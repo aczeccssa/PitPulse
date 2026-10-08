@@ -1,0 +1,23 @@
+[server]
+bind = "127.0.0.1:38701"
+
+[database]
+path = "/var/lib/f1-companion/pitpulse.sqlite"
+
+[providers]
+jolpica_enabled = true
+openf1_enabled = true
+f1_live_enabled = true
+user_agent = "PitPulse/0.1"
+
+[live]
+snapshot_interval_seconds = 15
+stale_after_seconds = 60
+
+[security]
+require_token = true
+# F1_COMPANION_TOKEN comes from the systemd EnvironmentFile or local secret storage.
+
+[scheduler]
+calendar_interval_seconds = 21600
+standings_interval_seconds = 21600

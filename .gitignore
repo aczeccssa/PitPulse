@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Rust / server
+server/target/
+server/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+.env.*
+!.env.example
+
+# Xcode / Swift
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.dSYM.zip
+
+# Editor
+.idea/
+.vscode/

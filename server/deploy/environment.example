@@ -1,0 +1,3 @@
+# /etc/f1-companion/environment
+F1_COMPANION_CONFIG=/etc/f1-companion/config.toml
+F1_COMPANION_TOKEN=replace-with-private-secret
