@@ -1,5 +1,8 @@
+use std::{sync::Arc, time::Duration};
+
 use reqwest::Client;
 use serde_json::Value;
+use tokio::sync::Mutex;
 
 use crate::{
     domain::{
@@ -8,7 +11,7 @@ use crate::{
         quality::ProviderAvailability,
     },
     error::ProviderError,
-    providers::http::{get_json, shared_client, with_query},
+    providers::http::{get_json_with_min_interval, shared_client, with_query},
 };
 
 pub const SOURCE: &str = "openf1";
@@ -18,6 +21,7 @@ pub struct OpenF1Provider {
     pub client: Client,
     pub enabled: bool,
     pub base_url: String,
+    last_request: Arc<Mutex<Option<tokio::time::Instant>>>,
 }
 
 impl OpenF1Provider {
@@ -26,6 +30,7 @@ impl OpenF1Provider {
             client: shared_client(&config.user_agent)?,
             enabled: config.openf1_enabled,
             base_url: "https://api.openf1.org".to_string(),
+            last_request: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -34,11 +39,22 @@ impl OpenF1Provider {
             client,
             enabled: true,
             base_url: base_url.into(),
+            last_request: Arc::new(Mutex::new(None)),
         }
     }
 
     pub async fn raw(&self, path: &str) -> Result<Value, ProviderError> {
-        get_json(&self.client, &format!("{}{}", self.base_url, path)).await
+        self.request(&format!("{}{}", self.base_url, path)).await
+    }
+
+    async fn request(&self, url: &str) -> Result<Value, ProviderError> {
+        get_json_with_min_interval(
+            &self.client,
+            url,
+            &self.last_request,
+            Duration::from_millis(350),
+        )
+        .await
     }
 
     pub async fn meetings(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
@@ -47,7 +63,7 @@ impl OpenF1Provider {
             "/v1/meetings",
             &[("year", season.to_string())],
         )?;
-        let payload = get_json(&self.client, &url).await?;
+        let payload = self.request(&url).await?;
         payload
             .as_array()
             .cloned()
@@ -62,7 +78,7 @@ impl OpenF1Provider {
             "/v1/sessions",
             &[("year", season.to_string())],
         )?;
-        let payload = get_json(&self.client, &url).await?;
+        let payload = self.request(&url).await?;
         payload
             .as_array()
             .cloned()
@@ -77,12 +93,27 @@ impl OpenF1Provider {
             "/v1/session_result",
             &[("session_key", session_key.to_string())],
         )?;
-        let payload = get_json(&self.client, &url).await?;
+        let payload = self.request(&url).await?;
         payload
             .as_array()
             .cloned()
             .ok_or_else(|| ProviderError::MissingField {
                 field: "session_result".to_string(),
+            })
+    }
+
+    pub async fn drivers(&self, session_key: i64) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            "/v1/drivers",
+            &[("session_key", session_key.to_string())],
+        )?;
+        let payload = self.request(&url).await?;
+        payload
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: "drivers".to_string(),
             })
     }
 }

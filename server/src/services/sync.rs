@@ -87,16 +87,37 @@ impl CalendarSync {
 
 pub fn spawn_startup_calendar_sync(state: AppState) {
     tokio::spawn(async move {
+        let season = match state.database.utc_now().await {
+            Ok(now) => now
+                .get(..4)
+                .and_then(|year| year.parse::<i64>().ok())
+                .filter(|year| (1950..=9999).contains(year)),
+            Err(error) => {
+                tracing::warn!(%error, "cannot determine current season for startup sync");
+                return;
+            }
+        };
+        let Some(season) = season else {
+            tracing::warn!("cannot determine current season for startup sync");
+            return;
+        };
         let sync = CalendarSync {
             jolpica: state.jolpica.clone(),
             openf1: state.openf1.clone(),
             timeout: Duration::from_secs(8),
         };
-        match sync.sync_season(&state.database, 2026).await {
+        match sync.sync_season(&state.database, season).await {
             Ok(meetings) => tracing::info!(count = meetings.len(), "calendar cache refreshed"),
             Err(error) => {
                 tracing::warn!(error = %error, "calendar refresh failed; serving cached calendar")
             }
         }
+        crate::services::results_sync::ResultsSync {
+            jolpica: state.jolpica.clone(),
+            openf1: state.openf1.clone(),
+            timeout: Duration::from_secs(8),
+        }
+        .sync_startup(&state.database, season)
+        .await;
     });
 }

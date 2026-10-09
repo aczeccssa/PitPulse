@@ -59,7 +59,8 @@
 - 素材随 App 本地打包；macOS 不运行时直连 F1 / 第三方图源，素材元数据研究文件不作为客户端联网入口。
 - 来源、授权、赛季、下载与打包状态逐项记录。研究完成、下载完成、可发布和 App 已接入是四种不同状态。
 - 无可用素材时用车手缩写 + 车队名 / 颜色占位，通用辅助图标仍用 SF Symbols；不展示其他车手或其他赛季图却不标注。
-- 不等待所有图齐全才实现 V1。未知授权图不自动进入 shipping bundle。
+- 不等待所有图齐全才实现 V1。未知授权图不自动进入对外发布 bundle。
+- **2026-10-09 用户范围澄清：** 仓库仅供用户本人本机私人版本控制，用户授权将 T03 素材纳入本地 commit；不 push 到 GitHub、不公开发布或分发。素材放在 `MotorsportAssets/private-local/`，manifest 用 `useScope=privateLocalOnly` / `privateLocalPath` 标识；本地 commit 不改变 `rightsStatus`，也不代表获得通用再分发许可。若未来要 push、公开发布或分发，须先重新核验相应权利。
 
 ## 3. 快速交付路线
 

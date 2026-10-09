@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-09T03:00:32Z",
+  "updatedAt": "2026-10-09T06:08:46Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -227,69 +227,276 @@
       "priority": "P1",
       "milestone": "M2",
       "area": "Asset Agent",
-      "status": "inProgress",
-      "summary": "首轮研究已交付；原图、设计赛季与使用条件待审，已下载／可打包均为 0。",
+      "status": "done",
+      "summary": "按用户限定的本机私人使用范围完成素材收集与文件核验：39 个本地文件，22/22 当前车手单盔图、11/11 当前车队 Logo。用户授权将私用素材纳入本地版本控制 commit；不 push 或公开发布。设计年与再分发权仅为发布范围后续限制。",
       "dependencies": [],
       "relatedTasks": [],
-      "scope": "当前赛季名单证据、逐车手头盔 / 逐车队 Logo 覆盖矩阵、可审计 manifest、可打包图片（若许可明确）、缺失与授权待审清单。**不能只写一份网址列表就声称图片已下载。**",
+      "scope": "当前赛季名单证据、逐车手头盔 / 逐车队 Logo 覆盖矩阵、可审计 manifest、实际本人本机私用素材及缺失清单。用户明确仅本机私人使用；不以对外分发许可作为本地收集前置条件。",
       "steps": [],
       "acceptanceCriteria": [
         {
           "id": "T03-A1",
           "text": "manifest 可解析。",
-          "done": false
+          "done": true
         },
         {
           "id": "T03-A2",
           "text": "每项 ID / season / 来源 / license / 状态明确。",
-          "done": false
+          "done": true
         },
         {
           "id": "T03-A3",
           "text": "已下载文件 hash、格式与路径有效。",
-          "done": false
+          "done": true
         },
         {
           "id": "T03-A4",
           "text": "区分候选、已下载参考、可发布。",
-          "done": false
+          "done": true
         },
         {
           "id": "T03-A5",
           "text": "缺失有替代 UI 建议。详细要求见独立任务卡。",
-          "done": false
+          "done": true
         }
       ],
       "deliverables": [
         {
-          "label": "独立 Agent 任务说明",
-          "path": "docs/tasks/T03-motorsport-assets.md"
-        },
-        {
-          "label": "首轮素材收集报告",
+          "label": "复核后的 2026 素材覆盖与授权报告",
           "path": "docs/assets/collection-report.md"
         },
         {
-          "label": "素材来源与映射 manifest",
+          "label": "逐项素材来源、映射与权利状态",
           "path": "macos/Resources/MotorsportAssets/manifest.json"
+        },
+        {
+          "label": "T03 素材收集任务说明",
+          "path": "docs/tasks/T03-motorsport-assets.md"
         }
       ],
       "evidence": [
         {
           "label": "首轮研究：34 项记录；已下载 0，可打包 0。JSON 必填字段、唯一键与未授权隔离检查通过。",
           "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "2026 官方阵容与 Jolpica 替补映射复核通过；34 项 manifest 唯一；来源条款未许可复制，已下载及可发布素材均为 0。",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "Chrome DevTools 查询 Commons 返回 HTTP 200；重新核验 2026 阵容/Provider ID、开放许可来源、下载数量、失败与授权边界。4 个仓库外参考、0 个可发布；覆盖与 fallback 见报告。",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "34 项唯一键检查通过；4 个外部文件均实际存在，完整 SHA-256、字节数、MIME、图像解码/尺寸/内容通过；SVG XML 有效且无脚本/外链；34 项均无 bundlePath。",
+          "path": "macos/Resources/MotorsportAssets/manifest.json"
+        },
+        {
+          "label": "替代许可来源复查：Simple Icons 官方逐图授权规则与 F1 权利指引",
+          "detail": "Simple Icons 官方说明：项目本身 CC0 不代表其中每个图标均为 CC0，需看逐图许可并由使用者确认必要权限；F1 Guidelines 仍要求品牌/IP用途遵守限制。尚未据第三方汇总页推定任何 F1 商标可发布；逐项候选核验继续中。来源：https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md；https://www.formula1.com/en/information/guidelines.4EOKE9RRqevL4niTK9kWyt"
+        },
+        {
+          "label": "Simple Icons 官方数据集逐项许可检查",
+          "detail": "通过 GitHub API 读取官方 develop/data/simple-icons.json（HTTP 200，3,465 条）。Aston Martin、Audi、Cadillac、Ferrari、McLaren 对应条目的 license 均为 null；未找到 Williams、Red Bull Racing、Racing Bulls、Alpine F1、Haas F1 的对应 F1 车队条目。故不能把仓库项目 CC0 或第三方汇总页声明当作各 logo 的逐项授权。来源：https://github.com/simple-icons/simple-icons/blob/develop/data/simple-icons.json；https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+        },
+        {
+          "label": "T03 最终研究与素材门禁复核",
+          "path": "docs/assets/collection-report.md",
+          "detail": "34 项 (kind,id,season) 唯一；清单与报告最新复核时间 2026-10-09T04:20:08Z 一致。累计下载 4 个仓库外参考，逐文件 MIME/尺寸/内容/hash 已记录；仓库素材目录仅有 manifest，34 项 shippingReady=false、bundlePath=null。Openverse 34 个逐项 CC 筛选均零结果；Commons 22 项请求遇 HTTP 429，按未核实保留；真实 Chrome DevTools 页面检查未提供单车手可分发 2026 头盔文件。授权 blocker 未清零，因此状态为 blocked/research delivered, packaging pending，不标 done。"
+        },
+        {
+          "label": "第三轮替代路线研究已交付：Chrome DevTools 的 2026 Commons 检索均未命中合格素材；22 条限流目标按 Retry-After 低频重试完成；Flickr 与权利方媒资条款复核均未发现可发布素材。",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "最终 manifest/report 一致于 2026-10-09T04:54:45Z：34 个 kind+id+season 唯一项；22 位当前车手、1 位赛季替补、11 支车队；5 个仓库外参考逐文件 MIME/字节数/SHA-256 匹配，均 needsReview，全部 34 项 shippingReady=false 且 bundlePath=null。",
+          "path": "macos/Resources/MotorsportAssets/manifest.json"
+        },
+        {
+          "label": "新增 Williams 2026 横版 SVG 只作仓库外个人参考：6,746 bytes、image/svg+xml、500×80、SHA-256 56af776014a1216fad897ef7b097e66912bc50070e265e675983a67b06bac877；XML 有效且无脚本/外链。PD-textlogo 不清理商标与 App 分发权。",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "第四轮来源核验：FIA/F1 媒体包、运动员/设计师条款、商业图库与 Unsplash；新增 1 个仓库外参考，累计 6 个，发布素材仍为 0。",
+          "path": "docs/assets/collection-report.md",
+          "detail": "Unsplash Max Verstappen 头盔参考为 JPEG/JFIF 4032×3024、707669 bytes，SHA-256 已记录；设计年份未确认，嵌入标志及头盔设计权利未清，保持 needsReview/downloadedReference。F1 官方 Guidelines 要求 F1 Logos 的明确书面许可、静态图相关权利人同意，并限制其他 F1 IP 在 App 使用；报告记录了当前来源和核验时间。"
+        },
+        {
+          "label": "第四轮 manifest 完整性和外部参考校验通过：34 个 kind/id/season 唯一记录；6 个仓库外参考文件逐一匹配实际字节数与 SHA-256；所有记录无 bundlePath 且 shippingReady=false。",
+          "path": "macos/Resources/MotorsportAssets/manifest.json"
+        },
+        {
+          "label": "第四轮报告与本地交付说明已将 6 个源文件和 2 个 SVG Quick Look PNG 预览区分；当前数与第三轮结束时的 5 个参考历史快照分开记录，未包含机器私有路径。",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "用户于 2026-10-09 明确 T03 的使用范围仅为本人本机私人使用，不对外提交、发布或分发；已按此更新任务范围，分发许可状态仍单独记录。",
+          "path": "implementation-sequence.md"
+        },
+        {
+          "label": "私用范围下的素材收集进展",
+          "path": "docs/assets/collection-report.md",
+          "detail": "T1V 2026 头盔 22 个直链均返回 HTTP 200、image/png（目前仅 HEAD，尚未下载内容）；另有 6 张 F1 赛站图片和 10 个车队 Logo 已保存于被忽略的本机私用目录，文件分类与 manifest/hash 校验待完成。"
+        },
+        {
+          "label": "T1V 2026 头盔与当前车队标志已实际下载",
+          "path": "macos/Resources/MotorsportAssets/manifest.json",
+          "detail": "已下载 22 张单头盔 PNG（每张 685×597）及 11 支车队 Logo；抽查 Max Verstappen、Lewis Hamilton、Alex Albon、Arvid Lindblad 图片均为匹配的独立头盔。逐文件 SHA-256 已复算，完整 manifest 登记和来源/赛季分类正在收尾；文件保存在 ignored private-local 目录。"
+        },
+        {
+          "label": "T03 私人本机素材交付与覆盖验收",
+          "path": "docs/assets/collection-report.md",
+          "detail": "本机私用素材收集和文件核验完成：39 个文件，其中 22/22 当前正赛车手为视觉匹配的单头盔图，11/11 当前车队有 Logo；6 张官方编辑拼图单列且不计单盔。Tsunoda 赛季额外身份无当前适用图，已记录缩写/车队文字 fallback。设计年份和再分发权不影响当前私用范围，均如实保留未核验状态。"
+        },
+        {
+          "label": "逐文件及 manifest 验证",
+          "path": "macos/Resources/MotorsportAssets/manifest.json",
+          "detail": "34 项 (kind,id,season) 唯一；39 条 privateLocalDownloads 与磁盘文件一一对应，路径、MIME、尺寸/viewBox、字节数及 SHA-256 一致。两份 SVG 均通过 XML、无脚本与外链检查；39 项均标 privateLocalOnly，bundlePath=null、shippingReady=false。独立覆盖检查为当前车手 22/22、车队 11/11。"
         }
       ],
-      "blockers": [
-        "原图出处、设计赛季及版权／商标使用条件尚未核验；这不阻塞 V1。"
-      ],
-      "nextAction": "核验原图与赛季、确认使用条件后下载允许打包的文件，补齐 hash 与覆盖缺口。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "blockers": [],
+      "nextAction": "T03 已完成。若未来要 push、公开发布或将素材纳入发布 bundle，先重新核验设计年份和相关权利。",
+      "updatedAt": "2026-10-09T06:07:34Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "inProgress",
           "note": "首轮素材研究已交付；不等同于下载、许可确认或 App 接入完成。"
+        },
+        {
+          "at": "2026-10-09T03:09:08Z",
+          "status": "inProgress",
+          "note": "开始按 implementation-sequence.md 推进；启动阶段记录。"
+        },
+        {
+          "at": "2026-10-09T03:17:28Z",
+          "status": "blocked",
+          "note": "复核阵容、替补与 Provider ID；来源条款要求复制许可且当前未获授权，未下载或打包素材。保留 blocker，继续 T07。"
+        },
+        {
+          "at": "2026-10-09T03:55:43Z",
+          "status": "inProgress",
+          "note": "按用户要求重试 T03；改查开放许可替代来源，启动实际下载与文件核验，并保留原有权利边界。"
+        },
+        {
+          "at": "2026-10-09T03:59:08Z",
+          "status": "inProgress",
+          "note": "Chrome DevTools 的 Commons API 查询返回 HTTP 200；确认 Norris 2020、Piastri 2024、Verstappen 2024、Alonso 2005/2007 等 CC 许可历史候选。均不可冒充 2026；Agent 继续核验文件与授权边界。"
+        },
+        {
+          "at": "2026-10-09T03:59:43Z",
+          "status": "inProgress",
+          "note": "扩展 Commons API 核验：Norris 2020 CC BY 2.0，Piastri 2024 与 Verstappen 2021–2024 CC BY-SA 4.0，Alonso 2005/2007 CC BY-SA 4.0。DevTools 页面 CSP 阻止跨域读取 Simple Icons 源文件，未将该失败误判为素材许可。"
+        },
+        {
+          "at": "2026-10-09T03:59:59Z",
+          "status": "inProgress",
+          "note": "Agent 实际下载仓库外参考：Max Verstappen 2024 CC BY-SA 4.0 单头盔插画（2500×2300，含第三方商标）；Russell 2026 CC BY 4.0 展陈照（5712×4284，含 9 顶不同头盔，不适合作为单人图）。Haas SVG 标示 PD-textlogo 但仍 trademarked。均保持参考/待审，不进可发布目录。"
+        },
+        {
+          "at": "2026-10-09T04:00:32Z",
+          "status": "inProgress",
+          "note": "Chrome 页面核验 Simple Icons 官方 LICENSE.md 为 CC0 1.0，但明确不授予商标权并不清理第三方权利。不能只凭 CC0 将 F1 team marks 标为可发布。"
+        },
+        {
+          "at": "2026-10-09T04:01:31Z",
+          "status": "inProgress",
+          "note": "新增 Piastri 2024 独立头盔参考下载：Commons CC BY-SA 4.0，JPEG 3257×3257，SHA-256 已在 Agent 本地核验；含 Monster/Dropbox/Android 标志，仍标 needsReview、仓库外参考。当前共 4 个外部参考文件。"
+        },
+        {
+          "at": "2026-10-09T04:04:18Z",
+          "status": "inProgress",
+          "note": "Manifest 已列 4 个仓库外参考下载（Max/Piastri 历史单头盔、Russell 多头盔展陈、Haas 2026 PD-textlogo 商标标志），均不进 bundle。要求 Agent 同步报告计数并补完整文件大小与最终验证。"
+        },
+        {
+          "at": "2026-10-09T04:06:14Z",
+          "status": "blocked",
+          "note": "第二轮素材收集与完整性验收结束。4 个仓库外参考均下载并通过 SHA-256/字节数/MIME/图像尺寸与内容检查及 SVG 安全检查；T03-A3 已通过。34 项无可发布文件；商标/头盔设计许可未确认，按计划保留 blocker，不因参考下载标 done。"
+        },
+        {
+          "at": "2026-10-09T04:15:08Z",
+          "status": "inProgress",
+          "note": "用户要求继续 T03；从已完成的 Commons/Openverse 研究继续扩展其他可明确再分发来源，尝试解除发布素材 blocker。"
+        },
+        {
+          "at": "2026-10-09T04:19:14Z",
+          "status": "inProgress",
+          "note": "拓展核验 Simple Icons 官方逐图授权规则及 F1 官方素材限制；项目总库 CC0 不代表所有品牌图标都获授权，继续核对逐项许可及当前赛季资产。"
+        },
+        {
+          "at": "2026-10-09T04:20:04Z",
+          "status": "inProgress",
+          "note": "读取 Simple Icons 官方授权数据集 3,465 条；当前相关图标逐项 license 为 null 或无 F1 车队条目，排除其作为明确获准的当前 Logo 来源。0 个可发布素材；Agent 正同步报告与 manifest。"
+        },
+        {
+          "at": "2026-10-09T04:25:40Z",
+          "status": "blocked",
+          "note": "T03 报告与 manifest 的最后复核完成；34 项唯一、4 个外部参考哈希及路径门禁复核通过，shipping-ready=0。已追加官方 F1 指引、Simple Icons 逐图许可与 Commons 429 搜索限制证据。未取得权利方再分发授权，依任务要求以研究交付/打包待审结案，不标 done。"
+        },
+        {
+          "at": "2026-10-09T04:44:56Z",
+          "status": "inProgress",
+          "note": "用户要求继续完成 T03；从既有研究和 0 个可发布状态继续，改查权利方媒体资料与可独立验证的开放许可来源，并复核实际下载路径。"
+        },
+        {
+          "at": "2026-10-09T04:48:20Z",
+          "status": "inProgress",
+          "note": "Chrome DevTools 重试 Commons MediaSearch：2026 Formula One driver helmet 仅返回 1965–1992 历史项；2026 Formula 1 team logo 仅返回非目标项目。正在核验官方媒体和候选站条款，结果待素材 Agent 写入报告/manifest。"
+        },
+        {
+          "at": "2026-10-09T04:52:22Z",
+          "status": "inProgress",
+          "note": "找到并下载 Commons 的 Atlassian Williams F1 Team 2026 横版 SVG 作为外部个人参考；6,746 bytes、image/svg+xml、500×80、SHA-256 已核验，SVG 无脚本或外链。PD-textlogo 不授予 Williams 商标权，故仅 needsReview；累计 5 个参考、0 个 shipping-ready。报告/manifest 待定稿。"
+        },
+        {
+          "at": "2026-10-09T04:55:48Z",
+          "status": "blocked",
+          "note": "第三轮复核、五个仓库外参考文件验证及 report/manifest 定稿验收完成。实际搜索、低频限流重试和官方媒资条款检查仍未找到许可明确的 2026 单头盔或可在 App 中再分发的队标；可发布素材为 0，按任务卡保持“研究交付，打包素材待审”，不伪报 done。"
+        },
+        {
+          "at": "2026-10-09T05:03:02Z",
+          "status": "inProgress",
+          "note": "用户要求继续推进 T03；改查官方媒体包、设计授权条款、图库许可与 Unsplash，新增 1 个仓库外个人参考，未将候选或待审图放入素材目录。"
+        },
+        {
+          "at": "2026-10-09T05:09:47Z",
+          "status": "blocked",
+          "note": "第四轮核验收尾：报告/manifest 与本地交付说明同步为 6 个外部参考；34 项唯一、6 个文件 hash/字节数匹配、bundle/shipping-ready 均为 0。当前 F1 官方指引明确要求 Logo/图片另取许可并限制其他 F1 IP 在 App 使用，未联系权利方或购买许可；T03 按任务卡保留授权 blocker，不标 done。"
+        },
+        {
+          "at": "2026-10-09T05:46:26Z",
+          "status": "inProgress",
+          "note": "用户澄清素材仅供本人本机私人使用，不对外提交/发布/分发；据此解除“必须取得对外许可才能进行本地收集”的前置条件，继续实际下载与逐项文件核验。保留 rightsStatus、shippingReady 与 privateLocalOnly 的区别。"
+        },
+        {
+          "at": "2026-10-09T05:54:24Z",
+          "status": "inProgress",
+          "note": "确认 22 个 2026 头盔直链可公开读取；发现本机私用目录已有 6 张赛站图片和 10 个车队 Logo。按用户私用范围继续下载头盔原图、逐文件核验并补齐 manifest；A3/A4 暂标未完成。"
+        },
+        {
+          "at": "2026-10-09T05:57:15Z",
+          "status": "inProgress",
+          "note": "实际下载 22 张 T1V 单头盔 PNG 和 11 支车队 Logo 到本机私用目录；抽查四张图与车手 ID 匹配，尺寸均为 685×597。已重算文件 SHA-256；manifest 登记、图像逐项分类、替补缺失和 fallback 验收仍在进行。"
+        },
+        {
+          "at": "2026-10-09T06:02:46Z",
+          "status": "done",
+          "note": "按用户明确的本机私人使用范围完成 T03；39 个私用文件及 34 项 manifest 通过逐文件路径/MIME/尺寸/字节/hash 检查，22/22 当前车手和 11/11 车队覆盖完成，Tsunoda 缺项有 fallback。设计年份及再分发权状态保留未核验但不构成本机范围 blocker；bundle/shipping-ready 为 0。"
+        },
+        {
+          "at": "2026-10-09T06:03:22Z",
+          "status": "done",
+          "note": "最终一致性校对：任务卡明确区分用户授权的 private-local 私用素材与仓库外临时研究候选；不改变已验收范围或发布门禁。"
+        },
+        {
+          "at": "2026-10-09T06:03:41Z",
+          "status": "done",
+          "note": "报告最终校对：说明素材 Agent 未编辑任务 JSON、主 Agent 已按要求同步进度和完成状态；T03 完成验收保持不变。"
+        },
+        {
+          "at": "2026-10-09T06:07:34Z",
+          "status": "done",
+          "note": "用户明确仓库只用于本机私人版本控制，并授权本地 commit；取消 private-local 忽略规则，将素材纳入本地版本控制。保持 no push/publication，rightsStatus、bundlePath 和 shippingReady 不变。"
         }
       ]
     },
@@ -916,8 +1123,8 @@
       "priority": "P0",
       "milestone": "M2",
       "area": "Backend",
-      "status": "pending",
-      "summary": "实现各类 Session 成绩与 WDC／WCC 数据闭环。",
+      "status": "done",
+      "summary": "七种 Session 成绩、官方 WDC/WCC、启动同步、SQLite 最新快照与 REST 闭环已验收；真实历史 smoke、逐请求限流与所有质量门禁通过。",
       "dependencies": [
         "T01",
         "T02"
@@ -934,29 +1141,163 @@
         {
           "id": "T07-A1",
           "text": "每种 Session 至少一个 fixture。",
-          "done": false
+          "done": true
         },
         {
           "id": "T07-A2",
           "text": "两源分歧、先 partial 后完整、处罚修正、空榜与可空字段测试。",
-          "done": false
+          "done": true
         },
         {
           "id": "T07-A3",
           "text": "两种 standings API 有实际非空及鉴权测试。",
-          "done": false
+          "done": true
+        },
+        {
+          "id": "T07-A4",
+          "text": "Alpha、Ergast、OpenF1 身份映射；未知 ID 保留来源 ID 并标 partial；WDC 支持多 constructor ID。",
+          "done": true
+        },
+        {
+          "id": "T07-A5",
+          "text": "事务快照、revision、空/较差数据保留、回滚与旧库迁移有测试。",
+          "done": true
+        },
+        {
+          "id": "T07-A6",
+          "text": "结果与积分 API 覆盖 pending/404、meta、当前赛季默认、非法 season 与鉴权。",
+          "done": true
+        },
+        {
+          "id": "T07-A7",
+          "text": "本地启动 mock、缓存保留与 REST 通过；真实历史周末 smoke 单独记录。",
+          "done": true
+        },
+        {
+          "id": "T07-A8",
+          "text": "locked test、fmt、严格 Clippy、release build 与 task JSON 校验通过。",
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "T07 数据与 API 契约",
+          "path": "docs/data-contract.md"
+        },
+        {
+          "label": "T07 闭环验收与真实历史 smoke",
+          "path": "docs/acceptance/t07-results.md"
+        },
+        {
+          "label": "Provider 解码与稳定身份映射",
+          "path": "server/src/providers/results.rs"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Provider 与分类 fixture",
+          "path": "server/src/providers/results.rs",
+          "detail": "七种 Session fixture；双源覆盖择优；DNF/DNS/DSQ、未知身份与无有效圈可空字段测试通过。"
+        },
+        {
+          "label": "SQLite revision 与迁移",
+          "path": "server/tests/storage.rs",
+          "detail": "partial 升级、处罚修正、空/较差快照保留、重复键事务回滚、v3 旧库数据保留与 standings revision 测试通过。"
+        },
+        {
+          "label": "启动同步 mock 与 API",
+          "path": "server/tests/results_sync.rs",
+          "detail": "本地 Provider mock 写入非空 results/WDC/WCC；上游失效后缓存 revision 不变。"
+        },
+        {
+          "label": "API contract tests",
+          "path": "server/tests/api.rs",
+          "detail": "两种 standings API 非空、鉴权、当前赛季默认、非法 season、未知 Session 404 覆盖。"
+        },
+        {
+          "label": "第一次全套 Rust tests",
+          "path": "server/Cargo.toml",
+          "detail": "cargo test --locked --manifest-path server/Cargo.toml：36 passed；cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings：通过。release build 与真实 smoke 待验。"
+        },
+        {
+          "label": "真实历史周末 release smoke",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "2026-10-09T03:31:47Z；Calendar 200/24，2026:15 Race results 200/22 provisional，WDC 200/23，WCC 200/11；来源分别为 jolpica-alpha 与 jolpica-ergast。"
+        },
+        {
+          "label": "完整质量门禁",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "cargo fmt --check、cargo test --locked（36 passed）、严格 Clippy、locked release build、task validator 与 task-data tests 均通过。"
+        },
+        {
+          "label": "直连真实 Provider smoke",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "2026-10-09T03:33:30Z：Jolpica Alpha schedule/results HTTP 200，24/22；Ergast WDC/WCC HTTP 200，23/11；OpenF1 session drivers HTTP 200，22。"
+        },
+        {
+          "label": "OpenF1 retry rate-limit regression",
+          "path": "server/src/providers/http.rs",
+          "detail": "本地 HTTP mock 返回 503 + Retry-After=0；重试仍保持最小请求间隔，回归测试通过。"
+        },
+        {
+          "label": "最终质量门禁（逐请求限流修复后）",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "cargo fmt --check、cargo test --locked（37 passed）、严格 Clippy、locked release build、task validator 与 task-data tests 全部通过。"
+        },
+        {
+          "label": "本地提交前重新运行 T07 全套 Rust 质量门禁",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "cargo fmt --check 通过；cargo test --locked 为 37 passed；严格 Clippy 与 locked release build 通过。真实历史周末 smoke 沿用前次已记录结果，本次未重新请求外部网络。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "实现各类 Session 成绩与 WDC／WCC 数据闭环。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "按计划后续推进 T08 素材接入与 T09 周期调度；本任务不包含二者。",
+      "updatedAt": "2026-10-09T06:08:46Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-09T03:09:08Z",
+          "status": "inProgress",
+          "note": "开始按 implementation-sequence.md 推进；启动阶段记录。"
+        },
+        {
+          "at": "2026-10-09T03:17:28Z",
+          "status": "inProgress",
+          "note": "完成领域字段、顺序 migration、快照读写与元数据初版；Provider／启动编排实现中，尚未验收。"
+        },
+        {
+          "at": "2026-10-09T03:31:07Z",
+          "status": "inProgress",
+          "note": "完成 Provider/SQLite/API 主实现与扩展验收测试；本地 mock、36 项测试及严格 Clippy 通过，真实 smoke 与 release build 仍待验。"
+        },
+        {
+          "at": "2026-10-09T03:32:47Z",
+          "status": "done",
+          "note": "完成 T07 全闭环；fixture/mock 与缓存失败路径、旧库迁移、REST 语义、真实历史周末 release smoke 和全部质量门禁通过。"
+        },
+        {
+          "at": "2026-10-09T03:33:30Z",
+          "status": "done",
+          "note": "补充直连真实 Provider HTTP smoke；Alpha、Ergast、OpenF1 路径均为 200，数量与本地 REST 缓存一致。"
+        },
+        {
+          "at": "2026-10-09T03:34:58Z",
+          "status": "inProgress",
+          "note": "补齐 OpenF1 内部重试的逐请求限流并增加本地 mock 回归测试；37 项 Rust tests 通过，最终 strict gates 重跑中。"
+        },
+        {
+          "at": "2026-10-09T03:35:34Z",
+          "status": "done",
+          "note": "OpenF1 retry 逐请求限流修复后，37 项 Rust tests、strict Clippy、locked release build、fmt 和任务数据校验全部通过；T07 完成。"
+        },
+        {
+          "at": "2026-10-09T06:08:46Z",
+          "status": "done",
+          "note": "本地提交前重跑 Rust 质量门禁：fmt、37 项 locked tests、严格 Clippy 和 locked release build 全部通过。既有真实历史周末 smoke 证据保留，未重复联网请求。"
         }
       ]
     },

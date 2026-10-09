@@ -7,6 +7,7 @@ use crate::{
     api::dto::Meta,
     domain::{
         calendar::{Meeting, MeetingStatus, Session, SessionStatus, SessionType},
+        quality::DataQuality,
         results::SessionResult,
         standings::{ConstructorStanding, DriverStanding},
     },
@@ -16,6 +17,7 @@ use crate::{
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
 const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
 const MIGRATION_0003: &str = include_str!("migrations/0003_nullable_meeting_round.sql");
+const MIGRATION_0004: &str = include_str!("migrations/0004_results.sql");
 
 #[derive(Clone)]
 pub struct Database {
@@ -80,7 +82,7 @@ impl Database {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
                 "SELECT id, season, round, name, country, location, start_date, end_date, \
-                        country_code, status, source, fetched_at, source_updated_at, revision \
+                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id \
                  FROM meetings WHERE (?1 IS NULL OR season = ?1) ORDER BY COALESCE(round, 9999), id",
             )?;
             let mut meetings = Vec::new();
@@ -89,6 +91,7 @@ impl Database {
                     id: row.get(0)?,
                     season: row.get(1)?,
                     round: row.get(2)?,
+                    jolpica_round_id: row.get(14)?,
                     name: row.get(3)?,
                     country: row.get(4)?,
                     country_code: row.get(8)?,
@@ -158,15 +161,14 @@ impl Database {
         session_id: &str,
     ) -> Result<(Vec<SessionResult>, Meta), StorageError> {
         let connection = Arc::clone(&self.connection);
-        let session_id = session_id.to_string();
-        let result = spawn_blocking(move || {
+        let lookup_id = session_id.to_string();
+        let results = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality \
-                 FROM session_results WHERE session_id = ?1 ORDER BY position IS NULL, position",
+                "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality
+                 FROM session_results WHERE session_id = ?1 AND revision = (SELECT MAX(revision) FROM session_results WHERE session_id = ?1) ORDER BY position IS NULL, position",
             )?;
-            let mut results = Vec::new();
-            let rows = statement.query_map([&session_id], |row| {
+            let rows = statement.query_map([&lookup_id], |row| {
                 Ok(SessionResult {
                     session_id: row.get(0)?,
                     position: row.get(1)?,
@@ -176,23 +178,67 @@ impl Database {
                     constructor_id: row.get(5)?,
                     team: row.get(6)?,
                     time: row.get(7)?,
-                    gap: row.get(8)?,
-                    laps: row.get(9)?,
-                    points: row.get(10)?,
-                    source: row.get(11)?,
-                    source_updated_at: row.get(12)?,
-                    fetched_at: row.get(13)?,
-                    revision: row.get(14)?,
-                    quality: row.get(15)?,
+                    best_lap: row.get(8)?,
+                    q1: row.get(9)?,
+                    q2: row.get(10)?,
+                    q3: row.get(11)?,
+                    race_time: row.get(12)?,
+                    gap: row.get(13)?,
+                    laps: row.get(14)?,
+                    points: row.get(15)?,
+                    source: row.get(16)?,
+                    source_updated_at: row.get(17)?,
+                    fetched_at: row.get(18)?,
+                    revision: row.get(19)?,
+                    quality: row.get(20)?,
                 })
             })?;
-            for row in rows {
-                results.push(row?);
-            }
-            Ok::<_, rusqlite::Error>(results)
+            rows.collect::<Result<Vec<_>, _>>()
+        }).await??;
+        let meta = self.session_results_meta(session_id).await?;
+        Ok((results, meta))
+    }
+
+    pub async fn session_exists(&self, session_id: &str) -> Result<bool, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let session_id = session_id.to_string();
+        Ok(spawn_blocking(move || -> Result<bool, rusqlite::Error> {
+            connection.blocking_lock().query_row(
+                "SELECT EXISTS(SELECT 1 FROM sessions WHERE id = ?1)",
+                [&session_id],
+                |row| row.get(0),
+            )
         })
-        .await??;
-        Ok((result, Meta::empty()))
+        .await??)
+    }
+
+    async fn session_results_meta(&self, session_id: &str) -> Result<Meta, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let session_id = session_id.to_string();
+        Ok(spawn_blocking(move || -> Result<Meta, rusqlite::Error> {
+            let connection = connection.blocking_lock();
+            connection.query_row(
+                "SELECT source, source_updated_at, fetched_at, revision, quality, COALESCE(julianday('now') - julianday(fetched_at) > 0.25, 1)
+                 FROM session_results WHERE session_id = ?1 ORDER BY revision DESC LIMIT 1",
+                [&session_id],
+                |row| {
+                    let source: String = row.get(0)?;
+                    let source_updated_at: Option<String> = row.get(1)?;
+                    let fetched_at: String = row.get(2)?;
+                    let revision: i64 = row.get(3)?;
+                    let quality: String = row.get(4)?;
+                    let stale: bool = row.get(5)?;
+                    Ok(meta_from_snapshot(
+                        source,
+                        source_updated_at,
+                        fetched_at,
+                        revision,
+                        &quality,
+                        stale,
+                    ))
+                },
+            ).optional().map(|meta| meta.unwrap_or_else(Meta::empty))
+        }).await??)
     }
 
     pub async fn driver_standings(
@@ -200,13 +246,12 @@ impl Database {
         season: Option<i64>,
     ) -> Result<(Vec<DriverStanding>, Meta), StorageError> {
         let connection = Arc::clone(&self.connection);
-        let result = spawn_blocking(move || {
+        let rows = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT season, position, driver_id, driver_name, constructor, points, wins, source, fetched_at, revision \
-                 FROM driver_standings WHERE (?1 IS NULL OR season = ?1) ORDER BY position",
+                "SELECT season, position, driver_id, driver_name, constructor, points, wins, source, fetched_at, revision, constructor_ids
+                 FROM driver_standings WHERE season = COALESCE(?1, CAST(strftime('%Y','now') AS INTEGER)) ORDER BY position",
             )?;
-            let mut standings = Vec::new();
             let rows = statement.query_map([season], |row| {
                 Ok(DriverStanding {
                     season: row.get(0)?,
@@ -219,15 +264,13 @@ impl Database {
                     source: row.get(7)?,
                     fetched_at: row.get(8)?,
                     revision: row.get(9)?,
+                    constructor_ids: serde_json::from_str(&row.get::<_, String>(10)?).unwrap_or_default(),
                 })
             })?;
-            for row in rows {
-                standings.push(row?);
-            }
-            Ok::<_, rusqlite::Error>(standings)
-        })
-        .await??;
-        Ok((result, Meta::empty()))
+            rows.collect::<Result<Vec<_>, _>>()
+        }).await??;
+        let meta = self.standings_meta("driver_standings", season).await?;
+        Ok((rows, meta))
     }
 
     pub async fn constructor_standings(
@@ -235,13 +278,12 @@ impl Database {
         season: Option<i64>,
     ) -> Result<(Vec<ConstructorStanding>, Meta), StorageError> {
         let connection = Arc::clone(&self.connection);
-        let result = spawn_blocking(move || {
+        let rows = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT season, position, constructor_id, constructor_name, points, wins, source, fetched_at, revision \
-                 FROM constructor_standings WHERE (?1 IS NULL OR season = ?1) ORDER BY position",
+                "SELECT season, position, constructor_id, constructor_name, points, wins, source, fetched_at, revision
+                 FROM constructor_standings WHERE season = COALESCE(?1, CAST(strftime('%Y','now') AS INTEGER)) ORDER BY position",
             )?;
-            let mut standings = Vec::new();
             let rows = statement.query_map([season], |row| {
                 Ok(ConstructorStanding {
                     season: row.get(0)?,
@@ -255,13 +297,167 @@ impl Database {
                     revision: row.get(8)?,
                 })
             })?;
-            for row in rows {
-                standings.push(row?);
+            rows.collect::<Result<Vec<_>, _>>()
+        }).await??;
+        let meta = self.standings_meta("constructor_standings", season).await?;
+        Ok((rows, meta))
+    }
+
+    async fn standings_meta(
+        &self,
+        table: &'static str,
+        season: Option<i64>,
+    ) -> Result<Meta, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || -> Result<Meta, rusqlite::Error> {
+            let connection = connection.blocking_lock();
+            let sql = format!("SELECT source, fetched_at, revision, COALESCE(julianday('now') - julianday(fetched_at) > 0.25, 1) FROM {table} WHERE season = COALESCE(?1, CAST(strftime('%Y','now') AS INTEGER)) ORDER BY revision DESC LIMIT 1");
+            connection.query_row(&sql, [season], |row| {
+                let source: String = row.get(0)?;
+                let fetched_at: String = row.get(1)?;
+                let revision: i64 = row.get(2)?;
+                let stale: bool = row.get(3)?;
+                Ok(Meta::from_cache(Some(source), Some(fetched_at), revision.max(0) as u64, stale))
+            }).optional().map(|meta| meta.unwrap_or_else(Meta::empty))
+        }).await??)
+    }
+
+    pub async fn replace_session_results(
+        &self,
+        mut rows: Vec<SessionResult>,
+        quality: &str,
+    ) -> Result<i64, StorageError> {
+        let Some(session_id) = rows.first().map(|row| row.session_id.clone()) else {
+            return Ok(0);
+        };
+        if rows.iter().any(|row| row.session_id != session_id) {
+            return Err(StorageError::Sqlite(rusqlite::Error::InvalidQuery));
+        }
+        let quality = quality.to_string();
+        for row in &mut rows {
+            row.quality = quality.clone();
+        }
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || -> Result<i64, rusqlite::Error> {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            let mut old = load_latest_results(&tx, &session_id)?;
+            old.sort_by(|a, b| a.driver_id.cmp(&b.driver_id));
+            rows.sort_by(|a, b| a.driver_id.cmp(&b.driver_id));
+            let current_revision = old.iter().map(|row| row.revision).max().unwrap_or(0);
+            if !old.is_empty() && quality_rank(&quality) < quality_rank(&old[0].quality) {
+                tx.rollback()?;
+                return Ok(current_revision);
             }
-            Ok::<_, rusqlite::Error>(standings)
-        })
-        .await??;
-        Ok((result, Meta::empty()))
+            if quality == "partial"
+                && old.first().is_some_and(|latest| latest.quality == "partial")
+                && rows.len() < old.len()
+            {
+                tx.rollback()?;
+                return Ok(current_revision);
+            }
+            let unchanged = old.len() == rows.len()
+                && old.iter().zip(&rows).all(|(a, b)| same_result_content(a, b));
+            let revision = if unchanged { current_revision } else { current_revision + 1 };
+            for row in &mut rows {
+                row.revision = revision;
+                row.quality = quality.to_string();
+            }
+            if unchanged {
+                for row in &rows {
+                    tx.execute(
+                        "UPDATE session_results SET source_updated_at=?1, fetched_at=?2, quality=?3 WHERE session_id=?4 AND revision=?5 AND driver_id=?6",
+                        rusqlite::params![row.source_updated_at, row.fetched_at, quality, session_id, revision, row.driver_id],
+                    )?;
+                }
+            } else {
+                for row in &rows {
+                    tx.execute(
+                        "INSERT INTO session_results (session_id, position, classification, driver_id, driver_name, constructor_id, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, best_lap, q1, q2, q3, race_time)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
+                        rusqlite::params![row.session_id, row.position, row.classification, row.driver_id, row.driver_name, row.constructor_id, row.team, row.time, row.gap, row.laps, row.points, row.source, row.source_updated_at, row.fetched_at, revision, quality, row.best_lap, row.q1, row.q2, row.q3, row.race_time],
+                    )?;
+                }
+            }
+            tx.commit()?;
+            Ok(revision)
+        }).await??)
+    }
+
+    pub async fn replace_driver_standings(
+        &self,
+        rows: Vec<DriverStanding>,
+    ) -> Result<i64, StorageError> {
+        let Some(season) = rows.first().map(|row| row.season) else {
+            return Ok(0);
+        };
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || -> Result<i64, rusqlite::Error> {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            let old_revision: i64 = tx.query_row("SELECT COALESCE(MAX(revision), 0) FROM driver_standings WHERE season=?1", [season], |row| row.get(0))?;
+            let mut old = tx.prepare("SELECT position, driver_id, driver_name, constructor, points, wins, constructor_ids, source FROM driver_standings WHERE season=?1 ORDER BY position")?;
+            let old_rows = old.query_map([season], |row| Ok((row.get::<_,i64>(0)?, row.get::<_,String>(1)?, row.get::<_,String>(2)?, row.get::<_,String>(3)?, row.get::<_,f64>(4)?, row.get::<_,i64>(5)?, row.get::<_,String>(6)?, row.get::<_,String>(7)?)))?.collect::<Result<Vec<_>,_>>()?;
+            drop(old);
+            let mut incoming = rows.clone();
+            incoming.sort_by(|a,b| a.position.cmp(&b.position));
+            let unchanged = old_rows.len() == incoming.len() && old_rows.iter().zip(&incoming).all(|(a,b)| a.0==b.position && a.1==b.driver_id && a.2==b.driver_name && a.3==b.constructor && a.4==b.points && a.5==b.wins && a.6==serde_json::to_string(&b.constructor_ids).unwrap_or_default() && a.7==b.source);
+            let revision = if unchanged { old_revision } else { old_revision + 1 };
+            tx.execute("DELETE FROM driver_standings WHERE season=?1", [season])?;
+            for row in incoming {
+                tx.execute("INSERT INTO driver_standings (season,position,driver_id,driver_name,constructor,points,wins,source,source_updated_at,fetched_at,revision,quality,constructor_ids) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,NULL,?9,?10,'provisional',?11)", rusqlite::params![row.season,row.position,row.driver_id,row.driver_name,row.constructor,row.points,row.wins,row.source,row.fetched_at,revision,serde_json::to_string(&row.constructor_ids).unwrap_or_else(|_| "[]".to_string())])?;
+            }
+            tx.commit()?;
+            Ok(revision)
+        }).await??)
+    }
+
+    pub async fn replace_constructor_standings(
+        &self,
+        rows: Vec<ConstructorStanding>,
+    ) -> Result<i64, StorageError> {
+        let Some(season) = rows.first().map(|row| row.season) else {
+            return Ok(0);
+        };
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || -> Result<i64, rusqlite::Error> {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            let old_revision: i64 = tx.query_row("SELECT COALESCE(MAX(revision), 0) FROM constructor_standings WHERE season=?1", [season], |row| row.get(0))?;
+            let mut old = tx.prepare("SELECT position,constructor_id,constructor_name,points,wins,source FROM constructor_standings WHERE season=?1 ORDER BY position")?;
+            let old_rows = old.query_map([season], |row| Ok((row.get::<_,i64>(0)?,row.get::<_,String>(1)?,row.get::<_,String>(2)?,row.get::<_,f64>(3)?,row.get::<_,i64>(4)?,row.get::<_,String>(5)?)))?.collect::<Result<Vec<_>,_>>()?;
+            drop(old);
+            let mut incoming = rows;
+            incoming.sort_by(|a,b| a.position.cmp(&b.position));
+            let unchanged = old_rows.len() == incoming.len() && old_rows.iter().zip(&incoming).all(|(a,b)| a.0==b.position && a.1==b.constructor_id && a.2==b.constructor_name && a.3==b.points && a.4==b.wins && a.5==b.source);
+            let revision = if unchanged { old_revision } else { old_revision + 1 };
+            tx.execute("DELETE FROM constructor_standings WHERE season=?1", [season])?;
+            for row in incoming {
+                tx.execute("INSERT INTO constructor_standings (season,position,constructor_id,constructor_name,points,wins,source,source_updated_at,fetched_at,revision,quality) VALUES (?1,?2,?3,?4,?5,?6,?7,NULL,?8,?9,'provisional')", rusqlite::params![row.season,row.position,row.constructor_id,row.constructor_name,row.points,row.wins,row.source,row.fetched_at,revision])?;
+            }
+            tx.commit()?;
+            Ok(revision)
+        }).await??)
+    }
+
+    pub async fn store_provider_mappings(
+        &self,
+        drivers: Vec<(String, String, String)>,
+        constructors: Vec<(String, String, String)>,
+    ) -> Result<(), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        spawn_blocking(move || {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            for (provider, provider_id, canonical_id) in drivers {
+                tx.execute("INSERT INTO driver_mappings(provider,provider_id,canonical_id) VALUES (?1,?2,?3) ON CONFLICT(provider,provider_id) DO UPDATE SET canonical_id=excluded.canonical_id", rusqlite::params![provider,provider_id,canonical_id])?;
+            }
+            for (provider, provider_id, canonical_id) in constructors {
+                tx.execute("INSERT INTO constructor_mappings(provider,provider_id,canonical_id) VALUES (?1,?2,?3) ON CONFLICT(provider,provider_id) DO UPDATE SET canonical_id=excluded.canonical_id", rusqlite::params![provider,provider_id,canonical_id])?;
+            }
+            tx.commit()
+        }).await??;
+        Ok(())
     }
 
     pub async fn replace_calendar(
@@ -288,6 +484,92 @@ impl Database {
         .await??;
         Ok(version)
     }
+}
+
+fn meta_from_snapshot(
+    source: String,
+    source_updated_at: Option<String>,
+    fetched_at: String,
+    revision: i64,
+    quality: &str,
+    stale: bool,
+) -> Meta {
+    let quality = if stale {
+        DataQuality::Stale
+    } else {
+        match quality {
+            "partial" => DataQuality::Partial,
+            "final" => DataQuality::Final,
+            "pending" => DataQuality::Pending,
+            _ => DataQuality::Provisional,
+        }
+    };
+    Meta {
+        schema_version: crate::domain::quality::SCHEMA_VERSION,
+        revision: revision.max(0) as u64,
+        stale,
+        quality,
+        source: Some(source),
+        fetched_at: Some(fetched_at),
+        source_updated_at,
+    }
+}
+
+fn quality_rank(value: &str) -> u8 {
+    match value {
+        "partial" => 1,
+        "provisional" => 2,
+        "final" => 3,
+        _ => 0,
+    }
+}
+
+fn same_result_content(old: &SessionResult, new: &SessionResult) -> bool {
+    let mut old = old.clone();
+    let mut new = new.clone();
+    old.fetched_at.clear();
+    new.fetched_at.clear();
+    old.source_updated_at = None;
+    new.source_updated_at = None;
+    old.revision = 0;
+    new.revision = 0;
+    old == new
+}
+
+fn load_latest_results(
+    connection: &Connection,
+    session_id: &str,
+) -> Result<Vec<SessionResult>, rusqlite::Error> {
+    let mut statement = connection.prepare(
+        "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality
+         FROM session_results WHERE session_id=?1 AND revision=(SELECT MAX(revision) FROM session_results WHERE session_id=?1) ORDER BY driver_id",
+    )?;
+    let rows = statement.query_map([session_id], |row| {
+        Ok(SessionResult {
+            session_id: row.get(0)?,
+            position: row.get(1)?,
+            classification: row.get(2)?,
+            driver_id: row.get(3)?,
+            driver_name: row.get(4)?,
+            constructor_id: row.get(5)?,
+            team: row.get(6)?,
+            time: row.get(7)?,
+            best_lap: row.get(8)?,
+            q1: row.get(9)?,
+            q2: row.get(10)?,
+            q3: row.get(11)?,
+            race_time: row.get(12)?,
+            gap: row.get(13)?,
+            laps: row.get(14)?,
+            points: row.get(15)?,
+            source: row.get(16)?,
+            source_updated_at: row.get(17)?,
+            fetched_at: row.get(18)?,
+            revision: row.get(19)?,
+            quality: row.get(20)?,
+        })
+    })?;
+    rows.collect()
 }
 
 fn load_sessions(
@@ -335,7 +617,7 @@ fn next_meeting_at(
         Some(id) => connection
             .query_row(
                 "SELECT id, season, round, name, country, location, start_date, end_date, \
-                        country_code, status, source, fetched_at, source_updated_at, revision \
+                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id \
                  FROM meetings WHERE id = ?1",
                 [&id],
                 |row| {
@@ -343,6 +625,7 @@ fn next_meeting_at(
                         id: row.get(0)?,
                         season: row.get(1)?,
                         round: row.get(2)?,
+                        jolpica_round_id: row.get(14)?,
                         name: row.get(3)?,
                         country: row.get(4)?,
                         country_code: row.get(8)?,
@@ -407,6 +690,11 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         connection.execute_batch(MIGRATION_0003)?;
         connection.execute_batch("PRAGMA user_version = 3;")?;
     }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 4 {
+        connection.execute_batch(MIGRATION_0004)?;
+        connection.execute_batch("PRAGMA user_version = 4;")?;
+    }
     Ok(())
 }
 
@@ -445,8 +733,11 @@ fn upsert_calendar(
             "INSERT INTO meetings (id, season, round, name, country, country_code, location, start_date, end_date, status, source, source_updated_at, fetched_at, revision, jolpica_round_id, openf1_meeting_key) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
              ON CONFLICT(id) DO UPDATE SET season=excluded.season, round=excluded.round, name=excluded.name, country=excluded.country, country_code=excluded.country_code, location=excluded.location, start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, source=excluded.source, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_round_id=excluded.jolpica_round_id, openf1_meeting_key=excluded.openf1_meeting_key",
-            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), meeting.source.clone().unwrap_or_else(|| "jolpica-alpha".to_string()), meeting.source_updated_at, fetched_at, revision, meeting.id, None::<i64>],
+            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), meeting.source.clone().unwrap_or_else(|| "jolpica-alpha".to_string()), meeting.source_updated_at, fetched_at, revision, meeting.jolpica_round_id, None::<i64>],
         )?;
+        if let Some(round_id) = &meeting.jolpica_round_id {
+            insert_mapping(&tx, "jolpica-alpha", round_id, Some(&meeting.id), None)?;
+        }
         let mut seen = Vec::new();
         for session in &meeting.sessions {
             seen.push(session.id.clone());

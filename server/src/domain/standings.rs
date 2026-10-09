@@ -8,6 +8,8 @@ pub struct DriverStanding {
     pub driver_id: String,
     pub driver_name: String,
     pub constructor: String,
+    #[serde(default)]
+    pub constructor_ids: Vec<String>,
     pub points: f64,
     pub wins: i64,
     pub source: String,

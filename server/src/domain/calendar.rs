@@ -6,6 +6,8 @@ pub struct Meeting {
     pub id: String,
     pub season: i64,
     pub round: Option<i64>,
+    #[serde(skip)]
+    pub jolpica_round_id: Option<String>,
     pub name: String,
     pub country: String,
     #[serde(skip_serializing_if = "Option::is_none")]

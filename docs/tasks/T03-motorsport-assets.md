@@ -15,7 +15,9 @@
 3. 每支已确认车队的**Logo**（不是赛车 / 车库照片）。
 4. 可用下载文件、出处、授权信息和缺失矩阵，供 SwiftUI 本地资源使用。
 
-“已找到页面”“已找到直接图片”“已下载个人参考”“许可允许打包发布”“已接入 App”必须分别记录。不能拿候选搜索结果当已收集图片，也不能拿匿名可访问当开放版权。
+“已找到页面”“已找到直接图片”“已下载本机私用文件”“允许对外再分发”“已接入 App”必须分别记录。不能拿候选搜索结果当已下载图片，也不能把用户的本机私用范围写成通用开放版权。
+
+**范围澄清（2026-10-09）：** 用户明确仓库只用于本人本机私人版本控制，允许将 T03 素材纳入本地 commit，不 push 到 GitHub、不公开发布或分发。按此范围收集本地文件，不再以取得对外发布许可作为前置条件；仍逐项记录来源和已知条款，`rightsStatus` 不得因用户用途说明或本地 commit 而伪改为 `approved`。如未来要 push、公开发布或分发，必须重新核验权利。
 
 ## 2. 允许写入的范围
 
@@ -24,14 +26,15 @@ docs/assets/
   collection-report.md           # 名单、来源、覆盖统计、缺失与结论
 macos/Resources/MotorsportAssets/
   manifest.json                  # 逐项来源 / 授权 / season / ID 映射
+  private-local/                 # 仅供用户本机使用；不可视作发布素材或通用授权
   helmets/                       # 许可已确认的头盔本地文件（若有）
   team-logos/                    # 许可已确认的 Logo 本地文件（若有）
 ```
 
 - 不修改业务代码、Xcode 工程、根任务计划、架构原文和已有无关文件。
-- 不 commit、push、创建 PR 或发布；不是唯一在仓库工作的 Agent，不回滚其他人的改动。
-- 不往 App bundle 自动加入待审参考图；转换 `.xcassets`、明暗变体和构建设置由 T08 负责。
-- 如确需下载权利未明确的个人研究参考，放仓库外临时目录，报告位置和权利状态；不把临时路径当可打包文件。默认优先收集可核验来源，不以大量下载为完成指标。
+- 用户已授权本地 commit；不 push、创建 PR 或公开发布；不是唯一在仓库工作的 Agent，不回滚其他人的改动。
+- 私人本机文件放 `private-local/`，不自动进入对外发布 bundle；转换 `.xcassets`、明暗变体和构建设置由 T08 负责。
+- 用户明确限定为本机私人使用时，实际下载的权利未明素材可放入 `private-local/` 并纳入本地版本控制，逐项记录来源、已知条款与权利状态；不进入对外 bundle。仅临时核验、无需保存在本机的候选放仓库外，不记为本地交付。
 
 ## 3. 检索与核验方法
 
@@ -60,6 +63,7 @@ macos/Resources/MotorsportAssets/
 | `rightsStatus` | `approved` / `needsReview` / `restricted` |
 | `downloadStatus` | `notDownloaded` / `downloadedReference` / `downloadedApproved` / `missing` |
 | `bundlePath` | 已确认许可本地文件的相对路径；待审 / 未下载为 null |
+| `useScope` / `privateLocalPath` | 私人本机文件标 `privateLocalOnly` 并记录相对路径；它与 `bundlePath` / `shippingReady` 分离 |
 | `sha256` | 已下载文件的真实 hash；未下载为 null |
 | `notes` | attribution、商标、设计年份、格式、缺失原因与下一步 |
 
@@ -80,12 +84,12 @@ macos/Resources/MotorsportAssets/
 - [ ] 当前赛季覆盖矩阵与名单基准可追溯；缺失保留，不虚构完整覆盖。
 - [ ] manifest JSON 可解析；kind + id + season 无重复；已确认 Provider ID 对应正确。
 - [ ] 头盔与头像、Logo 与照片分类正确；特殊版 / 旧赛季不冒充当前通用设计。
-- [ ] `bundlePath` 指向存在且可打包的文件；sha256 与本地文件一致。
-- [ ] 未知 / restricted 许可的素材不自动打包，required attribution 已记录。
+- [ ] 私人本机文件的 `privateLocalPath` 指向存在文件；sha256 与本地文件一致；`bundlePath` 仅用于对外已获准素材。
+- [ ] 未知 / restricted 素材仅按用户指定的本机范围保存，不进入对外发布包；来源、条款、署名和限制已记录。
 - [ ] App 无需运行时访问第三方素材 API / CDN。
 - [ ] 完成研究与未完成下载 / 权利审批分别汇报；T08 接入不在本任务完成范围。
 
-如果可打包资产为 0，也必须如实报告 0 与原因，交付可靠候选及缺失清单，状态写“研究交付，打包素材待审”，不可声称素材制作全部完成。
+对外可发布数可以为 0；在当前用户指定的私人本机范围内，这不单独阻止 T03 完成。必须实际收集并校验本机素材、如实列出缺失项，并将私用与再分发状态分开；若没有实际本机素材或缺失矩阵未完成，不可标记任务完成。
 
 ## 7. 可直接发给 Agent 的执行 prompt
 

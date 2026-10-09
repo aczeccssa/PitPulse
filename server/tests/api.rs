@@ -2,6 +2,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
+use pitpulse_server::domain::standings::{ConstructorStanding, DriverStanding};
 use pitpulse_server::{app_state::AppState, config::AppConfig, server, storage::sqlite::Database};
 use serde_json::Value;
 use tempfile::TempDir;
@@ -67,7 +68,7 @@ async fn test_bearer_token_is_enforced_when_enabled() {
     let missing = server::router(state.clone())
         .oneshot(
             Request::builder()
-                .uri("/api/v1/calendar")
+                .uri("/api/v1/standings/drivers?season=2026")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -75,10 +76,21 @@ async fn test_bearer_token_is_enforced_when_enabled() {
         .unwrap();
     assert_eq!(missing.status(), StatusCode::UNAUTHORIZED);
 
-    let authorized = server::router(state)
+    let missing_constructor = server::router(state.clone())
         .oneshot(
             Request::builder()
-                .uri("/api/v1/calendar")
+                .uri("/api/v1/standings/constructors?season=2026")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(missing_constructor.status(), StatusCode::UNAUTHORIZED);
+
+    let authorized = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/standings/constructors?season=2026")
                 .header(header::AUTHORIZATION, "Bearer test-token")
                 .body(Body::empty())
                 .unwrap(),
@@ -86,4 +98,157 @@ async fn test_bearer_token_is_enforced_when_enabled() {
         .await
         .unwrap();
     assert_eq!(authorized.status(), StatusCode::OK);
+
+    let authorized_driver = server::router(state)
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/standings/drivers?season=2026")
+                .header(header::AUTHORIZATION, "Bearer test-token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(authorized_driver.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_unknown_session_and_invalid_standings_season_are_rejected() {
+    let (state, _temp) = test_state().await;
+    let router = server::router(state);
+    let missing = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/sessions/unknown/results")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    let invalid = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/standings/drivers?season=not-a-year")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+    let invalid_zero = router
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/standings/constructors?season=0")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(invalid_zero.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_nonempty_standings_endpoints_return_snapshot_meta() {
+    let (state, _temp) = test_state().await;
+    let season = state
+        .database
+        .utc_now()
+        .await
+        .unwrap()
+        .get(..4)
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+    let fetched_at = state.database.utc_now().await.unwrap();
+    state
+        .database
+        .replace_driver_standings(vec![DriverStanding {
+            season,
+            position: 1,
+            driver_id: "leclerc".into(),
+            driver_name: "Charles Leclerc".into(),
+            constructor: "Ferrari".into(),
+            constructor_ids: vec!["ferrari".into()],
+            points: 25.0,
+            wins: 1,
+            source: "jolpica-ergast".into(),
+            fetched_at: fetched_at.clone(),
+            revision: 1,
+        }])
+        .await
+        .unwrap();
+    state
+        .database
+        .replace_constructor_standings(vec![ConstructorStanding {
+            season,
+            position: 1,
+            constructor_id: "ferrari".into(),
+            constructor_name: "Ferrari".into(),
+            points: 25.0,
+            wins: 1,
+            source: "jolpica-ergast".into(),
+            fetched_at,
+            revision: 1,
+        }])
+        .await
+        .unwrap();
+    let response = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/v1/standings/drivers?season={season}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let value: Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(value["data"][0]["driverId"], "leclerc");
+    assert_eq!(value["data"][0]["constructorIds"][0], "ferrari");
+    assert_eq!(value["meta"]["source"], "jolpica-ergast");
+    assert_eq!(value["meta"]["quality"], "provisional");
+
+    let default_season = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/standings/drivers")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(default_season.status(), StatusCode::OK);
+    let default_value: Value = serde_json::from_slice(
+        &axum::body::to_bytes(default_season.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(default_value["data"][0]["season"], season);
+
+    let constructors = server::router(state)
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/v1/standings/constructors?season={season}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(constructors.status(), StatusCode::OK);
+    let constructor_value: Value = serde_json::from_slice(
+        &axum::body::to_bytes(constructors.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(constructor_value["data"][0]["constructorId"], "ferrari");
 }

@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "timestamp": "2026-10-09T03:00:00Z"
+  },
+  "data": {
+    "code": "SR",
+    "results": [
+      {
+        "driver": {
+          "id": "driver_lc",
+          "given_name": "Charles",
+          "family_name": "Leclerc",
+          "permanent_car_number": 16,
+          "wikipedia": "http://en.wikipedia.org/wiki/Charles_Leclerc"
+        },
+        "team": {
+          "id": "team_ferrari",
+          "name": "Ferrari",
+          "wikipedia": "https://en.wikipedia.org/wiki/Scuderia_Ferrari"
+        },
+        "position": 1,
+        "position_text": "1",
+        "is_classified": true,
+        "time": "1:20.123",
+        "gap": "0.000",
+        "laps": 19,
+        "components": {},
+        "points": 8
+      }
+    ]
+  }
+}

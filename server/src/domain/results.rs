@@ -14,6 +14,16 @@ pub struct SessionResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub time: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub best_lap: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q3: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub race_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gap: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub laps: Option<i64>,

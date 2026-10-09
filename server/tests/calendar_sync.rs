@@ -154,6 +154,7 @@ async fn test_pagination_and_nullable_result_position() {
     let next = next_page(&page).unwrap();
     assert!(next.contains("offset=1"));
     assert!(next.contains("limit=1"));
+    assert!(next.contains("season=2026"));
 
     let fp1: Value =
         serde_json::from_str(include_str!("fixtures/jolpica-fp1-available.json")).unwrap();
@@ -180,7 +181,7 @@ async fn test_old_database_upgrades_and_timeout_keeps_cache() {
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 3);
+    assert_eq!(database.user_version().await.unwrap(), 4);
     database.migrate().await.unwrap();
 
     let payload: Value =
@@ -196,6 +197,9 @@ async fn test_old_database_upgrades_and_timeout_keeps_cache() {
 #[tokio::test]
 async fn test_empty_results_are_pending_not_server_error() {
     let (database, temp) = database().await;
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    sync().sync_fixture(&database, &payload).await.unwrap();
     let mut config = AppConfig::default();
     config.database.path = temp.path().join("pitpulse.sqlite");
     let state = AppState::new(config, database);

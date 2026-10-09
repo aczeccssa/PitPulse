@@ -45,15 +45,7 @@ async fn calendar(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let season = params
-        .get("season")
-        .map(|value| value.parse::<i64>())
-        .transpose()
-        .map_err(|error| ApiError::InvalidQuery {
-            field: "season".to_string(),
-            error: error.to_string(),
-        })?;
-
+    let season = parse_season(&params)?;
     let (meetings, meta) = state.database.calendar(season).await?;
     Ok(Json(json!({"data": meetings, "meta": meta})))
 }
@@ -71,6 +63,9 @@ async fn session_results(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    if !state.database.session_exists(&session_id).await? {
+        return Err(ApiError::NotFound);
+    }
     let (results, mut meta) = state.database.session_results(&session_id).await?;
     if results.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
@@ -84,7 +79,11 @@ async fn driver_standings(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
-    let (standings, meta) = state.database.driver_standings(season).await?;
+    let (standings, mut meta) = state.database.driver_standings(season).await?;
+    if standings.is_empty() {
+        meta.quality = crate::domain::quality::DataQuality::Pending;
+        meta.stale = false;
+    }
     Ok(Json(json!({"data": standings, "meta": meta})))
 }
 
@@ -93,7 +92,11 @@ async fn constructor_standings(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
-    let (standings, meta) = state.database.constructor_standings(season).await?;
+    let (standings, mut meta) = state.database.constructor_standings(season).await?;
+    if standings.is_empty() {
+        meta.quality = crate::domain::quality::DataQuality::Pending;
+        meta.stale = false;
+    }
     Ok(Json(json!({"data": standings, "meta": meta})))
 }
 
@@ -102,7 +105,7 @@ async fn live_snapshot(State(state): State<AppState>) -> Json<serde_json::Value>
 }
 
 fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiError> {
-    params
+    let season = params
         .get("season")
         .map(|value| {
             value
@@ -112,5 +115,12 @@ fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiErro
                     error: error.to_string(),
                 })
         })
-        .transpose()
+        .transpose()?;
+    if season.is_some_and(|year| !(1950..=9999).contains(&year)) {
+        return Err(ApiError::InvalidQuery {
+            field: "season".to_string(),
+            error: "season must be between 1950 and 9999".to_string(),
+        });
+    }
+    Ok(season)
 }

@@ -68,6 +68,55 @@ impl JolpicaProvider {
         .await?;
         Ok(races)
     }
+
+    pub async fn alpha_results(&self, round_id: &str, code: &str) -> Result<Value, ProviderError> {
+        let encoded = urlencoding_placeholder(round_id);
+        self.raw(&format!("/f1/alpha/results/{encoded}/{code}/"))
+            .await
+    }
+
+    pub async fn ergast_rows(
+        &self,
+        season: i64,
+        endpoint: &str,
+    ) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            &format!("/ergast/f1/{season}/{endpoint}.json"),
+            &[("limit", "100".to_string())],
+        )?;
+        let mut rows = Vec::new();
+        get_pages(&self.client, &url, |page| {
+            let collection = match endpoint {
+                "drivers" => page.pointer("/MRData/DriverTable/Drivers"),
+                "constructors" => page.pointer("/MRData/ConstructorTable/Constructors"),
+                "driverStandings" => {
+                    page.pointer("/MRData/StandingsTable/StandingsLists/0/DriverStandings")
+                }
+                "constructorStandings" => {
+                    page.pointer("/MRData/StandingsTable/StandingsLists/0/ConstructorStandings")
+                }
+                _ => None,
+            };
+            rows.extend(
+                collection
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default(),
+            );
+            Ok(())
+        })
+        .await?;
+        Ok(rows)
+    }
+}
+
+fn urlencoding_placeholder(value: &str) -> String {
+    value
+        .replace('%', "%25")
+        .replace('/', "%2F")
+        .replace('?', "%3F")
+        .replace('#', "%23")
 }
 
 pub fn decode_alpha_schedule(payload: &Value) -> Result<Vec<Meeting>, ProviderError> {
@@ -165,6 +214,7 @@ fn decode_event(event: &Value, season: Option<i64>) -> Result<Option<Meeting>, P
         id,
         season,
         round: round_number,
+        jolpica_round_id: Some(provider_round),
         name,
         country_code: country_code(
             &text(&circuit, "country_code").unwrap_or_else(|| country.clone()),
