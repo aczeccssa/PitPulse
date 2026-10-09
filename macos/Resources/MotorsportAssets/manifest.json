@@ -125,7 +125,9 @@
     "privateLocalExtraSeasonOnlyMissingIds": [
       "tsunoda"
     ],
-    "publicationStatus": "notReady"
+    "publicationStatus": "notReady",
+    "projectBundleAssets": 33,
+    "projectBundleStatus": "userAuthorizedForProject; thirdPartyRightsUnchanged"
   },
   "registryOnlyDrivers": [
     {
@@ -308,7 +310,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-gasly-2026.imageset/image.png",
+      "projectBundleSha256": "0c2e4bd17bfb654087aa05c6beea1e78577991a04e5c78af6c809009d5c2a444",
+      "projectBundleReady": true
     },
     {
       "id": "colapinto",
@@ -380,7 +391,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-colapinto-2026.imageset/image.png",
+      "projectBundleSha256": "955aa585919bb2900db476fba2c7288b571995ee811300522cea4a3680a15c3b",
+      "projectBundleReady": true
     },
     {
       "id": "alpine",
@@ -442,7 +462,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-alpine-2026.imageset/image.png",
+      "projectBundleSha256": "125bd33e5a4c84cfe486aa7688c37716c5221d4b8c7dca762d8b1a5eb620821a",
+      "projectBundleReady": true
     },
     {
       "id": "alonso",
@@ -514,7 +543,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-alonso-2026.imageset/image.png",
+      "projectBundleSha256": "36cd7816e1bddffa8bb241dab00e8420e76aac8dacbb2361fae4c78980b3f5c1",
+      "projectBundleReady": true
     },
     {
       "id": "stroll",
@@ -586,7 +624,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-stroll-2026.imageset/image.png",
+      "projectBundleSha256": "0cc5ab374a2b110620d8e1091a5254930833d10f5fd20308693bb76b343d465f",
+      "projectBundleReady": true
     },
     {
       "id": "aston_martin",
@@ -648,7 +695,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-aston_martin-2026.imageset/image.png",
+      "projectBundleSha256": "ae7ae3a62bf114ec03968a568f61fbb1cf2fbd5faecbdea52b95ac971433e3f7",
+      "projectBundleReady": true
     },
     {
       "id": "hulkenberg",
@@ -725,7 +781,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-hulkenberg-2026.imageset/image.png",
+      "projectBundleSha256": "4ab5dba8bc060302141daa6bc320b3f4030db3ab8c333b303dc08607da472951",
+      "projectBundleReady": true
     },
     {
       "id": "bortoleto",
@@ -802,7 +867,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-bortoleto-2026.imageset/image.png",
+      "projectBundleSha256": "0d54eb0862c99d8e8e4cf35537a2b5b35c4282c55feadf954d3bf4b910453b7f",
+      "projectBundleReady": true
     },
     {
       "id": "audi",
@@ -864,7 +938,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-audi-2026.imageset/image.png",
+      "projectBundleSha256": "6000ab25b6f38e2223600ceed649841fd695e41897c8b5072aeff75910285f3f",
+      "projectBundleReady": true
     },
     {
       "id": "perez",
@@ -936,7 +1019,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-perez-2026.imageset/image.png",
+      "projectBundleSha256": "d9232a2127b88420a9eaf16139c20df9db514a8fb59e8f9fa565da8a8f264079",
+      "projectBundleReady": true
     },
     {
       "id": "bottas",
@@ -1008,7 +1100,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-bottas-2026.imageset/image.png",
+      "projectBundleSha256": "d07357cffda8d5206c464c11ed69b88ce0e6cc1ccb85f387ac25ad4d7086a3fa",
+      "projectBundleReady": true
     },
     {
       "id": "cadillac",
@@ -1070,7 +1171,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-cadillac-2026.imageset/image.png",
+      "projectBundleSha256": "9a986c5fc791ffda1d6b09e15aa8e8149c3defd89d3ff295a2612e5525058794",
+      "projectBundleReady": true
     },
     {
       "id": "leclerc",
@@ -1142,7 +1252,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-leclerc-2026.imageset/image.png",
+      "projectBundleSha256": "cdb272ffceaa8ebef231142feaaaa8f0070866f816fe5dd6f67144dd02cb739d",
+      "projectBundleReady": true
     },
     {
       "id": "hamilton",
@@ -1214,7 +1333,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-hamilton-2026.imageset/image.png",
+      "projectBundleSha256": "077d03145cd3b7384fd91d003c6048c1fc49a58e768c486404dcc0b0f6b62b65",
+      "projectBundleReady": true
     },
     {
       "id": "ferrari",
@@ -1276,7 +1404,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-ferrari-2026.imageset/image.png",
+      "projectBundleSha256": "297a53f3ef19aa4f524aab9464e76ef05cf67c9cc27a554e3fb7b233c04d9953",
+      "projectBundleReady": true
     },
     {
       "id": "ocon",
@@ -1348,7 +1485,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-ocon-2026.imageset/image.png",
+      "projectBundleSha256": "2dc0669ab8fbff9283d27378c8550f68eab2a1d5e77cbd324fea7c05c8bf3313",
+      "projectBundleReady": true
     },
     {
       "id": "bearman",
@@ -1420,7 +1566,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-bearman-2026.imageset/image.png",
+      "projectBundleSha256": "0b9c8d8de54fd51cee14bc8c9e1a2b1ff4cccfef39a9c0eff336b8b114ed742d",
+      "projectBundleReady": true
     },
     {
       "id": "haas",
@@ -1501,7 +1656,16 @@
         "viewBox": "0 0 199.3864487 182.5550803",
         "detectedMimeSource": "file --mime-type; XML signature parsed",
         "httpContentType": null
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-haas-2026.imageset/image.png",
+      "projectBundleSha256": "0ad4bf805226d529010dabfdbcc7c6ff212a78def0a63b3754cec4a398987e6c",
+      "projectBundleReady": true
     },
     {
       "id": "norris",
@@ -1578,7 +1742,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-norris-2026.imageset/image.png",
+      "projectBundleSha256": "740980cb8b3bd8d491eabf492c7ea860db40eb5e7ebb47ac4b143bfafc7ec002",
+      "projectBundleReady": true
     },
     {
       "id": "piastri",
@@ -1672,7 +1845,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-piastri-2026.imageset/image.png",
+      "projectBundleSha256": "c7864c84fbbdc037197c5086e969b5395fcc9a9c702fffb0bbd0e7ca10e314a2",
+      "projectBundleReady": true
     },
     {
       "id": "mclaren",
@@ -1734,7 +1916,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-mclaren-2026.imageset/image.png",
+      "projectBundleSha256": "664d2aa1d4e99a6ded1eec4fb626e7923f7ecc5a8996f7bce938495351da489a",
+      "projectBundleReady": true
     },
     {
       "id": "russell",
@@ -1823,7 +2014,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-russell-2026.imageset/image.png",
+      "projectBundleSha256": "97f8d8308a3e45c6e01d52046463dae47afa753b15ad6305400fc76c411b35af",
+      "projectBundleReady": true
     },
     {
       "id": "antonelli",
@@ -1895,7 +2095,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-antonelli-2026.imageset/image.png",
+      "projectBundleSha256": "9d649db9690d97c3aae3de288d1a06bbf66690893c17243def70fb81dd935f59",
+      "projectBundleReady": true
     },
     {
       "id": "mercedes",
@@ -1957,7 +2166,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-mercedes-2026.imageset/image.png",
+      "projectBundleSha256": "90857fb0dfa71adc9c4fed2eedd36771775f98a7c63443445e89114636a740e1",
+      "projectBundleReady": true
     },
     {
       "id": "lawson",
@@ -2031,7 +2249,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-lawson-2026.imageset/image.png",
+      "projectBundleSha256": "8418b68b3029e943d93c05cd1512e2df2d57a81e8525a9f6062916f43ac5d92f",
+      "projectBundleReady": true
     },
     {
       "id": "arvid_lindblad",
@@ -2103,7 +2330,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-arvid_lindblad-2026.imageset/image.png",
+      "projectBundleSha256": "bf702e30169c709313239a18a3c3d4e5ef552ad81dcb42b9e2ba63af81cef7df",
+      "projectBundleReady": true
     },
     {
       "id": "rb",
@@ -2165,7 +2401,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-rb-2026.imageset/image.png",
+      "projectBundleSha256": "f6fa45712657798685dd4beb4f1dfbc525788fc5f26ad33f5c0d9fb98ce60ae2",
+      "projectBundleReady": true
     },
     {
       "id": "max_verstappen",
@@ -2289,7 +2534,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-max_verstappen-2026.imageset/image.png",
+      "projectBundleSha256": "479989b64a031399093e04448cd262f632a030f973c2fa4c36bc8cb8817e58ec",
+      "projectBundleReady": true
     },
     {
       "id": "hadjar",
@@ -2361,7 +2615,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-hadjar-2026.imageset/image.png",
+      "projectBundleSha256": "3b4b045cdc08837f8c497a7b3bf0b19d5b9643c96b4dfe4164a8247659e0f8f0",
+      "projectBundleReady": true
     },
     {
       "id": "red_bull",
@@ -2423,7 +2686,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/webp"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-red_bull-2026.imageset/image.png",
+      "projectBundleSha256": "451430990b851e39603732fff54b6f73220866edd7f7c3ef5281247e52dffaf5",
+      "projectBundleReady": true
     },
     {
       "id": "albon",
@@ -2500,7 +2772,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-albon-2026.imageset/image.png",
+      "projectBundleSha256": "a96e4791998fdb3cd3e322186e7c6a54d17edd3ee6a6ee82ceb3b1c3fe6122a7",
+      "projectBundleReady": true
     },
     {
       "id": "sainz",
@@ -2572,7 +2853,16 @@
         "dimensionUnit": "pixels",
         "detectedMimeSource": "file --mime-type; image bytes decoded by Pillow",
         "httpContentType": "image/png"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/helmet-sainz-2026.imageset/image.png",
+      "projectBundleSha256": "076665e7c9180ae12aefc7295ea3b14a3d291d18b36f1155ffca78b02ee3d0b2",
+      "projectBundleReady": true
     },
     {
       "id": "williams",
@@ -2672,7 +2962,16 @@
         "viewBox": "0 0 78 17",
         "detectedMimeSource": "file --mime-type; XML signature parsed",
         "httpContentType": "image/svg+xml"
-      }
+      },
+      "projectUseAuthorization": {
+        "authorizedBy": "user",
+        "scope": "PitPulse app bundle",
+        "authorizedAt": "2026-10-09T08:01:56Z",
+        "note": "User authorized project use and packaging; does not change third-party copyright, trademark, or redistribution rights."
+      },
+      "projectBundlePath": "Resources/PitPulseAssets.xcassets/team-logo-williams-2026.imageset/image.png",
+      "projectBundleSha256": "a4d917b77e8cea0d42fa90123fdb81ecfbe15e47ee204afc4fa597d1cc4a9710",
+      "projectBundleReady": true
     },
     {
       "id": "tsunoda",
@@ -4489,7 +4788,19 @@
     "extraSeasonOnlyMissingIds": [
       "tsunoda"
     ],
-    "extraSeasonOnlyFallback": "driver abbreviation and team text"
+    "extraSeasonOnlyFallback": "driver abbreviation and team text",
+    "projectBundleAuthorizationScope": "privateLocalOnly",
+    "projectBundlePathCount": 33,
+    "projectBundleReadyCount": 33,
+    "projectBundleCountsByKind": {
+      "helmet": 22,
+      "teamLogo": 11
+    },
+    "projectBundleNotes": [
+      "The user authorized these local-only PitPulse app bundle outputs; per-file third-party rightsStatus and publication readiness remain unchanged.",
+      "The project bundle contains 22 helmet images and 11 team logos. The six editorial photo references are excluded.",
+      "Public distribution readiness remains not ready; bundle authorization is not rights-holder permission."
+    ]
   },
   "privateLocalDownloads": [
     {

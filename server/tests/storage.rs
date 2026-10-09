@@ -20,6 +20,111 @@ async fn test_database_migrates_and_answers_health_query() {
 }
 
 #[tokio::test]
+async fn test_sync_deadline_and_identity_cache_survive_database_reopen() {
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("sync-state.sqlite");
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    database
+        .sync_begin(
+            "jolpica-alpha",
+            "results-2026:1:race",
+            "2026-10-09T08:00:00Z",
+        )
+        .await
+        .unwrap();
+    database
+        .sync_failed(
+            "jolpica-alpha",
+            "results-2026:1:race",
+            "2026-10-09T08:00:01Z",
+            "2026-10-09T08:03:01Z",
+            "provider returned HTTP 429",
+            Some("estimated_end=startTime+2h; probe_only"),
+        )
+        .await
+        .unwrap();
+    database
+        .save_identity_cache(
+            2026,
+            &[serde_json::json!({"driverId":"leclerc"})],
+            &[serde_json::json!({"constructorId":"ferrari"})],
+            "2026-10-09T08:00:00Z",
+        )
+        .await
+        .unwrap();
+    drop(database);
+
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    let status = database
+        .sync_status("jolpica-alpha", "results-2026:1:race")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(status.retry_count, 1);
+    assert_eq!(
+        status.last_error.as_deref(),
+        Some("provider returned HTTP 429")
+    );
+    assert_eq!(
+        status.next_retry_at.as_deref(),
+        Some("2026-10-09T08:03:01Z")
+    );
+    assert_eq!(
+        status.schedule_note.as_deref(),
+        Some("estimated_end=startTime+2h; probe_only")
+    );
+    let (drivers, constructors) = database.identity_cache(2026).await.unwrap().unwrap();
+    assert_eq!(drivers[0]["driverId"], "leclerc");
+    assert_eq!(constructors[0]["constructorId"], "ferrari");
+}
+
+#[tokio::test]
+async fn test_calendar_revision_hash_ignores_fetch_metadata_and_tracks_schedule_content() {
+    let temp = TempDir::new().unwrap();
+    let database = Database::open(&temp.path().join("calendar-hash.sqlite"))
+        .await
+        .unwrap();
+    database.migrate().await.unwrap();
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    let mut meetings = decode_alpha_schedule(&payload).unwrap();
+    database
+        .replace_calendar(&meetings, "2026-10-09T00:00:00Z")
+        .await
+        .unwrap();
+    let (_, first_meta) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(first_meta.revision, 1);
+
+    meetings[0].fetched_at = Some("2026-10-09T01:00:00Z".into());
+    meetings[0].source_updated_at = Some("2026-10-09T01:00:00Z".into());
+    database
+        .replace_calendar(&meetings, "2026-10-09T01:00:00Z")
+        .await
+        .unwrap();
+    let (_, unchanged_meta) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(unchanged_meta.revision, 1);
+
+    meetings[0].sessions.reverse();
+    meetings[0].name.push_str(" corrected");
+    database
+        .replace_calendar(&meetings, "2026-10-09T02:00:00Z")
+        .await
+        .unwrap();
+    let (_, changed_meta) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(changed_meta.revision, 2);
+
+    meetings[0].source = Some("openf1".into());
+    database
+        .replace_calendar(&meetings, "2026-10-09T03:00:00Z")
+        .await
+        .unwrap();
+    let (_, source_meta) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(source_meta.revision, 3);
+}
+
+#[tokio::test]
 async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_fields() {
     let temp = TempDir::new().unwrap();
     let path = temp.path().join("version-three.sqlite");
@@ -49,7 +154,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 4);
+    assert_eq!(database.user_version().await.unwrap(), 5);
     let (rows, meta) = database.session_results("2026:1:race").await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].revision, 7);

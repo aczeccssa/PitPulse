@@ -7,7 +7,7 @@ use pitpulse_server::{
     domain::calendar::{Meeting, MeetingStatus, Session, SessionStatus, SessionType},
     providers::{jolpica::JolpicaProvider, openf1::OpenF1Provider},
     server,
-    services::results_sync::ResultsSync,
+    services::results_sync::{ResultsSync, SyncOutcome},
     storage::sqlite::Database,
 };
 use serde_json::{Value, json};
@@ -50,7 +50,7 @@ async fn mock_openf1_drivers() -> Json<Value> {
 }
 
 #[tokio::test]
-async fn test_startup_sync_fetches_and_serves_results_and_both_standings() {
+async fn test_split_sync_targets_fetch_and_preserve_results_and_both_standings() {
     let app = Router::new()
         .route("/ergast/f1/2026/drivers.json", get(mock_drivers))
         .route("/ergast/f1/2026/constructors.json", get(mock_constructors))
@@ -116,11 +116,42 @@ async fn test_startup_sync_fetches_and_serves_results_and_both_standings() {
         openf1: OpenF1Provider::with_base_url(reqwest::Client::new(), &base),
         timeout: Duration::from_secs(2),
     };
-    sync.sync_startup(&database, 2026).await;
+    let identities = sync.load_identity_maps_once(&database, 2026).await.unwrap();
+    assert!(
+        sync.sync_driver_standings_once(&database, 2026, &identities)
+            .await
+            .unwrap()
+    );
+    assert!(
+        sync.sync_constructor_standings_once(&database, 2026, &identities)
+            .await
+            .unwrap()
+    );
+    let (meetings, _) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(
+        sync.sync_session_once(
+            &database,
+            &meetings[0],
+            &meetings[0].sessions[0],
+            &identities
+        )
+        .await
+        .unwrap(),
+        SyncOutcome::Stored { retry_after: None }
+    );
     let (cached_results, results_meta) = database.session_results("2026:1:race").await.unwrap();
     let (_, driver_meta) = database.driver_standings(Some(2026)).await.unwrap();
     upstream.abort();
-    sync.sync_startup(&database, 2026).await;
+    assert!(
+        sync.sync_session_once(
+            &database,
+            &meetings[0],
+            &meetings[0].sessions[0],
+            &identities
+        )
+        .await
+        .is_err()
+    );
     let (after_failure, after_failure_meta) =
         database.session_results("2026:1:race").await.unwrap();
     let (_, after_driver_meta) = database.driver_standings(Some(2026)).await.unwrap();

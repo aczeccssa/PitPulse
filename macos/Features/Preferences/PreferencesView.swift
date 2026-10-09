@@ -44,6 +44,46 @@ struct PreferencesView: View {
                 }
             }
 
+            Section("本地提醒") {
+                Toggle("开启 Session 提醒", isOn: Binding(
+                    get: { model.remindersEnabled },
+                    set: { enabled in Task { await model.setRemindersEnabled(enabled) } }
+                ))
+                Text("PitPulse 会在每个 Session 开始前提醒你。开启时 macOS 会请求通知权限；默认提前 15 分钟。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("提前时间", selection: Binding(
+                    get: { model.reminderMinutes },
+                    set: { minutes in Task { await model.setReminderMinutes(minutes) } }
+                )) {
+                    ForEach(SessionReminderPlanner.allowedMinutes, id: \.self) { minutes in
+                        Text("\(minutes) 分钟").tag(minutes)
+                    }
+                }
+                .disabled(!model.remindersEnabled)
+                if let message = model.reminderMessage {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                }
+                if model.reminderPermissionDenied {
+                    Button("打开通知系统设置") { model.openNotificationSettings() }
+                }
+            }
+
+            Section("关注车手") {
+                Picker("车手", selection: Binding(
+                    get: { model.favoriteDriverId ?? "" },
+                    set: { model.setFavoriteDriver($0.isEmpty ? nil : $0) }
+                )) {
+                    Text("不关注").tag("")
+                    ForEach(model.favoriteDrivers) { driver in
+                        Text(driver.name).tag(driver.id)
+                    }
+                }
+                Text("按稳定车手 ID 保存；车队变更不会改变关注对象。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("连接与缓存") {
                 HStack {
                     Button("测试连接") {

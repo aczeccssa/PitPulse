@@ -11,6 +11,14 @@ struct CachedCalendar: Codable, Sendable {
     let envelope: APIEnvelope<[Meeting]>
 }
 
+private struct CachedEndpoint<Value: Codable & Sendable>: Codable, Sendable {
+    let cacheVersion: Int
+    let serverIdentity: String
+    let season: Int
+    let savedAt: Date
+    let envelope: APIEnvelope<Value>
+}
+
 actor DiskCalendarCache {
     private let rootURL: URL
     private let fileManager: FileManager
@@ -73,6 +81,55 @@ actor DiskCalendarCache {
         try data.write(to: url, options: [.atomic])
     }
 
+    func load<Value: Codable & Sendable>(
+        server: URL,
+        season: Int,
+        key: String,
+        as: Value.Type
+    ) throws -> APIEnvelope<Value>? {
+        let url = endpointURL(server: server, season: season, key: key)
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let cached = try decoder.decode(CachedEndpoint<Value>.self, from: Data(contentsOf: url))
+            guard cached.cacheVersion == CachedCalendar.currentVersion,
+                  cached.serverIdentity == normalizedIdentity(server),
+                  cached.season == season,
+                  cached.envelope.meta.schemaVersion == APIClient.supportedSchemaVersion
+            else {
+                try? fileManager.removeItem(at: url)
+                return nil
+            }
+            return cached.envelope
+        } catch {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+    }
+
+    func save<Value: Codable & Sendable>(
+        server: URL,
+        season: Int,
+        key: String,
+        envelope: APIEnvelope<Value>
+    ) throws {
+        let cached = CachedEndpoint(
+            cacheVersion: CachedCalendar.currentVersion,
+            serverIdentity: normalizedIdentity(server),
+            season: season,
+            savedAt: Date(),
+            envelope: envelope
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(cached)
+        let url = endpointURL(server: server, season: season, key: key)
+        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url, options: [.atomic])
+    }
+
     func clear(server: URL) throws {
         let directory = serverDirectory(server: server)
         guard fileManager.fileExists(atPath: directory.path) else { return }
@@ -87,6 +144,10 @@ actor DiskCalendarCache {
         rootURL
             .appendingPathComponent("v\(CachedCalendar.currentVersion)", isDirectory: true)
             .appendingPathComponent(hash(normalizedIdentity(server)), isDirectory: true)
+    }
+
+    private func endpointURL(server: URL, season: Int, key: String) -> URL {
+        serverDirectory(server: server).appendingPathComponent("\(season)-\(hash(key)).json")
     }
 
     private func normalizedIdentity(_ server: URL) -> String {

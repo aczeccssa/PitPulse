@@ -1,0 +1,28 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "00006000-001C78EC3E21801E",
+        "deviceName" : "My Mac",
+        "exportedFileName" : "E094FA22-71D4-416C-AC0F-A1F01C428B4F.png",
+        "isAssociatedWithFailure" : false,
+        "repetitionNumber" : 1,
+        "suggestedHumanReadableName" : "T08 MenuBar driver standings connected to loopback fixture_0_2515E572-25FD-457F-A2DD-A3EAF9031D3B.png",
+        "timestamp" : 1791553153.98
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "00006000-001C78EC3E21801E",
+        "deviceName" : "My Mac",
+        "exportedFileName" : "AE8BD07B-00F4-4773-81ED-8A515A9555E2.png",
+        "isAssociatedWithFailure" : false,
+        "repetitionNumber" : 1,
+        "suggestedHumanReadableName" : "T08 MenuBar race results connected to loopback fixture_0_8C1E0F0E-7291-4D54-B6E5-8F92B182B307.png",
+        "timestamp" : 1791553152.156
+      }
+    ],
+    "testIdentifier" : "MenuBarAcceptanceTests/testMenuBarStatusItemOpensLiveFixturePopup()",
+    "testIdentifierURL" : "test://com.apple.xcode/F1Companion/F1CompanionUITests/MenuBarAcceptanceTests/testMenuBarStatusItemOpensLiveFixturePopup"
+  }
+]

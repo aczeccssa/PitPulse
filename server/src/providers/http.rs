@@ -100,6 +100,10 @@ async fn request_once<T: DeserializeOwned>(client: &Client, url: &str) -> Result
         })
 }
 
+pub async fn get_json_once(client: &Client, url: &str) -> Result<Value, ProviderError> {
+    request_once(client, url).await
+}
+
 pub fn with_query(
     base: &str,
     path: &str,
@@ -165,6 +169,25 @@ pub async fn get_pages(
     let mut url = first_url.to_string();
     for _ in 0..8 {
         let page = get_json(client, &url).await?;
+        collect(&page)?;
+        match next_page(&page) {
+            Some(next) if next != url => url = next,
+            _ => return Ok(()),
+        }
+    }
+    Err(ProviderError::Pagination {
+        url: first_url.to_string(),
+    })
+}
+
+pub async fn get_pages_once(
+    client: &Client,
+    first_url: &str,
+    mut collect: impl FnMut(&Value) -> Result<(), ProviderError>,
+) -> Result<(), ProviderError> {
+    let mut url = first_url.to_string();
+    for _ in 0..8 {
+        let page = get_json_once(client, &url).await?;
         collect(&page)?;
         match next_page(&page) {
             Some(next) if next != url => url = next,
@@ -246,6 +269,88 @@ mod tests {
         assert_eq!(result["ok"], true);
         assert_eq!(calls.load(Ordering::SeqCst), 2);
         assert!(started.elapsed() >= Duration::from_millis(250));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_single_request_preserves_429_retry_after_without_retrying() {
+        async fn limited(State(calls): State<Arc<AtomicUsize>>) -> axum::response::Response {
+            calls.fetch_add(1, Ordering::SeqCst);
+            (
+                StatusCode::TOO_MANY_REQUESTS,
+                [(reqwest::header::RETRY_AFTER, "75")],
+            )
+                .into_response()
+        }
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let app = Router::new()
+            .route("/limited", get(limited))
+            .with_state(calls.clone());
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let error = get_json_once(&Client::new(), &format!("http://{address}/limited"))
+            .await
+            .unwrap_err();
+        match error {
+            ProviderError::Http {
+                status,
+                retry_after,
+                ..
+            } => {
+                assert_eq!(status, 429);
+                assert_eq!(retry_after, Some(Duration::from_secs(75)));
+            }
+            error => panic!("expected HTTP 429, got {error}"),
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_single_request_preserves_5xx_for_scheduler_backoff() {
+        async fn unavailable() -> axum::response::Response {
+            StatusCode::SERVICE_UNAVAILABLE.into_response()
+        }
+
+        let app = Router::new().route("/unavailable", get(unavailable));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let error = get_json_once(&Client::new(), &format!("http://{address}/unavailable"))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, ProviderError::Http { status: 503, .. }));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn test_single_request_returns_timeout_for_scheduler_backoff() {
+        async fn delayed() -> Json<Value> {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            Json(serde_json::json!({"ok": true}))
+        }
+
+        let app = Router::new().route("/slow", get(delayed));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let client = Client::builder()
+            .timeout(Duration::from_millis(10))
+            .build()
+            .unwrap();
+        let error = get_json_once(&client, &format!("http://{address}/slow"))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, ProviderError::Transport { .. }));
         server.abort();
     }
 }

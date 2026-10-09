@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>PitPulse · 任务状态</title>
+  <link rel="stylesheet" href="board.css">
+  <script type="module" src="board.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#task-board">跳转到任务卡</a>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="PitPulse 任务看板"><span class="brand-mark" aria-hidden="true">✳</span>PitPulse<span class="brand-caption">项目空间</span></a>
+    <div class="header-right"><span class="read-only">只读状态报告</span><a href="tasks.json">查看 JSON ↗</a></div>
+  </header>
+  <main>
+    <section class="heading" aria-labelledby="page-title">
+      <div><p class="eyebrow">工作空间 / 任务看板</p><h1 id="page-title">项目任务</h1><p id="project-description">正在读取任务数据…</p></div>
+      <div class="sync-panel"><div><p id="updated-at">等待加载</p><p id="load-clock" class="clock-label">—</p></div><button id="refresh" type="button">刷新数据 <span aria-hidden="true">↻</span></button></div>
+    </section>
+    <div id="load-error" class="error-panel" role="alert" hidden></div>
+    <p id="load-status" class="sr-only" role="status" aria-live="polite">正在读取任务数据</p>
+    <noscript><p class="error-panel">此任务看板需要 JavaScript 才能读取 tasks.json。也可直接打开 JSON 查看任务。</p></noscript>
+    <div id="workspace" hidden>
+      <section class="overview" aria-label="任务统计">
+        <div class="completion"><p class="metric-label">整体交付</p><div><strong id="completion-value">0%</strong><span id="completion-count">0 / 0 完成</span></div><div class="progress-track" aria-hidden="true"><div id="completion-bar"></div></div></div>
+        <div class="metric"><span class="metric-label">全部任务</span><strong id="total-count">0</strong></div>
+        <div class="metric"><span class="metric-label">推进中<span class="dot progress-dot"></span></span><strong id="active-count">0</strong></div>
+        <div class="metric"><span class="metric-label">待开始</span><strong id="pending-count">0</strong></div>
+        <div class="metric"><span class="metric-label">受阻</span><strong id="blocked-count">0</strong></div>
+      </section>
+      <section class="roadmap" aria-labelledby="roadmap-heading"><div class="section-heading"><h2 id="roadmap-heading">交付路线</h2><span>V1 优先 · Live 不阻塞主线</span></div><div id="milestones" class="milestones"></div></section>
+      <section id="task-board" class="task-section" aria-labelledby="board-heading">
+        <div class="section-heading"><h2 id="board-heading">任务卡 <span id="visible-count" class="count-badge">0</span></h2><div id="source-links" class="document-links"></div></div>
+        <div class="toolbar">
+          <div id="status-tabs" class="status-tabs" role="group" aria-label="按任务状态筛选"></div>
+          <div class="filter-controls"><label class="search-box"><span class="sr-only">搜索任务</span><input id="search" type="search" placeholder="搜索任务、ID、关键词" autocomplete="off"></label><label><span class="sr-only">按里程碑筛选</span><select id="milestone-filter"><option value="all">全部里程碑</option></select></label><button id="clear-filters" class="text-button" type="button" hidden>重置</button></div>
+        </div>
+        <div id="task-list" class="task-grid"></div>
+        <div id="empty-state" class="empty-state" hidden><strong>没有匹配的任务</strong><p>试试其他关键词，或重置筛选条件。</p><button id="reset-empty" type="button">重置筛选</button></div>
+      </section>
+      <aside class="maintenance-note"><span class="note-label">维护约定</span><p>任务开始、进度变化、验收或完成时更新 <code>docs/tasks/tasks.json</code>。页面不保存状态，刷新即读取最新数据；完成率只统计已完成任务。</p></aside>
+    </div>
+  </main>
+  <div id="task-modal" class="modal-backdrop" hidden><section class="task-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-header"><div class="modal-heading"><span id="modal-id" class="task-id"></span><h2 id="modal-title"></h2><span id="modal-status" class="status-badge"></span></div><button id="modal-close" type="button" aria-label="关闭任务详情"><span aria-hidden="true">×</span></button></div><div id="modal-body" class="modal-body"></div><div class="modal-footer"><span id="modal-meta"></span><button id="modal-dismiss" type="button">关闭</button></div></section></div>
+  <footer><span>PitPulse / F1 Companion</span><span>单一数据源 <a href="tasks.json">tasks.json</a> · <span id="footer-date">—</span></span></footer>
+</body>
+</html>

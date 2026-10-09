@@ -1,10 +1,14 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+    sync::Arc,
+};
 
 use rusqlite::{Connection, OptionalExtension};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::{
-    api::dto::Meta,
+    api::dto::{Meta, SyncStatus},
     domain::{
         calendar::{Meeting, MeetingStatus, Session, SessionStatus, SessionType},
         quality::DataQuality,
@@ -18,6 +22,22 @@ const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
 const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
 const MIGRATION_0003: &str = include_str!("migrations/0003_nullable_meeting_round.sql");
 const MIGRATION_0004: &str = include_str!("migrations/0004_results.sql");
+const MIGRATION_0005: &str = include_str!("migrations/0005_sync_schedule.sql");
+
+struct SyncStateUpdate<'a> {
+    provider: &'a str,
+    endpoint: &'a str,
+    now: &'a str,
+    next: &'a str,
+    note: Option<&'a str>,
+    outcome: SyncStateOutcome<'a>,
+}
+
+enum SyncStateOutcome<'a> {
+    Succeeded,
+    Empty,
+    Failed(&'a str),
+}
 
 #[derive(Clone)]
 pub struct Database {
@@ -57,6 +77,171 @@ impl Database {
             Ok::<_, rusqlite::Error>(())
         })
         .await??;
+        Ok(())
+    }
+
+    pub async fn sync_status(
+        &self,
+        provider: &str,
+        endpoint: &str,
+    ) -> Result<Option<SyncStatus>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let (provider, endpoint) = (provider.to_string(), endpoint.to_string());
+        Ok(spawn_blocking(move || {
+            connection.blocking_lock().query_row(
+                "SELECT last_attempt_at,last_success_at,next_retry_at,last_error,retry_count,schedule_note FROM sync_state WHERE provider=?1 AND endpoint=?2",
+                rusqlite::params![provider, endpoint],
+                |row| Ok(SyncStatus {
+                    last_attempt_at: row.get(0)?, last_success_at: row.get(1)?, next_retry_at: row.get(2)?,
+                    last_error: row.get(3)?, retry_count: row.get::<_, i64>(4)?.max(0) as u32, schedule_note: row.get(5)?,
+                }),
+            ).optional()
+        }).await??)
+    }
+
+    pub async fn save_identity_cache(
+        &self,
+        season: i64,
+        drivers: &[serde_json::Value],
+        constructors: &[serde_json::Value],
+        fetched_at: &str,
+    ) -> Result<(), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let drivers = serde_json::to_string(drivers).unwrap_or_else(|_| "[]".to_string());
+        let constructors = serde_json::to_string(constructors).unwrap_or_else(|_| "[]".to_string());
+        let fetched_at = fetched_at.to_string();
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO provider_identity_cache(season,drivers_json,constructors_json,fetched_at) VALUES(?1,?2,?3,?4) ON CONFLICT(season) DO UPDATE SET drivers_json=excluded.drivers_json,constructors_json=excluded.constructors_json,fetched_at=excluded.fetched_at",
+                rusqlite::params![season, drivers, constructors, fetched_at],
+            )?;
+            Ok::<_, rusqlite::Error>(())
+        }).await??;
+        Ok(())
+    }
+
+    pub async fn identity_cache(
+        &self,
+        season: i64,
+    ) -> Result<Option<(Vec<serde_json::Value>, Vec<serde_json::Value>)>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            connection.query_row(
+                "SELECT drivers_json,constructors_json FROM provider_identity_cache WHERE season=?1",
+                [season],
+                |row| {
+                    let drivers: String = row.get(0)?;
+                    let constructors: String = row.get(1)?;
+                    Ok((
+                        serde_json::from_str(&drivers).unwrap_or_default(),
+                        serde_json::from_str(&constructors).unwrap_or_default(),
+                    ))
+                },
+            ).optional()
+        }).await??)
+    }
+
+    pub async fn sync_begin(
+        &self,
+        provider: &str,
+        endpoint: &str,
+        now: &str,
+    ) -> Result<(), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let (provider, endpoint, now) =
+            (provider.to_string(), endpoint.to_string(), now.to_string());
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO sync_state(provider,endpoint,last_attempt_at) VALUES(?1,?2,?3) ON CONFLICT(provider,endpoint) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,next_retry_at=NULL,schedule_note=NULL",
+                rusqlite::params![provider,endpoint,now],
+            )?;
+            Ok::<_, rusqlite::Error>(())
+        }).await??;
+        Ok(())
+    }
+
+    pub async fn sync_succeeded(
+        &self,
+        provider: &str,
+        endpoint: &str,
+        now: &str,
+        next: &str,
+        note: Option<&str>,
+    ) -> Result<(), StorageError> {
+        self.update_sync_state(SyncStateUpdate {
+            provider,
+            endpoint,
+            now,
+            next,
+            note,
+            outcome: SyncStateOutcome::Succeeded,
+        })
+        .await
+    }
+
+    pub async fn sync_empty(
+        &self,
+        provider: &str,
+        endpoint: &str,
+        now: &str,
+        next: &str,
+        note: Option<&str>,
+    ) -> Result<(), StorageError> {
+        self.update_sync_state(SyncStateUpdate {
+            provider,
+            endpoint,
+            now,
+            next,
+            note,
+            outcome: SyncStateOutcome::Empty,
+        })
+        .await
+    }
+
+    pub async fn sync_failed(
+        &self,
+        provider: &str,
+        endpoint: &str,
+        now: &str,
+        next: &str,
+        error: &str,
+        note: Option<&str>,
+    ) -> Result<(), StorageError> {
+        self.update_sync_state(SyncStateUpdate {
+            provider,
+            endpoint,
+            now,
+            next,
+            note,
+            outcome: SyncStateOutcome::Failed(error),
+        })
+        .await
+    }
+
+    async fn update_sync_state(&self, update: SyncStateUpdate<'_>) -> Result<(), StorageError> {
+        let (success, error, reset_retries, increment_retries) = match update.outcome {
+            SyncStateOutcome::Succeeded => (Some(update.now), None, true, false),
+            SyncStateOutcome::Empty => (Some(update.now), None, false, true),
+            SyncStateOutcome::Failed(error) => (None, Some(error), false, true),
+        };
+        let connection = Arc::clone(&self.connection);
+        let values = (
+            update.provider.to_string(),
+            update.endpoint.to_string(),
+            update.now.to_string(),
+            success.map(str::to_string),
+            update.next.to_string(),
+            error.map(str::to_string),
+            update.note.map(str::to_string),
+        );
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO sync_state(provider,endpoint,last_success_at,last_attempt_at,next_retry_at,last_error,retry_count,schedule_note) VALUES(?1,?2,?4,?3,?5,?6,CASE WHEN ?7 THEN 0 WHEN ?8 THEN 1 ELSE 0 END,?9) ON CONFLICT(provider,endpoint) DO UPDATE SET last_success_at=COALESCE(excluded.last_success_at,sync_state.last_success_at),last_attempt_at=excluded.last_attempt_at,next_retry_at=excluded.next_retry_at,last_error=excluded.last_error,retry_count=CASE WHEN ?7 THEN 0 WHEN ?8 THEN sync_state.retry_count+1 ELSE sync_state.retry_count END,schedule_note=excluded.schedule_note",
+                rusqlite::params![values.0,values.1,values.2,values.3,values.4,values.5,reset_retries,increment_retries,values.6],
+            )?;
+            Ok::<_, rusqlite::Error>(())
+        }).await??;
         Ok(())
     }
 
@@ -512,6 +697,7 @@ fn meta_from_snapshot(
         source: Some(source),
         fetched_at: Some(fetched_at),
         source_updated_at,
+        sync_status: None,
     }
 }
 
@@ -655,7 +841,8 @@ fn next_meeting_at(
 
 fn calendar_meta(connection: &Connection, season: Option<i64>) -> Result<Meta, rusqlite::Error> {
     connection.query_row(
-        "SELECT source, MAX(fetched_at), MAX(revision), \
+        "SELECT source, MAX(fetched_at), COALESCE( \
+                    (SELECT MAX(revision) FROM calendar_snapshots WHERE (?1 IS NULL OR season = ?1)), MAX(revision)), \
                 COALESCE(julianday('now') - julianday(MIN(fetched_at)) > 0.25, 1) \
          FROM meetings WHERE (?1 IS NULL OR season = ?1)",
         [season],
@@ -695,6 +882,11 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         connection.execute_batch(MIGRATION_0004)?;
         connection.execute_batch("PRAGMA user_version = 4;")?;
     }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 5 {
+        connection.execute_batch(MIGRATION_0005)?;
+        connection.execute_batch("PRAGMA user_version = 5;")?;
+    }
     Ok(())
 }
 
@@ -705,27 +897,73 @@ fn upsert_calendar(
 ) -> Result<u64, rusqlite::Error> {
     let tx = connection.unchecked_transaction()?;
     let mut max_revision = 0_u64;
+    let mut changed_seasons = BTreeSet::new();
+    let mut previous_revisions = BTreeMap::new();
     for meeting in meetings {
+        if let std::collections::btree_map::Entry::Vacant(entry) =
+            previous_revisions.entry(meeting.season)
+        {
+            let revision = tx.query_row(
+                "SELECT COALESCE(MAX(revision),0) FROM meetings WHERE season=?1",
+                [meeting.season],
+                |row| row.get::<_, i64>(0),
+            )?;
+            entry.insert(revision);
+        }
+    }
+    for meeting in meetings {
+        let source = meeting.source.as_deref().unwrap_or("jolpica-alpha");
         let existing = tx.query_row(
-            "SELECT start_date, end_date, status, revision FROM meetings WHERE id = ?1",
+            "SELECT season,round,name,country,country_code,location,start_date,end_date,status,source,jolpica_round_id,revision FROM meetings WHERE id = ?1",
             [&meeting.id],
             |row| {
                 Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(0)?, row.get::<_, Option<i64>>(1)?,
+                    row.get::<_, String>(2)?, row.get::<_, String>(3)?,
+                    row.get::<_, Option<String>>(4)?, row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?, row.get::<_, String>(7)?,
+                    row.get::<_, String>(8)?, row.get::<_, String>(9)?,
+                    row.get::<_, Option<String>>(10)?, row.get::<_, i64>(11)?,
                 ))
             },
         );
         let revision = match existing {
-            Ok((start, end, status, revision)) => {
-                let changed = start != meeting.start_date
+            Ok((
+                season,
+                round,
+                name,
+                country,
+                country_code,
+                location,
+                start,
+                end,
+                status,
+                old_source,
+                round_id,
+                revision,
+            )) => {
+                let changed = season != meeting.season
+                    || round != meeting.round
+                    || name != meeting.name
+                    || country != meeting.country
+                    || country_code != meeting.country_code
+                    || location != meeting.location
+                    || start != meeting.start_date
                     || end != meeting.end_date
-                    || status != meeting.status.as_str();
-                if changed { revision + 1 } else { revision }
+                    || status != meeting.status.as_str()
+                    || old_source != source
+                    || round_id != meeting.jolpica_round_id;
+                if changed {
+                    changed_seasons.insert(meeting.season);
+                    revision + 1
+                } else {
+                    revision
+                }
             }
-            Err(rusqlite::Error::QueryReturnedNoRows) => 1,
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                changed_seasons.insert(meeting.season);
+                1
+            }
             Err(error) => return Err(error),
         };
         max_revision = max_revision.max(revision as u64);
@@ -733,7 +971,7 @@ fn upsert_calendar(
             "INSERT INTO meetings (id, season, round, name, country, country_code, location, start_date, end_date, status, source, source_updated_at, fetched_at, revision, jolpica_round_id, openf1_meeting_key) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
              ON CONFLICT(id) DO UPDATE SET season=excluded.season, round=excluded.round, name=excluded.name, country=excluded.country, country_code=excluded.country_code, location=excluded.location, start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, source=excluded.source, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_round_id=excluded.jolpica_round_id, openf1_meeting_key=excluded.openf1_meeting_key",
-            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), meeting.source.clone().unwrap_or_else(|| "jolpica-alpha".to_string()), meeting.source_updated_at, fetched_at, revision, meeting.jolpica_round_id, None::<i64>],
+            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), source, meeting.source_updated_at, fetched_at, revision, meeting.jolpica_round_id, None::<i64>],
         )?;
         if let Some(round_id) = &meeting.jolpica_round_id {
             insert_mapping(&tx, "jolpica-alpha", round_id, Some(&meeting.id), None)?;
@@ -742,25 +980,46 @@ fn upsert_calendar(
         for session in &meeting.sessions {
             seen.push(session.id.clone());
             let existing_session = tx.query_row(
-                "SELECT start_time, end_time, status, revision FROM sessions WHERE id = ?1",
+                "SELECT session_type,start_time,end_time,status,source,provider_session_id,openf1_session_key,revision FROM sessions WHERE id = ?1",
                 [&session.id],
                 |row| {
                     Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, Option<String>>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, i64>(3)?,
+                        row.get::<_, String>(0)?, row.get::<_, String>(1)?,
+                        row.get::<_, Option<String>>(2)?, row.get::<_, String>(3)?,
+                        row.get::<_, String>(4)?, row.get::<_, Option<String>>(5)?,
+                        row.get::<_, Option<i64>>(6)?, row.get::<_, i64>(7)?,
                     ))
                 },
             );
             let session_revision = match existing_session {
-                Ok((start, end, status, revision)) => {
-                    let changed = start != session.start_time
+                Ok((
+                    session_type,
+                    start,
+                    end,
+                    status,
+                    old_source,
+                    provider_id,
+                    openf1_key,
+                    revision,
+                )) => {
+                    let changed = session_type != session.session_type.as_str()
+                        || start != session.start_time
                         || end != session.end_time
-                        || status != session.status.as_str();
-                    if changed { revision + 1 } else { revision }
+                        || status != session.status.as_str()
+                        || old_source != source
+                        || provider_id != session.jolpica_session_id
+                        || openf1_key != session.openf1_session_key;
+                    if changed {
+                        changed_seasons.insert(meeting.season);
+                        revision + 1
+                    } else {
+                        revision
+                    }
                 }
-                Err(rusqlite::Error::QueryReturnedNoRows) => 1,
+                Err(rusqlite::Error::QueryReturnedNoRows) => {
+                    changed_seasons.insert(meeting.season);
+                    1
+                }
                 Err(error) => return Err(error),
             };
             tx.execute(
@@ -797,11 +1056,86 @@ fn upsert_calendar(
             for id in &seen {
                 params.push(id);
             }
-            tx.execute(&sql, params.as_slice())?;
+            if tx.execute(&sql, params.as_slice())? > 0 {
+                changed_seasons.insert(meeting.season);
+            }
         }
+    }
+    let mut by_season = BTreeMap::<i64, Vec<&Meeting>>::new();
+    for meeting in meetings {
+        by_season.entry(meeting.season).or_default().push(meeting);
+    }
+    for (season, meetings) in by_season {
+        let hash = stable_calendar_hash(&meetings);
+        let old = tx
+            .query_row(
+                "SELECT content_hash,revision FROM calendar_snapshots WHERE season=?1",
+                [season],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
+            )
+            .optional()?;
+        let legacy_revision = previous_revisions.get(&season).copied().unwrap_or(0);
+        let revision = match old {
+            Some((previous_hash, revision)) if previous_hash == hash => revision,
+            Some((_, revision)) => revision + 1,
+            None if legacy_revision == 0 => 1,
+            None => legacy_revision + i64::from(changed_seasons.contains(&season)),
+        };
+        tx.execute(
+            "INSERT INTO calendar_snapshots(season,content_hash,revision) VALUES(?1,?2,?3) ON CONFLICT(season) DO UPDATE SET content_hash=excluded.content_hash,revision=excluded.revision",
+            rusqlite::params![season, hash, revision],
+        )?;
+        max_revision = max_revision.max(revision.max(0) as u64);
     }
     tx.commit()?;
     Ok(max_revision)
+}
+
+fn stable_calendar_hash(meetings: &[&Meeting]) -> String {
+    let mut content = meetings
+        .iter()
+        .map(|meeting| {
+            let mut sessions = meeting
+                .sessions
+                .iter()
+                .map(|session| {
+                    serde_json::json!({
+                        "id": session.id,
+                        "type": session.session_type.as_str(),
+                        "start": session.start_time,
+                        "end": session.end_time,
+                        "status": session.status.as_str(),
+                        "jolpicaSessionId": session.jolpica_session_id,
+                        "openF1SessionKey": session.openf1_session_key,
+                    })
+                })
+                .collect::<Vec<_>>();
+            sessions.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+            serde_json::json!({
+                "id": meeting.id,
+                "season": meeting.season,
+                "round": meeting.round,
+                "name": meeting.name,
+                "country": meeting.country,
+                "countryCode": meeting.country_code,
+                "location": meeting.location,
+                "start": meeting.start_date,
+                "end": meeting.end_date,
+                "status": meeting.status.as_str(),
+                "source": meeting.source.as_deref().unwrap_or("jolpica-alpha"),
+                "jolpicaRoundId": meeting.jolpica_round_id,
+                "sessions": sessions,
+            })
+        })
+        .collect::<Vec<_>>();
+    content.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+    let bytes = serde_json::to_vec(&content).unwrap_or_default();
+    let hash = bytes
+        .into_iter()
+        .fold(0xcbf29ce484222325_u64, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3)
+        });
+    format!("{hash:016x}")
 }
 
 fn insert_mapping(

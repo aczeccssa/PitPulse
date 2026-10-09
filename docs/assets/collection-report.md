@@ -383,3 +383,8 @@ git diff --check -- docs/assets macos/Resources/MotorsportAssets
 2. `macos/Resources/MotorsportAssets/manifest.json`
 
 源代码构建/测试不适用于这两个研究文件；业务、SwiftUI 及图片实际接入未完成，不应报作本任务成果。
+
+
+## T08 项目内图集授权记录（2026-10-09）
+
+用户授权将当前 33 个 2026 单盔与车队 Logo 参考文件用于 PitPulse 项目并打包进 macOS App。源文件仍保留于私用素材目录；另生成 33 个本地 PNG asset catalog 项，并在 manifest 记录项目使用范围、输出路径及 SHA-256。六份专题照片未作为默认单盔。该项目授权不改变各素材项原有的 `rightsStatus`、`license`、`shippingReady`、商标状态或其第三方来源核验结论；它不代表权利人授予公开再分发权。`shippingReadyFiles` 保持 0，项目内 bundle readiness 与公开发布许可分别记录。

@@ -37,6 +37,33 @@ actor APIClient {
         )
     }
 
+    func sessionResults(sessionId: String, token: String?) async throws -> APIEnvelope<[SessionResult]> {
+        try await envelope(
+            [SessionResult].self,
+            path: "/api/v1/sessions/\(sessionId)/results",
+            queryItems: [],
+            token: token
+        )
+    }
+
+    func driverStandings(season: Int, token: String?) async throws -> APIEnvelope<[DriverStanding]> {
+        try await envelope(
+            [DriverStanding].self,
+            path: "/api/v1/standings/drivers",
+            queryItems: [URLQueryItem(name: "season", value: String(season))],
+            token: token
+        )
+    }
+
+    func constructorStandings(season: Int, token: String?) async throws -> APIEnvelope<[ConstructorStanding]> {
+        try await envelope(
+            [ConstructorStanding].self,
+            path: "/api/v1/standings/constructors",
+            queryItems: [URLQueryItem(name: "season", value: String(season))],
+            token: token
+        )
+    }
+
     private func envelope<Value: Codable & Sendable>(
         _ type: Value.Type,
         path: String,

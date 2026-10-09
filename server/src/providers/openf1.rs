@@ -11,7 +11,7 @@ use crate::{
         quality::ProviderAvailability,
     },
     error::ProviderError,
-    providers::http::{get_json_with_min_interval, shared_client, with_query},
+    providers::http::{get_json_once, get_json_with_min_interval, shared_client, with_query},
 };
 
 pub const SOURCE: &str = "openf1";
@@ -57,6 +57,18 @@ impl OpenF1Provider {
         .await
     }
 
+    async fn request_once(&self, url: &str) -> Result<Value, ProviderError> {
+        let mut last = self.last_request.lock().await;
+        if let Some(previous) = *last {
+            let remaining = Duration::from_millis(350).saturating_sub(previous.elapsed());
+            if !remaining.is_zero() {
+                tokio::time::sleep(remaining).await;
+            }
+        }
+        *last = Some(tokio::time::Instant::now());
+        get_json_once(&self.client, url).await
+    }
+
     pub async fn meetings(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
         let url = with_query(
             &self.base_url,
@@ -65,6 +77,21 @@ impl OpenF1Provider {
         )?;
         let payload = self.request(&url).await?;
         payload
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: "meetings".to_string(),
+            })
+    }
+
+    pub async fn meetings_once(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            "/v1/meetings",
+            &[("year", season.to_string())],
+        )?;
+        self.request_once(&url)
+            .await?
             .as_array()
             .cloned()
             .ok_or_else(|| ProviderError::MissingField {
@@ -87,6 +114,21 @@ impl OpenF1Provider {
             })
     }
 
+    pub async fn sessions_once(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            "/v1/sessions",
+            &[("year", season.to_string())],
+        )?;
+        self.request_once(&url)
+            .await?
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: "sessions".to_string(),
+            })
+    }
+
     pub async fn session_result(&self, session_key: i64) -> Result<Vec<Value>, ProviderError> {
         let url = with_query(
             &self.base_url,
@@ -102,6 +144,21 @@ impl OpenF1Provider {
             })
     }
 
+    pub async fn session_result_once(&self, session_key: i64) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            "/v1/session_result",
+            &[("session_key", session_key.to_string())],
+        )?;
+        self.request_once(&url)
+            .await?
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: "session_result".to_string(),
+            })
+    }
+
     pub async fn drivers(&self, session_key: i64) -> Result<Vec<Value>, ProviderError> {
         let url = with_query(
             &self.base_url,
@@ -110,6 +167,21 @@ impl OpenF1Provider {
         )?;
         let payload = self.request(&url).await?;
         payload
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: "drivers".to_string(),
+            })
+    }
+
+    pub async fn drivers_once(&self, session_key: i64) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            "/v1/drivers",
+            &[("session_key", session_key.to_string())],
+        )?;
+        self.request_once(&url)
+            .await?
             .as_array()
             .cloned()
             .ok_or_else(|| ProviderError::MissingField {

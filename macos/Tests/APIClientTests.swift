@@ -35,6 +35,35 @@ final class APIClientTests: XCTestCase {
         XCTAssertNil(response.data)
     }
 
+    func testResultsAndStandingsEndpointsDecodeRealPayloadShapes() async throws {
+        URLProtocolStub.handler = { request in
+            let body: String
+            let requestPath = request.url.flatMap {
+                URLComponents(url: $0, resolvingAgainstBaseURL: false)?.percentEncodedPath
+            }
+            switch requestPath {
+            case "/api/v1/sessions/2026:1:race/results":
+                body = #"{"data":[{"sessionId":"2026:1:race","position":1,"classification":"classified","driverId":"norris","driverName":"Lando Norris","constructorId":"mclaren","team":"McLaren","bestLap":"1:20.000","source":"jolpica-alpha","sourceUpdatedAt":null,"fetchedAt":"2026-03-08T00:00:00Z","revision":2,"quality":"provisional"}],"meta":{"schemaVersion":1,"revision":2,"stale":false,"quality":"provisional","source":"jolpica-alpha","fetchedAt":"2026-03-08T00:00:00Z","sourceUpdatedAt":null}}"#
+            case "/api/v1/standings/drivers":
+                XCTAssertTrue(request.url?.query?.contains("season=2026") == true)
+                body = #"{"data":[{"season":2026,"position":1,"driverId":"norris","driverName":"Lando Norris","constructor":"McLaren","constructorIds":["mclaren"],"points":25.0,"wins":1,"source":"jolpica-ergast","fetchedAt":"2026-03-08T00:00:00Z","revision":1}],"meta":{"schemaVersion":1,"revision":1,"stale":false,"quality":"provisional"}}"#
+            default:
+                XCTAssertEqual(request.url?.path, "/api/v1/standings/constructors")
+                body = #"{"data":[{"season":2026,"position":1,"constructorId":"mclaren","constructorName":"McLaren","points":43.0,"wins":1,"source":"jolpica-ergast","fetchedAt":"2026-03-08T00:00:00Z","revision":1}],"meta":{"schemaVersion":1,"revision":1,"stale":false,"quality":"provisional"}}"#
+            }
+            return Self.response(for: request, body: body)
+        }
+
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        let results = try await client.sessionResults(sessionId: "2026:1:race", token: nil)
+        let drivers = try await client.driverStandings(season: 2026, token: nil)
+        let constructors = try await client.constructorStandings(season: 2026, token: nil)
+        XCTAssertEqual(results.data.first?.bestLap, "1:20.000")
+        XCTAssertNil(results.data.first?.q1)
+        XCTAssertEqual(drivers.data.first?.constructorIds, ["mclaren"])
+        XCTAssertEqual(constructors.data.first?.points, 43)
+    }
+
     func testUnauthorizedIsNotRetriedAsTransportFailure() async {
         var requestCount = 0
         URLProtocolStub.handler = { request in

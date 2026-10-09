@@ -55,6 +55,42 @@ async fn test_calendar_returns_stale_empty_meta() {
     assert_eq!(value["data"], serde_json::json!([]));
     assert_eq!(value["meta"]["schemaVersion"], 1);
     assert_eq!(value["meta"]["stale"], true);
+    assert!(value["meta"].get("syncStatus").is_none());
+}
+
+#[tokio::test]
+async fn test_calendar_meta_includes_persisted_sync_status_when_available() {
+    let (state, _temp) = test_state().await;
+    state
+        .database
+        .sync_failed(
+            "jolpica-alpha",
+            "calendar-2026",
+            "2026-10-09T08:00:00Z",
+            "2026-10-09T08:05:00Z",
+            "provider returned HTTP 429",
+            None,
+        )
+        .await
+        .unwrap();
+    let response = server::router(state)
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/calendar?season=2026")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(value["meta"]["syncStatus"]["retryCount"], 1);
+    assert_eq!(
+        value["meta"]["syncStatus"]["nextRetryAt"],
+        "2026-10-09T08:05:00Z"
+    );
 }
 
 #[tokio::test]

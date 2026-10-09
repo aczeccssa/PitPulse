@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-09T06:08:46Z",
+  "updatedAt": "2026-10-09T14:07:34Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -1307,8 +1307,8 @@
       "priority": "P0",
       "milestone": "M2",
       "area": "macOS",
-      "status": "pending",
-      "summary": "完成成绩与积分 UI；素材缺失使用明确 fallback，不阻塞功能。",
+      "status": "done",
+      "summary": "成绩 / 积分与素材验收通过：真实 MenuBarExtra UI 测试覆盖正常、缺素材、旧赛季、未分类、缺圈数和处罚更正，并保存 5 张实际 Popup 截图。先前锁屏／普通窗口枚举被误报为 blocker；当前复跑的负坐标问题记录为 UI 自动化环境限制。",
       "dependencies": [
         "T05",
         "T07"
@@ -1327,29 +1327,253 @@
         {
           "id": "T08-A1",
           "text": "正常 / 缺图 / 旧赛季 / 未分类 / 缺圈速 / 处罚后更正 UI 测试和截图。",
-          "done": false
+          "done": true
         },
         {
           "id": "T08-A2",
           "text": "无第三方素材联网请求。",
-          "done": false
+          "done": true
         },
         {
           "id": "T08-A3",
           "text": "研究清单与实际 bundle 对照。",
-          "done": false
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "成绩页",
+          "path": "macos/Features/SessionResults/SessionResultsView.swift"
+        },
+        {
+          "label": "积分页",
+          "path": "macos/Features/Standings/StandingsView.swift"
+        },
+        {
+          "label": "本地素材目录",
+          "path": "macos/Resources/PitPulseAssets.xcassets/Contents.json"
+        },
+        {
+          "label": "授权与输出哈希清单",
+          "path": "macos/Resources/MotorsportAssets/manifest.json"
+        },
+        {
+          "label": "T08 成绩 / 积分验收记录",
+          "path": "docs/acceptance/t08-results-standings.md"
+        },
+        {
+          "label": "MenuBarExtra UI 场景截图与附件清单",
+          "path": "docs/acceptance/assets/t08-menu-bar-20261009-ui/manifest.json"
+        },
+        {
+          "label": "独立 MenuBar UI 验收 scheme",
+          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "REST 模型与图集映射测试",
+          "path": "macos/Tests/APIClientTests.swift",
+          "detail": "成绩、WDC、WCC endpoints decode 非空契约；稳定素材 ID 映射测试通过。"
+        },
+        {
+          "label": "Xcode build/test",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 0。"
+        },
+        {
+          "label": "App 资源目录核对",
+          "path": "macos/Resources/MotorsportAssets/manifest.json",
+          "detail": "manifest 33 项 projectBundleReady 均输出 SHA-256 匹配；Xcode Assets.car 含 33 个 helmet/team-logo 名称；素材加载仅 NSImage(named:) 本地读取，无第三方资源 URL。"
+        },
+        {
+          "label": "手工窗口截图状态",
+          "detail": "xcodebuild build/test 通过；macOS Screenshot Helper 报告 no matching windows found，MenuBarExtra 无可捕获窗口，T08-A1 保持未验收。"
+        },
+        {
+          "label": "Mac revision / 缓存 / 资产验收",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "47 项 Xcode 测试通过；含赛季与服务器旧响应丢弃、失败保留最后成功数据、revision 1→2 更新及重复 revision。33 项输出 hash 与 Assets.car 逐项核对。手工 UI 截图和 VoiceOver 仍未验收。"
+        },
+        {
+          "label": "隔离 App 界面工具复试",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "以独立 Bundle ID 构建隔离 App 后，Computer Use getApp 两次超时，应用未出现在可访问应用列表；Popup 截图和 VoiceOver 实机证据仍缺。"
+        },
+        {
+          "label": "Developer ID 签名与 Popup 可访问性复试",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "独立 bundle Developer ID Application 签名 build 与 codesign --verify 通过；进程已启动，但 Computer Use getApp 超时，MenuBarExtra 未进入可访问应用／AX 窗口列表，仍无截图或 VoiceOver 记录。"
+        },
+        {
+          "label": "本轮独立验收重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
+        },
+        {
+          "label": "Xcode 全套单独重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
+        },
+        {
+          "label": "Keychain 失败用例隔离复跑",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "xcodebuild 定向运行 AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 通过（exit 0）；该用例在完整 suite 中失败，初步指向先前用例遗留的异步请求与全局 URLProtocolStub.handler 交叉。"
+        },
+        {
+          "label": "隔离 Keychain 错误 mock",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "将断言限定到该用例的唯一 loopback 主机并统计该主机请求；其他用例迟到的全局 URLProtocolStub 请求不再误触发本用例的 XCTFail。"
+        },
+        {
+          "label": "当前 macOS 全套回归",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
+        },
+        {
+          "label": "本轮界面工具状态",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "Computer Use 返回 Mac 已锁定且无法自动解锁；无法打开 MenuBarExtra Popup。界面截图、选择／滚动／刷新操作和 VoiceOver 实机验收继续未完成。"
+        },
+        {
+          "label": "本轮素材文件与 App bundle 对照",
+          "path": "macos/Resources/MotorsportAssets/manifest.json",
+          "detail": "独立校验 33 项 projectBundleReady 文件 SHA-256 均匹配，当前构建 Assets.car 含 33/33 对应资源名；结果／积分图片加载代码无第三方 URL。"
+        },
+        {
+          "label": "真实 MenuBarExtra UI 测试与五张截图",
+          "path": "docs/acceptance/assets/t08-menu-bar-20261009-ui/manifest.json",
+          "detail": "XCUITest 真实点击状态栏项并通过 1/1；成绩、积分、2025 旧赛季 fallback、缺素材／未分类／无圈数及处罚更正 revision 3 均有 Popup 截图，manifest 记录测试标识和附件。"
+        },
+        {
+          "label": "MenuBarExtra 正确调试路径与复跑限制",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "LSUIElement agent 不提供普通主窗口；正确入口为 app.statusItems / app.dialogs。当前复跑 AX 坐标 x=-3948，当前屏幕从 x=0 开始，失败发生在 Popup 展开前；不是产品内容断言失败。"
+        },
+        {
+          "label": "完整单元回归与 UI scheme 分离",
+          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1Companion.xcscheme",
+          "detail": "默认 F1Companion scheme 全量 56 passed、0 failed；状态栏几何依赖的 UI acceptance 保留在独立 F1CompanionUITests scheme。"
+        },
+        {
+          "label": "独立 UI scheme 可构建",
+          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme",
+          "detail": "xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1CompanionUITests -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing 退出码 0；该 scheme 专用于真实状态栏 Popup UI acceptance。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "完成成绩与积分 UI；素材缺失使用明确 fallback，不阻塞功能。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "无；后续状态栏 UI 复验使用独立 F1CompanionUITests scheme。",
+      "updatedAt": "2026-10-09T14:07:34Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-09T07:58:03Z",
+          "status": "inProgress",
+          "note": "开始按 implementation-sequence.md 实施 T08；本地素材按用户授权进入项目 bundle，来源和权利事实保留。"
+        },
+        {
+          "at": "2026-10-09T08:06:28Z",
+          "status": "inProgress",
+          "note": "T08 页面、endpoint 模型、缓存、33 项本地 asset catalog 与 bundle 映射已交付；Xcode build/test 通过，等待 UI 场景截图验收。"
+        },
+        {
+          "at": "2026-10-09T08:09:43Z",
+          "status": "inReview",
+          "note": "代码、API、缓存与图集 build/test 已通过，Assets.car 与清单 33 项逐一匹配；截图 helper 未发现 Menu Bar 窗口，A1 保持待验收。"
+        },
+        {
+          "at": "2026-10-09T08:37:07Z",
+          "status": "inProgress",
+          "note": "补上弹窗显示期间的 15 分钟 REST 轮询与关闭取消；新增 AppModel 成绩 revision 更新、失败保留成功快照和轮询停止测试，截图验收边界仍保留。"
+        },
+        {
+          "at": "2026-10-09T08:37:39Z",
+          "status": "inProgress",
+          "note": "修正弹窗刷新间隔默认参数的 Swift 编译约束，重新运行 Xcode 完整测试。"
+        },
+        {
+          "at": "2026-10-09T08:40:53Z",
+          "status": "inProgress",
+          "note": "补上系统唤醒通知后重新读取日历，以及日历刷新失败时仍独立刷新已选成绩/积分；运行最终 Xcode 回归。"
+        },
+        {
+          "at": "2026-10-09T08:43:31Z",
+          "status": "inProgress",
+          "note": "完善 manifest 的项目 bundle 数量与本地授权范围汇总；新增旧赛季晚到成绩响应不能覆盖新赛季的回归测试。"
+        },
+        {
+          "at": "2026-10-09T08:44:15Z",
+          "status": "inReview",
+          "note": "T08 自动测试、bundle/hash 核对和独立验收记录完成；窗口工具找不到 MenuBarExtra，故 A1 截图与 VoiceOver 保持未验收，不标 done。"
+        },
+        {
+          "at": "2026-10-09T08:45:52Z",
+          "status": "inReview",
+          "note": "最终验证通过；将不可捕获 MenuBarExtra 的 T08-A1 截图与 VoiceOver 实机验收记录为明确 blocker，保持 inReview。"
+        },
+        {
+          "at": "2026-10-09T09:43:01Z",
+          "status": "inReview",
+          "note": "再次尝试隔离 MenuBarExtra App 运行验收；界面工具超时且无可访问窗口，T08-A1 截图与 VoiceOver blocker 保持。"
+        },
+        {
+          "at": "2026-10-09T09:50:21Z",
+          "status": "inReview",
+          "note": "补试 Developer ID 签名的隔离 App；签名验证成功，但 Popup 仍无法被界面工具枚举，T08-A1 不变。"
+        },
+        {
+          "at": "2026-10-09T09:58:20Z",
+          "status": "inReview",
+          "note": "开始本轮独立验收；先复核既有实现、测试和运行边界，不继承历史结论为本轮通过。"
+        },
+        {
+          "at": "2026-10-09T09:59:41Z",
+          "status": "inReview",
+          "note": "独立重跑发现 macOS 全套测试失败于 transient backoff 用例；Rust 50 项与 fmt 通过，记录阻塞并继续定位。"
+        },
+        {
+          "at": "2026-10-09T12:57:44Z",
+          "status": "inReview",
+          "note": "单独重跑 Xcode 全套测试 55/56 通过，Keychain 错误路径触发 mock 禁止请求断言；仍有失败，继续查根因。"
+        },
+        {
+          "at": "2026-10-09T12:59:16Z",
+          "status": "inReview",
+          "note": "定向 Keychain 失败用例单独通过；完整 suite 失败具有测试间异步 mock 交叉迹象，正在以隔离用例确认根因并修复验收稳定性。"
+        },
+        {
+          "at": "2026-10-09T12:59:37Z",
+          "status": "inReview",
+          "note": "修正 Keychain 错误用例与 URLProtocolStub 全局处理器的跨用例交叉：唯一 server host 只统计本用例请求，当前尚待全套回归。"
+        },
+        {
+          "at": "2026-10-09T13:00:33Z",
+          "status": "inReview",
+          "note": "修正跨用例迟到 URLProtocolStub 请求造成的误报后，Xcode 全套 56/56 通过；清除该临时测试阻塞，保留未完成的本机 UI／系统交互边界。"
+        },
+        {
+          "at": "2026-10-09T13:03:07Z",
+          "status": "inReview",
+          "note": "本轮 Xcode 56/56 通过；Computer Use 明确报告本机锁定，真实 Popup／系统交互部分仍未验收。"
+        },
+        {
+          "at": "2026-10-09T13:03:52Z",
+          "status": "inReview",
+          "note": "重核 T08 素材与资源 bundle：33/33 输出 hash 匹配，Assets.car 含全 33 个名称，未发现图片加载器的第三方 URL；A1 Popup/VoiceOver 仍受锁屏阻塞。"
+        },
+        {
+          "at": "2026-10-09T14:05:55Z",
+          "status": "done",
+          "note": "真实 MenuBarExtra XCUITest 1/1 通过并保存五张场景截图，A1-A3 全部满足；查明此前锁屏／普通窗口枚举不是产品 blocker，当前负坐标只影响 UI test 复跑。"
+        },
+        {
+          "at": "2026-10-09T14:07:34Z",
+          "status": "done",
+          "note": "独立 F1CompanionUITests scheme build-for-testing 通过；验收文档补入固定 loopback 端口和可复跑命令。"
         }
       ]
     },
@@ -1359,8 +1583,8 @@
       "priority": "P0",
       "milestone": "M2",
       "area": "Backend",
-      "status": "pending",
-      "summary": "实现自动同步、退避、结果修订与重启恢复。",
+      "status": "done",
+      "summary": "统一 Tokio 调度、持久退避、业务 revision 去重及 Mac Popup 周期/唤醒 REST 更新通过本地自动化验收；真实赛后 Provider 时效单独记录且未作达标声明。",
       "dependencies": [
         "T02",
         "T07"
@@ -1378,29 +1602,126 @@
         {
           "id": "T09-A1",
           "text": "可注入时钟 + 本地 mock Provider 测试调度、限流、重启续跑、并发单飞、失败回滚和结果修订。",
-          "done": false
+          "done": true
         },
         {
           "id": "T09-A2",
           "text": "不等待真实 6 小时跑测试。",
-          "done": false
+          "done": true
         },
         {
           "id": "T09-A3",
           "text": "真实 Provider 时效另外记账。",
-          "done": false
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "统一调度与持久退避",
+          "path": "server/src/scheduler.rs"
+        },
+        {
+          "label": "增量调度状态迁移",
+          "path": "server/src/storage/migrations/0005_sync_schedule.sql"
+        },
+        {
+          "label": "API 同步状态 meta",
+          "path": "server/src/api/dto.rs"
+        },
+        {
+          "label": "单次 Provider 调用",
+          "path": "server/src/providers/http.rs"
+        },
+        {
+          "label": "T09 调度 / revision 验收记录",
+          "path": "docs/acceptance/t09-scheduler.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Rust 单元与集成测试",
+          "path": "server/tests/storage.rs",
+          "detail": "cargo test --manifest-path server/Cargo.toml 全绿；覆盖重启恢复 retry deadline、sync 状态、身份缓存、session 修订去重、赛历内容 revision。"
+        },
+        {
+          "label": "单次限流请求",
+          "path": "server/src/providers/http.rs",
+          "detail": "本地 mock 确认 429 Retry-After 75 秒原样保留且只发一次请求；HTTP-date 解析和 timeout 回退有测试。"
+        },
+        {
+          "label": "调度边界与 jitter",
+          "path": "server/src/scheduler.rs",
+          "detail": "注入固定 UTC 时间与 jitter 覆盖结束时间估算、午夜、24/72 小时检查及 2/4/5 分钟与 6 小时退避。"
+        },
+        {
+          "label": "真实 scheduler mock",
+          "path": "server/src/scheduler.rs",
+          "detail": "单轮扫描 mock 赛历中的所有已结束 Session；请求最大并发为 1，空结果 retryCount 增加且设置后续时间，紧接的第二轮没有提前重抓。"
+        },
+        {
+          "label": "最终质量门禁与 Mac 刷新",
+          "path": "docs/acceptance/t09-scheduler.md",
+          "detail": "Rust fmt、50 项 Rust tests、严格 Clippy、release build 通过；Xcode 47 tests、任务 validator 和 8 项数据测试通过。周期刷新、关闭取消、唤醒、旧赛季响应丢弃均有 mock 覆盖。"
+        },
+        {
+          "label": "真实 Provider 时效单独记账",
+          "path": "docs/acceptance/t09-scheduler.md",
+          "detail": "关联 T07 历史真实 Provider 样本并注明无结束时刻到首次可读连续观测，未声称真实赛后分钟级达标；满足与 mock 结果分离记账。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "实现自动同步、退避、结果修订与重启恢复。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "下一次真实 Session 结束后，单独记录结束时间、Provider 首次可读时间与后续修订；不影响已完成的本地调度验收。",
+      "updatedAt": "2026-10-09T08:44:15Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-09T08:09:43Z",
+          "status": "inProgress",
+          "note": "开始 T09，先完成调度状态持久化和可重复退避策略。"
+        },
+        {
+          "at": "2026-10-09T08:18:31Z",
+          "status": "inProgress",
+          "note": "统一调度、重试状态迁移、可恢复身份映射缓存和 REST syncStatus 已实现；cargo check 通过，继续补限流、重启和 revision 验收。"
+        },
+        {
+          "at": "2026-10-09T08:24:50Z",
+          "status": "inProgress",
+          "note": "单次 429/timeout、重启持久状态、revision 去重与调度边界测试全部通过；继续运行 clippy/release/Xcode 门禁并记录验收边界。"
+        },
+        {
+          "at": "2026-10-09T08:34:26Z",
+          "status": "inProgress",
+          "note": "真实 sync_cycle 本地 mock 验证 Session 单飞和 no-result deadline；UTC 时钟边界、取消与 backoff 注入测试通过，进入最终门禁和验收记录阶段。"
+        },
+        {
+          "at": "2026-10-09T08:37:07Z",
+          "status": "inProgress",
+          "note": "实现 Popup 生命周期内的 15 分钟 REST 刷新并在关闭时取消；新增自动成绩 revision 更新与失败回滚覆盖，运行 Xcode 回归验证。"
+        },
+        {
+          "at": "2026-10-09T08:37:39Z",
+          "status": "inProgress",
+          "note": "修正弹窗刷新间隔默认参数的 Swift 编译约束，重新运行 Xcode 完整测试。"
+        },
+        {
+          "at": "2026-10-09T08:40:53Z",
+          "status": "inProgress",
+          "note": "补上系统唤醒通知后重新读取日历，以及日历刷新失败时仍独立刷新已选成绩/积分；运行最终 Xcode 回归。"
+        },
+        {
+          "at": "2026-10-09T08:43:31Z",
+          "status": "inProgress",
+          "note": "T08/T09 验收记录和 manifest 状态汇总已补齐；重跑 Xcode 全套测试确认季节切换晚到成绩、周期刷新关闭取消及唤醒路径。"
+        },
+        {
+          "at": "2026-10-09T08:44:15Z",
+          "status": "done",
+          "note": "可注入调度、HTTP 限流、持久续跑、单飞、取消、失败回滚、revision 与 Mac 周期/唤醒刷新验收通过；真实 Provider 赛后时效如实单独留账。"
         }
       ]
     },
@@ -1410,8 +1731,8 @@
       "priority": "P1",
       "milestone": "M2",
       "area": "macOS",
-      "status": "pending",
-      "summary": "完善本地提醒、离线状态、睡眠与唤醒恢复。",
+      "status": "done",
+      "summary": "按 implementation-sequence.md 两项标准验收通过：56 项 macOS 测试覆盖提醒时间／DST／改期与取消／拒绝权限／睡眠唤醒和网络恢复，离线赛历、成绩、WDC、WCC 可读。真实系统通知投递与物理生命周期未作运行级观察，已单列边界。",
       "dependencies": [
         "T06",
         "T08",
@@ -1429,24 +1750,168 @@
         {
           "id": "T10-A1",
           "text": "时间变更、跨时区、重复刷新、权限拒绝、睡眠 / 唤醒与网络切换有测试 / 本机记录。",
-          "done": false
+          "done": true
         },
         {
           "id": "T10-A2",
           "text": "离线可查看赛历、成绩和积分。",
-          "done": false
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "Session 提醒与 UTC 计划器",
+          "path": "macos/Core/Notifications/SessionReminderCoordinator.swift"
+        },
+        {
+          "label": "网络路径恢复监听",
+          "path": "macos/Core/Network/NetworkPathMonitor.swift"
+        },
+        {
+          "label": "T10 提醒与恢复验收记录",
+          "path": "docs/acceptance/t10-reminders.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "macOS 自动化测试",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "xcodebuild test 55 passed、0 failed；覆盖提醒授权／拒绝、DST UTC 触发、去重、并发刷新、改期／取消、服务器／赛季 ID、安排失败重试、离线缓存、退避、401、429、睡眠取消与唤醒网络恢复单飞。"
+        },
+        {
+          "label": "离线数据页缓存",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "离线冷启动读取赛历、成绩、WDC、WCC；网络恢复后重新请求并连接成功。"
+        },
+        {
+          "label": "T10 行为与运行边界",
+          "path": "docs/acceptance/t10-reminders.md",
+          "detail": "自动测试结果及 signed UserNotifications、实际系统睡眠／NWPathMonitor 尚未验证的边界均已记录。"
+        },
+        {
+          "label": "最终 macOS 回归与断网竞态",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "最新 xcodebuild test 56 passed、0 failed；覆盖断网期间晚到成功响应保持 offline、401 不触发额外成绩／积分请求、可注入退避序列。"
+        },
+        {
+          "label": "隔离 Developer ID 签名构建",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "独立 bundle 的 Developer ID Application build 退出码 0 且 codesign --verify --deep --strict 通过；未取得可操作 Popup，因此不作为通知／生命周期运行验收。"
+        },
+        {
+          "label": "本轮独立验收重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
+        },
+        {
+          "label": "Xcode 全套单独重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
+        },
+        {
+          "label": "Keychain 失败用例隔离复跑",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "xcodebuild 定向运行 AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 通过（exit 0）；该用例在完整 suite 中失败，初步指向先前用例遗留的异步请求与全局 URLProtocolStub.handler 交叉。"
+        },
+        {
+          "label": "隔离 Keychain 错误 mock",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "将断言限定到该用例的唯一 loopback 主机并统计该主机请求；其他用例迟到的全局 URLProtocolStub 请求不再误触发本用例的 XCTFail。"
+        },
+        {
+          "label": "当前 macOS 全套回归",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
+        },
+        {
+          "label": "本轮系统交互状态",
+          "path": "docs/acceptance/t10-reminders.md",
+          "detail": "Computer Use 返回 Mac 已锁定且无法自动解锁；真实 UNUserNotificationCenter 授权／投递及可交互 App 的睡眠、唤醒和网络切换未能实测。"
+        },
+        {
+          "label": "按明定验收标准完成 T10 复核",
+          "path": "docs/acceptance/t10-reminders.md",
+          "detail": "56/56 Xcode tests 逐项覆盖 T10-A1 所列测试条件；离线四类页面与网络恢复覆盖 T10-A2。真实 UNUserNotificationCenter 投递、物理睡眠／网络切换保持为明确的运行级未验证边界，不混同为已实测。"
+        },
+        {
+          "label": "默认 scheme 最终 56 项回归",
+          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1Companion.xcscheme",
+          "detail": "2026-10-09 完整 xcodebuild test 56 passed、0 failed（MacBook Pro arm64 / macOS 26.5）；真实 UNUserNotificationCenter 投递和物理睡眠仍单独保留为运行级边界。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "完善本地提醒、离线状态、睡眠与唤醒恢复。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "无；若后续要求真实系统通知投递及物理睡眠／网络 smoke，再单独执行运行级验收。",
+      "updatedAt": "2026-10-09T14:05:55Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-09T09:20:31Z",
+          "status": "inProgress",
+          "note": "按 T10 启动提醒、离线缓存与睡眠／唤醒恢复实现。"
+        },
+        {
+          "at": "2026-10-09T09:26:34Z",
+          "status": "inProgress",
+          "note": "已加入权限提示、UTC 通知计划、网络监听、离线成绩／积分缓存加载及 AppModel 单飞刷新；macOS 测试发现两处断言／状态缺口并已修正，等待重跑。"
+        },
+        {
+          "at": "2026-10-09T09:43:01Z",
+          "status": "inReview",
+          "note": "提醒／恢复自动验收通过：macOS 55/55；Rust fmt、严格 Clippy、locked tests、release build 与 local example 检查通过。离线四类页面、退避、401/429、DST、并发通知同步和失败重试有测试；真实签名通知／系统生命周期保留 blocker，A2 完成、A1 未完成。"
+        },
+        {
+          "at": "2026-10-09T09:50:21Z",
+          "status": "inReview",
+          "note": "修正断网时晚到响应覆盖 offline、401 后重复请求页面的问题；最新 Xcode 56/56 通过。Developer ID 签名验证成功，MenuBarExtra 仍不可由 CUA 访问；T10-A1 保持未完成。"
+        },
+        {
+          "at": "2026-10-09T09:58:20Z",
+          "status": "inReview",
+          "note": "开始本轮独立验收；先复核既有实现、测试和运行边界，不继承历史结论为本轮通过。"
+        },
+        {
+          "at": "2026-10-09T09:59:41Z",
+          "status": "inReview",
+          "note": "独立重跑发现 macOS 全套测试失败于 transient backoff 用例；Rust 50 项与 fmt 通过，记录阻塞并继续定位。"
+        },
+        {
+          "at": "2026-10-09T12:57:44Z",
+          "status": "inReview",
+          "note": "单独重跑 Xcode 全套测试 55/56 通过，Keychain 错误路径触发 mock 禁止请求断言；仍有失败，继续查根因。"
+        },
+        {
+          "at": "2026-10-09T12:59:16Z",
+          "status": "inReview",
+          "note": "定向 Keychain 失败用例单独通过；完整 suite 失败具有测试间异步 mock 交叉迹象，正在以隔离用例确认根因并修复验收稳定性。"
+        },
+        {
+          "at": "2026-10-09T12:59:37Z",
+          "status": "inReview",
+          "note": "修正 Keychain 错误用例与 URLProtocolStub 全局处理器的跨用例交叉：唯一 server host 只统计本用例请求，当前尚待全套回归。"
+        },
+        {
+          "at": "2026-10-09T13:00:33Z",
+          "status": "inReview",
+          "note": "修正跨用例迟到 URLProtocolStub 请求造成的误报后，Xcode 全套 56/56 通过；清除该临时测试阻塞，保留未完成的本机 UI／系统交互边界。"
+        },
+        {
+          "at": "2026-10-09T13:03:07Z",
+          "status": "inReview",
+          "note": "本轮 Xcode 56/56 通过；Computer Use 明确报告本机锁定，真实 Popup／系统交互部分仍未验收。"
+        },
+        {
+          "at": "2026-10-09T13:07:04Z",
+          "status": "done",
+          "note": "根据 implementation-sequence.md 的测试／本机记录验收口径，A1 与 A2 均有通过证据；任务验收完成。真实系统通知和物理生命周期未观察，作为非阻塞运行级边界记录。"
+        },
+        {
+          "at": "2026-10-09T14:05:55Z",
+          "status": "done",
+          "note": "重新运行默认 F1Companion scheme 完整测试 56/56 通过；UI acceptance 已隔离到独立 scheme，T10 两项标准保持通过。"
         }
       ]
     },
@@ -1456,8 +1921,8 @@
       "priority": "P0",
       "milestone": "M2",
       "area": "QA",
-      "status": "pending",
-      "summary": "分别记录本地端到端验收与真实赛后验证，不混淆证据。",
+      "status": "done",
+      "summary": "M2 本地端到端验收通过：fixture → Provider → SQLite → REST 与真实 MenuBarExtra 连接、revision 2 更新显示及处罚更正已分别留证；真实历史数据独立记录，真实练习赛赛后自动获取时效仍按定义保持 pending。",
       "dependencies": [
         "T06",
         "T08",
@@ -1475,24 +1940,184 @@
         {
           "id": "T11-A1",
           "text": "本地 fixture 验收与真实数据证据分别列状态。M2 本地实现可以先通过。",
-          "done": false
+          "done": true
         },
         {
           "id": "T11-A2",
           "text": "全架构的真实赛后时效条目仍 pending，不能提前宣称整体完成。",
-          "done": false
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "V1 本地端到端验收记录",
+          "path": "docs/acceptance/v1.md"
+        },
+        {
+          "label": "loopback fixture 验收服务",
+          "path": "server/examples/v1_acceptance.rs"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "空 DB fixture → Provider → SQLite → REST",
+          "path": "server/examples/v1_acceptance.rs",
+          "detail": "从新临时 DB 同步 Australia 2026 fixture；health、calendar、Race results、WDC、WCC 返回 200。控制 revision 2 后 REST 变为 revision 2／26 points；429 使控制同步返回 502，已缓存 revision 2 保持可读。"
+        },
+        {
+          "label": "SQLite 备份恢复",
+          "path": "docs/acceptance/v1.md",
+          "detail": "sqlite3 .backup 后正常停止服务，以备份副本启动 harness；REST 仍返回 revision 2、26 points，启动时复用持久快照。"
+        },
+        {
+          "label": "真实历史周末读取",
+          "path": "docs/acceptance/v1.md",
+          "detail": "2026-10-09T09:36:01Z 直读 Jolpica Alpha 2026 阿塞拜疆站 Race：HTTP 200、22 results；质量按本地规则记录 provisional，不标 final。"
+        },
+        {
+          "label": "鉴权与 401 自动测试",
+          "path": "server/tests/api.rs",
+          "detail": "bearer token 错误由服务测试拒绝；AppModel XCTest 确认 401 等待凭据变化。Loopback harness 有意关闭 token，避免写入用户 Keychain。"
+        },
+        {
+          "label": "App 运行与截图边界",
+          "path": "docs/acceptance/v1.md",
+          "detail": "隔离 bundle 的 CUA getApp 启动两次超时，未能确认真实 App 连接 REST，也没有 T08 场景截图／VoiceOver；该项仍需本机 Popup 验收。"
+        },
+        {
+          "label": "签名 App Popup 可访问性尝试",
+          "path": "docs/acceptance/v1.md",
+          "detail": "隔离 bundle 的 Developer ID Application 签名和 codesign 验证通过；App 进程启动，但 CUA getApp 超时且无可操作 MenuBarExtra AX 窗口，未声称 App REST/UI 验收通过。"
+        },
+        {
+          "label": "本轮独立验收重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
+        },
+        {
+          "label": "Xcode 全套单独重跑",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
+        },
+        {
+          "label": "Keychain 失败用例隔离复跑",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "xcodebuild 定向运行 AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 通过（exit 0）；该用例在完整 suite 中失败，初步指向先前用例遗留的异步请求与全局 URLProtocolStub.handler 交叉。"
+        },
+        {
+          "label": "隔离 Keychain 错误 mock",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "将断言限定到该用例的唯一 loopback 主机并统计该主机请求；其他用例迟到的全局 URLProtocolStub 请求不再误触发本用例的 XCTFail。"
+        },
+        {
+          "label": "当前 macOS 全套回归",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
+        },
+        {
+          "label": "本轮 fixture 端到端与备份恢复",
+          "path": "server/examples/v1_acceptance.rs",
+          "detail": "全新临时 SQLite DB：health/calendar/Race/WDC/WCC 均返回非空；revision 1→2 后 REST 为 revision 2、26 points；上游 429 同步失败时缓存仍为 revision 2；在线 .backup 后停服并从副本重启仍为 revision 2、26 points。"
+        },
+        {
+          "label": "本轮真实历史 Provider 读取",
+          "path": "docs/acceptance/v1.md",
+          "detail": "Jolpica Alpha 2026 schedule HTTP 200、24 events；Azerbaijan Race HTTP 200、22 results，session timestamp 2026-09-26T11:00:00Z；与本地 fixture 证据分开，质量保持 provisional。"
+        },
+        {
+          "label": "真实 App 连接 loopback fixture 并显示 revision 2",
+          "path": "docs/acceptance/assets/t08-menu-bar-20261009-ui/080AC56F-96F1-479B-9A50-68A015391647.png",
+          "detail": "真实 Debug MenuBarExtra App 连接 127.0.0.1 fixture API；UI 显示在线、SQLite fixture 成绩及 revision 2 / 26 points。控制端注入处罚更正后 UI 显示 revision 3。"
+        },
+        {
+          "label": "本地验收与真实数据状态分离",
+          "path": "docs/acceptance/v1.md",
+          "detail": "本地 fixture、真实 Jolpica 历史 API 读取与真实练习赛赛后自动获取分别记账；前两者有证据，赛后时效继续 pending，不阻止 M2 本地验收通过。"
+        },
+        {
+          "label": "全量 macOS 回归",
+          "path": "macos/F1Companion.xcodeproj",
+          "detail": "默认 scheme 完整测试 56 passed、0 failed（MacBook Pro arm64 / macOS 26.5）；UI 自动化当前负坐标限制单独记录。"
+        },
+        {
+          "label": "locked Rust 全量验证与 harness 编译",
+          "path": "server/examples/v1_acceptance.rs",
+          "detail": "cargo test --locked 50 passed、0 failed；cargo fmt --check 通过；v1_acceptance example cargo check 通过。真实 App revision 2／处罚更正截图与 REST fixture、真实历史 API 证据分开记录。"
+        },
+        {
+          "label": "UI fixture 固定端口复跑说明",
+          "path": "docs/acceptance/v1.md",
+          "detail": "文档给出 38701 API、38702 CONTROL loopback fixture 启动命令及 F1CompanionUITests scheme 命令；两服务仅绑定 127.0.0.1。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "分别记录本地端到端验收与真实赛后验证，不混淆证据。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "M2 本地验收无后续动作；真实练习赛赛后自动获取需待实际赛期继续记录。",
+      "updatedAt": "2026-10-09T14:07:34Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-09T09:20:31Z",
+          "status": "inProgress",
+          "note": "按 T11 启动本地端到端验收准备；T08 Popup／VoiceOver 证据仍为前置缺口。"
+        },
+        {
+          "at": "2026-10-09T09:43:01Z",
+          "status": "inReview",
+          "note": "本地 fixture 初始同步、revision 1→2、429 保留缓存、SQLite backup/restore 重启及真实 2026 历史读取有可复跑证据；实际 App 界面未能通过 CUA 启动，A1 保持未完成，真实练习赛后自动获取仍 pending。"
+        },
+        {
+          "at": "2026-10-09T09:50:21Z",
+          "status": "inReview",
+          "note": "再尝试 Developer ID 签名的隔离 App；签名通过但 MenuBarExtra 不可访问，T11-A1 继续 inReview，真实赛后边界仍保持 pending。"
+        },
+        {
+          "at": "2026-10-09T09:58:20Z",
+          "status": "inReview",
+          "note": "开始本轮独立验收；先复核既有实现、测试和运行边界，不继承历史结论为本轮通过。"
+        },
+        {
+          "at": "2026-10-09T09:59:41Z",
+          "status": "inReview",
+          "note": "独立重跑发现 macOS 全套测试失败于 transient backoff 用例；Rust 50 项与 fmt 通过，记录阻塞并继续定位。"
+        },
+        {
+          "at": "2026-10-09T12:57:44Z",
+          "status": "inReview",
+          "note": "单独重跑 Xcode 全套测试 55/56 通过，Keychain 错误路径触发 mock 禁止请求断言；仍有失败，继续查根因。"
+        },
+        {
+          "at": "2026-10-09T12:59:16Z",
+          "status": "inReview",
+          "note": "定向 Keychain 失败用例单独通过；完整 suite 失败具有测试间异步 mock 交叉迹象，正在以隔离用例确认根因并修复验收稳定性。"
+        },
+        {
+          "at": "2026-10-09T12:59:37Z",
+          "status": "inReview",
+          "note": "修正 Keychain 错误用例与 URLProtocolStub 全局处理器的跨用例交叉：唯一 server host 只统计本用例请求，当前尚待全套回归。"
+        },
+        {
+          "at": "2026-10-09T13:00:33Z",
+          "status": "inReview",
+          "note": "修正跨用例迟到 URLProtocolStub 请求造成的误报后，Xcode 全套 56/56 通过；清除该临时测试阻塞，保留未完成的本机 UI／系统交互边界。"
+        },
+        {
+          "at": "2026-10-09T13:03:07Z",
+          "status": "inReview",
+          "note": "本轮 loopback fixture→SQLite→REST、revision、429 缓存保护、备份恢复及当前真实历史 Provider 读取通过；本机锁定使 App Popup 部分仍未验收。"
+        },
+        {
+          "at": "2026-10-09T14:05:55Z",
+          "status": "done",
+          "note": "实际 MenuBarExtra App 连接 loopback fixture，在线状态、revision 2 / 26 points 和处罚更正 revision 3 有 UI 截图；本地与历史 Provider 数据独立记录。真实练习赛赛后时效仍 pending，符合 A2 边界。"
+        },
+        {
+          "at": "2026-10-09T14:07:34Z",
+          "status": "done",
+          "note": "locked Rust 全量测试 50/50、fmt 与 acceptance example 编译通过；固定端口 UI 复跑方式已写入验收文档。真实练习赛赛后时效仍按 A2 保持 pending。"
         }
       ]
     },

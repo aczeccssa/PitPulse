@@ -58,6 +58,59 @@ struct Meeting: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+struct SessionResult: Codable, Identifiable, Equatable, Sendable {
+    var id: String { driverId }
+    let sessionId: String
+    let position: Int?
+    let classification: String
+    let driverId: String
+    let driverName: String
+    let constructorId: String
+    let team: String
+    let time: String?
+    let bestLap: String?
+    let q1: String?
+    let q2: String?
+    let q3: String?
+    let raceTime: String?
+    let gap: String?
+    let laps: Int?
+    let points: Double?
+    let source: String
+    let sourceUpdatedAt: String?
+    let fetchedAt: Date
+    let revision: Int
+    let quality: String
+}
+
+struct DriverStanding: Codable, Identifiable, Equatable, Sendable {
+    var id: String { driverId }
+    let season: Int
+    let position: Int
+    let driverId: String
+    let driverName: String
+    let constructor: String
+    let constructorIds: [String]
+    let points: Double
+    let wins: Int
+    let source: String
+    let fetchedAt: Date
+    let revision: Int
+}
+
+struct ConstructorStanding: Codable, Identifiable, Equatable, Sendable {
+    var id: String { constructorId }
+    let season: Int
+    let position: Int
+    let constructorId: String
+    let constructorName: String
+    let points: Double
+    let wins: Int
+    let source: String
+    let fetchedAt: Date
+    let revision: Int
+}
+
 enum MeetingStatus: String, Codable, Sendable {
     case scheduled
     case postponed

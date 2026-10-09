@@ -18,13 +18,11 @@ async fn main() -> anyhow::Result<()> {
     database.migrate().await?;
 
     let state = AppState::new(config, database);
-    pitpulse_server::services::sync::spawn_startup_calendar_sync(state.clone());
-    scheduler::spawn(state.clone());
+    let background = scheduler::spawn(state.clone());
 
-    server::serve(state)
-        .await
-        .context("server stopped unexpectedly")?;
-    Ok(())
+    let result = server::serve(state).await;
+    background.shutdown().await;
+    result.context("server stopped unexpectedly")
 }
 
 fn install_tracing() -> anyhow::Result<()> {

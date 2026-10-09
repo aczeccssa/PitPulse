@@ -17,7 +17,7 @@ struct F1CompanionApp: App {
         Settings {
             PreferencesView()
                 .environmentObject(model)
-                .frame(width: 560, height: 430)
+                .frame(width: 560, height: 560)
         }
     }
 }

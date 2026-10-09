@@ -1,6 +1,37 @@
 import Foundation
 @testable import F1Companion
 
+@MainActor
+final class TestNetworkPathMonitor: NetworkPathMonitoring {
+    private var receive: (@Sendable (Bool) -> Void)?
+
+    func start(_ receive: @escaping @Sendable (Bool) -> Void) { self.receive = receive }
+    func cancel() { receive = nil }
+    func setAvailable(_ available: Bool) { receive?(available) }
+}
+
+@MainActor
+final class TestReminderCenter: SessionReminderCenter {
+    var authorizationStatus: ReminderAuthorization = .authorized
+    var authorizationGranted = true
+    var shouldFailScheduling = false
+    private(set) var permissionRequests = 0
+    private(set) var scheduled: [String: SessionReminder] = [:]
+
+    func authorization() async -> ReminderAuthorization { authorizationStatus }
+    func requestAuthorization() async throws -> Bool {
+        permissionRequests += 1
+        return authorizationGranted
+    }
+    func pendingIdentifiers() async -> [String] { Array(scheduled.keys) }
+    func schedule(_ reminder: SessionReminder) async throws {
+        if shouldFailScheduling { throw URLError(.cannotWriteToFile) }
+        scheduled[reminder.identifier] = reminder
+    }
+    func removePending(identifiers: [String]) async { identifiers.forEach { scheduled.removeValue(forKey: $0) } }
+    func removeAllPending() async { scheduled.removeAll() }
+}
+
 enum TestData {
     static func date(_ value: String) -> Date {
         RFC3339.parse(value)!

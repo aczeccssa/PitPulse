@@ -10,7 +10,9 @@ use crate::{
         quality::ProviderAvailability,
     },
     error::ProviderError,
-    providers::http::{get_json, get_pages, shared_client, with_query},
+    providers::http::{
+        get_json, get_json_once, get_pages, get_pages_once, shared_client, with_query,
+    },
 };
 
 pub const SOURCE: &str = "jolpica-alpha";
@@ -49,6 +51,11 @@ impl JolpicaProvider {
         decode_alpha_schedule(&payload)
     }
 
+    pub async fn season_calendar_once(&self, season: i64) -> Result<Vec<Meeting>, ProviderError> {
+        let url = format!("{}/f1/alpha/schedules/{season}/", self.base_url);
+        decode_alpha_schedule(&get_json_once(&self.client, &url).await?)
+    }
+
     pub async fn ergast_races(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
         let url = with_query(
             &self.base_url,
@@ -75,6 +82,19 @@ impl JolpicaProvider {
             .await
     }
 
+    pub async fn alpha_results_once(
+        &self,
+        round_id: &str,
+        code: &str,
+    ) -> Result<Value, ProviderError> {
+        let encoded = urlencoding_placeholder(round_id);
+        get_json_once(
+            &self.client,
+            &format!("{}/f1/alpha/results/{encoded}/{code}/", self.base_url),
+        )
+        .await
+    }
+
     pub async fn ergast_rows(
         &self,
         season: i64,
@@ -87,6 +107,41 @@ impl JolpicaProvider {
         )?;
         let mut rows = Vec::new();
         get_pages(&self.client, &url, |page| {
+            let collection = match endpoint {
+                "drivers" => page.pointer("/MRData/DriverTable/Drivers"),
+                "constructors" => page.pointer("/MRData/ConstructorTable/Constructors"),
+                "driverStandings" => {
+                    page.pointer("/MRData/StandingsTable/StandingsLists/0/DriverStandings")
+                }
+                "constructorStandings" => {
+                    page.pointer("/MRData/StandingsTable/StandingsLists/0/ConstructorStandings")
+                }
+                _ => None,
+            };
+            rows.extend(
+                collection
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default(),
+            );
+            Ok(())
+        })
+        .await?;
+        Ok(rows)
+    }
+
+    pub async fn ergast_rows_once(
+        &self,
+        season: i64,
+        endpoint: &str,
+    ) -> Result<Vec<Value>, ProviderError> {
+        let url = with_query(
+            &self.base_url,
+            &format!("/ergast/f1/{season}/{endpoint}.json"),
+            &[("limit", "100".to_string())],
+        )?;
+        let mut rows = Vec::new();
+        get_pages_once(&self.client, &url, |page| {
             let collection = match endpoint {
                 "drivers" => page.pointer("/MRData/DriverTable/Drivers"),
                 "constructors" => page.pointer("/MRData/ConstructorTable/Constructors"),

@@ -9,7 +9,7 @@ use crate::domain::{
     standings::{ConstructorStanding, DriverStanding},
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct IdentityMaps {
     drivers_by_wikipedia: HashMap<String, String>,
     drivers_by_number: HashMap<i64, String>,

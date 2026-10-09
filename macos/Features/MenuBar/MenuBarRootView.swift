@@ -45,17 +45,9 @@ struct MenuBarRootView: View {
                 case .calendar:
                     CalendarView()
                 case .results:
-                    PlaceholderView(
-                        symbol: .results,
-                        title: "成绩尚未接入",
-                        message: "T07 完成后显示真实比赛结果，这里不会展示占位名次。"
-                    )
+                    SessionResultsView(model: model)
                 case .standings:
-                    PlaceholderView(
-                        symbol: .standings,
-                        title: "积分榜尚未接入",
-                        message: "当前构建只覆盖赛历、Session 和下一站。"
-                    )
+                    StandingsView(model: model)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -67,6 +59,9 @@ struct MenuBarRootView: View {
         .onAppear {
             model.popupDidAppear()
         }
+        .onDisappear {
+            model.popupDidDisappear()
+        }
     }
 
     private var header: some View {
@@ -76,7 +71,7 @@ struct MenuBarRootView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("PitPulse")
                     .font(.headline)
-                Text("F1 赛历与 Session")
+                Text("F1 赛历、成绩与积分")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

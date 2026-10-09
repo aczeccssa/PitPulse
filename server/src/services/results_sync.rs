@@ -27,59 +27,25 @@ struct Candidate {
 }
 
 impl ResultsSync {
-    pub async fn sync_startup(&self, database: &Database, season: i64) {
-        if !self.jolpica.enabled {
-            return;
-        }
-        let (driver_rows, constructor_rows) = tokio::join!(
-            tokio::time::timeout(self.timeout, self.jolpica.ergast_rows(season, "drivers")),
+    pub async fn load_identity_maps_once(
+        &self,
+        database: &Database,
+        season: i64,
+    ) -> Result<IdentityMaps, ProviderError> {
+        let (drivers, constructors) = tokio::join!(
             tokio::time::timeout(
                 self.timeout,
-                self.jolpica.ergast_rows(season, "constructors")
+                self.jolpica.ergast_rows_once(season, "drivers")
+            ),
+            tokio::time::timeout(
+                self.timeout,
+                self.jolpica.ergast_rows_once(season, "constructors")
             ),
         );
-        let drivers = provider_rows(driver_rows, "drivers").unwrap_or_default();
-        let constructors = provider_rows(constructor_rows, "constructors").unwrap_or_default();
+        let drivers = timed_provider_result(drivers, format!("identity/drivers/{season}"))?;
+        let constructors =
+            timed_provider_result(constructors, format!("identity/constructors/{season}"))?;
         let identities = IdentityMaps::from_ergast(&drivers, &constructors);
-        let (driver_standings, constructor_standings) = tokio::join!(
-            tokio::time::timeout(
-                self.timeout,
-                self.jolpica.ergast_rows(season, "driverStandings")
-            ),
-            tokio::time::timeout(
-                self.timeout,
-                self.jolpica.ergast_rows(season, "constructorStandings")
-            ),
-        );
-        if let Some(rows) = provider_rows(driver_standings, "driverStandings") {
-            match database.utc_now().await {
-                Ok(fetched_at) => {
-                    let snapshot = identities.decode_driver_standings(&rows, season, &fetched_at);
-                    if !snapshot.is_empty()
-                        && let Err(error) = database.replace_driver_standings(snapshot).await
-                    {
-                        tracing::warn!(%error, "driver standings persistence failed");
-                    }
-                }
-                Err(error) => tracing::warn!(%error, "driver standings fetch time unavailable"),
-            }
-        }
-        if let Some(rows) = provider_rows(constructor_standings, "constructorStandings") {
-            match database.utc_now().await {
-                Ok(fetched_at) => {
-                    let snapshot =
-                        identities.decode_constructor_standings(&rows, season, &fetched_at);
-                    if !snapshot.is_empty()
-                        && let Err(error) = database.replace_constructor_standings(snapshot).await
-                    {
-                        tracing::warn!(%error, "constructor standings persistence failed");
-                    }
-                }
-                Err(error) => {
-                    tracing::warn!(%error, "constructor standings fetch time unavailable")
-                }
-            }
-        }
         let driver_mappings = drivers
             .iter()
             .filter_map(|row| {
@@ -94,85 +60,122 @@ impl ResultsSync {
                 Some(("jolpica-ergast".to_string(), id.to_string(), id.to_string()))
             })
             .collect();
-        if let Err(error) = database
+        database
             .store_provider_mappings(driver_mappings, constructor_mappings)
             .await
-        {
-            tracing::warn!(%error, "provider identity mappings could not be stored");
-        }
-
-        let now = match database.utc_now().await {
-            Ok(now) => now,
-            Err(error) => {
-                tracing::warn!(%error, "cannot read UTC time for result sync");
-                return;
-            }
-        };
-        let meetings = match database.calendar(Some(season)).await {
-            Ok((meetings, _)) => meetings,
-            Err(error) => {
-                tracing::warn!(%error, "cannot read cached calendar for result sync");
-                return;
-            }
-        };
-        let meeting = meetings
-            .into_iter()
-            .filter(|meeting| meeting.status.as_str() != "cancelled")
-            .filter_map(|meeting| {
-                let end = meeting
-                    .sessions
-                    .iter()
-                    .find(|session| session.session_type == SessionType::Race)
-                    .and_then(|session| session.end_time.as_deref())?;
-                (end <= now.as_str()).then_some((end.to_string(), meeting))
-            })
-            .max_by(|a, b| a.0.cmp(&b.0))
-            .map(|(_, meeting)| meeting);
-        let Some(meeting) = meeting else {
-            tracing::info!(
-                season,
-                "no completed meeting with a verified session end time"
-            );
-            return;
-        };
-        for session in meeting.sessions.iter().filter(|session| {
-            session.status.as_str() != "cancelled"
-                && session
-                    .end_time
-                    .as_deref()
-                    .is_some_and(|end| end <= now.as_str())
-        }) {
-            if let Err(error) = self
-                .sync_session(database, &meeting, session, &identities)
-                .await
-            {
-                tracing::warn!(session_id = %session.id, %error, "session result sync failed; preserving cache");
-            }
-        }
+            .map_err(|error| ProviderError::Decode {
+                url: "sqlite".to_string(),
+                error: error.to_string(),
+            })?;
+        let fetched_at = database.utc_now().await.map_err(storage_error)?;
+        database
+            .save_identity_cache(season, &drivers, &constructors, &fetched_at)
+            .await
+            .map_err(storage_error)?;
+        Ok(identities)
     }
 
-    async fn sync_session(
+    pub async fn cached_identity_maps(
+        &self,
+        database: &Database,
+        season: i64,
+    ) -> Result<Option<IdentityMaps>, ProviderError> {
+        let Some((drivers, constructors)) = database
+            .identity_cache(season)
+            .await
+            .map_err(storage_error)?
+        else {
+            return Ok(None);
+        };
+        Ok(Some(IdentityMaps::from_ergast(&drivers, &constructors)))
+    }
+
+    pub async fn sync_driver_standings_once(
+        &self,
+        database: &Database,
+        season: i64,
+        identities: &IdentityMaps,
+    ) -> Result<bool, ProviderError> {
+        let rows = tokio::time::timeout(
+            self.timeout,
+            self.jolpica.ergast_rows_once(season, "driverStandings"),
+        )
+        .await
+        .map_err(|_| ProviderError::Transport {
+            url: format!("driverStandings/{season}"),
+            error: "request timed out".to_string(),
+        })??;
+        if rows.is_empty() {
+            return Ok(false);
+        }
+        let fetched_at = database.utc_now().await.map_err(storage_error)?;
+        let snapshot = identities.decode_driver_standings(&rows, season, &fetched_at);
+        if snapshot.is_empty() {
+            return Ok(false);
+        }
+        database
+            .replace_driver_standings(snapshot)
+            .await
+            .map_err(storage_error)?;
+        Ok(true)
+    }
+
+    pub async fn sync_constructor_standings_once(
+        &self,
+        database: &Database,
+        season: i64,
+        identities: &IdentityMaps,
+    ) -> Result<bool, ProviderError> {
+        let rows = tokio::time::timeout(
+            self.timeout,
+            self.jolpica
+                .ergast_rows_once(season, "constructorStandings"),
+        )
+        .await
+        .map_err(|_| ProviderError::Transport {
+            url: format!("constructorStandings/{season}"),
+            error: "request timed out".to_string(),
+        })??;
+        if rows.is_empty() {
+            return Ok(false);
+        }
+        let fetched_at = database.utc_now().await.map_err(storage_error)?;
+        let snapshot = identities.decode_constructor_standings(&rows, season, &fetched_at);
+        if snapshot.is_empty() {
+            return Ok(false);
+        }
+        database
+            .replace_constructor_standings(snapshot)
+            .await
+            .map_err(storage_error)?;
+        Ok(true)
+    }
+
+    pub async fn sync_session_once(
         &self,
         database: &Database,
         meeting: &Meeting,
         session: &Session,
         identities: &IdentityMaps,
-    ) -> Result<(), ProviderError> {
-        let Some(round_id) = meeting.jolpica_round_id.as_deref() else {
-            return Ok(());
-        };
-        let expected = if self.openf1.enabled {
+    ) -> Result<SyncOutcome, ProviderError> {
+        let (expected, expected_error) = if self.openf1.enabled {
             if let Some(key) = session.openf1_session_key {
-                tokio::time::timeout(self.timeout, self.openf1.drivers(key))
-                    .await
-                    .ok()
-                    .and_then(Result::ok)
-                    .unwrap_or_default()
+                match tokio::time::timeout(self.timeout, self.openf1.drivers_once(key)).await {
+                    Ok(Ok(rows)) => (rows, None),
+                    Ok(Err(error)) => (Vec::new(), Some(error)),
+                    Err(_) => (
+                        Vec::new(),
+                        Some(ProviderError::Transport {
+                            url: format!("openf1/drivers/{key}"),
+                            error: "request timed out".to_string(),
+                        }),
+                    ),
+                }
             } else {
-                Vec::new()
+                (Vec::new(), None)
             }
         } else {
-            Vec::new()
+            (Vec::new(), None)
         };
         let openf1_driver_mappings = expected
             .iter()
@@ -205,17 +208,25 @@ impl ResultsSync {
             tracing::warn!(%error, "OpenF1 identity mappings could not be stored");
         }
 
+        let round_id = meeting.jolpica_round_id.as_deref();
         let alpha = async {
+            let Some(round_id) = round_id else {
+                return Err(ProviderError::MissingField {
+                    field: "meeting.jolpicaRoundId".to_string(),
+                });
+            };
             let payload = tokio::time::timeout(
                 self.timeout,
                 self.jolpica
-                    .alpha_results(round_id, alpha_code(session.session_type)),
+                    .alpha_results_once(round_id, alpha_code(session.session_type)),
             )
             .await
-            .ok()
-            .and_then(Result::ok)?;
-            let fetched_at = database.utc_now().await.ok()?;
-            Some(decode_alpha_candidate(
+            .map_err(|_| ProviderError::Transport {
+                url: format!("alpha/results/{round_id}"),
+                error: "request timed out".to_string(),
+            })??;
+            let fetched_at = database.utc_now().await.map_err(storage_error)?;
+            Ok::<_, ProviderError>(decode_alpha_candidate(
                 &payload,
                 identities,
                 session,
@@ -224,13 +235,19 @@ impl ResultsSync {
             ))
         };
         let openf1 = async {
-            let key = session.openf1_session_key?;
-            let rows = tokio::time::timeout(self.timeout, self.openf1.session_result(key))
+            let key = session
+                .openf1_session_key
+                .ok_or_else(|| ProviderError::MissingField {
+                    field: "session.openF1SessionKey".to_string(),
+                })?;
+            let rows = tokio::time::timeout(self.timeout, self.openf1.session_result_once(key))
                 .await
-                .ok()
-                .and_then(Result::ok)?;
-            let fetched_at = database.utc_now().await.ok()?;
-            Some(identities.decode_openf1_results(
+                .map_err(|_| ProviderError::Transport {
+                    url: format!("openf1/session_result/{key}"),
+                    error: "request timed out".to_string(),
+                })??;
+            let fetched_at = database.utc_now().await.map_err(storage_error)?;
+            Ok::<_, ProviderError>(identities.decode_openf1_results(
                 &rows,
                 &expected,
                 &session.id,
@@ -240,7 +257,7 @@ impl ResultsSync {
             ))
         };
 
-        let selected = if is_practice(session.session_type)
+        let (selected, errors) = if is_practice(session.session_type)
             && self.openf1.enabled
             && session.openf1_session_key.is_some()
         {
@@ -248,32 +265,59 @@ impl ResultsSync {
             tokio::pin!(openf1);
             let (first, alpha_first) = tokio::select! {
                 biased;
-                result = &mut alpha => (result, true),
-                result = &mut openf1 => (result.map(|(rows, quality)| (Candidate { rows, quality }, None)), false),
+                result = &mut alpha => (result.map(Some), true),
+                result = &mut openf1 => (result.map(|(rows, quality)| Some((Candidate { rows, quality }, None))), false),
             };
-            if first
-                .as_ref()
-                .is_some_and(|(candidate, _)| candidate.quality == DataQuality::Provisional)
-            {
-                first
+            if first.as_ref().is_ok_and(|candidate| {
+                candidate
+                    .as_ref()
+                    .is_some_and(|(candidate, _)| candidate.quality == DataQuality::Provisional)
+            }) {
+                (first.unwrap(), Vec::new())
             } else {
                 let second = if alpha_first {
                     openf1
                         .await
-                        .map(|(rows, quality)| (Candidate { rows, quality }, None))
+                        .map(|(rows, quality)| Some((Candidate { rows, quality }, None)))
                 } else {
-                    alpha.await
+                    alpha.await.map(Some)
                 };
-                choose_candidates(first, second)
+                let mut errors = expected_error.into_iter().collect::<Vec<_>>();
+                let first = match first {
+                    Ok(candidate) => candidate,
+                    Err(error) => {
+                        errors.push(error);
+                        None
+                    }
+                };
+                let second = match second {
+                    Ok(candidate) => candidate,
+                    Err(error) => {
+                        errors.push(error);
+                        None
+                    }
+                };
+                (choose_candidates(first, second), errors)
             }
         } else {
-            alpha.await
+            match alpha.await {
+                Ok(candidate) => (Some(candidate), expected_error.into_iter().collect()),
+                Err(error) => return Err(error),
+            }
         };
         let Some((candidate, alpha_payload)) = selected else {
-            return Ok(());
+            return Err(errors
+                .into_iter()
+                .next()
+                .unwrap_or_else(|| ProviderError::MissingField {
+                    field: format!("results/{}", session.id),
+                }));
         };
         if candidate.rows.is_empty() {
-            return Ok(());
+            if let Some(error) = errors.into_iter().next() {
+                return Err(error);
+            }
+            return Ok(SyncOutcome::NoResult);
         }
         if let Some(payload) = alpha_payload {
             let (drivers, constructors) = alpha_mappings(&payload, identities);
@@ -287,12 +331,37 @@ impl ResultsSync {
         database
             .replace_session_results(candidate.rows, candidate.quality.as_str())
             .await
-            .map_err(|error| ProviderError::Decode {
-                url: "sqlite".to_string(),
-                error: error.to_string(),
-            })?;
-        Ok(())
+            .map_err(storage_error)?;
+        Ok(SyncOutcome::Stored {
+            retry_after: errors
+                .into_iter()
+                .filter_map(|error| error.retry_after())
+                .max(),
+        })
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncOutcome {
+    Stored { retry_after: Option<Duration> },
+    NoResult,
+}
+
+fn storage_error(error: impl std::fmt::Display) -> ProviderError {
+    ProviderError::Decode {
+        url: "sqlite".to_string(),
+        error: error.to_string(),
+    }
+}
+
+fn timed_provider_result<T>(
+    result: Result<Result<T, ProviderError>, tokio::time::error::Elapsed>,
+    url: String,
+) -> Result<T, ProviderError> {
+    result.map_err(|_| ProviderError::Transport {
+        url,
+        error: "request timed out".to_string(),
+    })?
 }
 
 fn decode_alpha_candidate(
@@ -373,23 +442,6 @@ fn mapped_count(rows: &[SessionResult]) -> usize {
     rows.iter()
         .filter(|row| !row.driver_id.contains(':') && !row.constructor_id.contains(':'))
         .count()
-}
-
-fn provider_rows(
-    result: Result<Result<Vec<Value>, ProviderError>, tokio::time::error::Elapsed>,
-    endpoint: &str,
-) -> Option<Vec<Value>> {
-    match result {
-        Ok(Ok(rows)) => Some(rows),
-        Ok(Err(error)) => {
-            tracing::warn!(endpoint, %error, "provider lookup failed");
-            None
-        }
-        Err(_) => {
-            tracing::warn!(endpoint, "provider lookup timed out");
-            None
-        }
-    }
 }
 
 fn is_practice(session: SessionType) -> bool {

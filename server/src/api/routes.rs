@@ -46,7 +46,15 @@ async fn calendar(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
-    let (meetings, meta) = state.database.calendar(season).await?;
+    let (meetings, mut meta) = state.database.calendar(season).await?;
+    let season_id = match season {
+        Some(season) => season,
+        None => current_year(&state).await?,
+    };
+    meta.sync_status = state
+        .database
+        .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))
+        .await?;
     Ok(Json(json!({"data": meetings, "meta": meta})))
 }
 
@@ -55,7 +63,15 @@ async fn next_meeting(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
-    let (meeting, meta) = state.database.next_meeting(season).await?;
+    let (meeting, mut meta) = state.database.next_meeting(season).await?;
+    let season_id = match season {
+        Some(season) => season,
+        None => current_year(&state).await?,
+    };
+    meta.sync_status = state
+        .database
+        .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))
+        .await?;
     Ok(Json(json!({"data": meeting, "meta": meta})))
 }
 
@@ -67,6 +83,10 @@ async fn session_results(
         return Err(ApiError::NotFound);
     }
     let (results, mut meta) = state.database.session_results(&session_id).await?;
+    meta.sync_status = state
+        .database
+        .sync_status("jolpica-alpha", &format!("results-{session_id}"))
+        .await?;
     if results.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
@@ -80,6 +100,14 @@ async fn driver_standings(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
     let (standings, mut meta) = state.database.driver_standings(season).await?;
+    let season_id = match season {
+        Some(season) => season,
+        None => current_year(&state).await?,
+    };
+    meta.sync_status = state
+        .database
+        .sync_status("jolpica-alpha", &format!("standings-drivers-{season_id}"))
+        .await?;
     if standings.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
@@ -93,6 +121,17 @@ async fn constructor_standings(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
     let (standings, mut meta) = state.database.constructor_standings(season).await?;
+    let season_id = match season {
+        Some(season) => season,
+        None => current_year(&state).await?,
+    };
+    meta.sync_status = state
+        .database
+        .sync_status(
+            "jolpica-alpha",
+            &format!("standings-constructors-{season_id}"),
+        )
+        .await?;
     if standings.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
@@ -123,4 +162,14 @@ fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiErro
         });
     }
     Ok(season)
+}
+
+async fn current_year(state: &AppState) -> Result<i64, ApiError> {
+    let now = state.database.utc_now().await?;
+    now.get(..4)
+        .and_then(|year| year.parse().ok())
+        .ok_or_else(|| ApiError::InvalidQuery {
+            field: "season".to_string(),
+            error: "current UTC year is unavailable".to_string(),
+        })
 }

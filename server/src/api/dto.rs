@@ -24,6 +24,19 @@ pub struct Meta {
     pub fetched_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_updated_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sync_status: Option<SyncStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncStatus {
+    pub last_attempt_at: String,
+    pub last_success_at: Option<String>,
+    pub next_retry_at: Option<String>,
+    pub last_error: Option<String>,
+    pub retry_count: u32,
+    pub schedule_note: Option<String>,
 }
 
 impl Meta {
@@ -36,6 +49,7 @@ impl Meta {
             source: None,
             fetched_at: None,
             source_updated_at: None,
+            sync_status: None,
         }
     }
 
@@ -58,6 +72,7 @@ impl Meta {
             fetched_at,
             // Provider update time is unknown unless explicitly supplied by the provider.
             source_updated_at: None,
+            sync_status: None,
         }
     }
 }

@@ -1,4 +1,10 @@
+import AppKit
 import Foundation
+
+struct FavoriteDriver: Identifiable, Equatable, Sendable {
+    let id: String
+    let name: String
+}
 
 enum AppConnectionStatus: Equatable, Sendable {
     case idle
@@ -17,6 +23,15 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var meetings: [Meeting] = []
     @Published private(set) var meta: ResponseMeta?
+    @Published private(set) var sessionResults: [SessionResult] = []
+    @Published private(set) var resultMeta: ResponseMeta?
+    @Published private(set) var resultError: String?
+    @Published private(set) var selectedResultSessionID: String?
+    @Published private(set) var driverStandings: [DriverStanding] = []
+    @Published private(set) var constructorStandings: [ConstructorStanding] = []
+    @Published private(set) var standingsMeta: ResponseMeta?
+    @Published private(set) var standingsError: String?
+    @Published private(set) var showingConstructorStandings = false
     @Published private(set) var connectionStatus: AppConnectionStatus = .idle
     @Published private(set) var errorMessage: String?
     @Published private(set) var lastSuccessfulLoadAt: Date?
@@ -26,27 +41,57 @@ final class AppModel: ObservableObject {
     @Published private(set) var serverAddress: String
     @Published private(set) var isTokenStored = false
     @Published private(set) var settingsMessage: String?
+    @Published private(set) var remindersEnabled = false
+    @Published private(set) var reminderMinutes = 15
+    @Published private(set) var reminderMessage: String?
+    @Published private(set) var reminderPermissionDenied = false
+    @Published private(set) var favoriteDriverId: String?
 
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
     private let cache: DiskCalendarCache
+    private let reminderCenter: any SessionReminderCenter
+    private let networkMonitor: any NetworkPathMonitoring
+    private let retryDelays: [TimeInterval]
     private var generation = 0
+    private var resultGeneration = 0
+    private var standingsGeneration = 0
     private let session: URLSession
+    private let popupRefreshInterval: TimeInterval
     private var configuredServer: ServerAddress?
     private var nextMeetingOverride: Meeting?
     private var didBootstrap = false
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var popupRefreshTask: Task<Void, Never>?
+    private var retryTask: Task<Void, Never>?
+    private var activeRefreshTask: Task<Void, Never>?
+    private var activeRefreshID: UUID?
+    private var retryAttempt = 0
+    private var networkAvailable = true
 
     init(
         defaults: UserDefaults = .standard,
         credentials: any CredentialStore = KeychainStore(),
         cache: DiskCalendarCache = DiskCalendarCache(),
+        reminderCenter: (any SessionReminderCenter)? = nil,
+        networkMonitor: (any NetworkPathMonitoring)? = nil,
         session: URLSession = .shared,
+        popupRefreshInterval: TimeInterval = AppModel.refreshInterval,
+        retryDelays: [TimeInterval] = [5, 15, 30, 60, 300],
         autoBootstrap: Bool = true
     ) {
         self.defaults = defaults
         self.credentials = credentials
         self.cache = cache
+        self.reminderCenter = reminderCenter ?? UserNotificationReminderCenter()
+        self.networkMonitor = networkMonitor ?? SystemNetworkPathMonitor()
         self.session = session
+        self.popupRefreshInterval = max(popupRefreshInterval, 0.001)
+        self.retryDelays = retryDelays.isEmpty ? [5, 15, 30, 60, 300] : retryDelays
+        self.remindersEnabled = defaults.bool(forKey: PreferenceKeys.remindersEnabled)
+        let savedMinutes = defaults.object(forKey: PreferenceKeys.reminderMinutes) as? Int ?? 15
+        self.reminderMinutes = SessionReminderPlanner.allowedMinutes.contains(savedMinutes) ? savedMinutes : 15
+        self.favoriteDriverId = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
 
         let savedAddress = defaults.string(forKey: PreferenceKeys.serverAddress)
         let fallbackAddress = "http://localhost:38701"
@@ -56,6 +101,17 @@ final class AppModel: ObservableObject {
 
         let currentYear = Calendar.current.component(.year, from: Date())
         self.selectedSeason = defaults.object(forKey: PreferenceKeys.selectedSeason) as? Int ?? currentYear
+        self.workspaceObservers = [NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification].map { name in
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    if name == NSWorkspace.willSleepNotification { self?.prepareForSleep() }
+                    else { await self?.resumeAfterWake() }
+                }
+            }
+        }
+        self.networkMonitor.start { [weak self] isAvailable in
+            Task { @MainActor [weak self] in self?.networkPathDidChange(isAvailable: isAvailable) }
+        }
 
         if autoBootstrap {
             Task { [weak self] in
@@ -80,6 +136,15 @@ final class AppModel: ObservableObject {
         nextSession?.meeting
     }
 
+    var availableResultSessions: [NextSession] {
+        meetings.flatMap { meeting in
+            meeting.sessions
+                .filter { $0.status != .cancelled && ($0.status == .finished || ($0.endTime ?? meeting.endDate) <= Date()) }
+                .map { NextSession(meeting: meeting, session: $0) }
+        }
+        .sorted { ($0.session.endTime ?? $0.session.startTime) > ($1.session.endTime ?? $1.session.startTime) }
+    }
+
     var isShowingCachedData: Bool {
         guard let lastSuccessfulLoadAt else { return false }
         return Date().timeIntervalSince(lastSuccessfulLoadAt) > Self.staleCacheInterval
@@ -89,15 +154,25 @@ final class AppModel: ObservableObject {
         StatusSymbolResolver.symbol(for: connectionStatus)
     }
 
+    var favoriteDrivers: [FavoriteDriver] {
+        var names: [String: String] = [:]
+        (driverStandings.map { ($0.driverId, $0.driverName) } + sessionResults.map { ($0.driverId, $0.driverName) })
+            .forEach { names[$0.0] = $0.1 }
+        if let favoriteDriverId, names[favoriteDriverId] == nil { names[favoriteDriverId] = favoriteDriverId }
+        return names.map { FavoriteDriver(id: $0.key, name: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
         await loadCachedIfAvailable()
         await refreshTokenStatus()
-        await refreshNow()
+        if networkAvailable { await refreshCalendar() }
+        else { markOffline(); await refreshPageData() }
     }
 
     func popupDidAppear() {
+        startPopupRefresh()
         if !didBootstrap {
             Task { await bootstrap() }
             return
@@ -106,7 +181,115 @@ final class AppModel: ObservableObject {
            Date().timeIntervalSince(lastSuccessfulAttemptAt) < Self.refreshInterval {
             return
         }
+        Task { await refreshPageData() }
         refresh(force: true)
+    }
+
+    func popupDidDisappear() {
+        popupRefreshTask?.cancel()
+        popupRefreshTask = nil
+    }
+
+    func selectResultSession(_ sessionID: String) {
+        guard selectedResultSessionID != sessionID else { return }
+        resultGeneration += 1
+        selectedResultSessionID = sessionID
+        sessionResults = []
+        resultMeta = nil
+        resultError = nil
+        Task { await refreshResults() }
+    }
+
+    func selectStandings(isConstructor: Bool) {
+        guard showingConstructorStandings != isConstructor else { return }
+        standingsGeneration += 1
+        showingConstructorStandings = isConstructor
+        standingsError = nil
+        Task { await refreshStandings() }
+    }
+
+    func refreshResults() async {
+        guard let sessionID = selectedResultSessionID,
+              let server = configuredServer else { return }
+        resultGeneration += 1
+        let requestGeneration = resultGeneration
+        let season = selectedSeason
+        let client = APIClient(baseURL: server.url, session: session)
+        if sessionResults.isEmpty {
+            await loadResultsCache(sessionID: sessionID, requestGeneration: requestGeneration)
+        }
+        guard networkAvailable else { resultError = "离线，当前显示缓存数据。"; return }
+        do {
+            let token = try credentials.token(for: server.url)
+            let response = try await client.sessionResults(sessionId: sessionID, token: token)
+            guard requestGeneration == resultGeneration, server == configuredServer,
+                  season == selectedSeason, sessionID == selectedResultSessionID else { return }
+            sessionResults = response.data
+            resultMeta = response.meta
+            resultError = nil
+            try? await cache.save(server: server.url, season: season, key: "results-\(sessionID)", envelope: response)
+        } catch {
+            guard requestGeneration == resultGeneration, server == configuredServer,
+                  season == selectedSeason, sessionID == selectedResultSessionID else { return }
+            if sessionResults.isEmpty,
+               let cached = try? await cache.load(server: server.url, season: season, key: "results-\(sessionID)", as: [SessionResult].self) {
+                sessionResults = cached.data
+                resultMeta = cached.meta
+            }
+            resultError = error.localizedDescription
+        }
+    }
+
+    func refreshStandings() async {
+        guard let server = configuredServer else { return }
+        standingsGeneration += 1
+        let requestGeneration = standingsGeneration
+        let season = selectedSeason
+        let client = APIClient(baseURL: server.url, session: session)
+        if showingConstructorStandings ? constructorStandings.isEmpty : driverStandings.isEmpty {
+            await loadStandingsCache(server: server, season: season, isConstructor: showingConstructorStandings, requestGeneration: requestGeneration)
+        }
+        guard networkAvailable else { standingsError = "离线，当前显示缓存数据。"; return }
+        do {
+            let token = try credentials.token(for: server.url)
+            if showingConstructorStandings {
+                let response = try await client.constructorStandings(season: season, token: token)
+                guard requestGeneration == standingsGeneration, server == configuredServer, season == selectedSeason,
+                      showingConstructorStandings else { return }
+                constructorStandings = response.data
+                standingsMeta = response.meta
+                try? await cache.save(server: server.url, season: season, key: "standings-constructors", envelope: response)
+            } else {
+                let response = try await client.driverStandings(season: season, token: token)
+                guard requestGeneration == standingsGeneration, server == configuredServer, season == selectedSeason,
+                      !showingConstructorStandings else { return }
+                driverStandings = response.data
+                standingsMeta = response.meta
+                try? await cache.save(server: server.url, season: season, key: "standings-drivers", envelope: response)
+            }
+            standingsError = nil
+        } catch {
+            guard requestGeneration == standingsGeneration, server == configuredServer, season == selectedSeason else { return }
+            let key = showingConstructorStandings ? "standings-constructors" : "standings-drivers"
+            if showingConstructorStandings, constructorStandings.isEmpty,
+               let cached = try? await cache.load(server: server.url, season: season, key: key, as: [ConstructorStanding].self) {
+                constructorStandings = cached.data
+                standingsMeta = cached.meta
+            } else if !showingConstructorStandings, driverStandings.isEmpty,
+                      let cached = try? await cache.load(server: server.url, season: season, key: key, as: [DriverStanding].self) {
+                driverStandings = cached.data
+                standingsMeta = cached.meta
+            }
+            standingsError = error.localizedDescription
+        }
+    }
+
+    func refreshPageData() async {
+        if selectedResultSessionID == nil {
+            selectedResultSessionID = availableResultSessions.first?.session.id
+        }
+        await refreshResults()
+        await refreshStandings()
     }
 
     func refresh(force: Bool = false) {
@@ -123,7 +306,7 @@ final class AppModel: ObservableObject {
 
         let season = selectedSeason
         Task {
-            await performRefresh(server: server, season: season)
+            await refreshCalendar(server: server, season: season)
         }
     }
 
@@ -140,8 +323,9 @@ final class AppModel: ObservableObject {
         nextMeetingOverride = nil
         errorMessage = nil
         Task {
+            await reminderCenter.removeAllPending()
             await loadCachedIfAvailable()
-            await performRefresh(server: configuredServer, season: season)
+            await refreshCalendar(server: configuredServer, season: season)
         }
     }
 
@@ -159,9 +343,10 @@ final class AppModel: ObservableObject {
             errorMessage = nil
             settingsMessage = "服务器已更新"
             Task {
+                await reminderCenter.removeAllPending()
                 await loadCachedIfAvailable()
                 await refreshTokenStatus()
-                await performRefresh(server: server, season: selectedSeason)
+                await refreshCalendar(server: server, season: selectedSeason)
             }
             return true
         } catch {
@@ -179,6 +364,8 @@ final class AppModel: ObservableObject {
             try credentials.save(token: token, for: server.url)
             isTokenStored = true
             settingsMessage = "Token 已保存到 Keychain"
+            retryAttempt = 0
+            retryTask?.cancel()
             refresh(force: true)
         } catch {
             settingsMessage = error.localizedDescription
@@ -191,6 +378,8 @@ final class AppModel: ObservableObject {
             try credentials.deleteToken(for: server.url)
             isTokenStored = false
             settingsMessage = "Token 已删除"
+            retryAttempt = 0
+            retryTask?.cancel()
             refresh(force: true)
         } catch {
             settingsMessage = error.localizedDescription
@@ -239,16 +428,159 @@ final class AppModel: ObservableObject {
     }
 
     func refreshNow() async {
-        await performRefresh(server: configuredServer, season: selectedSeason)
+        await refreshCalendar()
+    }
+
+    func setRemindersEnabled(_ enabled: Bool) async {
+        guard enabled else {
+            remindersEnabled = false
+            defaults.set(false, forKey: PreferenceKeys.remindersEnabled)
+            reminderMessage = nil
+            await reminderCenter.removeAllPending()
+            return
+        }
+
+        do {
+            let authorization = await reminderCenter.authorization()
+            let allowed: Bool
+            switch authorization {
+            case .authorized:
+                allowed = true
+            case .denied:
+                allowed = false
+            case .notDetermined:
+                allowed = try await reminderCenter.requestAuthorization()
+            }
+            guard allowed else {
+                reminderPermissionDenied = true
+                reminderMessage = "通知权限未开启；可在系统设置中允许 PitPulse 通知。"
+                return
+            }
+            reminderPermissionDenied = false
+            remindersEnabled = true
+            defaults.set(true, forKey: PreferenceKeys.remindersEnabled)
+            reminderMessage = "已开启全部 Session 提前 \(reminderMinutes) 分钟提醒。"
+            if let configuredServer { await syncReminders(meetings, server: configuredServer, season: selectedSeason) }
+        } catch {
+            reminderMessage = "无法开启通知：\(error.localizedDescription)"
+        }
+    }
+
+    func setReminderMinutes(_ minutes: Int) async {
+        guard SessionReminderPlanner.allowedMinutes.contains(minutes) else { return }
+        reminderMinutes = minutes
+        defaults.set(minutes, forKey: PreferenceKeys.reminderMinutes)
+        if remindersEnabled, let configuredServer {
+            await syncReminders(meetings, server: configuredServer, season: selectedSeason)
+        }
+    }
+
+    func setFavoriteDriver(_ id: String?) {
+        favoriteDriverId = id
+        if let id { defaults.set(id, forKey: PreferenceKeys.favoriteDriverId) }
+        else { defaults.removeObject(forKey: PreferenceKeys.favoriteDriverId) }
+    }
+
+    func openNotificationSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func networkPathDidChange(isAvailable: Bool) {
+        guard networkAvailable != isAvailable else { return }
+        networkAvailable = isAvailable
+        if isAvailable {
+            retryAttempt = 0
+            retryTask?.cancel()
+            refresh(force: true)
+        } else {
+            markOffline()
+            retryTask?.cancel()
+        }
+    }
+
+    private func prepareForSleep() {
+        generation += 1
+        activeRefreshTask?.cancel()
+        activeRefreshTask = nil
+        activeRefreshID = nil
+        isRefreshing = false
+        retryTask?.cancel()
+        popupRefreshTask?.cancel()
+        popupRefreshTask = nil
+        markOffline()
+    }
+
+    private func resumeAfterWake() async {
+        markOffline()
+        if networkAvailable { await refreshCalendar() }
+        else { await refreshPageData() }
+    }
+
+    private func markOffline() {
+        connectionStatus = .offline
+        if meetings.isEmpty { lastSuccessfulLoadAt = nil }
+    }
+
+    private func refreshCalendar(server: ServerAddress? = nil, season: Int? = nil) async {
+        let targetServer = server ?? configuredServer
+        let targetSeason = season ?? selectedSeason
+        guard networkAvailable else { markOffline(); return }
+        if let activeRefreshTask {
+            await activeRefreshTask.value
+            return
+        }
+        let requestID = UUID()
+        activeRefreshID = requestID
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.performRefresh(server: targetServer, season: targetSeason)
+        }
+        activeRefreshTask = task
+        await task.value
+        if activeRefreshID == requestID {
+            activeRefreshTask = nil
+            activeRefreshID = nil
+        }
     }
 
     private func invalidateConnection() {
         generation += 1
+        activeRefreshTask?.cancel()
+        activeRefreshTask = nil
+        activeRefreshID = nil
+        retryTask?.cancel()
+        resultGeneration += 1
+        standingsGeneration += 1
         lastSuccessfulLoadAt = nil
         lastSuccessfulAttemptAt = nil
         isRefreshing = false
         isTokenStored = false
         connectionStatus = .idle
+        selectedResultSessionID = nil
+        sessionResults = []
+        resultMeta = nil
+        resultError = nil
+        driverStandings = []
+        constructorStandings = []
+        standingsMeta = nil
+        standingsError = nil
+    }
+
+    private func startPopupRefresh() {
+        guard popupRefreshTask == nil else { return }
+        let interval = popupRefreshInterval
+        popupRefreshTask = Task { @MainActor [weak self, interval] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(interval))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled, let self else { return }
+                await self.refreshNow()
+            }
+        }
     }
 
     private func performRefresh(server: ServerAddress?, season: Int) async {
@@ -274,8 +606,10 @@ final class AppModel: ObservableObject {
             lastSuccessfulLoadAt = Date()
             lastSuccessfulAttemptAt = Date()
             errorMessage = nil
-            connectionStatus = calendarResponse.meta.stale ? .stale : .connected
+            connectionStatus = networkAvailable ? (calendarResponse.meta.stale ? .stale : .connected) : .offline
             isTokenStored = token != nil
+            retryAttempt = 0
+            retryTask?.cancel()
             do {
                 try await cache.save(server: server.url, season: season, envelope: calendarResponse)
             } catch {
@@ -283,18 +617,90 @@ final class AppModel: ObservableObject {
                     settingsMessage = "数据已读取，但缓存写入失败：\(error.localizedDescription)"
                 }
             }
+            if remindersEnabled { await syncReminders(calendarResponse.data, server: server, season: season) }
+            Task { await refreshPageData() }
         } catch {
             guard requestGeneration == generation else { return }
+            let unauthorized = error as? APIClientError == .unauthorized
             errorMessage = error.localizedDescription
-            if error as? APIClientError == .unauthorized {
+            if !networkAvailable {
+                connectionStatus = .offline
+            } else if unauthorized {
                 connectionStatus = .requiresToken
             } else if meetings.isEmpty {
                 connectionStatus = .failed
             } else {
                 connectionStatus = .stale
             }
+            if !unauthorized { Task { await refreshPageData() } }
+            scheduleRetry(for: error)
         }
         if requestGeneration == generation { isRefreshing = false }
+    }
+
+    private func scheduleRetry(for error: Error) {
+        guard networkAvailable, !(error is CancellationError) else { return }
+        let delay: TimeInterval
+        if error as? APIClientError == .unauthorized { return }
+        if case let APIClientError.rateLimited(retryAfter)? = error as? APIClientError, let retryAfter {
+            delay = max(0, retryAfter.timeIntervalSinceNow)
+        } else {
+            delay = retryDelays[min(retryAttempt, retryDelays.count - 1)]
+            retryAttempt += 1
+        }
+        retryTask?.cancel()
+        retryTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            guard let self, self.networkAvailable else { return }
+            await self.refreshCalendar()
+        }
+    }
+
+    private func syncReminders(_ meetings: [Meeting], server: ServerAddress, season: Int) async {
+        guard remindersEnabled else { return }
+        let desired = SessionReminderPlanner.reminders(
+            meetings: meetings, serverIdentity: server.identity, season: season,
+            minutesBefore: reminderMinutes, now: Date()
+        )
+        do {
+            for reminder in desired { try await reminderCenter.schedule(reminder) }
+            let desiredIDs = Set(desired.map(\.identifier))
+            let staleIDs = (await reminderCenter.pendingIdentifiers()).filter {
+                $0.hasPrefix("pitpulse.") && !desiredIDs.contains($0)
+            }
+            await reminderCenter.removePending(identifiers: staleIDs)
+            reminderMessage = nil
+        } catch {
+            reminderMessage = "提醒安排失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func loadResultsCache(sessionID: String, requestGeneration: Int? = nil) async {
+        guard let server = configuredServer else { return }
+        let season = selectedSeason
+        guard let cached = try? await cache.load(server: server.url, season: season, key: "results-\(sessionID)", as: [SessionResult].self),
+              server == configuredServer, season == selectedSeason,
+              selectedResultSessionID == sessionID,
+              requestGeneration == nil || requestGeneration == resultGeneration,
+              sessionResults.isEmpty else { return }
+        sessionResults = cached.data
+        resultMeta = cached.meta
+    }
+
+    private func loadStandingsCache(server: ServerAddress, season: Int, isConstructor: Bool, requestGeneration: Int) async {
+        if isConstructor,
+           let cached = try? await cache.load(server: server.url, season: season, key: "standings-constructors", as: [ConstructorStanding].self),
+           server == configuredServer, season == selectedSeason, requestGeneration == standingsGeneration,
+           showingConstructorStandings, constructorStandings.isEmpty {
+            constructorStandings = cached.data
+            standingsMeta = cached.meta
+        } else if !isConstructor,
+                  let cached = try? await cache.load(server: server.url, season: season, key: "standings-drivers", as: [DriverStanding].self),
+                  server == configuredServer, season == selectedSeason, requestGeneration == standingsGeneration,
+                  !showingConstructorStandings, driverStandings.isEmpty {
+            driverStandings = cached.data
+            standingsMeta = cached.meta
+        }
     }
 
     private func loadCachedIfAvailable() async {
@@ -334,4 +740,7 @@ final class AppModel: ObservableObject {
 enum PreferenceKeys {
     static let serverAddress = "serverAddress"
     static let selectedSeason = "selectedSeason"
+    static let remindersEnabled = "remindersEnabled"
+    static let reminderMinutes = "reminderMinutes"
+    static let favoriteDriverId = "favoriteDriverId"
 }

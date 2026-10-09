@@ -12,7 +12,7 @@
    </BuildAction>
    <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
       <Testables>
-         <TestableReference skipped="NO">
+         <TestableReference skipped="NO" parallelizable="NO">
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="4FF465E03EFC50650753F668" BuildableName="F1CompanionTests.xctest" BlueprintName="F1CompanionTests" ReferencedContainer="container:F1Companion.xcodeproj"/>
          </TestableReference>
       </Testables>

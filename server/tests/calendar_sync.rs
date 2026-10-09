@@ -181,7 +181,7 @@ async fn test_old_database_upgrades_and_timeout_keeps_cache() {
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 4);
+    assert_eq!(database.user_version().await.unwrap(), 5);
     database.migrate().await.unwrap();
 
     let payload: Value =
