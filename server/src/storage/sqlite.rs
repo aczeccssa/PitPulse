@@ -1,12 +1,12 @@
 use std::{path::Path, sync::Arc};
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::{
     api::dto::Meta,
     domain::{
-        calendar::Meeting,
+        calendar::{Meeting, MeetingStatus, Session, SessionStatus, SessionType},
         results::SessionResult,
         standings::{ConstructorStanding, DriverStanding},
     },
@@ -14,6 +14,8 @@ use crate::{
 };
 
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
+const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
+const MIGRATION_0003: &str = include_str!("migrations/0003_nullable_meeting_round.sql");
 
 #[derive(Clone)]
 pub struct Database {
@@ -41,13 +43,7 @@ impl Database {
 
     pub async fn migrate(&self) -> Result<(), StorageError> {
         let connection = Arc::clone(&self.connection);
-        spawn_blocking(move || {
-            let connection = connection.blocking_lock();
-            connection.execute_batch(MIGRATION_0001)?;
-            connection.execute_batch("PRAGMA user_version = 1;")?;
-            Ok::<_, rusqlite::Error>(())
-        })
-        .await??;
+        spawn_blocking(move || apply_migrations(&connection.blocking_lock())).await??;
         Ok(())
     }
 
@@ -62,6 +58,19 @@ impl Database {
         Ok(())
     }
 
+    pub async fn utc_now(&self) -> Result<String, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let now = spawn_blocking(move || {
+            connection.blocking_lock().query_row(
+                "SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
+                [],
+                |row| row.get(0),
+            )
+        })
+        .await??;
+        Ok(now)
+    }
+
     pub async fn calendar(
         &self,
         season: Option<i64>,
@@ -70,8 +79,9 @@ impl Database {
         let result = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT id, season, round, name, country, location, start_date, end_date \
-                 FROM meetings WHERE (?1 IS NULL OR season = ?1) ORDER BY round",
+                "SELECT id, season, round, name, country, location, start_date, end_date, \
+                        country_code, status, source, fetched_at, source_updated_at, revision \
+                 FROM meetings WHERE (?1 IS NULL OR season = ?1) ORDER BY COALESCE(round, 9999), id",
             )?;
             let mut meetings = Vec::new();
             let rows = statement.query_map([season], |row| {
@@ -81,25 +91,66 @@ impl Database {
                     round: row.get(2)?,
                     name: row.get(3)?,
                     country: row.get(4)?,
+                    country_code: row.get(8)?,
                     location: row.get(5)?,
                     start_date: row.get(6)?,
                     end_date: row.get(7)?,
+                    status: MeetingStatus::parse(&row.get::<_, String>(9)?),
                     sessions: Vec::new(),
+                    source: row.get(10)?,
+                    fetched_at: row.get(11)?,
+                    source_updated_at: row.get(12)?,
+                    revision: row.get(13)?,
                 })
             })?;
             for row in rows {
-                meetings.push(row?);
+                let mut meeting = row?;
+                meeting.sessions = load_sessions(&connection, &meeting.id)?;
+                meetings.push(meeting);
             }
-            Ok::<_, rusqlite::Error>(meetings)
+            let meta = calendar_meta(&connection, season)?;
+            Ok::<_, rusqlite::Error>((meetings, meta))
         })
-        .await??;
+        .await?
+        .map_err(StorageError::from)?;
 
-        Ok((result, Meta::empty()))
+        Ok(result)
     }
 
-    pub async fn next_meeting(&self) -> Result<(Option<Meeting>, Meta), StorageError> {
-        let (meetings, meta) = self.calendar(None).await?;
-        Ok((meetings.into_iter().next(), meta))
+    pub async fn next_meeting(
+        &self,
+        season: Option<i64>,
+    ) -> Result<(Option<Meeting>, Meta), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let result = spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            let now: String = connection.query_row(
+                "SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
+                [],
+                |row| row.get(0),
+            )?;
+            next_meeting_at(&connection, season, &now)
+        })
+        .await?
+        .map_err(StorageError::from)?;
+        Ok(result)
+    }
+
+    #[doc(hidden)]
+    pub async fn next_meeting_at(
+        &self,
+        season: Option<i64>,
+        now: &str,
+    ) -> Result<(Option<Meeting>, Meta), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let now = now.to_string();
+        let result = spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            next_meeting_at(&connection, season, &now)
+        })
+        .await?
+        .map_err(StorageError::from)?;
+        Ok(result)
     }
 
     pub async fn session_results(
@@ -111,8 +162,8 @@ impl Database {
         let result = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT session_id, position, classification, driver_id, driver_name, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality \
-                 FROM session_results WHERE session_id = ?1 ORDER BY position",
+                "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality \
+                 FROM session_results WHERE session_id = ?1 ORDER BY position IS NULL, position",
             )?;
             let mut results = Vec::new();
             let rows = statement.query_map([&session_id], |row| {
@@ -122,16 +173,17 @@ impl Database {
                     classification: row.get(2)?,
                     driver_id: row.get(3)?,
                     driver_name: row.get(4)?,
-                    team: row.get(5)?,
-                    time: row.get(6)?,
-                    gap: row.get(7)?,
-                    laps: row.get(8)?,
-                    points: row.get(9)?,
-                    source: row.get(10)?,
-                    source_updated_at: row.get(11)?,
-                    fetched_at: row.get(12)?,
-                    revision: row.get(13)?,
-                    quality: row.get(14)?,
+                    constructor_id: row.get(5)?,
+                    team: row.get(6)?,
+                    time: row.get(7)?,
+                    gap: row.get(8)?,
+                    laps: row.get(9)?,
+                    points: row.get(10)?,
+                    source: row.get(11)?,
+                    source_updated_at: row.get(12)?,
+                    fetched_at: row.get(13)?,
+                    revision: row.get(14)?,
+                    quality: row.get(15)?,
                 })
             })?;
             for row in rows {
@@ -211,4 +263,267 @@ impl Database {
         .await??;
         Ok((result, Meta::empty()))
     }
+
+    pub async fn replace_calendar(
+        &self,
+        meetings: &[Meeting],
+        fetched_at: &str,
+    ) -> Result<u64, StorageError> {
+        let meetings = meetings.to_vec();
+        let fetched_at = fetched_at.to_string();
+        let connection = Arc::clone(&self.connection);
+        let revision = spawn_blocking(move || {
+            upsert_calendar(&connection.blocking_lock(), &meetings, &fetched_at)
+        })
+        .await??;
+        Ok(revision)
+    }
+
+    pub async fn user_version(&self) -> Result<i64, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let version = spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            connection.query_row("PRAGMA user_version", [], |row| row.get(0))
+        })
+        .await??;
+        Ok(version)
+    }
+}
+
+fn load_sessions(
+    connection: &Connection,
+    meeting_id: &str,
+) -> Result<Vec<Session>, rusqlite::Error> {
+    let mut statement = connection.prepare(
+        "SELECT id, meeting_id, session_type, start_time, end_time, status, jolpica_session_id, openf1_session_key \
+         FROM sessions WHERE meeting_id = ?1 ORDER BY start_time",
+    )?;
+    let rows = statement.query_map([meeting_id], |row| {
+        let raw_type: String = row.get(2)?;
+        Ok(Session {
+            id: row.get(0)?,
+            meeting_id: row.get(1)?,
+            session_type: SessionType::parse(&raw_type).unwrap_or(SessionType::Race),
+            start_time: row.get(3)?,
+            end_time: row.get(4)?,
+            status: SessionStatus::parse(&row.get::<_, String>(5)?),
+            jolpica_session_id: row.get(6)?,
+            openf1_session_key: row.get(7)?,
+        })
+    })?;
+    rows.collect()
+}
+
+fn next_meeting_at(
+    connection: &Connection,
+    season: Option<i64>,
+    now: &str,
+) -> Result<(Option<Meeting>, Meta), rusqlite::Error> {
+    let meeting_id = connection
+        .query_row(
+            "SELECT m.id FROM meetings m JOIN sessions s ON s.meeting_id = m.id \
+             WHERE m.status = 'scheduled' AND s.status = 'scheduled' \
+               AND (?1 IS NULL OR m.season = ?1) \
+               AND julianday(s.start_time) >= julianday(?2) \
+             ORDER BY julianday(s.start_time), s.id, m.id LIMIT 1",
+            rusqlite::params![season, now],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()?;
+
+    let meeting = match meeting_id {
+        Some(id) => connection
+            .query_row(
+                "SELECT id, season, round, name, country, location, start_date, end_date, \
+                        country_code, status, source, fetched_at, source_updated_at, revision \
+                 FROM meetings WHERE id = ?1",
+                [&id],
+                |row| {
+                    Ok(Meeting {
+                        id: row.get(0)?,
+                        season: row.get(1)?,
+                        round: row.get(2)?,
+                        name: row.get(3)?,
+                        country: row.get(4)?,
+                        country_code: row.get(8)?,
+                        location: row.get(5)?,
+                        start_date: row.get(6)?,
+                        end_date: row.get(7)?,
+                        status: MeetingStatus::parse(&row.get::<_, String>(9)?),
+                        sessions: Vec::new(),
+                        source: row.get(10)?,
+                        fetched_at: row.get(11)?,
+                        source_updated_at: row.get(12)?,
+                        revision: row.get(13)?,
+                    })
+                },
+            )
+            .optional()?
+            .map(|mut meeting| {
+                meeting.sessions = load_sessions(connection, &meeting.id)?;
+                Ok::<_, rusqlite::Error>(meeting)
+            })
+            .transpose()?,
+        None => None,
+    };
+
+    Ok((meeting, calendar_meta(connection, season)?))
+}
+
+fn calendar_meta(connection: &Connection, season: Option<i64>) -> Result<Meta, rusqlite::Error> {
+    connection.query_row(
+        "SELECT source, MAX(fetched_at), MAX(revision), \
+                COALESCE(julianday('now') - julianday(MIN(fetched_at)) > 0.25, 1) \
+         FROM meetings WHERE (?1 IS NULL OR season = ?1)",
+        [season],
+        |row| {
+            let fetched_at: Option<String> = row.get(1)?;
+            if fetched_at.is_none() {
+                return Ok(Meta::empty());
+            }
+            Ok(Meta::from_cache(
+                row.get(0)?,
+                fetched_at,
+                row.get::<_, Option<i64>>(2)?.unwrap_or(0) as u64,
+                row.get(3)?,
+            ))
+        },
+    )
+}
+
+fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 1 {
+        connection.execute_batch(MIGRATION_0001)?;
+        connection.execute_batch("PRAGMA user_version = 1;")?;
+    }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 2 {
+        connection.execute_batch(MIGRATION_0002)?;
+        connection.execute_batch("PRAGMA user_version = 2;")?;
+    }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 3 {
+        connection.execute_batch(MIGRATION_0003)?;
+        connection.execute_batch("PRAGMA user_version = 3;")?;
+    }
+    Ok(())
+}
+
+fn upsert_calendar(
+    connection: &Connection,
+    meetings: &[Meeting],
+    fetched_at: &str,
+) -> Result<u64, rusqlite::Error> {
+    let tx = connection.unchecked_transaction()?;
+    let mut max_revision = 0_u64;
+    for meeting in meetings {
+        let existing = tx.query_row(
+            "SELECT start_date, end_date, status, revision FROM meetings WHERE id = ?1",
+            [&meeting.id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                ))
+            },
+        );
+        let revision = match existing {
+            Ok((start, end, status, revision)) => {
+                let changed = start != meeting.start_date
+                    || end != meeting.end_date
+                    || status != meeting.status.as_str();
+                if changed { revision + 1 } else { revision }
+            }
+            Err(rusqlite::Error::QueryReturnedNoRows) => 1,
+            Err(error) => return Err(error),
+        };
+        max_revision = max_revision.max(revision as u64);
+        tx.execute(
+            "INSERT INTO meetings (id, season, round, name, country, country_code, location, start_date, end_date, status, source, source_updated_at, fetched_at, revision, jolpica_round_id, openf1_meeting_key) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
+             ON CONFLICT(id) DO UPDATE SET season=excluded.season, round=excluded.round, name=excluded.name, country=excluded.country, country_code=excluded.country_code, location=excluded.location, start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, source=excluded.source, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_round_id=excluded.jolpica_round_id, openf1_meeting_key=excluded.openf1_meeting_key",
+            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), meeting.source.clone().unwrap_or_else(|| "jolpica-alpha".to_string()), meeting.source_updated_at, fetched_at, revision, meeting.id, None::<i64>],
+        )?;
+        let mut seen = Vec::new();
+        for session in &meeting.sessions {
+            seen.push(session.id.clone());
+            let existing_session = tx.query_row(
+                "SELECT start_time, end_time, status, revision FROM sessions WHERE id = ?1",
+                [&session.id],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, i64>(3)?,
+                    ))
+                },
+            );
+            let session_revision = match existing_session {
+                Ok((start, end, status, revision)) => {
+                    let changed = start != session.start_time
+                        || end != session.end_time
+                        || status != session.status.as_str();
+                    if changed { revision + 1 } else { revision }
+                }
+                Err(rusqlite::Error::QueryReturnedNoRows) => 1,
+                Err(error) => return Err(error),
+            };
+            tx.execute(
+                "INSERT INTO sessions (id, meeting_id, session_type, start_time, end_time, status, source, provider_session_id, source_updated_at, fetched_at, revision, jolpica_session_id, openf1_session_key) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) \
+                 ON CONFLICT(id) DO UPDATE SET start_time=excluded.start_time, end_time=excluded.end_time, status=excluded.status, source=excluded.source, provider_session_id=excluded.provider_session_id, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_session_id=excluded.jolpica_session_id, openf1_session_key=excluded.openf1_session_key",
+                rusqlite::params![session.id, session.meeting_id, session.session_type.as_str(), session.start_time, session.end_time, session.status.as_str(), meeting.source.clone().unwrap_or_else(|| "jolpica-alpha".to_string()), session.jolpica_session_id, meeting.source_updated_at, fetched_at, session_revision, session.jolpica_session_id, session.openf1_session_key],
+            )?;
+            if let Some(provider_id) = &session.jolpica_session_id {
+                insert_mapping(
+                    &tx,
+                    "jolpica-alpha",
+                    provider_id,
+                    Some(&meeting.id),
+                    Some(&session.id),
+                )?;
+            }
+            if let Some(key) = session.openf1_session_key {
+                insert_mapping(
+                    &tx,
+                    "openf1",
+                    &key.to_string(),
+                    Some(&meeting.id),
+                    Some(&session.id),
+                )?;
+            }
+        }
+        let placeholders = seen.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        if !seen.is_empty() {
+            let sql = format!(
+                "DELETE FROM sessions WHERE meeting_id = ?1 AND id NOT IN ({placeholders})"
+            );
+            let mut params: Vec<&dyn rusqlite::ToSql> = vec![&meeting.id];
+            for id in &seen {
+                params.push(id);
+            }
+            tx.execute(&sql, params.as_slice())?;
+        }
+    }
+    tx.commit()?;
+    Ok(max_revision)
+}
+
+fn insert_mapping(
+    tx: &rusqlite::Transaction,
+    provider: &str,
+    provider_id: &str,
+    meeting_id: Option<&str>,
+    session_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
+    tx.execute(
+        "INSERT INTO provider_mappings (provider, provider_id, meeting_id, session_id) VALUES (?1, ?2, ?3, ?4) \
+         ON CONFLICT(provider, provider_id) DO UPDATE SET meeting_id=excluded.meeting_id, session_id=excluded.session_id",
+        rusqlite::params![provider, provider_id, meeting_id, session_id],
+    )?;
+    Ok(())
 }

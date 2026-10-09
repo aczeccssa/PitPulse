@@ -58,8 +58,12 @@ async fn calendar(
     Ok(Json(json!({"data": meetings, "meta": meta})))
 }
 
-async fn next_meeting(State(state): State<AppState>) -> Result<Json<serde_json::Value>, ApiError> {
-    let (meeting, meta) = state.database.next_meeting().await?;
+async fn next_meeting(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let season = parse_season(&params)?;
+    let (meeting, meta) = state.database.next_meeting(season).await?;
     Ok(Json(json!({"data": meeting, "meta": meta})))
 }
 
@@ -67,7 +71,11 @@ async fn session_results(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let (results, meta) = state.database.session_results(&session_id).await?;
+    let (results, mut meta) = state.database.session_results(&session_id).await?;
+    if results.is_empty() {
+        meta.quality = crate::domain::quality::DataQuality::Pending;
+        meta.stale = false;
+    }
     Ok(Json(json!({"data": results, "meta": meta})))
 }
 

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PitPulse">
+  <!--
+    PitPulse 任务看板的站点图标。
+    形态与 index.html 顶栏的 .brand-mark 一致：圆角方块 + 八角辐条星，端点平切。
+
+    配色对齐 board.css 的 brand-bg / brand-fg 两个令牌：
+      系统浅色（对应页面浅色主题）深色块 + 白色辐条
+      系统深色（对应页面深色主题）浅色块 + 深色辐条
+
+    几何说明：页面 .brand-mark 是 32px 方块 + 18px 字号，测得的星形直径只占方块
+    约 38%。这里刻意放大到 60%，因为站点图标实际渲染在 16px 量级，照搬小占比会
+    糊成一团；辐条宽与直径之比保持原字形的 10.4% 不变。
+    如需严格等比，把下面四个 rect 的尺寸按 64 缩放到 25.6 即可。
+    注意：XML 注释中不能出现连续两个连字符。
+  -->
+  <title>PitPulse</title>
+  <style>
+    .plate { fill: #26292e; }
+    .spokes { fill: #ffffff; }
+    @media (prefers-color-scheme: dark) {
+      .plate { fill: #e9edf5; }
+      .spokes { fill: #0a0d13; }
+    }
+  </style>
+  <rect class="plate" width="64" height="64" rx="20" />
+  <g class="spokes">
+    <rect x="12.8" y="30" width="38.4" height="4" />
+    <rect x="30" y="12.8" width="4" height="38.4" />
+    <rect x="12.8" y="30" width="38.4" height="4" transform="rotate(45 32 32)" />
+    <rect x="12.8" y="30" width="38.4" height="4" transform="rotate(-45 32 32)" />
+  </g>
+</svg>

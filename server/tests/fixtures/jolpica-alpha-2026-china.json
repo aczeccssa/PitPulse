@@ -1,0 +1,19 @@
+{
+  "metadata": {"timestamp": "2026-10-08T09:12:29Z"},
+  "data": {
+    "year": 2026,
+    "events": [
+      {
+        "round": {"id": "round_JqmngOvt", "number": 2, "name": "Chinese Grand Prix", "is_cancelled": false},
+        "circuit": {"country": "China", "country_code": "CHN", "locality": "Shanghai"},
+        "schedule": [
+          {"code": "FP1", "timestamp": "2026-03-13T03:30:00Z", "sessions": [{"id": "session_c_fp1", "type": "FP1", "is_cancelled": false}]},
+          {"code": "SQ", "timestamp": "2026-03-13T07:30:00Z", "sessions": [{"id": "session_c_sq", "type": "SQ1", "is_cancelled": false}]},
+          {"code": "SR", "timestamp": "2026-03-14T03:00:00Z", "sessions": [{"id": "session_c_sr", "type": "SR", "is_cancelled": false}]},
+          {"code": "Q", "timestamp": "2026-03-14T07:00:00Z", "sessions": [{"id": "session_c_q", "type": "Q1", "is_cancelled": false}]},
+          {"code": "R", "timestamp": "2026-03-15T07:00:00Z", "sessions": [{"id": "session_c_r", "type": "R", "is_cancelled": false}]}
+        ]
+      }
+    ]
+  }
+}

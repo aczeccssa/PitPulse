@@ -1,0 +1,1344 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "name": "PitPulse",
+    "subtitle": "F1 Companion · 实现任务状态",
+    "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
+    "timezone": "Asia/Shanghai"
+  },
+  "updatedAt": "2026-10-09T03:00:32Z",
+  "sourceDocuments": [
+    {
+      "label": "技术架构",
+      "path": "F1-Companion-Architecture.md"
+    },
+    {
+      "label": "实现任务计划",
+      "path": "implementation-sequence.md"
+    },
+    {
+      "label": "Agent 更新约定",
+      "path": "AGENTS.md"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "title": "第一条可用链路",
+      "description": "真实赛历 → SQLite → REST → Menu Bar",
+      "taskIds": [
+        "T01",
+        "T02",
+        "T04",
+        "T05",
+        "T06"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "完整 Menu Bar V1",
+      "description": "成绩、积分、修订、缓存与提醒；素材非阻塞",
+      "taskIds": [
+        "T03",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Live 与 Notch",
+      "description": "协议验证后接入；不可用时明确降级",
+      "taskIds": [
+        "T12",
+        "T13",
+        "T14"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "部署与最终验收",
+      "description": "本地演练与真实 VPS／赛事证据分别记录",
+      "taskIds": [
+        "T15"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T01",
+      "title": "V1 数据 Spike 与统一契约",
+      "priority": "P0",
+      "milestone": "M1",
+      "area": "Backend",
+      "status": "done",
+      "summary": "已核验 2026 澳大利亚与中国周末，冻结 schemaVersion 1、质量语义和可空成绩名次。",
+      "dependencies": [],
+      "relatedTasks": [],
+      "scope": "`server/src/providers/`、`server/src/domain/`、`server/src/api/dto.rs`、`server/tests/fixtures/`、`docs/data-contract.md`、`docs/provider-spike.md`。",
+      "steps": [
+        "查询一个已经结束的常规周末和一个 Sprint 周末，核验 Jolpica 常规 / Alpha、OpenF1 sessions / session_result；FP1 尤其验证字段、匿名可读性、分页和延迟边界。",
+        "记录请求路径、采集时间、HTTP 状态、来源、字段缺失；只提交脱敏、精简、可用于测试的历史 fixture，不提交 token、原始实时 feed 日志或庞大全量抓取。",
+        "冻结稳定 meeting / session / driver / constructor ID、来源映射、Session 枚举、UTC 时间、国家代码、质量状态与可空字段。成绩 `position` 当前必填，应核验未分类 / DSQ 等情况是否需要可空；不可用数字 0 假装真实名次。",
+        "明确 `schemaVersion` / `revision` / `source` / `fetchedAt` / `stale`；区分数据抓取时间、上游修正时间和业务 revision。统一空数据、尚未发布成绩、404、401、错误 envelope 的语义。",
+        "API 不因上游暂无成绩而整接口报系统故障；Mac 能区分 pending / partial / provisional / final（仅有源证据时）/ stale。不凭“首次抓到”判定 final。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T01-A1",
+          "text": "fixture 解码 / 分页 / 缺字段 / UTC 测试通过。",
+          "done": true
+        },
+        {
+          "id": "T01-A2",
+          "text": "契约有 JSON 示例。",
+          "done": true
+        },
+        {
+          "id": "T01-A3",
+          "text": "两源 FP1 对照写出 `available / partial / blocked` 和证据。某上游受阻时，可用历史主源继续 V1，不凭预期宣称接入成功。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "V1 数据契约",
+          "path": "docs/data-contract.md"
+        },
+        {
+          "label": "Provider Spike",
+          "path": "docs/provider-spike.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "离线 fixture 与契约测试",
+          "detail": "cargo test --locked --manifest-path server/Cargo.toml --offline：19 passed。覆盖常规/Sprint fixture、缺字段、UTC、分页和可空 position。"
+        },
+        {
+          "label": "2026-10-08 上游采样",
+          "path": "docs/provider-spike.md",
+          "detail": "澳大利亚与中国 FP1 两源均为 available；澳大利亚正赛确认 OpenF1 position 可空。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "T07 再实现成绩与积分采集；不得在无来源证据时标记 final。",
+      "updatedAt": "2026-10-08T09:44:40Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-08T09:44:40Z",
+          "status": "done",
+          "note": "完成契约 Spike：两源 FP1 available，OpenF1 未分类名次为 null，Jolpica 使用 NC 文本；fixture 与 JSON 示例已入库。"
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "title": "赛历采集与持久化",
+      "priority": "P0",
+      "milestone": "M1",
+      "area": "Backend",
+      "status": "done",
+      "summary": "赛历可从 fixture 持久化到 SQLite 和 REST；真实 Alpha smoke 与离线测试分开记录。",
+      "dependencies": [
+        "T01"
+      ],
+      "relatedTasks": [],
+      "scope": "Jolpica / OpenF1 adapters、`domain/calendar.rs`、`storage/sqlite.rs`、新增 migrations、`services/sync.rs`、对应 API 测试。",
+      "steps": [
+        "实现赛季赛历、常规 / Sprint 周末各 Session，映射国家别名到 `countryCode`。",
+        "共享 Reqwest 连接、设置 timeout、检查 HTTP 状态、限制重试；Provider 不直接耦合 Swift 字段或 UI 文案。",
+        "SQLite 用事务 upsert，避免重复同步多出 Session；真实时间更新形成可观察 revision，取消 / 延期不丢失语义。",
+        "增加启动同步入口（完整调度留 T09）；已缓存内容先可读，上游失败不抹掉缓存。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T02-A1",
+          "text": "从空 DB 经 fixture 上游取到赛历 → API 非空。",
+          "done": true
+        },
+        {
+          "id": "T02-A2",
+          "text": "与该赛季官方赛历对照完整站数和 Session 类型（不写死数量）。",
+          "done": true
+        },
+        {
+          "id": "T02-A3",
+          "text": "重复同步幂等。",
+          "done": true
+        },
+        {
+          "id": "T02-A4",
+          "text": "分页 / 取消 / Sprint / 未知国家 / 旧库升级 / 请求超时有测试。",
+          "done": true
+        },
+        {
+          "id": "T02-A5",
+          "text": "真实数据手工 smoke 与离线测试分开记录。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "T01/T02 验收记录",
+          "path": "docs/acceptance/t01-t02-calendar.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "离线赛历闭环",
+          "detail": "空库 fixture 同步后 /api/v1/calendar?season=2026 非空；重复同步 revision 保持 1，时间变化后升至 2；取消、Sprint、未知国家和 user_version=1 升级通过。"
+        },
+        {
+          "label": "真实 Alpha smoke",
+          "detail": "2026-10-08T09:44:40Z GET https://api.jolpi.ca/f1/alpha/schedules/2026/ 返回 HTTP 200、24 events、23 numbered、1 cancelled。该 smoke 不进入 CI。"
+        },
+        {
+          "label": "质量门禁",
+          "detail": "cargo fmt --check、cargo clippy --locked --all-targets -- -D warnings、cargo test --locked --offline 和 cargo build --release --locked --offline 均通过。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "T09 再接入周期调度；当前仅启动时尝试一次同步。",
+      "updatedAt": "2026-10-08T09:44:40Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-08T09:44:40Z",
+          "status": "done",
+          "note": "完成赛历闭环：Alpha 为主源，OpenF1 补源，旧库升级、幂等 upsert、超时保留缓存和 2026-10-08 真实 smoke 已验证。"
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "title": "独立素材 Agent",
+      "priority": "P1",
+      "milestone": "M2",
+      "area": "Asset Agent",
+      "status": "inProgress",
+      "summary": "首轮研究已交付；原图、设计赛季与使用条件待审，已下载／可打包均为 0。",
+      "dependencies": [],
+      "relatedTasks": [],
+      "scope": "当前赛季名单证据、逐车手头盔 / 逐车队 Logo 覆盖矩阵、可审计 manifest、可打包图片（若许可明确）、缺失与授权待审清单。**不能只写一份网址列表就声称图片已下载。**",
+      "steps": [],
+      "acceptanceCriteria": [
+        {
+          "id": "T03-A1",
+          "text": "manifest 可解析。",
+          "done": false
+        },
+        {
+          "id": "T03-A2",
+          "text": "每项 ID / season / 来源 / license / 状态明确。",
+          "done": false
+        },
+        {
+          "id": "T03-A3",
+          "text": "已下载文件 hash、格式与路径有效。",
+          "done": false
+        },
+        {
+          "id": "T03-A4",
+          "text": "区分候选、已下载参考、可发布。",
+          "done": false
+        },
+        {
+          "id": "T03-A5",
+          "text": "缺失有替代 UI 建议。详细要求见独立任务卡。",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "独立 Agent 任务说明",
+          "path": "docs/tasks/T03-motorsport-assets.md"
+        },
+        {
+          "label": "首轮素材收集报告",
+          "path": "docs/assets/collection-report.md"
+        },
+        {
+          "label": "素材来源与映射 manifest",
+          "path": "macos/Resources/MotorsportAssets/manifest.json"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "首轮研究：34 项记录；已下载 0，可打包 0。JSON 必填字段、唯一键与未授权隔离检查通过。",
+          "path": "docs/assets/collection-report.md"
+        }
+      ],
+      "blockers": [
+        "原图出处、设计赛季及版权／商标使用条件尚未核验；这不阻塞 V1。"
+      ],
+      "nextAction": "核验原图与赛季、确认使用条件后下载允许打包的文件，补齐 hash 与覆盖缺口。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "inProgress",
+          "note": "首轮素材研究已交付；不等同于下载、许可确认或 App 接入完成。"
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "title": "macOS 原生工程与壳",
+      "priority": "P0",
+      "milestone": "M1",
+      "area": "macOS",
+      "status": "inReview",
+      "summary": "实现、构建和用户视觉复核通过；单一状态栏入口及退出按钮仍无操作证据，保持待验收。",
+      "dependencies": [],
+      "relatedTasks": [
+        "T01"
+      ],
+      "scope": "`macos/F1Companion.xcodeproj`、共享 scheme、`macos/App/`、`Features/MenuBar/`、`Core/Models/AppSymbol.swift`、测试 target、macOS CI job。",
+      "steps": [
+        "Swift 6；一个 `@main App`；`MenuBarExtra(.window)` + Settings；无第二 App 入口、无主窗口抢焦点。",
+        "先完成连接状态、loading / empty / error、页签导航；预览样本与真实运行明确隔离，禁止正式版默认展示编造赛事。",
+        "SF Symbols 集中映射、Menu Bar template 图标、可访问性 labels；测试候选 Symbol 是否可用。",
+        "默认 V1 最低部署版本候选 macOS 14；先核验使用到的 API。若 OpenNook 需要更高系统，在 T12 明确选择版本约束或能力降级，不偷偷提高 V1 门槛。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T04-A1",
+          "text": "共享 scheme 支持 build / test。",
+          "done": true
+        },
+        {
+          "id": "T04-A2",
+          "text": "App 实际启动后只有一个状态栏入口。",
+          "done": false
+        },
+        {
+          "id": "T04-A3",
+          "text": "Popup、Settings、退出可操作。",
+          "done": false
+        },
+        {
+          "id": "T04-A4",
+          "text": "附截图及实际最低版本 / Symbol 兼容结论。CI 编译不能代替运行验收。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "path": "macos/F1Companion.xcodeproj",
+          "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
+        },
+        {
+          "path": "macos/App/AppModel.swift",
+          "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
+        },
+        {
+          "path": "macos/Core/APIClient/APIClient.swift",
+          "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
+        },
+        {
+          "path": "macos/Core/Cache/CalendarCache.swift",
+          "label": "按服务器/赛季隔离的版本化原子缓存"
+        },
+        {
+          "path": "macos/Features/Calendar/CalendarView.swift",
+          "label": "赛季列表、状态、详情导航与本地时间"
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "真实 Popup 验收截图（已有）"
+        },
+        {
+          "label": "T04-T06 自动化与运行验收边界",
+          "path": "docs/acceptance/t04-t06-macos.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination \"platform=macOS\" CODE_SIGNING_ALLOWED=NO test",
+          "detail": "39 tests passed, 0 failures on macOS 26.5 / Xcode 26.6; includes AppModel refresh/cache/keychain/identity regression tests."
+        },
+        {
+          "label": "cargo fmt --manifest-path server/Cargo.toml -- --check && cargo test --locked --manifest-path server/Cargo.toml && cargo clippy --locked --manifest-path server/Cargo.toml -- -D warnings",
+          "detail": "Rust format, 9+0+3+8+1 tests and strict Clippy passed."
+        },
+        {
+          "label": "node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs",
+          "detail": "Task data validation and 8 data-contract tests passed."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "detail": "Existing real App Popup screenshot; separate from fixture tests."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "label": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "detail": "Existing real calendar list screenshot; detail navigation is implemented and covered by model/view build."
+        },
+        {
+          "label": "F1_COMPANION_DATABASE_PATH=/tmp/pitpulse-t04-t06/calendar.sqlite cargo run --locked --manifest-path server/Cargo.toml; curl -s \"http://localhost:38701/api/v1/calendar?season=2026\"",
+          "detail": "Local server served 24 meetings; after restart fetch metadata used current UTC fetch time (2026-10-09T01:34:52Z), not a hardcoded timestamp."
+        },
+        {
+          "label": "既有截图核验纠正",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "popup-next-meeting.png 可读；calendar-list.png 经实际打开为全黑，无效，不可作为赛历列表或详情验收证明。此前关于该图为真实列表截图的条目已由本条纠正。"
+        },
+        {
+          "label": "用户提供运行截图（修改前）",
+          "path": "docs/acceptance/assets/t04-t06/user-next-meeting.png",
+          "detail": "用户打开了下一站、赛事详情、成绩/积分占位页及设置；仅证明可见状态，不证明退出、Token 操作或离线恢复。"
+        },
+        {
+          "label": "续接后构建与测试",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "xcodebuild test 成功：40 项、0 失败；包含滚动容器透明/overlay/自动隐藏/small 配置断言，仅为配置证明，不代替可见效果验收。"
+        },
+        {
+          "label": "本地预览恢复",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "新版 App 进程启动；本地 API calendar?season=2026 HTTP 200，24 站；meetings/next?season=2026 HTTP 200，Singapore Grand Prix。未借此宣称 UI 交互完成。"
+        },
+        {
+          "label": "用户本机视觉验收",
+          "detail": "2026-10-09 用户确认前两个 Tab 数据和展示正常、无问题，并授权完成及本地 commit；成绩/积分 Tab 暂无数据属于 T07/T08 尚未接入。未将此反馈扩张为退出或断网操作证明。"
+        },
+        {
+          "label": "最终审查与门禁",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "Rust 22 项通过、fmt/严格 Clippy 通过；Swift 当前实现上一轮 40 项通过，无 Swift 代码后续改动；用户确认前两个 Tab 正常。T04 未将退出/入口数量勾选。"
+        },
+        {
+          "label": "暂存快照完整性",
+          "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        }
+      ],
+      "blockers": [
+        "UI 工具无法操作目标 App；用户反馈确认前两个 Tab，但未明确确认入口数量及退出行为。"
+      ],
+      "nextAction": "补确认唯一状态栏入口和退出按钮实际行为后结束 T04。",
+      "updatedAt": "2026-10-09T03:00:32Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-08T13:53:31Z",
+          "status": "inProgress",
+          "note": "开始实施 T04→T06；运行验收以当前 macOS 26.5 / Xcode 26.6 本机为准，保留未提交工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:09:15Z",
+          "status": "inProgress",
+          "note": "续接原聊天；已有实现和两张截图尚未完成验收，保留全部无关工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:21:43Z",
+          "status": "inProgress",
+          "note": "首轮 Xcode 35 项测试、Rust locked test/fmt/严格 Clippy 通过。复核发现生产抓取时间硬编码及误充 Provider 更新时间，已修复并新增回归。"
+        },
+        {
+          "at": "2026-10-09T01:30:47Z",
+          "status": "inReview",
+          "note": "修复请求/缓存竞态、Token 错误、缓存版本失效、服务器身份路径隔离及真实抓取时间；Xcode/Rust 门禁通过，进入运行验收。"
+        },
+        {
+          "at": "2026-10-09T01:38:53Z",
+          "status": "inReview",
+          "note": "补录现有交付、39 项 Swift/21 项 Rust/8 项状态测试和真实 24 站 API 联调；UI 绑定超时，未通过的运行验收不勾选。"
+        },
+        {
+          "at": "2026-10-09T01:42:08Z",
+          "status": "inReview",
+          "note": "最终 Xcode 39 项 0 失败；补全实施边界文档及任务证据。UI 自动化未连到目标 App 窗口，交互验收仍明确未完成。"
+        },
+        {
+          "at": "2026-10-09T01:43:17Z",
+          "status": "inReview",
+          "note": "实际打开旧截图发现 calendar-list.png 全黑，将其移出交付物并追加证据纠正；Popup 图可读。未通过运行项继续待验收。"
+        },
+        {
+          "at": "2026-10-09T02:16:50Z",
+          "status": "inReview",
+          "note": "用户补交五张可读运行截图，补齐修改前下一站/详情/设置证据；提出去掉赛历实色填充和粗滚动条的局部视觉需求。"
+        },
+        {
+          "at": "2026-10-09T02:36:39Z",
+          "status": "inReview",
+          "note": "从 Seq Implement T0456 续接；保留已有工作区改动，先验证被中断的赛历样式补丁与剩余运行验收。"
+        },
+        {
+          "at": "2026-10-09T02:39:18Z",
+          "status": "inReview",
+          "note": "完成被中断补丁的 Xcode 构建/40 项测试；重启新版 App 并恢复本地 API。UI 绑定超时且桌面截图纯白，保留手动交互和修改后视觉验收边界。"
+        },
+        {
+          "at": "2026-10-09T02:57:18Z",
+          "status": "inReview",
+          "note": "用户接受前两个 Tab 展示，授权完成审查和本地提交；开始最终审查，不重复请求提交许可。"
+        },
+        {
+          "at": "2026-10-09T03:00:02Z",
+          "status": "inReview",
+          "note": "完成本地提交前审查；修复过期赛历新鲜度并验证 22 项 Rust 门禁。T05/T06 全部既定验收通过；T04 保留两项实际操作证据缺口。"
+        },
+        {
+          "at": "2026-10-09T03:00:32Z",
+          "status": "inReview",
+          "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "title": "APIClient、缓存与 Preferences",
+      "priority": "P0",
+      "milestone": "M1",
+      "area": "macOS",
+      "status": "done",
+      "summary": "API/缓存回归全部通过，用户确认下一站/赛历展示通过；服务端旧缓存误标新鲜问题已修复。",
+      "dependencies": [
+        "T01",
+        "T04"
+      ],
+      "relatedTasks": [],
+      "scope": "`macos/Core/APIClient/`、`Models/`、`Cache/`、`Features/Preferences/`。",
+      "steps": [
+        "URLSession 只访问自托管 Rust API；base URL 可配置。Bearer 从 Keychain 读取，日志脱敏。",
+        "解码统一 envelope；超时 / 401 / 429 / 5xx / 契约不兼容可识别，不无限自动重试错误凭据。",
+        "Codable 磁盘缓存按服务器身份、赛季和资源键隔离；原子写入、旧 schema 失效 / 迁移、损坏缓存恢复。",
+        "缓存优先显示，后台刷新；切换服务器时不把旧服务器数据混到新连接。HTTPS 优先，仅为明确的本地开发 / 私网配置开放必要 HTTP 范围，不做全局 ATS 豁免。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T05-A1",
+          "text": "URLProtocol fixture 测试、损坏缓存、离线冷启动、缓存 revision、切换服务器和 Keychain 错误路径覆盖。",
+          "done": true
+        },
+        {
+          "id": "T05-A2",
+          "text": "不把 token 写 UserDefaults / JSON / 日志。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "path": "macos/F1Companion.xcodeproj",
+          "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
+        },
+        {
+          "path": "macos/App/AppModel.swift",
+          "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
+        },
+        {
+          "path": "macos/Core/APIClient/APIClient.swift",
+          "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
+        },
+        {
+          "path": "macos/Core/Cache/CalendarCache.swift",
+          "label": "按服务器/赛季隔离的版本化原子缓存"
+        },
+        {
+          "path": "macos/Features/Calendar/CalendarView.swift",
+          "label": "赛季列表、状态、详情导航与本地时间"
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "真实 Popup 验收截图（已有）"
+        },
+        {
+          "label": "T04-T06 自动化与运行验收边界",
+          "path": "docs/acceptance/t04-t06-macos.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination \"platform=macOS\" CODE_SIGNING_ALLOWED=NO test",
+          "detail": "39 tests passed, 0 failures on macOS 26.5 / Xcode 26.6; includes AppModel refresh/cache/keychain/identity regression tests."
+        },
+        {
+          "label": "cargo fmt --manifest-path server/Cargo.toml -- --check && cargo test --locked --manifest-path server/Cargo.toml && cargo clippy --locked --manifest-path server/Cargo.toml -- -D warnings",
+          "detail": "Rust format, 9+0+3+8+1 tests and strict Clippy passed."
+        },
+        {
+          "label": "node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs",
+          "detail": "Task data validation and 8 data-contract tests passed."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "detail": "Existing real App Popup screenshot; separate from fixture tests."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "label": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "detail": "Existing real calendar list screenshot; detail navigation is implemented and covered by model/view build."
+        },
+        {
+          "label": "F1_COMPANION_DATABASE_PATH=/tmp/pitpulse-t04-t06/calendar.sqlite cargo run --locked --manifest-path server/Cargo.toml; curl -s \"http://localhost:38701/api/v1/calendar?season=2026\"",
+          "detail": "Local server served 24 meetings; after restart fetch metadata used current UTC fetch time (2026-10-09T01:34:52Z), not a hardcoded timestamp."
+        },
+        {
+          "label": "既有截图核验纠正",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "popup-next-meeting.png 可读；calendar-list.png 经实际打开为全黑，无效，不可作为赛历列表或详情验收证明。此前关于该图为真实列表截图的条目已由本条纠正。"
+        },
+        {
+          "label": "用户提供运行截图（修改前）",
+          "path": "docs/acceptance/assets/t04-t06/user-settings.png",
+          "detail": "用户打开了下一站、赛事详情、成绩/积分占位页及设置；仅证明可见状态，不证明退出、Token 操作或离线恢复。"
+        },
+        {
+          "label": "续接后构建与测试",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "xcodebuild test 成功：40 项、0 失败；包含滚动容器透明/overlay/自动隐藏/small 配置断言，仅为配置证明，不代替可见效果验收。"
+        },
+        {
+          "label": "本地预览恢复",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "新版 App 进程启动；本地 API calendar?season=2026 HTTP 200，24 站；meetings/next?season=2026 HTTP 200，Singapore Grand Prix。未借此宣称 UI 交互完成。"
+        },
+        {
+          "label": "用户本机视觉验收",
+          "detail": "2026-10-09 用户确认前两个 Tab 数据和展示正常、无问题，并授权完成及本地 commit；成绩/积分 Tab 暂无数据属于 T07/T08 尚未接入。未将此反馈扩张为退出或断网操作证明。"
+        },
+        {
+          "label": "最终审查与门禁",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "Rust 22 项通过、fmt/严格 Clippy 通过；Swift 当前实现上一轮 40 项通过，无 Swift 代码后续改动；用户确认前两个 Tab 正常。T04 未将退出/入口数量勾选。"
+        },
+        {
+          "label": "暂存快照完整性",
+          "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "无；后续成绩/积分实现分别见 T07/T08，真实断网端到端演练在 T11 记录。",
+      "updatedAt": "2026-10-09T03:00:32Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-08T13:53:31Z",
+          "status": "inProgress",
+          "note": "开始实施 T04→T06；运行验收以当前 macOS 26.5 / Xcode 26.6 本机为准，保留未提交工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:09:15Z",
+          "status": "inProgress",
+          "note": "续接原聊天；已有实现和两张截图尚未完成验收，保留全部无关工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:21:43Z",
+          "status": "inProgress",
+          "note": "首轮 Xcode 35 项测试、Rust locked test/fmt/严格 Clippy 通过。复核发现生产抓取时间硬编码及误充 Provider 更新时间，已修复并新增回归。"
+        },
+        {
+          "at": "2026-10-09T01:30:47Z",
+          "status": "inReview",
+          "note": "修复请求/缓存竞态、Token 错误、缓存版本失效、服务器身份路径隔离及真实抓取时间；Xcode/Rust 门禁通过，进入运行验收。"
+        },
+        {
+          "at": "2026-10-09T01:38:53Z",
+          "status": "inReview",
+          "note": "补录现有交付、39 项 Swift/21 项 Rust/8 项状态测试和真实 24 站 API 联调；UI 绑定超时，未通过的运行验收不勾选。"
+        },
+        {
+          "at": "2026-10-09T01:42:08Z",
+          "status": "inReview",
+          "note": "最终 Xcode 39 项 0 失败；补全实施边界文档及任务证据。UI 自动化未连到目标 App 窗口，交互验收仍明确未完成。"
+        },
+        {
+          "at": "2026-10-09T01:43:17Z",
+          "status": "inReview",
+          "note": "实际打开旧截图发现 calendar-list.png 全黑，将其移出交付物并追加证据纠正；Popup 图可读。未通过运行项继续待验收。"
+        },
+        {
+          "at": "2026-10-09T02:16:50Z",
+          "status": "inReview",
+          "note": "用户补交五张可读运行截图，补齐修改前下一站/详情/设置证据；提出去掉赛历实色填充和粗滚动条的局部视觉需求。"
+        },
+        {
+          "at": "2026-10-09T02:36:39Z",
+          "status": "inReview",
+          "note": "从 Seq Implement T0456 续接；保留已有工作区改动，先验证被中断的赛历样式补丁与剩余运行验收。"
+        },
+        {
+          "at": "2026-10-09T02:39:18Z",
+          "status": "inReview",
+          "note": "完成被中断补丁的 Xcode 构建/40 项测试；重启新版 App 并恢复本地 API。UI 绑定超时且桌面截图纯白，保留手动交互和修改后视觉验收边界。"
+        },
+        {
+          "at": "2026-10-09T02:57:18Z",
+          "status": "inReview",
+          "note": "用户接受前两个 Tab 展示，授权完成审查和本地提交；开始最终审查，不重复请求提交许可。"
+        },
+        {
+          "at": "2026-10-09T03:00:02Z",
+          "status": "done",
+          "note": "完成本地提交前审查；修复过期赛历新鲜度并验证 22 项 Rust 门禁。T05/T06 全部既定验收通过；T04 保留两项实际操作证据缺口。"
+        },
+        {
+          "at": "2026-10-09T03:00:32Z",
+          "status": "done",
+          "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        }
+      ]
+    },
+    {
+      "id": "T06",
+      "title": "赛历、Session 与国家 Emoji",
+      "priority": "P0",
+      "milestone": "M1",
+      "area": "macOS",
+      "status": "done",
+      "summary": "国旗/时间/下一站测试及用户 Popup/详情视觉复核通过；透明赛历和细滚动条已接受，过期缓存按 6 小时标记 stale。",
+      "dependencies": [
+        "T02",
+        "T05"
+      ],
+      "relatedTasks": [],
+      "scope": "`Features/Calendar/`、`Features/MenuBar/`、`Core/Models/CountryFlag.swift`。",
+      "steps": [
+        "下一站、全赛季列表、比赛详情、各 Session 本地时间和倒计时；旗帜按 2.1 执行。",
+        "时间只从 RFC 3339 UTC 转当前 Mac 时区；常规 / Sprint 周末不硬编码固定 Session 数量。",
+        "清楚呈现暂无赛程、延期 / 取消、数据来源、最近成功同步和缓存过期；不将计划起止时间当实时比赛状态。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T06-A1",
+          "text": "AU / GB / US / AE / JP、未知代码与同国多站测试。",
+          "done": true
+        },
+        {
+          "id": "T06-A2",
+          "text": "Asia/Shanghai、跨日和 DST 时区测试。",
+          "done": true
+        },
+        {
+          "id": "T06-A3",
+          "text": "实际 Popup 截图和详情点击证据。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "path": "macos/F1Companion.xcodeproj",
+          "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
+        },
+        {
+          "path": "macos/App/AppModel.swift",
+          "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
+        },
+        {
+          "path": "macos/Core/APIClient/APIClient.swift",
+          "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
+        },
+        {
+          "path": "macos/Core/Cache/CalendarCache.swift",
+          "label": "按服务器/赛季隔离的版本化原子缓存"
+        },
+        {
+          "path": "macos/Features/Calendar/CalendarView.swift",
+          "label": "赛季列表、状态、详情导航与本地时间"
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "真实 Popup 验收截图（已有）"
+        },
+        {
+          "label": "T04-T06 自动化与运行验收边界",
+          "path": "docs/acceptance/t04-t06-macos.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination \"platform=macOS\" CODE_SIGNING_ALLOWED=NO test",
+          "detail": "39 tests passed, 0 failures on macOS 26.5 / Xcode 26.6; includes AppModel refresh/cache/keychain/identity regression tests."
+        },
+        {
+          "label": "cargo fmt --manifest-path server/Cargo.toml -- --check && cargo test --locked --manifest-path server/Cargo.toml && cargo clippy --locked --manifest-path server/Cargo.toml -- -D warnings",
+          "detail": "Rust format, 9+0+3+8+1 tests and strict Clippy passed."
+        },
+        {
+          "label": "node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs",
+          "detail": "Task data validation and 8 data-contract tests passed."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "label": "docs/acceptance/assets/t04-t06/popup-next-meeting.png",
+          "detail": "Existing real App Popup screenshot; separate from fixture tests."
+        },
+        {
+          "path": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "label": "docs/acceptance/assets/t04-t06/calendar-list.png",
+          "detail": "Existing real calendar list screenshot; detail navigation is implemented and covered by model/view build."
+        },
+        {
+          "label": "F1_COMPANION_DATABASE_PATH=/tmp/pitpulse-t04-t06/calendar.sqlite cargo run --locked --manifest-path server/Cargo.toml; curl -s \"http://localhost:38701/api/v1/calendar?season=2026\"",
+          "detail": "Local server served 24 meetings; after restart fetch metadata used current UTC fetch time (2026-10-09T01:34:52Z), not a hardcoded timestamp."
+        },
+        {
+          "label": "既有截图核验纠正",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "popup-next-meeting.png 可读；calendar-list.png 经实际打开为全黑，无效，不可作为赛历列表或详情验收证明。此前关于该图为真实列表截图的条目已由本条纠正。"
+        },
+        {
+          "label": "用户提供运行截图（修改前）",
+          "path": "docs/acceptance/assets/t04-t06/user-meeting-detail.png",
+          "detail": "用户打开了下一站、赛事详情、成绩/积分占位页及设置；仅证明可见状态，不证明退出、Token 操作或离线恢复。"
+        },
+        {
+          "label": "续接后构建与测试",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "xcodebuild test 成功：40 项、0 失败；包含滚动容器透明/overlay/自动隐藏/small 配置断言，仅为配置证明，不代替可见效果验收。"
+        },
+        {
+          "label": "本地预览恢复",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "新版 App 进程启动；本地 API calendar?season=2026 HTTP 200，24 站；meetings/next?season=2026 HTTP 200，Singapore Grand Prix。未借此宣称 UI 交互完成。"
+        },
+        {
+          "label": "用户本机视觉验收",
+          "detail": "2026-10-09 用户确认前两个 Tab 数据和展示正常、无问题，并授权完成及本地 commit；成绩/积分 Tab 暂无数据属于 T07/T08 尚未接入。未将此反馈扩张为退出或断网操作证明。"
+        },
+        {
+          "label": "最终审查与门禁",
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "detail": "Rust 22 项通过、fmt/严格 Clippy 通过；Swift 当前实现上一轮 40 项通过，无 Swift 代码后续改动；用户确认前两个 Tab 正常。T04 未将退出/入口数量勾选。"
+        },
+        {
+          "label": "暂存快照完整性",
+          "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "无；后续成绩/积分实现分别见 T07/T08，真实断网端到端演练在 T11 记录。",
+      "updatedAt": "2026-10-09T03:00:32Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-08T13:53:31Z",
+          "status": "inProgress",
+          "note": "开始实施 T04→T06；运行验收以当前 macOS 26.5 / Xcode 26.6 本机为准，保留未提交工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:09:15Z",
+          "status": "inProgress",
+          "note": "续接原聊天；已有实现和两张截图尚未完成验收，保留全部无关工作区改动。"
+        },
+        {
+          "at": "2026-10-09T01:21:43Z",
+          "status": "inProgress",
+          "note": "首轮 Xcode 35 项测试、Rust locked test/fmt/严格 Clippy 通过。复核发现生产抓取时间硬编码及误充 Provider 更新时间，已修复并新增回归。"
+        },
+        {
+          "at": "2026-10-09T01:30:47Z",
+          "status": "inReview",
+          "note": "修复请求/缓存竞态、Token 错误、缓存版本失效、服务器身份路径隔离及真实抓取时间；Xcode/Rust 门禁通过，进入运行验收。"
+        },
+        {
+          "at": "2026-10-09T01:38:53Z",
+          "status": "inReview",
+          "note": "补录现有交付、39 项 Swift/21 项 Rust/8 项状态测试和真实 24 站 API 联调；UI 绑定超时，未通过的运行验收不勾选。"
+        },
+        {
+          "at": "2026-10-09T01:42:08Z",
+          "status": "inReview",
+          "note": "最终 Xcode 39 项 0 失败；补全实施边界文档及任务证据。UI 自动化未连到目标 App 窗口，交互验收仍明确未完成。"
+        },
+        {
+          "at": "2026-10-09T01:43:17Z",
+          "status": "inReview",
+          "note": "实际打开旧截图发现 calendar-list.png 全黑，将其移出交付物并追加证据纠正；Popup 图可读。未通过运行项继续待验收。"
+        },
+        {
+          "at": "2026-10-09T02:16:50Z",
+          "status": "inProgress",
+          "note": "用户补交五张可读运行截图，补齐修改前下一站/详情/设置证据；提出去掉赛历实色填充和粗滚动条的局部视觉需求。"
+        },
+        {
+          "at": "2026-10-09T02:36:39Z",
+          "status": "inProgress",
+          "note": "从 Seq Implement T0456 续接；保留已有工作区改动，先验证被中断的赛历样式补丁与剩余运行验收。"
+        },
+        {
+          "at": "2026-10-09T02:39:18Z",
+          "status": "inReview",
+          "note": "完成被中断补丁的 Xcode 构建/40 项测试；重启新版 App 并恢复本地 API。UI 绑定超时且桌面截图纯白，保留手动交互和修改后视觉验收边界。"
+        },
+        {
+          "at": "2026-10-09T02:57:18Z",
+          "status": "inReview",
+          "note": "用户接受前两个 Tab 展示，授权完成审查和本地提交；开始最终审查，不重复请求提交许可。"
+        },
+        {
+          "at": "2026-10-09T02:58:28Z",
+          "status": "inReview",
+          "note": "新增过期缓存→成功刷新回归先失败；修复共享 calendar_meta，超过 6 小时标记 stale，calendar 与 next 共用。"
+        },
+        {
+          "at": "2026-10-09T03:00:02Z",
+          "status": "done",
+          "note": "完成本地提交前审查；修复过期赛历新鲜度并验证 22 项 Rust 门禁。T05/T06 全部既定验收通过；T04 保留两项实际操作证据缺口。"
+        },
+        {
+          "at": "2026-10-09T03:00:32Z",
+          "status": "done",
+          "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        }
+      ]
+    },
+    {
+      "id": "T07",
+      "title": "成绩与积分的 Provider / 存储闭环",
+      "priority": "P0",
+      "milestone": "M2",
+      "area": "Backend",
+      "status": "pending",
+      "summary": "实现各类 Session 成绩与 WDC／WCC 数据闭环。",
+      "dependencies": [
+        "T01",
+        "T02"
+      ],
+      "relatedTasks": [],
+      "scope": "`providers/`、`domain/results.rs`、`domain/standings.rs`、`services/sync.rs`、`storage/`、`api/routes.rs` 和 fixture 测试。",
+      "steps": [
+        "FP1 / FP2 / FP3、Sprint Qualifying / Sprint / Qualifying / Race；练习赛两源并行探测，谁先有可用完整成绩先使用。",
+        "将练习赛最佳圈、Q1 / Q2 / Q3、Race time / gap / laps / classification 分开建模；禁止将多阶段排位挤进一个含糊 `time` 而丢字段。",
+        "DSQ / DNF / DNS / 无有效圈 / 缺 position 不伪造；部分数据以 partial 展示，完整判据不得固定“永远 20 名”。",
+        "WDC / WCC 接官方积分快照，不自行算积分。写入事务、稳定 ID 和来源一致性；Mac 所需车队 ID 须在契约提供，不从显示名称猜素材。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T07-A1",
+          "text": "每种 Session 至少一个 fixture。",
+          "done": false
+        },
+        {
+          "id": "T07-A2",
+          "text": "两源分歧、先 partial 后完整、处罚修正、空榜与可空字段测试。",
+          "done": false
+        },
+        {
+          "id": "T07-A3",
+          "text": "两种 standings API 有实际非空及鉴权测试。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "实现各类 Session 成绩与 WDC／WCC 数据闭环。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T08",
+      "title": "成绩 / 积分 UI 与素材",
+      "priority": "P0",
+      "milestone": "M2",
+      "area": "macOS",
+      "status": "pending",
+      "summary": "完成成绩与积分 UI；素材缺失使用明确 fallback，不阻塞功能。",
+      "dependencies": [
+        "T05",
+        "T07"
+      ],
+      "relatedTasks": [
+        "T03"
+      ],
+      "scope": "`Features/SessionResults/`、`Features/Standings/`、`Core/Models/MotorsportAsset.swift`、App asset catalog 接入。",
+      "steps": [
+        "结果页按 Session 类型显示适配列；积分页支持 WDC / WCC 和赛季。",
+        "显示 driver / constructor 稳定 ID 对应头盔 / Logo；T03 交付的可发布文件由此任务转入 App build resources / `.xcassets`，素材研究 manifest 不自动加入 bundle。",
+        "允许没有素材照常运行；缺图、过季图、加载失败有明确 fallback。支持 Retina、明暗背景与 VoiceOver。",
+        "源时间戳、revision、partial / provisional / stale 可见；刷新不是仅重画旧缓存。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T08-A1",
+          "text": "正常 / 缺图 / 旧赛季 / 未分类 / 缺圈速 / 处罚后更正 UI 测试和截图。",
+          "done": false
+        },
+        {
+          "id": "T08-A2",
+          "text": "无第三方素材联网请求。",
+          "done": false
+        },
+        {
+          "id": "T08-A3",
+          "text": "研究清单与实际 bundle 对照。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "完成成绩与积分 UI；素材缺失使用明确 fallback，不阻塞功能。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T09",
+      "title": "自动调度、重试与结果修订",
+      "priority": "P0",
+      "milestone": "M2",
+      "area": "Backend",
+      "status": "pending",
+      "summary": "实现自动同步、退避、结果修订与重启恢复。",
+      "dependencies": [
+        "T02",
+        "T07"
+      ],
+      "relatedTasks": [],
+      "scope": "`scheduler.rs`、`services/sync.rs`、`services/reconcile.rs`、`sync_state` 持久化和 API meta。",
+      "steps": [
+        "常态赛历 / 积分每 6 小时；Session 前 24 小时每 30 分钟核对赛程；赛后每 2～5 分钟尝试结果；首次可读立即入库，随后每 30～60 分钟复核、逐步降频。",
+        "Session 结束时间不确定时记录估算 / source 状态依据；探测可以提前，但不得因此宣布比赛已结束 / 成绩 final。",
+        "处理 429 / Retry-After、5xx、网络 timeout、指数退避与 jitter；同一目标不重叠抓取；同步任务可取消并随服务正常退出。",
+        "同源内容 hash 去重；仅实际内容 / 来源 / 质量变化形成业务 revision；不要每次 fetchedAt 改变都通知“成绩更新”。跨源冲突遵守架构优先级并保留来源事实。",
+        "保存 next_retry / last_success / 错误摘要；重启恢复，不把失败写入替代上次成功数据。Mac 在打开 Popup、周期刷新、唤醒时识别 REST revision 更新；静态结果不依赖 Live SSE。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T09-A1",
+          "text": "可注入时钟 + 本地 mock Provider 测试调度、限流、重启续跑、并发单飞、失败回滚和结果修订。",
+          "done": false
+        },
+        {
+          "id": "T09-A2",
+          "text": "不等待真实 6 小时跑测试。",
+          "done": false
+        },
+        {
+          "id": "T09-A3",
+          "text": "真实 Provider 时效另外记账。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "实现自动同步、退避、结果修订与重启恢复。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "提醒、离线与唤醒",
+      "priority": "P1",
+      "milestone": "M2",
+      "area": "macOS",
+      "status": "pending",
+      "summary": "完善本地提醒、离线状态、睡眠与唤醒恢复。",
+      "dependencies": [
+        "T06",
+        "T08",
+        "T09"
+      ],
+      "relatedTasks": [],
+      "scope": "`Core/Notifications/`、缓存 / 生命周期协调、Preferences。",
+      "steps": [
+        "默认可配置 Session 提前提醒（例如 15 分钟）；解释用途后请求 UserNotifications 权限；可关闭 / 调整，不反复弹权限。",
+        "sessionId + reminder 规则去重；赛程更改重排，取消撤回；UTC 转本地通知时间，过期 Session 不补发一串通知。",
+        "断网和唤醒立即标识缓存状态，再按退避刷新；通知权限拒绝不影响所有数据页。",
+        "关注车手按稳定 ID 保存；为 V2 使用，但不假设某车手永远属于同一车队。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T10-A1",
+          "text": "时间变更、跨时区、重复刷新、权限拒绝、睡眠 / 唤醒与网络切换有测试 / 本机记录。",
+          "done": false
+        },
+        {
+          "id": "T10-A2",
+          "text": "离线可查看赛历、成绩和积分。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "完善本地提醒、离线状态、睡眠与唤醒恢复。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "V1 端到端验收",
+      "priority": "P0",
+      "milestone": "M2",
+      "area": "QA",
+      "status": "pending",
+      "summary": "分别记录本地端到端验收与真实赛后验证，不混淆证据。",
+      "dependencies": [
+        "T06",
+        "T08",
+        "T09",
+        "T10"
+      ],
+      "relatedTasks": [],
+      "scope": "`docs/acceptance/v1.md`、可重复的本地 fixture/mock 驱动流程、App 截图与必要测试补缺。",
+      "steps": [
+        "从空 DB 启动 Rust → 同步 fixture → Mac 配置私有 API → 赛历 / 成绩 / 积分显示；结果第二版注入后自动显示新 revision。",
+        "演练错误 token、上游限流、停止服务、Mac 断网、数据库恢复、缓存重启和 App 睡眠 / 唤醒；UI 不虚构“实时”。",
+        "另记录一次真实已完成历史周末的数据读取；**至少一次真实练习赛赛后自动获取**保留待真实赛期验证，不拿 mock 代替。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T11-A1",
+          "text": "本地 fixture 验收与真实数据证据分别列状态。M2 本地实现可以先通过。",
+          "done": false
+        },
+        {
+          "id": "T11-A2",
+          "text": "全架构的真实赛后时效条目仍 pending，不能提前宣称整体完成。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "分别记录本地端到端验收与真实赛后验证，不混淆证据。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "SignalR 与 OpenNook Spike",
+      "priority": "P1",
+      "milestone": "M3",
+      "area": "Protocol / macOS",
+      "status": "pending",
+      "summary": "核实 SignalR 协议与 OpenNook 集成；Live 受阻不影响 V1。",
+      "dependencies": [],
+      "relatedTasks": [
+        "T04"
+      ],
+      "scope": "`docs/live-spike.md`、`docs/opennook-spike.md`、最小纯 Rust / Swift 原型（不引入第二服务运行时）。",
+      "steps": [
+        "核实 negotiate / websocket / subscribe 的**实际协议版本**、cookie / auth、压缩 Topic、心跳与初始状态。不要因为名字叫 SignalR 就预设与某 Core crate 兼容。",
+        "先验证 `signalr-client`，不兼容再选择最小 `tokio-tungstenite` 层；不绕过认证或付费限制。",
+        "验证 OpenNook NookKit / NookSurface 实际包产品、最低系统、单 App 生命周期、MenuBarExtra 共存、多显示器 / 无刘海 fallback；不先引入整个示例 App。",
+        "Live 分 `available / partial / blocked`，同时区分协议能握手与真实赛期 Timing 字段可读；离线阶段不等同于无访问权。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T12-A1",
+          "text": "记录访问日期、依赖 revision、实际成功 / 失败步骤和字段证据。",
+          "done": false
+        },
+        {
+          "id": "T12-A2",
+          "text": "不能只靠库文档宣告可用。Live blocked 则暂停实际连接部分，继续实现 fixture 降级和 V1。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "核实 SignalR 协议与 OpenNook 集成；Live 受阻不影响 V1。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Live Topic Reducer → SSE → LiveStore",
+      "priority": "P1",
+      "milestone": "M3",
+      "area": "Full stack",
+      "status": "pending",
+      "summary": "实现 Topic reducer、SSE 与 LiveStore；上游受阻时保留 fixture 降级。",
+      "dependencies": [
+        "T01",
+        "T05",
+        "T12"
+      ],
+      "relatedTasks": [],
+      "scope": "`providers/f1_live/`、`domain/live.rs`、`services/live_state.rs`、`api/sse.rs`、`macos/Core/LiveStore/`。",
+      "steps": [
+        "优先 SessionInfo / SessionStatus / DriverList / TimingData / LapCount / TrackStatus / RaceControlMessages；轮胎字段按真实证据补齐，不订阅高体量物理遥测。",
+        "顺序 reducer 处理嵌套 key patch、索引、可空值和实际压缩消息；Session 切换 / reconnect 清理旧状态。现有通用 merge 不能直接视为完整 Topic reducer。",
+        "watch 最新 Snapshot、版本、UTC 时间、stale / disconnected 阈值，10～30 秒聚合 SSE；首次连入完整 snapshot，断线后重新取快照，不虚构完整事件审计。",
+        "Swift 增量 SSE parser 处理拆包、多行 data、keep-alive、取消、后台与唤醒；断开立即不再标 live，重连有退避。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T13-A1",
+          "text": "记录 / 精简 fixture 回放、多 Session 隔离、乱序版本、SSE 拆包、慢消费者、超时、断线 / 重连测试。",
+          "done": false
+        },
+        {
+          "id": "T13-A2",
+          "text": "没有真实上游时 UI 明示 replay / disconnected，不宣称 Live 已证实。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "实现 Topic reducer、SSE 与 LiveStore；上游受阻时保留 fixture 降级。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Notch 界面与降级",
+      "priority": "P1",
+      "milestone": "M3",
+      "area": "macOS",
+      "status": "pending",
+      "summary": "实现 Notch 紧凑／展开态、多屏与无实时数据降级。",
+      "dependencies": [
+        "T12",
+        "T13"
+      ],
+      "relatedTasks": [],
+      "scope": "`Features/LiveIsland/`、AppKit 面板 / OpenNook 接入、Preferences。",
+      "steps": [
+        "紧凑态：举办国 Emoji、Session、圈数、关注车手名次 / gap；展开态：Timing、最佳圈、可用轮胎 / 进站、TrackStatus / RaceControl。",
+        "Session 自动激活 / 收起，关注车手切换；Live 不可用只展示已知 Session / 计划信息与降级标签，不推进假圈数。",
+        "无刘海、外接显示器、分辨率变更和多屏策略明确；Panel 不抢焦点、不遮关键菜单区域；保留 Menu Bar 独立可用。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T14-A1",
+          "text": "紧凑 / 展开 / 无刘海 / 缺字段 / stale / disconnected 实际截图和交互。",
+          "done": false
+        },
+        {
+          "id": "T14-A2",
+          "text": "OpenNook 受阻时记录边界，不临时另起一个 App。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "实现 Notch 紧凑／展开态、多屏与无实时数据降级。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "部署与最终验收",
+      "priority": "P1",
+      "milestone": "M4",
+      "area": "Operations / QA",
+      "status": "pending",
+      "summary": "完成部署演练与运行证据；真实 VPS／赛期需要独立验收。",
+      "dependencies": [
+        "T11"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 `server/deploy/`、必要的可选 Docker 改进、README、`docs/acceptance/deployment.md` / `live.md`。",
+      "steps": [
+        "Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。",
+        "有 VPS 访问授权再部署；没有则本地先验收，不捏造远程上线结果。除非用户另行授权，不 commit / push / 创建 PR / 发布 release。",
+        "真实练习赛后 5 / 15 / 30 / 45 / 60 分钟记录 Provider 可读性；真实 Session 记录 Live 字段、分钟级时效及降级。",
+        "闲置 / 赛事 RSS / CPU 实测，无硬编码低内存承诺；区分 Linux 服务指标和本机 App 指标。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T15-A1",
+          "text": "架构 Phase 4 每项关联证据。",
+          "done": false
+        },
+        {
+          "id": "T15-A2",
+          "text": "真实赛事、VPS、最低系统兼容未测的项目标 pending。",
+          "done": false
+        },
+        {
+          "id": "T15-A3",
+          "text": "Live blocked 时明确交付 V1 + V2 不可用说明，不把全部功能勾完。",
+          "done": false
+        }
+      ],
+      "deliverables": [],
+      "evidence": [],
+      "blockers": [],
+      "nextAction": "完成部署演练与运行证据；真实 VPS／赛期需要独立验收。",
+      "updatedAt": "2026-10-08T08:54:47Z",
+      "history": [
+        {
+          "at": "2026-10-08T08:54:47Z",
+          "status": "pending",
+          "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        }
+      ]
+    }
+  ]
+}

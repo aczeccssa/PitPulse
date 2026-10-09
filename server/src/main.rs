@@ -18,6 +18,7 @@ async fn main() -> anyhow::Result<()> {
     database.migrate().await?;
 
     let state = AppState::new(config, database);
+    pitpulse_server::services::sync::spawn_startup_calendar_sync(state.clone());
     scheduler::spawn(state.clone());
 
     server::serve(state)

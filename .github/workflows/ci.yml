@@ -27,3 +27,18 @@ jobs:
         run: cargo test --manifest-path server/Cargo.toml
       - name: Build release
         run: cargo build --release --manifest-path server/Cargo.toml
+
+  macos:
+    name: macOS build / test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: >-
+          xcodebuild
+          -project macos/F1Companion.xcodeproj
+          -scheme F1Companion
+          -configuration Debug
+          -destination 'platform=macOS'
+          CODE_SIGNING_ALLOWED=NO
+          test

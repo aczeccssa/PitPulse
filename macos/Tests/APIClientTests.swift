@@ -1,0 +1,178 @@
+import XCTest
+@testable import F1Companion
+
+final class APIClientTests: XCTestCase {
+    override func tearDown() {
+        URLProtocolStub.handler = nil
+        super.tearDown()
+    }
+
+    func testCalendarDecodesEnvelopeWithFractionalUTCTimestamp() async throws {
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
+            XCTAssertEqual(request.url?.path, "/api/v1/calendar")
+            XCTAssertTrue(request.url?.query?.contains("season=2026") == true)
+            return Self.response(for: request, body: Self.calendarPayload)
+        }
+
+        let client = APIClient(baseURL: URL(string: "http://localhost:38701")!, session: Self.session())
+        let response = try await client.calendar(season: 2026, token: "secret")
+
+        XCTAssertEqual(response.meta.schemaVersion, 1)
+        XCTAssertEqual(response.data.count, 1)
+        XCTAssertEqual(response.data[0].countryCode, "AU")
+        XCTAssertEqual(response.data[0].sessions[0].sessionType, .fp1)
+        XCTAssertEqual(response.data[0].sessions[0].startTime, TestData.date("2026-03-06T01:30:00.125Z"))
+    }
+
+    func testNextMeetingDecodesNullWithoutInventingMeeting() async throws {
+        URLProtocolStub.handler = { request in
+            let body = #"{"data":null,"meta":{"schemaVersion":1,"revision":0,"stale":false,"quality":"pending"}}"#
+            return Self.response(for: request, body: body)
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        let response = try await client.nextMeeting(season: 2026, token: nil)
+        XCTAssertNil(response.data)
+    }
+
+    func testUnauthorizedIsNotRetriedAsTransportFailure() async {
+        var requestCount = 0
+        URLProtocolStub.handler = { request in
+            requestCount += 1
+            return Self.response(for: request, status: 401, body: #"{"error":{"code":"unauthorized"}}"#)
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.calendar(season: 2026, token: "wrong")
+            XCTFail("Expected unauthorized")
+        } catch {
+            XCTAssertEqual(error as? APIClientError, .unauthorized)
+            XCTAssertEqual(requestCount, 1)
+        }
+    }
+
+    func testRateLimitKeepsRetryAfter() async {
+        URLProtocolStub.handler = { request in
+            Self.response(for: request, status: 429, headers: ["Retry-After": "2"], body: "{}")
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.calendar(season: 2026, token: nil)
+            XCTFail("Expected rate limit")
+        } catch let error as APIClientError {
+            guard case let .rateLimited(retryAfter) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+            XCTAssertNotNil(retryAfter)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testServerAndTimeoutErrorsAreDistinct() async {
+        URLProtocolStub.handler = { request in
+            Self.response(for: request, status: 503, body: "{}")
+        }
+        let serverClient = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await serverClient.calendar(season: 2026, token: nil)
+            XCTFail("Expected server error")
+        } catch {
+            XCTAssertEqual(error as? APIClientError, .server(status: 503))
+        }
+
+        URLProtocolStub.handler = { _ in throw URLError(.timedOut) }
+        let timeoutClient = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await timeoutClient.calendar(season: 2026, token: nil)
+            XCTFail("Expected timeout")
+        } catch {
+            XCTAssertEqual(error as? APIClientError, .timeout)
+        }
+    }
+
+    func testIncompatibleSchemaIsRejected() async {
+        let body = #"{"data":[],"meta":{"schemaVersion":2,"revision":1,"stale":false,"quality":"provisional"}}"#
+        URLProtocolStub.handler = { request in Self.response(for: request, body: body) }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.calendar(season: 2026, token: nil)
+            XCTFail("Expected schema mismatch")
+        } catch {
+            XCTAssertEqual(error as? APIClientError, .incompatibleSchema(found: 2, expected: 1))
+        }
+    }
+
+    func testMalformedPayloadIsDecodingError() async {
+        URLProtocolStub.handler = { request in Self.response(for: request, body: #"{"data":{}}"#) }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.calendar(season: 2026, token: nil)
+            XCTFail("Expected decode error")
+        } catch {
+            guard case .decoding = error as? APIClientError else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
+
+    private static let calendarPayload = #"""
+    {
+      "data": [
+        {
+          "id": "2026:1",
+          "season": 2026,
+          "round": 1,
+          "name": "Australian Grand Prix",
+          "country": "Australia",
+          "countryCode": "AU",
+          "location": "Melbourne",
+          "startDate": "2026-03-06T01:30:00Z",
+          "endDate": "2026-03-08T04:00:00Z",
+          "status": "scheduled",
+          "sessions": [
+            {
+              "id": "2026:1:fp1",
+              "meetingId": "2026:1",
+              "sessionType": "fp1",
+              "startTime": "2026-03-06T01:30:00.125Z",
+              "status": "scheduled"
+            }
+          ],
+          "source": "jolpica-alpha",
+          "fetchedAt": "2026-03-01T00:00:00.250Z",
+          "revision": 1
+        }
+      ],
+      "meta": {
+        "schemaVersion": 1,
+        "revision": 1,
+        "stale": false,
+        "quality": "provisional",
+        "source": "fixture",
+        "fetchedAt": "2026-03-01T00:00:00.500Z"
+      }
+    }
+    """#
+
+    private static func session() -> URLSession {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [URLProtocolStub.self]
+        return URLSession(configuration: configuration)
+    }
+
+    private static func response(
+        for request: URLRequest,
+        status: Int = 200,
+        headers: [String: String] = ["Content-Type": "application/json"],
+        body: String
+    ) -> (HTTPURLResponse, Data) {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: status,
+            httpVersion: "HTTP/1.1",
+            headerFields: headers
+        )!
+        return (response, Data(body.utf8))
+    }
+}

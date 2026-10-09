@@ -56,6 +56,48 @@ impl IntoResponse for StorageError {
 }
 
 #[derive(Debug, Error)]
+pub enum ProviderError {
+    #[error("provider request failed for {url}: {error}")]
+    Transport { url: String, error: String },
+
+    #[error("provider returned HTTP {status} for {url}")]
+    Http {
+        url: String,
+        status: u16,
+        retry_after: Option<std::time::Duration>,
+    },
+
+    #[error("provider response could not be decoded for {url}: {error}")]
+    Decode { url: String, error: String },
+
+    #[error("invalid provider URL {url}: {error}")]
+    InvalidUrl { url: String, error: String },
+
+    #[error("provider pagination exceeded for {url}")]
+    Pagination { url: String },
+
+    #[error("provider payload missing required field {field}")]
+    MissingField { field: String },
+}
+
+impl ProviderError {
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            Self::Transport { .. } | Self::Pagination { .. } => true,
+            Self::Http { status, .. } => *status == 429 || (500..600).contains(status),
+            _ => false,
+        }
+    }
+
+    pub fn retry_after(&self) -> Option<std::time::Duration> {
+        match self {
+            Self::Http { retry_after, .. } => *retry_after,
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Error)]
 pub enum ApiError {
     #[error("resource not found")]
     NotFound,
