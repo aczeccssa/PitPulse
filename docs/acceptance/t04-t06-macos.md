@@ -1,5 +1,27 @@
 # T04 / T05 / T06 实施与自动化验收续记
 
+## T05 Settings 重做验收（2026-10-11）
+
+- `PreferencesView` 改用 macOS 26 原生 `NavigationSplitView` 侧栏、透明可滚动详情和 `GlassEffectContainer` / `.glassEffect` / `.glassProminent` 操作层；保留连接、本地提醒、Live Island、关注车手四类设置及原有 `AppModel` 行为。
+- 设置场景使用 800×640 默认尺寸、760×560 内容最小尺寸和统一紧凑工具栏；设置入口先收起菜单栏 Popup，避免 Popup 覆盖设置窗口。
+- 最终 `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`：82 项单测通过，0 失败。
+- 最终 `F1CompanionLiveAcceptance` scheme 仅运行 `MenuBarAcceptanceTests/testSettingsWindowPromotesAppAndRestoresAccessoryPolicy` 和 `MenuBarAcceptanceTests/testSettingsWindowLightAppearance`：2 项通过，0 失败、未跳过。覆盖齿轮打开、四类侧栏切换、关闭后重开、regular/accessory 往返、已打开设置时 Cmd+, 不增加第二个设置窗口。该 Cmd+, 断言不证明从关闭状态独立打开设置。
+- 浅色测试同时传入 `-AppleInterfaceStyle Light -NSRequiresAquaSystemAppearance YES`；仅前一参数在本机未生效。最终八张截图已逐张检查：800×640 窗口的浅深色四类页面均无遮挡，文字和控件未裁切，空 Token 操作正确显示禁用态。截图均为 2× 像素导出，未裁切、未合成。
+- 最小尺寸尝试两次失败：角落和直边拖拽后 XCTest 仍报告 800×640，760×560 断言失败。未确定是拖拽工具还是窗口缩放行为所致，因此移除不稳定拖拽断言，保留真实缩放与滚动为未验收项，不把最终两项交互测试通过扩大为缩放通过。
+- Computer Use Helper 缺少辅助功能授权；实际 Dock/Cmd+Tab 切换返回、最小化恢复、独立 Cmd+, 打开路径及最小尺寸检查尚无完整证据。T05 保留 `inReview`，A4/A5 不勾选。
+
+最终截图：
+
+| 页面 | 浅色 | 深色 |
+|---|---|---|
+| 连接 | [浅色连接](assets/t05-settings/light-connection.png) | [深色连接](assets/t05-settings/dark-connection.png) |
+| 本地提醒 | [浅色提醒](assets/t05-settings/light-reminders.png) | [深色提醒](assets/t05-settings/dark-reminders.png) |
+| Live Island | [浅色 Live Island](assets/t05-settings/light-liveIsland.png) | [深色 Live Island](assets/t05-settings/dark-liveIsland.png) |
+| 关注车手 | [浅色车手](assets/t05-settings/light-favoriteDriver.png) | [深色车手](assets/t05-settings/dark-favoriteDriver.png) |
+
+以下为历史记录；其中 macOS 14 最低目标描述已由当前 macOS 26.0 配置取代，历史测试数量不代表当前回归数量。
+
+
 日期：2026-10-09。运行环境：macOS 26.5 / Xcode 26.6；最低部署目标 macOS 14.0。当前验证覆盖最低目标编译设置与本机 macOS 26.5 运行环境；未在 macOS 14 设备上实测，Symbol 回退结果仅能确认在当前环境全部可解析。
 
 ## 实现与回归

@@ -114,6 +114,8 @@ struct MenuBarRootView: View {
             .disabled(model.isRefreshing)
 
             Button {
+                NSApp.keyWindow?.orderOut(nil)
+                NSApp.activate()
                 openSettings()
             } label: {
                 Image(systemName: AppSymbol.settings.resolvedSystemName())

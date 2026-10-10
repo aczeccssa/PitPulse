@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-10T13:19:55Z",
+  "updatedAt": "2026-10-10T16:49:45Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -507,7 +507,7 @@
       "milestone": "M1",
       "area": "macOS",
       "status": "inReview",
-      "summary": "用户四张实际截图反馈后共享UI已修正；历史证据保留，当前新版实际交互与截图待用户复验。",
+      "summary": "最低部署目标已核对为 macOS 26.0；当前新版实际交互与截图仍待用户复验。",
       "dependencies": [],
       "relatedTasks": [
         "T01"
@@ -517,7 +517,7 @@
         "Swift 6；一个 `@main App`；`MenuBarExtra(.window)` + Settings；无第二 App 入口、无主窗口抢焦点。",
         "先完成连接状态、loading / empty / error、页签导航；预览样本与真实运行明确隔离，禁止正式版默认展示编造赛事。",
         "SF Symbols 集中映射、Menu Bar template 图标、可访问性 labels；测试候选 Symbol 是否可用。",
-        "默认 V1 最低部署版本候选 macOS 14；先核验使用到的 API。若 OpenNook 需要更高系统，在 T12 明确选择版本约束或能力降级，不偷偷提高 V1 门槛。"
+        "最低部署目标为 macOS 26.0；App 与 Test 构建配置已统一为 26.0，Info.plist 从该值派生，不宣称兼容更早系统。"
       ],
       "acceptanceCriteria": [
         {
@@ -537,14 +537,14 @@
         },
         {
           "id": "T04-A4",
-          "text": "附截图及实际最低版本 / Symbol 兼容结论。CI 编译不能代替运行验收。",
+          "text": "附截图及实际最低版本 / Symbol 兼容结论；最低部署目标为 macOS 26.0，CI 编译不能代替运行验收。",
           "done": true
         }
       ],
       "deliverables": [
         {
           "path": "macos/F1Companion.xcodeproj",
-          "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
+          "label": "共享 App/Test scheme、macOS 26.0 壳与单入口 MenuBarExtra"
         },
         {
           "path": "macos/App/AppModel.swift",
@@ -635,13 +635,18 @@
           "label": "用户截图与共享UI修正编译",
           "path": "docs/acceptance/notch.md",
           "detail": "四张用户提供的修改前截图已归档；当前build及两个scheme build-for-testing成功，Swift无界面实际CalendarLogic6项assert通过。新增XCTest和改动UI测试未执行，实际新版视觉/点击待复验。"
+        },
+        {
+          "label": "最低 macOS 26.0 部署目标核验",
+          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "detail": "各 App/Test 配置的 MACOSX_DEPLOYMENT_TARGET 均为 26.0；Info.plist 的 LSMinimumSystemVersion 引用该设置。macOS 26.5 主机上主 App 构建成功，目标 triple 为 macos26.0；无需再改部署配置。"
         }
       ],
       "blockers": [
         "UI 工具无法操作目标 App；用户反馈确认前两个 Tab，但未明确确认入口数量及退出行为。"
       ],
       "nextAction": "复验新版入口/比赛周末/列表及详情；不以旧截图或仅编译通过关闭当前UI验收。",
-      "updatedAt": "2026-10-10T09:06:59Z",
+      "updatedAt": "2026-10-10T13:30:08Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -717,6 +722,11 @@
           "at": "2026-10-10T09:06:59Z",
           "status": "inReview",
           "note": "用户截图实际反馈触发共享UI修正；完整当周/最近比赛周末、固定状态图标、隐藏不再等待keepVisible悬停、统一原生overlay滚动与行间距、成绩/积分详情、Island计划倒计时。当前App与测试目标编译通过，真实代码无界面逻辑6项通过；未运行GUI测试，新UI仍待实际复验，旧历史不改写。"
+        },
+        {
+          "at": "2026-10-10T13:30:08Z",
+          "status": "inReview",
+          "note": "本次设置界面工作确认最低 macOS 26.0；所有 Xcode 目标已配置该值且 Info.plist 引用一致。未操作 Nook/Menu Bar，T04 原有入口交互验收仍保持未完成。"
         }
       ]
     },
@@ -726,19 +736,20 @@
       "priority": "P0",
       "milestone": "M1",
       "area": "macOS",
-      "status": "done",
-      "summary": "API/缓存回归全部通过，用户确认下一站/赛历展示通过；服务端旧缓存误标新鲜问题已修复。",
+      "status": "inReview",
+      "summary": "macOS 26 Liquid Glass 设置重做与窗口激活修复已实现；82 项单测、2 项设置 UI 测试通过，浅深色四类截图已复核；最小尺寸和实际桌面切换仍待验收。",
       "dependencies": [
         "T01",
         "T04"
       ],
       "relatedTasks": [],
-      "scope": "`macos/Core/APIClient/`、`Models/`、`Cache/`、`Features/Preferences/`。",
+      "scope": "`macos/Core/APIClient/`、`Models/`、`Cache/`、`Features/Preferences/`；设置窗口材质与激活生命周期；菜单栏仅修复设置入口激活，不改变 Popup 或 Nook 界面。",
       "steps": [
         "URLSession 只访问自托管 Rust API；base URL 可配置。Bearer 从 Keychain 读取，日志脱敏。",
         "解码统一 envelope；超时 / 401 / 429 / 5xx / 契约不兼容可识别，不无限自动重试错误凭据。",
         "Codable 磁盘缓存按服务器身份、赛季和资源键隔离；原子写入、旧 schema 失效 / 迁移、损坏缓存恢复。",
-        "缓存优先显示，后台刷新；切换服务器时不把旧服务器数据混到新连接。HTTPS 优先，仅为明确的本地开发 / 私网配置开放必要 HTTP 范围，不做全局 ATS 豁免。"
+        "缓存优先显示，后台刷新；切换服务器时不把旧服务器数据混到新连接。HTTPS 优先，仅为明确的本地开发 / 私网配置开放必要 HTTP 范围，不做全局 ATS 豁免。",
+        "Preferences 使用 macOS 26 原生窗口、侧栏和 Liquid Glass 操作控件；保留 AppModel 设置行为，打开设置可通过 Dock/Cmd+Tab 返回，关闭恢复菜单栏模式。"
       ],
       "acceptanceCriteria": [
         {
@@ -750,12 +761,27 @@
           "id": "T05-A2",
           "text": "不把 token 写 UserDefaults / JSON / 日志。",
           "done": true
+        },
+        {
+          "id": "T05-A3",
+          "text": "设置窗口采用连接、本地提醒、Live Island、关注车手四类侧栏；保留现有控件绑定与模型调用，macOS 26+ 主 App 构建通过。",
+          "done": true
+        },
+        {
+          "id": "T05-A4",
+          "text": "浅色/深色外观、四类侧栏切换及最小窗口尺寸完成实际布局与交互检查，并记录证据。",
+          "done": false
+        },
+        {
+          "id": "T05-A5",
+          "text": "设置窗口获得焦点；存续期间为 regular 应用，关闭恢复 accessory；重新打开、切换返回与两条设置入口有运行证据。",
+          "done": false
         }
       ],
       "deliverables": [
         {
           "path": "macos/F1Companion.xcodeproj",
-          "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
+          "label": "共享 App/Test scheme、macOS 26.0 壳与单入口 MenuBarExtra"
         },
         {
           "path": "macos/App/AppModel.swift",
@@ -780,6 +806,46 @@
         {
           "label": "T04-T06 自动化与运行验收边界",
           "path": "docs/acceptance/t04-t06-macos.md"
+        },
+        {
+          "path": "macos/App/SettingsWindowPresentation.swift",
+          "label": "设置窗口 regular/accessory 生命周期"
+        },
+        {
+          "path": "macos/UITests/MenuBarAcceptanceTests.swift",
+          "label": "设置分类、浅深色与重开 UI 测试"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-connection.png",
+          "label": "最终设置截图：dark-connection"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-favoriteDriver.png",
+          "label": "最终设置截图：dark-favoriteDriver"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-liveIsland.png",
+          "label": "最终设置截图：dark-liveIsland"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-reminders.png",
+          "label": "最终设置截图：dark-reminders"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-connection.png",
+          "label": "最终设置截图：light-connection"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-favoriteDriver.png",
+          "label": "最终设置截图：light-favoriteDriver"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-liveIsland.png",
+          "label": "最终设置截图：light-liveIsland"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-reminders.png",
+          "label": "最终设置截图：light-reminders"
         }
       ],
       "evidence": [
@@ -841,11 +907,87 @@
         {
           "label": "暂存快照完整性",
           "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        },
+        {
+          "label": "macOS 26 Settings 主 App 构建",
+          "path": "macos/Features/Preferences/PreferencesView.swift",
+          "detail": "xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build 成功；Swift 编译目标为 arm64-apple-macos26.0。保留现有 AppModel 操作绑定；该构建不代替实际窗口视觉验收。"
+        },
+        {
+          "label": "任务状态数据校验",
+          "path": "docs/tasks/tasks.json",
+          "detail": "node docs/tasks/validate.mjs 通过；node --test docs/tasks/tests/task-data.test.mjs：8 项通过。"
+        },
+        {
+          "label": "macOS 实际设置窗口与分类切换",
+          "detail": "从 F1Companion 应用菜单打开原生 SwiftUI Settings 窗口；无障碍树确认标准窗口 F1Companion Settings、连接/本地提醒/Live Island/关注车手四类，逐项切换均显示对应控件。当前深色外观截图已目视检查。浅色外观、最小窗口尺寸、键盘焦点和滚动仍待复核。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-connection.png",
+          "label": "最终设置截图：dark-connection",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-favoriteDriver.png",
+          "label": "最终设置截图：dark-favoriteDriver",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-liveIsland.png",
+          "label": "最终设置截图：dark-liveIsland",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/dark-reminders.png",
+          "label": "最终设置截图：dark-reminders",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-connection.png",
+          "label": "最终设置截图：light-connection",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-favoriteDriver.png",
+          "label": "最终设置截图：light-favoriteDriver",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-liveIsland.png",
+          "label": "最终设置截图：light-liveIsland",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/assets/t05-settings/light-reminders.png",
+          "label": "最终设置截图：light-reminders",
+          "detail": "XCTest 导出 800×640 窗口的 2× 截图；逐张复核无遮挡、无文字或控件裁切；不证明最小尺寸。"
+        },
+        {
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "label": "最终 Swift 回归",
+          "detail": "F1Companion scheme / platform=macOS / CODE_SIGNING_ALLOWED=NO test：82 tests，0 failures。"
+        },
+        {
+          "path": "macos/UITests/MenuBarAcceptanceTests.swift",
+          "label": "最终设置 UI 回归",
+          "detail": "F1CompanionLiveAcceptance 的两项设置测试：2 tests，0 failures，未跳过。齿轮、四类切换、关闭后重开、regular/accessory 往返通过；Cmd+, 只证明设置已开时不产生重复窗口。"
+        },
+        {
+          "path": "docs/acceptance/t04-t06-macos.md",
+          "label": "最小窗口缩放失败边界",
+          "detail": "角落与直边拖拽各一次均未改变 XCTest 报告的 800×640；760×560 断言失败。移除不稳定缩放断言后重跑交互测试通过；未声称缩放/滚动已验收。"
+        },
+        {
+          "label": "最新构建启动确认",
+          "detail": "最终 Debug App 已正常启动，进程查询确认正在运行；未附加测试外观或测试偏好参数。此记录不代替尚未完成的窗口交互验收。"
         }
       ],
-      "blockers": [],
-      "nextAction": "无；后续成绩/积分实现分别见 T07/T08，真实断网端到端演练在 T11 记录。",
-      "updatedAt": "2026-10-09T03:00:32Z",
+      "blockers": [
+        "Computer Use Helper 缺少辅助功能授权，实际 Dock/Cmd+Tab、最小化恢复和独立 Cmd+, 打开缺少证据。",
+        "两次 XCTest 拖拽缩放均仍报告 800×640；760×560 与滚动未通过实际验收，未确定是工具限制还是窗口行为。"
+      ],
+      "nextAction": "补足实际 760×560 缩放/滚动、Dock/Cmd+Tab 返回、最小化恢复与设置关闭时独立 Cmd+, 打开证据；A4/A5 通过后完成 T05。",
+      "updatedAt": "2026-10-10T16:49:45Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -916,6 +1058,41 @@
           "at": "2026-10-09T03:00:32Z",
           "status": "done",
           "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        },
+        {
+          "at": "2026-10-10T13:26:20Z",
+          "status": "inProgress",
+          "note": "开始用户授权的 Preferences Liquid Glass 重设计：连接、本地提醒、Live Island、关注车手四类侧栏；保留既有行为，Nook 与 Menu Bar 不在实现范围。"
+        },
+        {
+          "at": "2026-10-10T13:30:08Z",
+          "status": "inReview",
+          "note": "四类侧栏、Liquid Glass 选中效果和主要操作样式已实现；主 App build 成功，任务数据校验 8/8。未启动窗口或驱动桌面交互，实际浅/深色与分类切换验收保留待复核。"
+        },
+        {
+          "at": "2026-10-10T13:36:00Z",
+          "status": "inReview",
+          "note": "启动新构建并打开真实原生 F1Companion Settings 窗口；实机确认四类侧栏可切换并显示各自控件，深色外观已检查。浅色外观、最小尺寸、键盘焦点和滚动仍待复核。"
+        },
+        {
+          "at": "2026-10-10T15:45:06Z",
+          "status": "inProgress",
+          "note": "用户指出 grouped Form 不满足 macOS 26 Liquid Glass；改为原生窗口与侧栏、透明可滚动正文及真实玻璃操作层。此前 82 项单测通过；设置窗口 regular/accessory 往返和四类切换 UI 测试通过，但不代表重做后的视觉验收。"
+        },
+        {
+          "at": "2026-10-10T16:22:49Z",
+          "status": "inProgress",
+          "note": "最终工具栏与玻璃布局 build 通过；UI 生命周期测试 1/1 通过。设置入口收起 Popup 后截图无遮挡；此前把遮挡层认作 Nook 的描述不成立。开始补测浅色、四类切换与关闭后重开。"
+        },
+        {
+          "at": "2026-10-10T16:40:13Z",
+          "status": "inReview",
+          "note": "最终 82 项单测、2 项 UI 测试通过；八张浅深色四类截图逐张复核并保存。两次最小尺寸缩放失败及缺少桌面辅助功能授权如实记录；A4/A5 仍未完成，未改为 done。"
+        },
+        {
+          "at": "2026-10-10T16:49:45Z",
+          "status": "inReview",
+          "note": "启动最终构建并确认 App 进程运行。遵照用户要求，不使用 subagent，不再扩展或重复设置 UI 测试；现有未验收项保留，T05 维持 inReview。"
         }
       ]
     },

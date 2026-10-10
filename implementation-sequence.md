@@ -144,20 +144,20 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 - Swift 6；一个 `@main App`；`MenuBarExtra(.window)` + Settings；无第二 App 入口、无主窗口抢焦点。
 - 先完成连接状态、loading / empty / error、页签导航；预览样本与真实运行明确隔离，禁止正式版默认展示编造赛事。
 - SF Symbols 集中映射、Menu Bar template 图标、可访问性 labels；测试候选 Symbol 是否可用。
-- 默认 V1 最低部署版本候选 macOS 14；先核验使用到的 API。若 OpenNook 需要更高系统，在 T12 明确选择版本约束或能力降级，不偷偷提高 V1 门槛。
+- 最低部署目标为 macOS 26.0；App 与 Test 构建配置已统一为 26.0，Info.plist 从该值派生。直接使用 macOS 26 SwiftUI API，不宣称支持更早版本。
 
-**验收**：共享 scheme 支持 build / test；App 实际启动后只有一个状态栏入口；Popup、Settings、退出可操作；附截图及实际最低版本 / Symbol 兼容结论。CI 编译不能代替运行验收；可先确认 macOS 14 编译目标，并明确实际运行环境及最低系统实机尚未覆盖的边界。
+**验收**：共享 scheme 支持 build / test；App 实际启动后只有一个状态栏入口；Popup、Settings、退出可操作；附截图及实际最低版本 / Symbol 兼容结论。CI 编译不能代替运行验收；最低版本为 macOS 26.0，当前主机运行环境为 macOS 26.5。
 
 ### T05 — APIClient、缓存与 Preferences
 
-**实现范围**：`macos/Core/APIClient/`、`Models/`、`Cache/`、`Features/Preferences/`。
+**实现范围**：`macos/Core/APIClient/`、`Models/`、`Cache/`、`Features/Preferences/`；Settings 场景的尺寸、原生窗口材质与激活生命周期。菜单栏设置入口仅负责收起 Popup、激活并打开设置，不重做 Menu Bar 或 Nook 界面。
 
 - URLSession 只访问自托管 Rust API；base URL 可配置。Bearer 从 Keychain 读取，日志脱敏。
 - 解码统一 envelope；超时 / 401 / 429 / 5xx / 契约不兼容可识别，不无限自动重试错误凭据。
 - Codable 磁盘缓存按服务器身份、赛季和资源键隔离；原子写入、旧 schema 失效 / 迁移、损坏缓存恢复。
 - 缓存优先显示，后台刷新；切换服务器时不把旧服务器数据混到新连接。HTTPS 优先，仅为明确的本地开发 / 私网配置开放必要 HTTP 范围，不做全局 ATS 豁免。
 
-**验收**：URLProtocol fixture 测试、损坏缓存、离线冷启动、缓存 revision、切换服务器和 Keychain 错误路径覆盖；不把 token 写 UserDefaults / JSON / 日志。
+**验收**：URLProtocol fixture 测试、损坏缓存、离线冷启动、缓存 revision、切换服务器和 Keychain 错误路径覆盖；不把 token 写 UserDefaults / JSON / 日志。Preferences 以「连接、本地提醒、Live Island、关注车手」四类侧栏呈现，保留原有设置行为。
 
 ### T06 — 赛历、Session 与国家 Emoji
 

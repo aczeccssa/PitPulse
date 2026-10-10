@@ -26,7 +26,10 @@ struct F1CompanionApp: App {
         Settings {
             PreferencesView()
                 .environmentObject(model)
-                .frame(width: 560, height: 560)
+                .frame(minWidth: 760, idealWidth: 800, minHeight: 560, idealHeight: 640)
         }
+        .defaultSize(width: 800, height: 640)
+        .windowResizability(.contentMinSize)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: true))
     }
 }

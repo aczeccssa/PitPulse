@@ -348,6 +348,107 @@ final class MenuBarAcceptanceTests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsWindowPromotesAppAndRestoresAccessoryPolicy() throws {
+        try checkSettingsWindow(appearance: "Dark")
+    }
+
+    @MainActor
+    func testSettingsWindowLightAppearance() throws {
+        try checkSettingsWindow(appearance: "Light")
+    }
+
+    @MainActor
+    private func checkSettingsWindow(appearance: String) throws {
+        let app = XCUIApplication(bundleIdentifier: "com.pitpulse.F1Companion")
+        app.launchArguments = [
+            "-serverAddress", "http://127.0.0.1:38701",
+            "-notchAutoShowEnabled", "NO",
+            "-AppleInterfaceStyle", appearance,
+            "-NSRequiresAquaSystemAppearance", appearance == "Light" ? "YES" : "NO"
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        let statusItem = app.statusItems.firstMatch
+        XCTAssertTrue(statusItem.waitForExistence(timeout: 10), app.debugDescription)
+
+        // The status item can settle a moment after launch on a crowded menu
+        // bar; wait briefly before falling back to the suite-wide skip.
+        let deadline = Date().addingTimeInterval(5)
+        while !statusItem.isHittable, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+        guard statusItem.isHittable else {
+            throw XCTSkip("macOS reports the status item outside the hittable area on this multi-display desktop")
+        }
+
+        let popup = app.dialogs.firstMatch
+        if !popup.exists { statusItem.click() }
+        XCTAssertTrue(popup.waitForExistence(timeout: 5), app.debugDescription)
+        popup.buttons["menuBar.settings"].click()
+
+        let settingsWindow = app.windows.matching(
+            NSPredicate(format: "title CONTAINS[c] %@ OR title CONTAINS[c] %@", "Settings", "设置")
+        ).firstMatch
+        XCTAssertTrue(settingsWindow.waitForExistence(timeout: 10), app.debugDescription)
+
+        XCTAssertTrue(
+            settingsWindow.staticTexts["服务器地址"].waitForExistence(timeout: 5),
+            settingsWindow.debugDescription
+        )
+        XCTAssertFalse(
+            settingsWindow.toolbars.buttons["Hide Sidebar"].exists,
+            "NavigationSplitView's Hide Sidebar toolbar item should be removed"
+        )
+
+        let promoted = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            NSRunningApplication.runningApplications(withBundleIdentifier: "com.pitpulse.F1Companion")
+                .first?.activationPolicy == .regular
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [promoted], timeout: 5), .completed, "App should become .regular while Settings is open")
+
+        attachScreenshot("T05 \(appearance) connection", from: settingsWindow)
+
+        for (section, content) in [
+            ("reminders", "preferences.reminders"),
+            ("liveIsland", "preferences.notchAutoShow")
+        ] {
+            settingsWindow.staticTexts["preferences.section.\(section)"].click()
+            XCTAssertTrue(settingsWindow.switches[content].waitForExistence(timeout: 5), settingsWindow.debugDescription)
+            attachScreenshot("T05 \(appearance) \(section)", from: settingsWindow)
+        }
+        settingsWindow.staticTexts["preferences.section.favoriteDriver"].click()
+        XCTAssertTrue(settingsWindow.staticTexts["按稳定车手 ID 保存；车队变更不会改变关注对象。"].waitForExistence(timeout: 5), settingsWindow.debugDescription)
+        attachScreenshot("T05 \(appearance) favoriteDriver", from: settingsWindow)
+        settingsWindow.staticTexts["preferences.section.connection"].click()
+        XCTAssertTrue(settingsWindow.textFields["preferences.serverAddress"].waitForExistence(timeout: 5))
+
+        app.typeKey("w", modifierFlags: [.command])
+        XCTAssertTrue(settingsWindow.waitForNonExistence(timeout: 10), "Cmd+W should close the Settings window")
+
+        let demoted = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            NSRunningApplication.runningApplications(withBundleIdentifier: "com.pitpulse.F1Companion")
+                .first?.activationPolicy == .accessory
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [demoted], timeout: 5), .completed, "App should return to .accessory after Settings closes")
+
+        statusItem.click()
+        XCTAssertTrue(popup.waitForExistence(timeout: 5))
+        popup.buttons["menuBar.settings"].click()
+        XCTAssertTrue(settingsWindow.waitForExistence(timeout: 5))
+        let promotedAgain = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            NSRunningApplication.runningApplications(withBundleIdentifier: "com.pitpulse.F1Companion")
+                .first?.activationPolicy == .regular
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [promotedAgain], timeout: 5), .completed)
+        app.typeKey(",", modifierFlags: [.command])
+        XCTAssertTrue(settingsWindow.exists)
+        XCTAssertEqual(app.windows.matching(NSPredicate(format: "identifier == %@", "com_apple_SwiftUI_Settings_window")).count, 1)
+        app.typeKey("w", modifierFlags: [.command])
+        XCTAssertTrue(settingsWindow.waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
     private func staticText(containing value: String, in popup: XCUIElement) -> XCUIElement {
         popup.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] %@", value)).firstMatch
     }
