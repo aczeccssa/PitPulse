@@ -69,6 +69,17 @@ struct PreferencesView: View {
                 }
             }
 
+            Section("Live Island") {
+                Toggle("Session 期间自动显示 Notch", isOn: Binding(
+                    get: { model.notchAutoShowEnabled },
+                    set: { model.setNotchAutoShowEnabled($0) }
+                ))
+                .accessibilityIdentifier("preferences.notchAutoShow")
+                Text("收到 Session 实时开始状态后显示；关闭后仍可从菜单栏手动打开。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("关注车手") {
                 Picker("车手", selection: Binding(
                     get: { model.favoriteDriverId ?? "" },

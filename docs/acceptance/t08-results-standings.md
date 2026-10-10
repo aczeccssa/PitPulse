@@ -53,3 +53,23 @@ UI scheme 使用的 fixture 端口和可直接复跑命令见 [T11 本地验收�
 后续重跑查明当前自动化环境的具体限制：XCUITest / System Events 都枚举到 `PitPulse` 状态栏项，但辅助功能坐标为 `x=-3948`，当前内建屏幕范围从 `x=0` 开始；Popup 因而未展开。当前无外接屏在线，重启 `SystemUIServer` 和重启 App 后坐标仍为负值。失败发生在弹窗出现前，不是成绩断言失败。标准 `F1Companion` scheme 保留 56 项单元测试；状态栏 UI 测试放入独立 `F1CompanionUITests` scheme，避免无可见状态栏坐标时把单元测试误报失败。UI 场景成功证据以本节实际通过运行及附件为准，当前坐标异常作为复跑环境限制单独记录。
 
 UI 测试通过了成绩／积分导航和赛季选择器的 Accessibility 查询；本轮未验证 VoiceOver 实际语音播报。验收准则中的 UI 场景与截图已通过，语音播报不作为本任务 blocker。
+
+## 2026-10-10 成绩空态布局修正
+
+用户的[实际空榜截图](assets/t08-user-feedback/results-empty-before.png)显示赛事选择和日期被纵向居中、大空态进一步撑高页面。这是布局缺陷，不是系统显示问题。成绩页现在始终使用同一个弹性 ScrollView，空榜显示左对齐的小卡片，外层 topLeading 对齐，赛事选择/日期固定在导航下方；有数据时仍使用原来的原生滚动、行详情及本地头盔。
+
+Sprint 无数据的后端根因和真实 22 行入库见 [T07 实际修正](t07-results.md)。这次主 App `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。已退出旧主 App 后 `open -g` 启动唯一新版，未运行 App-host/UI 测试、鼠标/键盘自动化或更改系统设置。用户截图是修正前的证据；顶部位置、空态视觉及新的 OpenF1 行显示仍由用户手动确认，T08-A1 继续 false。
+
+新版 App 的成绩缓存在 2026-10-10T11:15:16Z 实际保存了此 Sprint 的 22 行、source=openf1、quality=partial、revision=1。这证明 App 已读取并保存结果，仍不是渲染/点击验收。只读进程检查保持一个主 App 和一个服务器；没有运行 UI 自动化。
+
+## 2026-10-10 详情改为二级页面
+
+用户的[实际弹出详情截图](assets/t08-user-feedback/results-modal-before.png)指出“完成”无法点击关闭，并明确要求二级菜单。成绩、车手积分、车队积分详情已移除所有 sheet 与 Environment dismiss，改为与赛历相同的菜单栏内容内列表/详情切换。全局导航和底部菜单仍在原位置；详情左上角使用返回箭头，按钮直接清空原页面的选中行状态，返回原赛事/赛季列表。保留 Escape、悬停说明与辅助功能标签，详情也使用既有原生滚动；不创建另一个窗口或面板。
+
+赛事选择、赛季、服务器或积分榜类型改变时清理旧详情，原数据模型/缓存/Provider 未改变。仅更新两个结果/积分视图与任务规范，赛历已有同页详情无须替换。实际源码检查确认这两个视图均无 sheet/dismiss、明确返回回调及 Escape；该检查不能替代实际点击。
+
+`xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。确认旧 App 退出后后台启动唯一新版，服务器保持原进程运行、Sprint REST 仍为 22 行。未启动 App-host/UI 测试或操作桌面，没有额外截图；用户提供的是修改前证据。新版进入/返回、主导航切换与可读性待用户手动确认，T08-A1 继续 false。本轮未改 Rust，已有检查不重复运行。
+
+## 2026-10-10 详细分析扩展
+
+按用户新需求扩展服务器按需分析与原窗口二级页面；真实 Sprint 圈速/赛段/赛道遥测及逐站积分已读通。实现、数据含义、实际缺项、命令结果与人工验收边界见 [详细分析验收](analysis.md)。这份追加记录不改写此前验收历史。

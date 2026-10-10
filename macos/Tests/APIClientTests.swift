@@ -7,6 +7,29 @@ final class APIClientTests: XCTestCase {
         super.tearDown()
     }
 
+
+    func testAnalysisEndpointsKeepMissingFieldsAndUseAuthenticatedServer() async throws {
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
+            XCTAssertEqual(request.timeoutInterval, 15)
+            let body: String
+            if request.url?.path.contains("sessions") == true {
+                XCTAssertTrue(request.url?.query?.contains("lap=19") == true)
+                body = #"{"data":{"laps":[{"lapNumber":19,"lapDuration":106.017,"durationSector1":null}],"stints":[],"pit":[],"positions":[],"weather":[],"raceControl":[],"grid":[],"location":[],"carData":[],"warnings":[],"selectedLap":19},"meta":{"schemaVersion":1,"revision":1,"stale":false,"quality":"partial"}}"#
+            } else {
+                XCTAssertEqual(request.url?.path, "/api/v1/standings/drivers/antonelli/analysis")
+                body = #"{"data":{"rounds":[{"round":1,"entries":[{"points":null}]}],"warnings":[]},"meta":{"schemaVersion":1,"revision":1,"stale":false,"quality":"partial"}}"#
+            }
+            return Self.response(for: request, body: body)
+        }
+        let client = APIClient(baseURL: URL(string: "http://localhost:38701")!, session: Self.session())
+        let timing = try await client.sessionAnalysis(sessionId: "2026:17:sprint", driverId: "antonelli", lap: 19, token: "secret")
+        XCTAssertNil(timing.data.laps[0].durationSector1)
+        XCTAssertEqual(timing.data.selectedLap, 19)
+        let history = try await client.seasonAnalysis(kind: "drivers", id: "antonelli", season: 2026, token: "secret")
+        XCTAssertNil(history.data.rounds[0].points)
+    }
+
     func testCalendarDecodesEnvelopeWithFractionalUTCTimestamp() async throws {
         URLProtocolStub.handler = { request in
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
@@ -93,6 +116,32 @@ final class APIClientTests: XCTestCase {
                 return XCTFail("Unexpected error: \(error)")
             }
             XCTAssertNotNil(retryAfter)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testRateLimitParsesHTTPDateRetryAfter() async {
+        URLProtocolStub.handler = { request in
+            Self.response(for: request, status: 429, headers: ["Retry-After": "Wed, 02 Jan 2030 03:04:05 GMT"], body: "{}")
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.calendar(season: 2026, token: nil)
+            XCTFail("Expected rate limit")
+        } catch let error as APIClientError {
+            guard case let .rateLimited(retryAfter) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+            var expectedComponents = DateComponents()
+            expectedComponents.timeZone = TimeZone(secondsFromGMT: 0)
+            expectedComponents.year = 2030
+            expectedComponents.month = 1
+            expectedComponents.day = 2
+            expectedComponents.hour = 3
+            expectedComponents.minute = 4
+            expectedComponents.second = 5
+            XCTAssertEqual(retryAfter, Calendar(identifier: .gregorian).date(from: expectedComponents))
         } catch {
             XCTFail("Unexpected error: \(error)")
         }

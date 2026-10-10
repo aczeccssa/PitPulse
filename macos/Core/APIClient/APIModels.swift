@@ -8,11 +8,15 @@ struct APIEnvelope<Value: Codable & Sendable>: Codable, Sendable {
 struct ResponseMeta: Codable, Equatable, Sendable {
     let schemaVersion: Int
     let revision: Int
-    let stale: Bool
+    var stale: Bool
     let quality: DataQuality
     let source: String?
     let fetchedAt: Date?
     let sourceUpdatedAt: Date?
+    var analysisStatus: String? = nil
+    var analysisError: String? = nil
+    var analysisIsLoading: Bool { analysisStatus == "loading" || analysisStatus == "pending" }
+    var analysisCanBeCached: Bool { analysisStatus == nil || analysisStatus == "ready" }
 }
 
 enum DataQuality: String, Codable, Sendable {
@@ -60,6 +64,16 @@ struct Meeting: Codable, Identifiable, Equatable, Sendable {
 
 struct SessionResult: Codable, Identifiable, Equatable, Sendable {
     var id: String { driverId }
+    var classificationLabel: String {
+        switch classification.uppercased() {
+        case "CLASSIFIED": "已分类"
+        case "DNF": "退赛"
+        case "DNS": "未起步"
+        case "DSQ": "取消资格"
+        case "NC": "未分类"
+        default: classification
+        }
+    }
     let sessionId: String
     let position: Int?
     let classification: String
@@ -193,5 +207,141 @@ enum RFC3339 {
         let standard = ISO8601DateFormatter()
         standard.formatOptions = [.withInternetDateTime]
         return standard.date(from: value)
+    }
+}
+
+
+struct SessionAnalysis: Codable, Sendable {
+    let laps: [AnalysisLap]
+    let stints: [AnalysisStint]
+    let pit: [AnalysisPit]
+    let positions: [AnalysisPosition]
+    let weather: [AnalysisWeather]
+    let raceControl: [AnalysisEvent]
+    let grid: [AnalysisGrid]
+    let location: [AnalysisLocation]
+    let carData: [AnalysisTelemetry]
+    let warnings: [String]
+    let selectedLap: Int?
+    let driver: AnalysisDriver?
+    var hasData: Bool { !laps.isEmpty || !stints.isEmpty || !pit.isEmpty || !positions.isEmpty || !weather.isEmpty || !raceControl.isEmpty || !location.isEmpty || !carData.isEmpty }
+}
+struct AnalysisDriver: Codable, Sendable {
+    let driverNumber: Int?
+    let fullName: String?
+    let teamName: String?
+}
+struct AnalysisLap: Codable, Sendable {
+    let lapNumber: Int?
+    let lapDuration: Double?
+    let dateStart: Date?
+    let durationSector1: Double?
+    let durationSector2: Double?
+    let durationSector3: Double?
+    let isPitOutLap: Bool?
+    let i1Speed: Double?
+    let i2Speed: Double?
+    let stSpeed: Double?
+    var sectors: [Double?] { [durationSector1, durationSector2, durationSector3] }
+}
+struct AnalysisStint: Codable, Sendable {
+    let stintNumber: Int?
+    let lapStart: Int?
+    let lapEnd: Int?
+    let compound: String?
+    let tyreAgeAtStart: Int?
+}
+struct AnalysisPit: Codable, Sendable {
+    let lapNumber: Int?
+    let date: Date?
+    let pitDuration: Double?
+    let laneDuration: Double?
+    let stopDuration: Double?
+}
+struct AnalysisPosition: Codable, Sendable {
+    let date: Date?
+    let position: Int?
+}
+struct AnalysisWeather: Codable, Sendable {
+    let date: Date?
+    let airTemperature: Double?
+    let trackTemperature: Double?
+    let humidity: Double?
+    let rainfall: Double?
+    let windSpeed: Double?
+    let windDirection: Double?
+    let pressure: Double?
+}
+struct AnalysisEvent: Codable, Sendable {
+    let date: Date?
+    let category: String?
+    let flag: String?
+    let message: String?
+    let driverNumber: Int?
+    let lapNumber: Int?
+}
+struct AnalysisGrid: Codable, Sendable {
+    let driverNumber: Int?
+    let position: Int?
+    let lapDuration: Double?
+}
+struct AnalysisLocation: Codable, Sendable {
+    let date: Date?
+    let x: Double?
+    let y: Double?
+    let z: Double?
+}
+struct AnalysisTelemetry: Codable, Sendable {
+    let date: Date?
+    let speed: Double?
+    let throttle: Double?
+    let brake: Double?
+    let rpm: Double?
+    let nGear: Int?
+    let drs: Int?
+}
+struct SeasonAnalysis: Codable, Sendable {
+    let rounds: [AnalysisRound]
+    let warnings: [String]
+    var hasData: Bool { !rounds.isEmpty }
+}
+struct AnalysisRound: Codable, Sendable {
+    let round: Int?
+    let raceName: String?
+    let date: String?
+    let circuitName: String?
+    let country: String?
+    let sessionType: String?
+    let entries: [AnalysisEntry]
+    var points: Double? {
+        guard !entries.isEmpty, entries.allSatisfy({ $0.points != nil }) else { return nil }
+        return entries.compactMap(\.points).reduce(0, +)
+    }
+}
+struct AnalysisEntry: Codable, Sendable {
+    let driverId: String?
+    let driverName: String?
+    let position: Int?
+    let grid: Int?
+    let points: Double?
+    let laps: Int?
+    let status: String?
+}
+
+enum AnalysisMath {
+    static func duration(_ seconds: Double?) -> String {
+        guard let seconds, seconds.isFinite, seconds >= 0, seconds <= 360000 else { return "—" }
+        let milliseconds = Int((seconds * 1000).rounded())
+        let whole = milliseconds / 1000
+        let tail = String(format: "%02d.%03d", whole % 60, milliseconds % 1000)
+        return whole >= 3600 ? "\(whole / 3600):\(String(format: "%02d", whole / 60 % 60)):\(tail)" : "\(whole / 60):\(tail)"
+    }
+    static func telemetry(at date: Date?, in rows: [AnalysisTelemetry]) -> AnalysisTelemetry? {
+        guard let date else { return nil }
+        let closest = rows.filter { $0.date != nil }.min {
+            abs($0.date!.timeIntervalSince(date)) < abs($1.date!.timeIntervalSince(date))
+        }
+        guard let closest, abs(closest.date!.timeIntervalSince(date)) <= 1 else { return nil }
+        return closest
     }
 }

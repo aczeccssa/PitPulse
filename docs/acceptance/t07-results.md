@@ -65,3 +65,19 @@
 | `cargo build --locked --release --manifest-path server/Cargo.toml` | 通过 |
 
 真实历史周末 smoke 结果仍见上文；本次质量门禁未重新发起外部网络 smoke。
+
+## 2026-10-10 新加坡 Sprint 实际空榜修正
+
+用户报告 Sprint 结束后仍无成绩。2026-10-10T11:08:31Z 实际检查主源 [Jolpica Alpha SR](https://api.jolpi.ca/f1/alpha/results/round_nxOKfUxB/SR/) 返回 HTTP 200 / 0 行，但已有补源 [OpenF1 session_result](https://api.openf1.org/v1/session_result?session_key=11383) 返回 HTTP 200 / 22 行。SQLite 和 REST 当时均为 0 行、pending；同步每 5 分钟尝试，故障并非 App 没有刷新，而是 `sync_session_once` 在非练习赛分支只读 Alpha。
+
+修正仅在 Sprint 的 Alpha 为空或失败且 OpenF1 已启用、Session 有可靠 key 时调用既有补源。主源非空仍优先，后续主源可读可形成正常修订；补源实际字段直接经过现有解码/身份映射/事务写入，不从 Live 末圈排行生成成绩或计算积分。空榜和失败不覆盖缓存，Alpha 限流的 Retry-After 保留。候选选择优先非空，避免无稳定 ID 的 partial 补源与空榜打平时丢失实际结果。
+
+重建并重启现有唯一服务器后，2026-10-10T11:14:32Z 的正常调度将 `2026:17:sprint` 写入 revision 1：REST 返回 22 行，source=openf1、quality=partial、stale=false；领先车手 Max Verstappen，20 圈、8 分，来自结果接口字段。nextRetryAt=11:44:32Z，遵守已有成功后复核周期。没有手动写入成绩或修改同步状态，没有额外回放/服务进程。partial 仍保留缺项和身份映射边界，不宣布 final；此证据证明这次赛后接口可读/持久化，不能推出所有赛事的分钟级开放保证。
+
+新增 loopback 集成测试覆盖主源空榜补源可读、主源恢复不请求补源、两源空榜保留缓存、Alpha 429 的 120 秒 Retry-After、补源失败保留缓存、补源禁用及缺 Session key；缺 points 不推算。新增候选测试覆盖两个顺序下 partial 未映射结果均胜过空榜。`cargo test --locked --manifest-path server/Cargo.toml` 共 68 passed / 0 failed；fmt 和严格 all-targets clippy 通过。
+
+最终检查：`cargo fmt --manifest-path server/Cargo.toml -- --check`、`cargo test --locked --manifest-path server/Cargo.toml`（68/68）、`cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings`、`cargo build --locked --release --manifest-path server/Cargo.toml` 全部通过。当前运行的正常服务使用新的 debug binary；release build 仅用于质量门禁，没有启动第二个服务器。任务数据校验、8 项 task-data 测试与 diff 检查通过。
+
+## 2026-10-10 详细分析扩展
+
+按用户新需求扩展服务器按需分析与原窗口二级页面；真实 Sprint 圈速/赛段/赛道遥测及逐站积分已读通。实现、数据含义、实际缺项、命令结果与人工验收边界见 [详细分析验收](analysis.md)。这份追加记录不改写此前验收历史。

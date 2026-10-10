@@ -1,6 +1,19 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{
+    net::SocketAddr,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+    time::Duration,
+};
 
-use axum::{Json, Router, routing::get};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::{StatusCode, header::RETRY_AFTER},
+    response::IntoResponse,
+    routing::get,
+};
 use pitpulse_server::{
     app_state::AppState,
     config::AppConfig,
@@ -47,6 +60,156 @@ async fn mock_alpha_race() -> Json<Value> {
 
 async fn mock_openf1_drivers() -> Json<Value> {
     Json(json!([{"driver_number":16,"full_name":"Charles Leclerc","team_name":"Ferrari"}]))
+}
+
+#[tokio::test]
+async fn test_sprint_fallback_preserves_primary_priority_rate_limit_and_cached_results() {
+    type Counts = Arc<(AtomicUsize, AtomicUsize)>;
+    async fn alpha(State(counts): State<Counts>) -> axum::response::Response {
+        match counts.0.load(Ordering::SeqCst) {
+            1 => mock_alpha_race().await.into_response(),
+            3 => (
+                StatusCode::TOO_MANY_REQUESTS,
+                [(RETRY_AFTER, "120")],
+                Json(json!({})),
+            )
+                .into_response(),
+            _ => Json(json!({"data":{"results":[]}})).into_response(),
+        }
+    }
+    async fn supplement(State(counts): State<Counts>) -> axum::response::Response {
+        counts.1.fetch_add(1, Ordering::SeqCst);
+        match counts.0.load(Ordering::SeqCst) {
+            2 => Json(json!([])).into_response(),
+            4 => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+            _ => Json(json!([{"driver_number":16,"position":1,"duration":1800.125,"number_of_laps":20,"dnf":false,"dns":false,"dsq":false}])).into_response(),
+        }
+    }
+    let counts = Arc::new((AtomicUsize::new(0), AtomicUsize::new(0)));
+    let app = Router::new()
+        .route("/ergast/f1/2026/drivers.json", get(mock_drivers))
+        .route("/ergast/f1/2026/constructors.json", get(mock_constructors))
+        .route("/f1/alpha/results/round_test/SR/", get(alpha))
+        .route("/v1/drivers", get(mock_openf1_drivers))
+        .route("/v1/session_result", get(supplement))
+        .with_state(counts.clone());
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let upstream = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let temp = TempDir::new().unwrap();
+    let database = Database::open(&temp.path().join("pitpulse.sqlite"))
+        .await
+        .unwrap();
+    database.migrate().await.unwrap();
+    let session = Session {
+        id: "2026:1:sprint".into(),
+        meeting_id: "2026:1".into(),
+        session_type: SessionType::Sprint,
+        start_time: "2026-10-08T20:00:00Z".into(),
+        end_time: Some("2026-10-08T21:00:00Z".into()),
+        status: SessionStatus::Scheduled,
+        jolpica_session_id: None,
+        openf1_session_key: Some(10),
+    };
+    let meeting = Meeting {
+        id: "2026:1".into(),
+        season: 2026,
+        round: Some(1),
+        jolpica_round_id: Some("round_test".into()),
+        name: "Test Grand Prix".into(),
+        country: "Australia".into(),
+        country_code: Some("AU".into()),
+        location: "Melbourne".into(),
+        start_date: session.start_time.clone(),
+        end_date: session.start_time.clone(),
+        status: MeetingStatus::Scheduled,
+        sessions: vec![session.clone()],
+        source: Some("jolpica-alpha".into()),
+        fetched_at: None,
+        source_updated_at: None,
+        revision: None,
+    };
+    database
+        .replace_calendar(std::slice::from_ref(&meeting), "2026-10-08T23:00:00Z")
+        .await
+        .unwrap();
+    let mut sync = ResultsSync {
+        jolpica: JolpicaProvider::with_base_url(reqwest::Client::new(), &base),
+        openf1: OpenF1Provider::with_base_url(reqwest::Client::new(), &base),
+        timeout: Duration::from_secs(2),
+    };
+    let identities = sync.load_identity_maps_once(&database, 2026).await.unwrap();
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::Stored { retry_after: None }
+    );
+    let (rows, meta) = database.session_results(&session.id).await.unwrap();
+    assert_eq!(rows[0].driver_id, "leclerc");
+    assert_eq!(rows[0].laps, Some(20));
+    assert_eq!(rows[0].points, None);
+    assert_eq!(meta.source.as_deref(), Some("openf1"));
+    assert_eq!(meta.quality.as_str(), "provisional");
+    counts.0.store(1, Ordering::SeqCst);
+    sync.sync_session_once(&database, &meeting, &session, &identities)
+        .await
+        .unwrap();
+    assert_eq!(counts.1.load(Ordering::SeqCst), 1);
+    let cached = database.session_results(&session.id).await.unwrap();
+    assert_eq!(cached.1.source.as_deref(), Some("jolpica-alpha"));
+    counts.0.store(2, Ordering::SeqCst);
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::NoResult
+    );
+    let unchanged = database.session_results(&session.id).await.unwrap();
+    assert_eq!(unchanged.0, cached.0);
+    assert_eq!(unchanged.1.revision, cached.1.revision);
+    counts.0.store(3, Ordering::SeqCst);
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::Stored {
+            retry_after: Some(Duration::from_secs(120))
+        }
+    );
+    let cached = database.session_results(&session.id).await.unwrap();
+    counts.0.store(4, Ordering::SeqCst);
+    assert!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        database.session_results(&session.id).await.unwrap().0,
+        cached.0
+    );
+    counts.0.store(0, Ordering::SeqCst);
+    let before = counts.1.load(Ordering::SeqCst);
+    sync.openf1.enabled = false;
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::NoResult
+    );
+    sync.openf1.enabled = true;
+    let without_key = Session {
+        openf1_session_key: None,
+        ..session
+    };
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &without_key, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::NoResult
+    );
+    assert_eq!(counts.1.load(Ordering::SeqCst), before);
+    upstream.abort();
 }
 
 #[tokio::test]

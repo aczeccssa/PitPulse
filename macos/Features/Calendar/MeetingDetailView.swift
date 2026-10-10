@@ -9,11 +9,6 @@ struct MeetingDetailView: View {
                 header
                 Divider()
                 sessions
-                Divider()
-                Text("Meeting ID：\(meeting.id)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
             }
             .padding(16)
             .background(CalendarScrollAppearance())
@@ -37,7 +32,7 @@ struct MeetingDetailView: View {
 
     private var sessions: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Session 时间")
+            Text("比赛周末")
                 .font(.headline)
             if meeting.sessions.isEmpty {
                 Text("暂无 Session 数据。")
@@ -57,6 +52,7 @@ struct MeetingDetailView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                    .padding(.vertical, 6)
                     if session.id != meeting.sessions.last?.id {
                         Divider()
                     }

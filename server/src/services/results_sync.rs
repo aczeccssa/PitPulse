@@ -300,9 +300,36 @@ impl ResultsSync {
                 (choose_candidates(first, second), errors)
             }
         } else {
-            match alpha.await {
-                Ok(candidate) => (Some(candidate), expected_error.into_iter().collect()),
-                Err(error) => return Err(error),
+            let primary = alpha.await;
+            if session.session_type == SessionType::Sprint
+                && self.openf1.enabled
+                && session.openf1_session_key.is_some()
+                && match &primary {
+                    Ok((candidate, _)) => candidate.rows.is_empty(),
+                    Err(_) => true,
+                }
+            {
+                let mut errors = expected_error.into_iter().collect::<Vec<_>>();
+                let primary = match primary {
+                    Ok(candidate) => Some(candidate),
+                    Err(error) => {
+                        errors.push(error);
+                        None
+                    }
+                };
+                let supplement = match openf1.await {
+                    Ok((rows, quality)) => Some((Candidate { rows, quality }, None)),
+                    Err(error) => {
+                        errors.push(error);
+                        None
+                    }
+                };
+                (choose_candidates(primary, supplement), errors)
+            } else {
+                match primary {
+                    Ok(candidate) => (Some(candidate), expected_error.into_iter().collect()),
+                    Err(error) => return Err(error),
+                }
             }
         };
         let Some((candidate, alpha_payload)) = selected else {
@@ -417,7 +444,11 @@ fn choose_candidates(
 ) -> Option<(Candidate, Option<Value>)> {
     match (a, b) {
         (Some(a), Some(b)) => {
-            if a.0.quality == DataQuality::Provisional && b.0.quality != DataQuality::Provisional {
+            if a.0.rows.is_empty() != b.0.rows.is_empty() {
+                Some(if a.0.rows.is_empty() { b } else { a })
+            } else if a.0.quality == DataQuality::Provisional
+                && b.0.quality != DataQuality::Provisional
+            {
                 Some(a)
             } else if b.0.quality == DataQuality::Provisional
                 && a.0.quality != DataQuality::Provisional
@@ -495,6 +526,31 @@ mod tests {
 
     fn candidate(rows: Vec<SessionResult>, quality: DataQuality) -> Candidate {
         Candidate { rows, quality }
+    }
+
+    #[test]
+    fn test_nonempty_unmapped_supplement_beats_empty_primary() {
+        for supplement_first in [false, true] {
+            let empty = Some((
+                candidate(Vec::new(), DataQuality::Partial),
+                Some(serde_json::json!({})),
+            ));
+            let unmapped = Some((
+                candidate(
+                    vec![row("openf1:16", "openf1:Ferrari", "openf1")],
+                    DataQuality::Partial,
+                ),
+                None,
+            ));
+            let selected = if supplement_first {
+                choose_candidates(unmapped, empty)
+            } else {
+                choose_candidates(empty, unmapped)
+            }
+            .unwrap();
+            assert_eq!(selected.0.rows.len(), 1);
+            assert_eq!(selected.0.rows[0].source, "openf1");
+        }
     }
 
     #[test]

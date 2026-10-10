@@ -16,6 +16,21 @@ pub fn deep_merge(current: &mut Value, patch: &Value) {
                 }
             }
         }
+        // SignalR sends sparse numeric objects for existing array entries.
+        (Value::Array(current), Value::Object(patch))
+            if patch.keys().all(|key| key.parse::<usize>().is_ok()) =>
+        {
+            for (key, value) in patch {
+                let index = key.parse::<usize>().unwrap();
+                if index >= 4096 {
+                    continue;
+                }
+                if current.len() <= index {
+                    current.resize(index + 1, Value::Null);
+                }
+                deep_merge(&mut current[index], value);
+            }
+        }
         (current, patch) => *current = patch.clone(),
     }
 }

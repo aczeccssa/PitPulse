@@ -64,6 +64,63 @@ actor APIClient {
         )
     }
 
+
+    func sessionAnalysis(sessionId: String, driverId: String, lap: Int?, token: String?) async throws -> APIEnvelope<SessionAnalysis> {
+        try await envelope(SessionAnalysis.self, path: "/api/v1/sessions/\(sessionId)/drivers/\(driverId)/analysis",
+            queryItems: lap.map { [URLQueryItem(name: "lap", value: String($0))] } ?? [], token: token)
+    }
+
+    func seasonAnalysis(kind: String, id: String, season: Int, token: String?) async throws -> APIEnvelope<SeasonAnalysis> {
+        try await envelope(SeasonAnalysis.self, path: "/api/v1/standings/\(kind)/\(id)/analysis",
+            queryItems: [URLQueryItem(name: "season", value: String(season))], token: token)
+    }
+
+    func liveStream(
+        token: String?,
+        onSnapshot: @escaping @MainActor @Sendable (LiveSnapshot) async -> Void
+    ) async throws {
+        var request = try makeRequest(path: "/api/v1/live/stream", queryItems: [])
+        request.timeoutInterval = 60
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        applyToken(token, to: &request)
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw APIClientError.timeout
+        } catch let error as URLError {
+            throw APIClientError.transport(error.localizedDescription)
+        } catch {
+            throw APIClientError.transport(error.localizedDescription)
+        }
+        try validate(response: response, data: Data())
+
+        var parser = SSEParser()
+        do {
+            for try await byte in bytes {
+                try Task.checkCancellation()
+                for event in parser.append(byte) where event.name == "snapshot" {
+                    let snapshot = try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8))
+                    await onSnapshot(snapshot)
+                }
+            }
+            for event in parser.finish() where event.name == "snapshot" {
+                let snapshot = try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8))
+                await onSnapshot(snapshot)
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as APIClientError {
+            throw error
+        } catch let error as URLError where error.code == .timedOut {
+            throw APIClientError.timeout
+        } catch {
+            throw APIClientError.transport(error.localizedDescription)
+        }
+        throw APIClientError.transport("live stream ended")
+    }
+
     private func envelope<Value: Codable & Sendable>(
         _ type: Value.Type,
         path: String,
@@ -143,7 +200,12 @@ actor APIClient {
         if let seconds = TimeInterval(value), seconds >= 0 {
             return Date().addingTimeInterval(seconds)
         }
-        return RFC3339.parse(value)
+        if let date = RFC3339.parse(value) { return date }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE',' dd MMM yyyy HH':'mm':'ss 'GMT'"
+        return formatter.date(from: value)
     }
 
     private static func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {

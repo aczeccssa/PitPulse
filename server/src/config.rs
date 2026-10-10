@@ -30,12 +30,20 @@ pub struct ProvidersConfig {
     pub openf1_enabled: bool,
     pub f1_live_enabled: bool,
     pub user_agent: String,
+    #[serde(skip)]
+    pub f1_live_access_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LiveConfig {
     pub snapshot_interval_seconds: u64,
     pub stale_after_seconds: u64,
+    #[serde(default = "default_live_disconnect_after_seconds")]
+    pub disconnect_after_seconds: u64,
+}
+
+const fn default_live_disconnect_after_seconds() -> u64 {
+    120
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -67,10 +75,12 @@ impl Default for AppConfig {
                 openf1_enabled: true,
                 f1_live_enabled: true,
                 user_agent: "PitPulse/0.1 (+https://github.com/)".to_string(),
+                f1_live_access_token: None,
             },
             live: LiveConfig {
                 snapshot_interval_seconds: 15,
                 stale_after_seconds: 60,
+                disconnect_after_seconds: default_live_disconnect_after_seconds(),
             },
             security: SecurityConfig {
                 require_token: false,
@@ -126,6 +136,13 @@ impl AppConfig {
                 value.trim().to_ascii_lowercase().as_str(),
                 "1" | "true" | "yes" | "on"
             );
+        }
+
+        if let Ok(value) = std::env::var("F1_LIVE_ACCESS_TOKEN") {
+            if value.trim().is_empty() {
+                return Err(ConfigError::EmptyToken);
+            }
+            config.providers.f1_live_access_token = Some(value);
         }
 
         if config.security.require_token && config.security.token.is_none() {

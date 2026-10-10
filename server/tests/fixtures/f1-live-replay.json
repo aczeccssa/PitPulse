@@ -1,0 +1,153 @@
+{
+  "SessionInfo": {
+    "Key": "replay-session-1",
+    "Name": "Replay Practice",
+    "Type": "Practice",
+    "Meeting": {
+      "Name": "Fixture Circuit"
+    }
+  },
+  "SessionStatus": {
+    "Status": "Started"
+  },
+  "DriverList": {
+    "44": {
+      "RacingNumber": "44",
+      "FullName": "Sample Driver One",
+      "TeamName": "Sample Team"
+    },
+    "16": {
+      "RacingNumber": "16",
+      "FullName": "Sample Driver Two",
+      "TeamName": "Sample Team"
+    }
+  },
+  "TimingData": {
+    "Lines": {
+      "44": {
+        "Line": 1,
+        "GapToLeader": "LEADER",
+        "IntervalToPositionAhead": {
+          "Value": "LEADER"
+        },
+        "NumberOfLaps": 4,
+        "LastLapTime": {
+          "Value": "1:30.000"
+        },
+        "BestLapTime": {
+          "Value": "1:30.000"
+        },
+        "Sectors": [
+          {
+            "Value": "25.000",
+            "PersonalFastest": true,
+            "OverallFastest": false,
+            "Segments": [
+              {
+                "Status": 2048
+              },
+              {
+                "Status": 2049
+              }
+            ]
+          },
+          {
+            "Value": "35.000",
+            "PersonalFastest": false,
+            "OverallFastest": true,
+            "Segments": [
+              {
+                "Status": 2051
+              },
+              {
+                "Status": 2051
+              }
+            ]
+          },
+          {
+            "Value": "30.000",
+            "Segments": [
+              {
+                "Status": 2064
+              },
+              {
+                "Status": 2048
+              }
+            ]
+          }
+        ]
+      },
+      "16": {
+        "Line": 2,
+        "GapToLeader": "+1.200",
+        "IntervalToPositionAhead": {
+          "Value": "+1.200"
+        },
+        "NumberOfLaps": 4,
+        "LastLapTime": {
+          "Value": "1:31.200"
+        },
+        "BestLapTime": {
+          "Value": "1:31.200"
+        },
+        "Sectors": [
+          {
+            "Value": "25.000",
+            "PersonalFastest": true,
+            "OverallFastest": false,
+            "Segments": [
+              {
+                "Status": 2048
+              },
+              {
+                "Status": 2049
+              }
+            ]
+          },
+          {
+            "Value": "35.000",
+            "PersonalFastest": false,
+            "OverallFastest": true,
+            "Segments": [
+              {
+                "Status": 2051
+              },
+              {
+                "Status": 2051
+              }
+            ]
+          },
+          {
+            "Value": "30.000",
+            "Segments": [
+              {
+                "Status": 2064
+              },
+              {
+                "Status": 2048
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "LapCount": {
+    "CurrentLap": {
+      "Value": 4
+    },
+    "TotalLaps": 19
+  },
+  "TrackStatus": {
+    "Status": "1"
+  },
+  "RaceControlMessages": {
+    "Messages": {
+      "1": {
+        "Message": "Replay fixture only",
+        "Category": "Other",
+        "Flag": "GREEN"
+      }
+    }
+  }
+}

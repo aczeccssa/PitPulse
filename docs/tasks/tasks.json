@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-09T14:07:34Z",
+  "updatedAt": "2026-10-10T13:19:55Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -507,7 +507,7 @@
       "milestone": "M1",
       "area": "macOS",
       "status": "inReview",
-      "summary": "实现、构建和用户视觉复核通过；单一状态栏入口及退出按钮仍无操作证据，保持待验收。",
+      "summary": "用户四张实际截图反馈后共享UI已修正；历史证据保留，当前新版实际交互与截图待用户复验。",
       "dependencies": [],
       "relatedTasks": [
         "T01"
@@ -630,13 +630,18 @@
         {
           "label": "暂存快照完整性",
           "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        },
+        {
+          "label": "用户截图与共享UI修正编译",
+          "path": "docs/acceptance/notch.md",
+          "detail": "四张用户提供的修改前截图已归档；当前build及两个scheme build-for-testing成功，Swift无界面实际CalendarLogic6项assert通过。新增XCTest和改动UI测试未执行，实际新版视觉/点击待复验。"
         }
       ],
       "blockers": [
         "UI 工具无法操作目标 App；用户反馈确认前两个 Tab，但未明确确认入口数量及退出行为。"
       ],
-      "nextAction": "补确认唯一状态栏入口和退出按钮实际行为后结束 T04。",
-      "updatedAt": "2026-10-09T03:00:32Z",
+      "nextAction": "复验新版入口/比赛周末/列表及详情；不以旧截图或仅编译通过关闭当前UI验收。",
+      "updatedAt": "2026-10-10T09:06:59Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -707,6 +712,11 @@
           "at": "2026-10-09T03:00:32Z",
           "status": "inReview",
           "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        },
+        {
+          "at": "2026-10-10T09:06:59Z",
+          "status": "inReview",
+          "note": "用户截图实际反馈触发共享UI修正；完整当周/最近比赛周末、固定状态图标、隐藏不再等待keepVisible悬停、统一原生overlay滚动与行间距、成绩/积分详情、Island计划倒计时。当前App与测试目标编译通过，真实代码无界面逻辑6项通过；未运行GUI测试，新UI仍待实际复验，旧历史不改写。"
         }
       ]
     },
@@ -915,8 +925,8 @@
       "priority": "P0",
       "milestone": "M1",
       "area": "macOS",
-      "status": "done",
-      "summary": "国旗/时间/下一站测试及用户 Popup/详情视觉复核通过；透明赛历和细滚动条已接受，过期缓存按 6 小时标记 stale。",
+      "status": "inReview",
+      "summary": "用户四张实际截图反馈后共享UI已修正；历史证据保留，当前新版实际交互与截图待用户复验。",
       "dependencies": [
         "T02",
         "T05"
@@ -942,7 +952,7 @@
         {
           "id": "T06-A3",
           "text": "实际 Popup 截图和详情点击证据。",
-          "done": true
+          "done": false
         }
       ],
       "deliverables": [
@@ -1034,11 +1044,16 @@
         {
           "label": "暂存快照完整性",
           "detail": "通过 git checkout-index 导出完整暂存快照，在独立临时目录运行任务路径校验及 8 项数据测试，全部通过；cached diff --check 和 board.js 语法检查通过；临时备份、SQLite、日志及环境凭据未暂存。"
+        },
+        {
+          "label": "用户截图与共享UI修正编译",
+          "path": "docs/acceptance/notch.md",
+          "detail": "四张用户提供的修改前截图已归档；当前build及两个scheme build-for-testing成功，Swift无界面实际CalendarLogic6项assert通过。新增XCTest和改动UI测试未执行，实际新版视觉/点击待复验。"
         }
       ],
       "blockers": [],
-      "nextAction": "无；后续成绩/积分实现分别见 T07/T08，真实断网端到端演练在 T11 记录。",
-      "updatedAt": "2026-10-09T03:00:32Z",
+      "nextAction": "复验新版入口/比赛周末/列表及详情；不以旧截图或仅编译通过关闭当前UI验收。",
+      "updatedAt": "2026-10-10T09:06:59Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -1114,6 +1129,11 @@
           "at": "2026-10-09T03:00:32Z",
           "status": "done",
           "note": "提交快照审查通过；提交包含 macOS 赛历链路及必要的未提交服务端/报告依赖。T03 仅保留已有研究元数据，不改变其完成状态；临时看板备份留在工作区。准备执行授权的本地 commit。"
+        },
+        {
+          "at": "2026-10-10T09:06:59Z",
+          "status": "inReview",
+          "note": "用户截图实际反馈触发共享UI修正；完整当周/最近比赛周末、固定状态图标、隐藏不再等待keepVisible悬停、统一原生overlay滚动与行间距、成绩/积分详情、Island计划倒计时。当前App与测试目标编译通过，真实代码无界面逻辑6项通过；未运行GUI测试，新UI仍待实际复验，旧历史不改写。"
         }
       ]
     },
@@ -1124,7 +1144,7 @@
       "milestone": "M2",
       "area": "Backend",
       "status": "done",
-      "summary": "七种 Session 成绩、官方 WDC/WCC、启动同步、SQLite 最新快照与 REST 闭环已验收；真实历史 smoke、逐请求限流与所有质量门禁通过。",
+      "summary": "修复分析加载：后台整场/整季预加载、SQLite 128 项持久缓存、即时 GET 与去重刷新；离线和实际重启/延迟验证通过。",
       "dependencies": [
         "T01",
         "T02"
@@ -1177,6 +1197,16 @@
           "id": "T07-A8",
           "text": "locked test、fmt、严格 Clippy、release build 与 task JSON 校验通过。",
           "done": true
+        },
+        {
+          "id": "T07-A9",
+          "text": "详情分析API：按需受限获取真实逐圈/赛段/轮胎/进站/轨迹/遥测及逐站积分，身份与鉴权验证、缓存、缺字段/失败降级有测试。",
+          "done": true
+        },
+        {
+          "id": "T07-A10",
+          "text": "分析服务端预加载与持久缓存；API 不等待上游，后台刷新不堵缓存命中，重启保留数据；加载/失败进度可调试且有离线与实际延迟证据。",
+          "done": true
         }
       ],
       "deliverables": [
@@ -1191,6 +1221,14 @@
         {
           "label": "Provider 解码与稳定身份映射",
           "path": "server/src/providers/results.rs"
+        },
+        {
+          "label": "详细分析与验收边界",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "分析持久缓存顺序迁移",
+          "path": "server/src/storage/migrations/0006_analysis_cache.sql"
         }
       ],
       "evidence": [
@@ -1248,11 +1286,36 @@
           "label": "本地提交前重新运行 T07 全套 Rust 质量门禁",
           "path": "docs/acceptance/t07-results.md",
           "detail": "cargo fmt --check 通过；cargo test --locked 为 37 passed；严格 Clippy 与 locked release build 通过。真实历史周末 smoke 沿用前次已记录结果，本次未重新请求外部网络。"
+        },
+        {
+          "label": "真实Sprint空榜修正与质量门禁",
+          "path": "docs/acceptance/t07-results.md",
+          "detail": "Alpha SR返回0行但OpenF1已22行；新增Sprint回退及本地多路径测试。11:14:32Z真实REST22行/openf1/partial/revision1，App11:15:16Z缓存22行。locked Rust68/68、fmt、严格all-targets Clippy、locked release build通过；无手写结果，无额外服务。"
+        },
+        {
+          "label": "真实详细数据读取与 Swift 解码",
+          "detail": "现有 loopback 正常服务器：Kimi Singapore Sprint 20 圈、413 个坐标、421 个遥测采样，4 Stint、3 进站、3 名次、127 天气、159 赛事控制；Kimi/Mercedes 积分历史各 21 场，HTTP 200，四份真实分析响应经 Swift 模型解码。发车格实际 HTTP 404 明确标缺。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "详细分析最终质量门禁",
+          "detail": "cargo test --locked --offline 76/76；fmt --check、严格 Clippy --all-targets -D warnings、debug/release locked offline build 均通过。覆盖缺历史场次保留缓存、失败/空资源降级和新值优先。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "最终本地运行确认",
+          "detail": "最终 debug 构建替换既有服务器后，Kimi 分析 HTTP200 + Swift 解码通过；Sprint 22 行保留，只读确认一主 App、一服务器。App 使用 open -g 后台启动；人工图表与交互验收未通过，不计运行/解码为 UI 通过。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "分析预载/持久化/加载修复验收",
+          "path": "docs/acceptance/analysis.md",
+          "detail": "79 项离线 Rust tests、fmt、严格 all-targets Clippy、debug/release build 通过。启动未点分析即预载22位车手基础和整季积分；Kimi完整26.5ms、未准备lap12基础62.9ms/后台6.3秒、后台期间Max读取30.9ms；实际同job重启后Kimi65ms、Mercedes3.6ms直接ready，SQLite已存81项。"
         }
       ],
       "blockers": [],
-      "nextAction": "按计划后续推进 T08 素材接入与 T09 周期调度；本任务不包含二者。",
-      "updatedAt": "2026-10-09T06:08:46Z",
+      "nextAction": "后端本轮无待办；T08/T14 人工 UI 验收及 T12/T13 真实 Live 边界分别保留。",
+      "updatedAt": "2026-10-10T12:48:51Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -1298,6 +1361,66 @@
           "at": "2026-10-09T06:08:46Z",
           "status": "done",
           "note": "本地提交前重跑 Rust 质量门禁：fmt、37 项 locked tests、严格 Clippy 和 locked release build 全部通过。既有真实历史周末 smoke 证据保留，未重复联网请求。"
+        },
+        {
+          "at": "2026-10-10T11:08:07Z",
+          "status": "inProgress",
+          "note": "用户实际截图显示空成绩导致赛事选择纵向居中，同时Sprint结束仍无数据。开始检查SwiftUI布局及实际REST/同步状态，不以Live圈数或排行伪造正式成绩，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T11:12:54Z",
+          "status": "inProgress",
+          "note": "真实探测Alpha SR HTTP200空榜、OpenF1 session_result11383 HTTP200共22行。根因是非练习赛分支只读取Alpha；新增Sprint为空/失败时的既有OpenF1回退，Alpha非空仍优先，限流Retry-After和失败缓存保留。成绩页始终使用同一ScrollView及顶部对齐，移除撑高中间空态。针对主源优先/空榜/429/补源失败/禁用/缺key的本地集成2/2通过，App build成功；完整检查及服务实际更新进行中，不计UI已通过。"
+        },
+        {
+          "at": "2026-10-10T11:17:49Z",
+          "status": "done",
+          "note": "Sprint回退、主源优先、Retry-After、空榜/失败保留及禁用/缺key已验证，Rust68/68、fmt/clippy/release全部通过。正常调度11:14:32Z持久化真实Sprint22行openf1/partial/revision1；App11:15:16Z缓存同22行。所有原T07标准仍通过且无blocker，恢复done；未将结果宣布final，UI由T08继续人工验收。"
+        },
+        {
+          "at": "2026-10-10T11:46:39Z",
+          "status": "inProgress",
+          "note": "用户明确确认同时要赛道速度/油门/刹车、逐圈/赛段热力表及详细积分图表。扩展T07/T08分析范围；现有静态API不够，新增服务器按需Provider读取，Mac禁止直连第三方。保留所有旧证据，缺项不推算，实际UI仍由用户手测。"
+        },
+        {
+          "at": "2026-10-10T11:57:00Z",
+          "status": "inProgress",
+          "note": "实现按需分析 API、64 项服务器缓存、缺项/失败降级；原窗口详情接入原生 Charts、S1/S2/S3 热力表、真实轨迹速度/油门/刹车图、轮胎/进站/天气/赛事事件，以及逐站/累计积分与名次分布。尚未完成验证。"
+        },
+        {
+          "at": "2026-10-10T12:19:10Z",
+          "status": "inProgress",
+          "note": "真实 Sprint 及积分分析已读通；主 App 与测试目标编译、Swift 无界面模型/投影检查通过。追加分析验收文档和人工操作清单，未运行 App-host/UI 自动测试或操作用户桌面。缓存缺场保护最终质量门禁收尾中。"
+        },
+        {
+          "at": "2026-10-10T12:21:14Z",
+          "status": "done",
+          "note": "新增 T07-A9 已通过：按需真实分析 API、鉴权/身份/查询约束/限量与缓存降级，76 项离线 Rust 测试及 fmt/Clippy/release 门禁通过，真实 Sprint 和逐站积分 HTTP200 + Swift 解码证据见 analysis.md。全部后端准则满足；UI/Live 验收不计入此完成。"
+        },
+        {
+          "at": "2026-10-10T12:22:49Z",
+          "status": "done",
+          "note": "最终构建运行复查：只更新既有正常服务器和唯一主 App。新服务器 Kimi 分析 HTTP200：20 圈/413 坐标/421 遥测，Sprint 22 行仍保留，Swift 实际响应解码通过；只读进程检查确认一主 App、一服务器。未操作桌面、未 commit/push。"
+        },
+        {
+          "at": "2026-10-10T12:28:32Z",
+          "status": "inProgress",
+          "note": "根据用户实际反馈重新打开加载问题：先前点击详情触发串行上游且全局锁横跨网络，内存缓存无法跨重启。修复服务端预加载/持久缓存/单次后台刷新和客户端缓存优先，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T12:41:57Z",
+          "status": "inProgress",
+          "note": "移除持有缓存锁的上游调用，新增独立后台 worker/去重状态；整场基础数据与整季积分批量读取，启动及周期预载最近有成绩 Session。SQLite 0006 持久且限 128 项，GET 即返缓存/进度，Swift 先读磁盘且不让准备/失败空态覆盖已读内容。慢上游、重复请求、缓存读取/过期/重启/容量与旧结果保持测试已初步通过；最终门禁进行中。"
+        },
+        {
+          "at": "2026-10-10T12:47:35Z",
+          "status": "inProgress",
+          "note": "79 项 Rust tests、fmt、严格 Clippy、debug/release build 与 Xcode 主 App/串行测试编译通过；正常服务器启动未点分析即预载 22 位车手基础与整季积分。Kimi 完整分析 26.5ms、积分 2.7ms，未准备 lap12 即返20圈基础62.9ms，后台6.3秒补完，期间Max缓存读取30.9ms。唯一新版主App后台启动，四份真实响应Swift解码通过；实际进程重启缓存复查收尾，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T12:48:51Z",
+          "status": "done",
+          "note": "T07-A10 服务端预加载/持久缓存闭环：79 项离线测试及严格构建门禁通过，启动自动预载22车手基础/整季积分；冷指定圈即返基础且后台不阻缓存，实际同job重启ready缓存仍在。证据追加analysis.md；不把该后端完成计入UI或Live验收。"
         }
       ]
     },
@@ -1307,8 +1430,8 @@
       "priority": "P0",
       "milestone": "M2",
       "area": "macOS",
-      "status": "done",
-      "summary": "成绩 / 积分与素材验收通过：真实 MenuBarExtra UI 测试覆盖正常、缺素材、旧赛季、未分类、缺圈数和处罚更正，并保存 5 张实际 Popup 截图。先前锁屏／普通窗口枚举被误报为 blocker；当前复跑的负坐标问题记录为 UI 自动化环境限制。",
+      "status": "inReview",
+      "summary": "常驻连接/缓存/加载文字已收进详情；主界面和Island用图标/等待指示，赛历会话取消预计前缀，回放保留。构建与无界面会话检查通过，唯一新版后台运行；实际UI验收待用户。",
       "dependencies": [
         "T05",
         "T07"
@@ -1327,7 +1450,7 @@
         {
           "id": "T08-A1",
           "text": "正常 / 缺图 / 旧赛季 / 未分类 / 缺圈速 / 处罚后更正 UI 测试和截图。",
-          "done": true
+          "done": false
         },
         {
           "id": "T08-A2",
@@ -1338,6 +1461,11 @@
           "id": "T08-A3",
           "text": "研究清单与实际 bundle 对照。",
           "done": true
+        },
+        {
+          "id": "T08-A4",
+          "text": "二级详情包含逐圈/赛段图表、赛道速度/油门/刹车热力图、逐站/累计积分与对比，数据不足清楚标缺；编译与实际交互验收。",
+          "done": false
         }
       ],
       "deliverables": [
@@ -1368,6 +1496,10 @@
         {
           "label": "独立 MenuBar UI 验收 scheme",
           "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme"
+        },
+        {
+          "label": "详细分析与验收边界",
+          "path": "docs/acceptance/analysis.md"
         }
       ],
       "evidence": [
@@ -1459,11 +1591,61 @@
           "label": "独立 UI scheme 可构建",
           "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme",
           "detail": "xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1CompanionUITests -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing 退出码 0；该 scheme 专用于真实状态栏 Popup UI acceptance。"
+        },
+        {
+          "label": "用户截图与共享UI修正编译",
+          "path": "docs/acceptance/notch.md",
+          "detail": "四张用户提供的修改前截图已归档；当前build及两个scheme build-for-testing成功，Swift无界面实际CalendarLogic6项assert通过。新增XCTest和改动UI测试未执行，实际新版视觉/点击待复验。"
+        },
+        {
+          "label": "用户空态反馈修正与真实成绩读取",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "归档修正前真实用户截图，始终使用同一ScrollView及topLeading布局。App build成功，唯一主App正常启动；11:15:16Z实际成绩缓存22行/openf1/partial/revision1，未自动操作桌面，非视觉或点击通过。"
+        },
+        {
+          "label": "详情二级页面替代弹出层",
+          "path": "docs/acceptance/t08-results-standings.md",
+          "detail": "用户实际弹出层关闭失败截图已归档；两个视图不再有sheet/dismiss，返回按钮直接清选中状态。App build通过，旧App退出后唯一新版启动，原服务器/22行Sprint保持。未进行桌面自动化，点击及视觉不计通过。"
+        },
+        {
+          "label": "真实详细数据读取与 Swift 解码",
+          "detail": "现有 loopback 正常服务器：Kimi Singapore Sprint 20 圈、413 个坐标、421 个遥测采样，4 Stint、3 进站、3 名次、127 天气、159 赛事控制；Kimi/Mercedes 积分历史各 21 场，HTTP 200，四份真实分析响应经 Swift 模型解码。发车格实际 HTTP 404 明确标缺。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "分析 UI 编译与无界面检查",
+          "detail": "Xcode BUILD SUCCEEDED、串行 TEST BUILD SUCCEEDED；Swift 无界面检查覆盖时长与超大值、亚秒日期、缺字段、遥测匹配边界、nullable 积分和赛段，四份真实响应解码通过；未执行 App-host/UI 自动测试。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "最终本地运行确认",
+          "detail": "最终 debug 构建替换既有服务器后，Kimi 分析 HTTP200 + Swift 解码通过；Sprint 22 行保留，只读确认一主 App、一服务器。App 使用 open -g 后台启动；人工图表与交互验收未通过，不计运行/解码为 UI 通过。",
+          "path": "docs/acceptance/analysis.md"
+        },
+        {
+          "label": "缓存优先与有限加载状态",
+          "path": "docs/acceptance/analysis.md",
+          "detail": "Xcode主App build及串行build-for-testing编译通过；Swift无界面loading/failed/旧meta缓存规则和实际数据解码通过。客户端15秒HTTP预算、2秒后台进度最多60次，缓存先显示且准备/失败不覆盖磁盘缓存。已退出旧App后open -g启动唯一新版，不操作桌面。"
+        },
+        {
+          "label": "成绩详情摘要改版",
+          "path": "macos/Features/SessionResults/SessionResultsView.swift",
+          "detail": "名次和积分突出显示；用时/差距/最佳圈/圈数及排位赛分段以左对齐双列呈现；详细分析顺接摘要下方。Xcode BUILD SUCCEEDED，后台启动唯一新版；未进行桌面交互或视觉验收。"
+        },
+        {
+          "label": "顶部导航与底栏改版",
+          "path": "macos/Features/MenuBar/MenuBarRootView.swift",
+          "detail": "四个等宽图标导航，动态选中态、VoiceOver标签/状态；底栏压缩在线状态，Island操作使用胶囊按钮，退出移入更多菜单。Xcode BUILD SUCCEEDED；唯一新版已后台启动；未执行桌面UI验收。"
+        },
+        {
+          "label": "状态文字与等待指示清理",
+          "path": "docs/acceptance/notch.md",
+          "detail": "Xcode主App build成功；真正LiveIslandLogic无界面会话检查通过，取消预计前缀、保留无新鲜数据时清空计时与回放保护。唯一新版后台启动，正常服务器不重启。13:19:05Z实际源切至11384 Qualifying connected/22行，但SessionStatus Inactive，未计Started/连续更新或视觉验收。"
         }
       ],
       "blockers": [],
-      "nextAction": "无；后续状态栏 UI 复验使用独立 F1CompanionUITests scheme。",
-      "updatedAt": "2026-10-09T14:07:34Z",
+      "nextAction": "用户检查新版视觉、等待动画与详情入口；T14原显示器/VoiceOver等实际验收继续保持未闭合。",
+      "updatedAt": "2026-10-10T13:19:55Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -1574,6 +1756,111 @@
           "at": "2026-10-09T14:07:34Z",
           "status": "done",
           "note": "独立 F1CompanionUITests scheme build-for-testing 通过；验收文档补入固定 loopback 端口和可复跑命令。"
+        },
+        {
+          "at": "2026-10-10T09:06:59Z",
+          "status": "inReview",
+          "note": "用户截图实际反馈触发共享UI修正；完整当周/最近比赛周末、固定状态图标、隐藏不再等待keepVisible悬停、统一原生overlay滚动与行间距、成绩/积分详情、Island计划倒计时。当前App与测试目标编译通过，真实代码无界面逻辑6项通过；未运行GUI测试，新UI仍待实际复验，旧历史不改写。"
+        },
+        {
+          "at": "2026-10-10T11:08:07Z",
+          "status": "inProgress",
+          "note": "用户实际截图显示空成绩导致赛事选择纵向居中，同时Sprint结束仍无数据。开始检查SwiftUI布局及实际REST/同步状态，不以Live圈数或排行伪造正式成绩，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T11:12:54Z",
+          "status": "inProgress",
+          "note": "真实探测Alpha SR HTTP200空榜、OpenF1 session_result11383 HTTP200共22行。根因是非练习赛分支只读取Alpha；新增Sprint为空/失败时的既有OpenF1回退，Alpha非空仍优先，限流Retry-After和失败缓存保留。成绩页始终使用同一ScrollView及顶部对齐，移除撑高中间空态。针对主源优先/空榜/429/补源失败/禁用/缺key的本地集成2/2通过，App build成功；完整检查及服务实际更新进行中，不计UI已通过。"
+        },
+        {
+          "at": "2026-10-10T11:17:49Z",
+          "status": "inReview",
+          "note": "成绩空态顶部修正已构建并启动唯一新版；后端实际22行已由App在11:15:16Z读取保存。修正前截图已归档，task-data8/8和diff通过。没有测试宿主/鼠标/键盘自动化或系统设置操作，T08-A1仍false，新空态视觉及结果交互待用户确认。"
+        },
+        {
+          "at": "2026-10-10T11:26:26Z",
+          "status": "inProgress",
+          "note": "用户实际截图反馈详情弹出层无法点击关闭且不接受弹出形式，明确要求二级菜单。检查确认赛历已为内嵌列表/详情切换；成绩与车手/车队积分仍使用sheet。开始替换为同一菜单栏内二级页面及显式返回回调，保留原数据/缓存/滚动，不操作桌面、不重启服务器。"
+        },
+        {
+          "at": "2026-10-10T11:29:07Z",
+          "status": "inReview",
+          "note": "完成用户二级菜单要求：成绩、车手积分、车队积分在同一MenuBar内容切换列表/详情，使用左上返回图标和显式状态回调，移除sheet、环境dismiss及完成按钮。切换服务器/赛事/赛季/榜单清理旧详情；保留键盘/辅助功能与原生滚动。App build和源码检查通过，已替换唯一主App，服务器不重启仍22行Sprint。未执行UI测试，实际进入/返回待用户确认，T08-A1false。"
+        },
+        {
+          "at": "2026-10-10T11:46:39Z",
+          "status": "inProgress",
+          "note": "用户明确确认同时要赛道速度/油门/刹车、逐圈/赛段热力表及详细积分图表。扩展T07/T08分析范围；现有静态API不够，新增服务器按需Provider读取，Mac禁止直连第三方。保留所有旧证据，缺项不推算，实际UI仍由用户手测。"
+        },
+        {
+          "at": "2026-10-10T11:57:00Z",
+          "status": "inProgress",
+          "note": "实现按需分析 API、64 项服务器缓存、缺项/失败降级；原窗口详情接入原生 Charts、S1/S2/S3 热力表、真实轨迹速度/油门/刹车图、轮胎/进站/天气/赛事事件，以及逐站/累计积分与名次分布。尚未完成验证。"
+        },
+        {
+          "at": "2026-10-10T12:19:10Z",
+          "status": "inProgress",
+          "note": "真实 Sprint 及积分分析已读通；主 App 与测试目标编译、Swift 无界面模型/投影检查通过。追加分析验收文档和人工操作清单，未运行 App-host/UI 自动测试或操作用户桌面。缓存缺场保护最终质量门禁收尾中。"
+        },
+        {
+          "at": "2026-10-10T12:21:14Z",
+          "status": "inReview",
+          "note": "分析二级页开发与数据契约验证完成，唯一新版主 App 后台运行。保留返回箭头/Escape、原生滚动、既有头盔；新增原生 Charts 和真实轨迹 Canvas。用户禁止桌面自动操作，因此 T08-A1/A4 保持 false，人工视觉/操作验收未冒充通过。"
+        },
+        {
+          "at": "2026-10-10T12:22:49Z",
+          "status": "inReview",
+          "note": "最终构建运行复查：只更新既有正常服务器和唯一主 App。新服务器 Kimi 分析 HTTP200：20 圈/413 坐标/421 遥测，Sprint 22 行仍保留，Swift 实际响应解码通过；只读进程检查确认一主 App、一服务器。未操作桌面、未 commit/push。"
+        },
+        {
+          "at": "2026-10-10T12:28:32Z",
+          "status": "inProgress",
+          "note": "根据用户实际反馈重新打开加载问题：先前点击详情触发串行上游且全局锁横跨网络，内存缓存无法跨重启。修复服务端预加载/持久缓存/单次后台刷新和客户端缓存优先，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T12:41:57Z",
+          "status": "inProgress",
+          "note": "移除持有缓存锁的上游调用，新增独立后台 worker/去重状态；整场基础数据与整季积分批量读取，启动及周期预载最近有成绩 Session。SQLite 0006 持久且限 128 项，GET 即返缓存/进度，Swift 先读磁盘且不让准备/失败空态覆盖已读内容。慢上游、重复请求、缓存读取/过期/重启/容量与旧结果保持测试已初步通过；最终门禁进行中。"
+        },
+        {
+          "at": "2026-10-10T12:47:35Z",
+          "status": "inProgress",
+          "note": "79 项 Rust tests、fmt、严格 Clippy、debug/release build 与 Xcode 主 App/串行测试编译通过；正常服务器启动未点分析即预载 22 位车手基础与整季积分。Kimi 完整分析 26.5ms、积分 2.7ms，未准备 lap12 即返20圈基础62.9ms，后台6.3秒补完，期间Max缓存读取30.9ms。唯一新版主App后台启动，四份真实响应Swift解码通过；实际进程重启缓存复查收尾，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T12:48:51Z",
+          "status": "inReview",
+          "note": "服务端实际预载/快速API/重启缓存验证通过，新版App后台单实例运行。客户端磁盘优先、后台进度有限轮询、不清空已有详情，主App及测试编译/Swift解码通过。未执行宿主或UI测试，用户人工交互/视觉仍待验，A1/A4false。"
+        },
+        {
+          "at": "2026-10-10T12:53:43Z",
+          "status": "inReview",
+          "note": "根据用户截图移除居中纵向成绩字段：增加名次/积分主摘要及左对齐双列成绩，头盔/赛事信息与详细分析保留。Xcode主App build成功，旧App退出后唯一新版后台启动。未执行桌面自动化/截图，实际视觉待用户确认。"
+        },
+        {
+          "at": "2026-10-10T13:00:23Z",
+          "status": "inReview",
+          "note": "根据用户截图将顶栏切换改为等宽图标导航，底栏收紧为在线摘要、Island主操作和更多/退出菜单。Xcode主App build通过，旧进程正常退出后唯一新版后台运行；无屏幕/鼠标/UI测试，实际视觉待用户验收。"
+        },
+        {
+          "at": "2026-10-10T13:05:34Z",
+          "status": "inProgress",
+          "note": "真实REST13:02Z显示上游仍保留11383 Sprint Ends/断开，赛历排位赛11384明确13:00Z开始。修复Island旧快照优先与收起计时器跨Session、导航仅图标；服务器收到有效Live后清零失败计数并保留silent原因。尚未声称真实排位赛数据恢复，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T13:12:57Z",
+          "status": "inReview",
+          "note": "按用户明确要求移除四个主导航底部文字，保留help/辅助功能标签/选中态。Xcode主App构建通过，唯一新版后台运行；未操作桌面。"
+        },
+        {
+          "at": "2026-10-10T13:16:55Z",
+          "status": "inProgress",
+          "note": "开始用户状态文字反馈修正：移除常驻在线/过期/最近成功等文字、取消预计前缀，等待数据用原生动画并尊重Reduce Motion。实际源状态保留在详情和辅助功能，回放保持明确。"
+        },
+        {
+          "at": "2026-10-10T13:19:55Z",
+          "status": "inReview",
+          "note": "完成用户常驻状态文字反馈：Header无Live字幕、Footer无在线/最近成功；诊断转信息菜单/数据详情。Island无预计/Live不可用文字，等待动画尊重Reduce Motion，保留回放/无旧Timing边界。Xcode build和无界面会话检查通过，唯一新版后台启动；不操作桌面。正常源已切至11384 Qualifying connected/22行，Inactive，未声称Started或持续计时更新。"
         }
       ]
     },
@@ -2127,8 +2414,8 @@
       "priority": "P1",
       "milestone": "M3",
       "area": "Protocol / macOS",
-      "status": "pending",
-      "summary": "核实 SignalR 协议与 OpenNook 集成；Live 受阻不影响 V1。",
+      "status": "inReview",
+      "summary": "追加赛期事实：固定SignalR客户端未转发协商affinity Cookie而升级404；已有WebSocket库公共协议适配补齐后，真实Sprint连接及持续feed已观察。既有Spike证据保留，授权Token及界面剩余边界未闭合。",
       "dependencies": [],
       "relatedTasks": [
         "T04"
@@ -2144,24 +2431,90 @@
         {
           "id": "T12-A1",
           "text": "记录访问日期、依赖 revision、实际成功 / 失败步骤和字段证据。",
-          "done": false
+          "done": true
         },
         {
           "id": "T12-A2",
           "text": "不能只靠库文档宣告可用。Live blocked 则暂停实际连接部分，继续实现 fixture 降级和 V1。",
-          "done": false
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
-      "blockers": [],
-      "nextAction": "核实 SignalR 协议与 OpenNook 集成；Live 受阻不影响 V1。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "deliverables": [
+        {
+          "label": "F1 Live 协议探测记录",
+          "path": "docs/live-spike.md"
+        },
+        {
+          "label": "OpenNook 显示生命周期记录",
+          "path": "docs/opennook-spike.md"
+        },
+        {
+          "label": "固定 revision 的独立 macOS Spike",
+          "path": "spikes/opennook-spike/Package.swift"
+        },
+        {
+          "label": "匿名 SignalR 探测程序",
+          "path": "server/examples/f1_live_probe.rs"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "匿名 negotiate / SignalR / Subscribe 实测",
+          "path": "docs/live-spike.md",
+          "detail": "2026-10-10 实测 negotiate、WebSocket handshake、Subscribe 成功；初始响应含七个优先 Topic 与 Heartbeat。30 秒未收到 feed 回调，不宣称真实字段或赛期时效可用。"
+        },
+        {
+          "label": "OpenNook 固定版本与构建",
+          "path": "spikes/opennook-spike/Package.resolved",
+          "detail": "revision 2b50b5c3a99df8914e25e199d29bf7aa505f7a59；swift build 成功，macOS 15 package 独立于主 App。"
+        },
+        {
+          "label": "实际显示器生命周期",
+          "path": "docs/opennook-spike.md",
+          "detail": "内建屏 expanded/notch，外接无刘海屏 expanded/floating；compact、hide/destroy 与退出按钮已实际验证。截图只裁切 Spike 自身内容。"
+        },
+        {
+          "label": "OpenNook 浮动 fallback 截图",
+          "path": "docs/acceptance/assets/opennook-spike.png",
+          "detail": "外接无刘海屏 NookSurface 的无用户内容裁切图。"
+        },
+        {
+          "label": "Sprint真实Live与三赛段修复验证",
+          "path": "docs/acceptance/live-cookie-transport.md",
+          "detail": "真实源live/connected，Sprint Started、22车手、圈数1到2/20及赛段时间变化；App LiveStore实际接收version1767，单App自动紧凑展示且非active/key。Rust66项、fmt/clippy及Swift14项无界面校验通过，App和XCTest目标编译通过；新UI人工验收未通过，未commit/push。"
+        }
+      ],
+      "blockers": [
+        "匿名真实Sprint已观察持续feed；合法用户Token的真实上游授权路径仍未验证。",
+        "主App与Nook的最新菜单共存、焦点和完整辅助功能仍需用户操作验收，不能用旧Spike或编译替代。"
+      ],
+      "nextAction": "在可操作状态栏的桌面验证 MenuBarExtra 与 OpenNook 共存；真实赛期重新验证字段和时效。",
+      "updatedAt": "2026-10-10T09:42:23Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-10T01:02:38Z",
+          "status": "inProgress",
+          "note": "开始按 implementation-sequence.md 实施 T12；当前未检测到上游访问凭据，将验证匿名能力并记录限制。"
+        },
+        {
+          "at": "2026-10-10T02:11:33Z",
+          "status": "inReview",
+          "note": "完成 T12 实际匿名协议探测和 OpenNook 双屏生命周期 Spike 并交付记录；上游状态标为 partial。MenuBarExtra 交互和真实赛期 feed 证据待补，故保持 inReview。"
+        },
+        {
+          "at": "2026-10-10T02:12:40Z",
+          "status": "inReview",
+          "note": "最终 Rust / Xcode / OpenNook 构建门禁通过；协议结论为 partial。保留真实赛期 feed 与状态栏菜单交互两项待验收边界。"
+        },
+        {
+          "at": "2026-10-10T09:42:23Z",
+          "status": "inReview",
+          "note": "追加赛期证据，不改写原Spike历史：HTTP404协商Cookie缺口需协议适配，固定库仍保留。适配后真实Started/圈数/赛段持续变化，App收到同一LiveStore快照；匿名feed原边界已有证据，授权Token和完整界面验收仍待完成。"
         }
       ]
     },
@@ -2171,8 +2524,8 @@
       "priority": "P1",
       "milestone": "M3",
       "area": "Full stack",
-      "status": "pending",
-      "summary": "实现 Topic reducer、SSE 与 LiveStore；上游受阻时保留 fixture 降级。",
+      "status": "inReview",
+      "summary": "真实Sprint全链路已观察：feed三参数及注册释放修复、协商Cookie适配；服务器与主App均live/connected，Started、22车手、圈数与赛段变化。Rust66项通过，旧压缩Topic和授权边界保留。",
       "dependencies": [
         "T01",
         "T05",
@@ -2190,7 +2543,7 @@
         {
           "id": "T13-A1",
           "text": "记录 / 精简 fixture 回放、多 Session 隔离、乱序版本、SSE 拆包、慢消费者、超时、断线 / 重连测试。",
-          "done": false
+          "done": true
         },
         {
           "id": "T13-A2",
@@ -2198,16 +2551,106 @@
           "done": false
         }
       ],
-      "deliverables": [],
-      "evidence": [],
-      "blockers": [],
-      "nextAction": "实现 Topic reducer、SSE 与 LiveStore；上游受阻时保留 fixture 降级。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "deliverables": [
+        {
+          "label": "Topic reducer",
+          "path": "server/src/providers/f1_live/reducer.rs"
+        },
+        {
+          "label": "SSE stream 与 REST 快照",
+          "path": "server/src/api/sse.rs"
+        },
+        {
+          "label": "显式 fixture replay server",
+          "path": "server/examples/live_replay.rs"
+        },
+        {
+          "label": "Swift SSE parser 与共享 LiveStore",
+          "path": "macos/Core/LiveStore/LiveStore.swift"
+        },
+        {
+          "label": "Live replay 验收记录",
+          "path": "docs/acceptance/live.md"
+        },
+        {
+          "label": "Live 菜单栏专用 UI 验收 scheme",
+          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionLiveAcceptance.xcscheme"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "本地 replay REST 与 SSE",
+          "path": "docs/acceptance/live.md",
+          "detail": "临时服务返回 sourceMode=replay 的完整快照；SSE 首帧立即返回 event:snapshot 与完整状态，回放由本地 fixture 显式启动，不由上游错误自动触发。"
+        },
+        {
+          "label": "Rust reducer / freshness / SSE 测试",
+          "path": "server/tests/live.rs",
+          "detail": "Rust 全量 60 项通过，覆盖嵌套索引 patch、null、Session 清理、Heartbeat 独立时效、大小上限、stale/disconnected、慢 watch 消费者、SSE 首帧与状态即时事件；fmt、严格 Clippy 通过。"
+        },
+        {
+          "label": "Swift parser / generation / retry-date 测试",
+          "path": "macos/Tests/LiveStoreTests.swift",
+          "detail": "串行 Xcode 全量 60 项通过，build 通过；覆盖 parser 拆包、CRLF、多行 data、坏 UTF-8恢复、连接 generation、乱序版本及 Retry-After 秒数和 HTTP 日期。一次默认并行运行的既有 backoff 时序断言失败，单测和串行全套通过。"
+        },
+        {
+          "label": "菜单栏 UI 验收限制",
+          "path": "macos/UITests/MenuBarAcceptanceTests.swift",
+          "detail": "专用 UI 用例因当前双屏桌面将状态栏项报告为不可命中而显式 skip；没有 Popup 实际截图，回放与 disconnected 的实屏 UI 仍待验收。"
+        },
+        {
+          "label": "压缩 Topic 边界",
+          "path": "docs/live-spike.md",
+          "detail": "未订阅 Position.z / CarData.z 高流量压缩遥测；未实现或验证压缩解码与损坏压缩帧路径，不能声称该项通过。"
+        },
+        {
+          "label": "Sprint真实Live与三赛段修复验证",
+          "path": "docs/acceptance/live-cookie-transport.md",
+          "detail": "真实源live/connected，Sprint Started、22车手、圈数1到2/20及赛段时间变化；App LiveStore实际接收version1767，单App自动紧凑展示且非active/key。Rust66项、fmt/clippy及Swift14项无界面校验通过，App和XCTest目标编译通过；新UI人工验收未通过，未commit/push。"
+        }
+      ],
+      "blockers": [
+        "新实时界面与回放/降级标签仍需用户操作确认；禁止桌面自动化，不能将编译或API响应当界面验收。",
+        "Position.z / CarData.z未订阅及解码，压缩损坏路径仍未覆盖；本次只投影原有TimingData。",
+        "合法用户Token真实上游授权未验证，当前运行证据为匿名连接。"
+      ],
+      "nextAction": "确认真实上游持续feed、运行Rust检查与Swift无界面校验，启动新版单App；记录未通过验收边界。",
+      "updatedAt": "2026-10-10T09:42:23Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-10T01:02:38Z",
+          "status": "inProgress",
+          "note": "开始 T13 实施；先完成 T12 协议边界，再以显式 replay 保证无上游时仍可端到端验证。"
+        },
+        {
+          "at": "2026-10-10T02:11:33Z",
+          "status": "inReview",
+          "note": "完成 T13 本地 reducer / REST / SSE / LiveStore replay 主链并新增明确的 UI 自动化验收入口；自动测试通过，但屏幕交互与压缩 Topic 验收边界仍未闭合，保持 inReview。"
+        },
+        {
+          "at": "2026-10-10T02:12:40Z",
+          "status": "inReview",
+          "note": "最终 cargo fmt/test/clippy、Xcode build 与串行 test、OpenNook build 及任务数据校验通过；T13 自动化验收项完成，UI 截图和未订阅的压缩 Topic 仍阻止整体完成。"
+        },
+        {
+          "at": "2026-10-10T09:22:31Z",
+          "status": "inProgress",
+          "note": "用户报告Sprint期间断开，并确认S1/S2/S3赛段、车手头盔、加宽Timing及紧凑关注信息需求。定位feed callback只读取第0个topic字符串而丢失patch/timestamp，正在修正；另发现原服务器进程已不存在，不能把旧运行记录当当前状态。保留既有历史，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T09:34:20Z",
+          "status": "inProgress",
+          "note": "确认用户要求为S1/S2/S3赛段。修复feed三参数解包与注册释放、Sprint优先名称、HTTP404协商Cookie传递；以现有TimingData添加可选赛段/分段与进站状态、修复数组稀疏增量合并。Island加宽并复用稳定ID姓名唯一匹配加载本地头盔，正在编译及真实连接验证；未操作鼠标或系统显示。"
+        },
+        {
+          "at": "2026-10-10T09:42:23Z",
+          "status": "inReview",
+          "note": "真实源live/connected持续到version1746，Started、圈数1到2/20、22车手和赛段值变化；主App实际snapshotAccepted version1767闭环已观察。Rust66项无skip，Cookie订阅/拆帧/关闭loopback协议测试通过；旧压缩Topic边界保留，未操作桌面。"
         }
       ]
     },
@@ -2217,16 +2660,16 @@
       "priority": "P1",
       "milestone": "M3",
       "area": "macOS",
-      "status": "pending",
-      "summary": "实现 Notch 紧凑／展开态、多屏与无实时数据降级。",
+      "status": "inReview",
+      "summary": "常驻连接/缓存/加载文字已收进详情；主界面和Island用图标/等待指示，赛历会话取消预计前缀，回放保留。构建与无界面会话检查通过，唯一新版后台运行；实际UI验收待用户。",
       "dependencies": [
         "T12",
         "T13"
       ],
       "relatedTasks": [],
-      "scope": "`Features/LiveIsland/`、AppKit 面板 / OpenNook 接入、Preferences。",
+      "scope": "Features/LiveIsland、OpenNook与Preferences；用户实际反馈关联T04/T06/T08共享入口、比赛首页、列表滚动与已有字段详情修正。",
       "steps": [
-        "紧凑态：举办国 Emoji、Session、圈数、关注车手名次 / gap；展开态：Timing、最佳圈、可用轮胎 / 进站、TrackStatus / RaceControl。",
+        "紧凑态显示举办国 Emoji、Session、圈数、关注车手名次 / gap；展开态显示 Timing、最佳圈、TrackStatus / RaceControl，并在当前无字段时标明轮胎与进站未提供。",
         "Session 自动激活 / 收起，关注车手切换；Live 不可用只展示已知 Session / 计划信息与降级标签，不推进假圈数。",
         "无刘海、外接显示器、分辨率变更和多屏策略明确；Panel 不抢焦点、不遮关键菜单区域；保留 Menu Bar 独立可用。"
       ],
@@ -2238,20 +2681,525 @@
         },
         {
           "id": "T14-A2",
-          "text": "OpenNook 受阻时记录边界，不临时另起一个 App。",
-          "done": false
+          "text": "固定 revision OpenNook 集成于单一主 App；未另起 App，尚未通过的焦点 / 布局验收留在阻塞项。",
+          "done": true
         }
       ],
-      "deliverables": [],
-      "evidence": [],
-      "blockers": [],
-      "nextAction": "实现 Notch 紧凑／展开态、多屏与无实时数据降级。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "deliverables": [
+        {
+          "label": "OpenNook Live Island 与可靠降级展示",
+          "path": "macos/Features/LiveIsland/LiveIsland.swift"
+        },
+        {
+          "label": "Session / 车手匹配投影规则",
+          "path": "macos/Features/LiveIsland/LiveIslandLogic.swift"
+        },
+        {
+          "label": "loopback Live 场景回放",
+          "path": "server/examples/live_replay.rs"
+        },
+        {
+          "label": "Notch 验收记录",
+          "path": "docs/acceptance/notch.md"
+        },
+        {
+          "label": "紧凑态真实桌面截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-compact.png"
+        },
+        {
+          "label": "展开态真实桌面截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-expanded.png"
+        },
+        {
+          "label": "缺字段真实桌面截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-missing-fields.png"
+        },
+        {
+          "label": "stale 真实桌面截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-stale.png"
+        },
+        {
+          "label": "disconnected 真实桌面截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-disconnected.png"
+        },
+        {
+          "label": "统一日志诊断操作说明",
+          "path": "macos/README.md"
+        },
+        {
+          "label": "主 App 关注切换截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-favorite-switch.png"
+        },
+        {
+          "label": "结束短暂停留诊断截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-finished-visible.png"
+        },
+        {
+          "label": "结束隐藏诊断截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-finished-hidden.png"
+        },
+        {
+          "label": "切换后超过旧收起期限的真实截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-session-switch.png"
+        },
+        {
+          "label": "结束停留通过截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-finished-verified-visible.png"
+        },
+        {
+          "label": "结束隐藏通过截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-finished-verified-hidden.png"
+        },
+        {
+          "label": "Disconnected 最新实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-disconnected-compact-labels.png"
+        },
+        {
+          "label": "Disconnected 最新实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-disconnected-labels.png"
+        },
+        {
+          "label": "Stale 最新实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-stale-compact-labels.png"
+        },
+        {
+          "label": "Stale 最新实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-stale-labels.png"
+        },
+        {
+          "label": "最新紧凑/展开/键盘实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-compact-final.png"
+        },
+        {
+          "label": "最新紧凑/展开/键盘实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-expanded-final.png"
+        },
+        {
+          "label": "最新紧凑/展开/键盘实际截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-keyboard-escape.png"
+        },
+        {
+          "label": "现有外接无刘海屏实际Floating截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-external-floating-compact.png"
+        },
+        {
+          "label": "现有外接无刘海屏实际Floating截图",
+          "path": "docs/acceptance/assets/t14-verified/t14-external-floating-expanded.png"
+        },
+        {
+          "label": "Island会话切换无界面检查",
+          "path": "macos/Tests/Headless/IslandSessionChecks.swift"
+        },
+        {
+          "label": "状态文字修正前用户反馈",
+          "path": "docs/acceptance/assets/t14-user-feedback/20261010-status-text.png"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "固定 revision OpenNook 解析与主 App 构建",
+          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "detail": "Xcode package resolution resolved OpenNook 2b50b5c3a99df8914e25e199d29bf7aa505f7a59; macOS 26.5 host build passed with ONLY_ACTIVE_ARCH=YES."
+        },
+        {
+          "label": "session / driver / RaceControl 单测与桌面截图",
+          "path": "macos/Tests/LiveIslandTests.swift",
+          "detail": "正常回放和缺字段 UI 各 1/1 通过。stale 首轮测试发现 Xcode Runner 启动晚于 replay freshness；20 秒延长仍复现。loopback 现在等待真实 SSE watch 订阅后再开始 freshness 计时，随后 stale/disconnect 待复验。"
+        },
+        {
+          "label": "macOS 26.5 主 App 构建与 Runner 签名核验",
+          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "detail": "固定 OpenNook revision 2b50b5c3a99df8914e25e199d29bf7aa505f7a59；最终主 App build 退出码 0。Xcode UI Runner ad-hoc signature 经 codesign --verify --deep --strict 验证通过，UI 测试由 xcodebuild 启动。"
+        },
+        {
+          "label": "串行 Swift 测试",
+          "path": "macos/Tests/LiveIslandTests.swift",
+          "detail": "macOS 26.5 串行 Xcode test 通过 69 项，0 失败、0 跳过；覆盖自动展示偏好、Session 延迟收起取消、姓名唯一匹配、无名单时稳定 ID 和 Live/API 解码。"
+        },
+        {
+          "label": "四类真实 App loopback UI 验收与截图",
+          "path": "docs/acceptance/notch.md",
+          "detail": "normal 紧凑/展开、missing-fields 未知 RaceControl、stale、disconnected 四个 UI 方法分别 1/1 通过且无跳过；截图保存于 docs/acceptance/assets/t14-verified/。只使用 loopback 合成回放。"
+        },
+        {
+          "label": "Rust 格式、测试与 lint gates",
+          "path": "server/examples/live_replay.rs",
+          "detail": "cargo fmt --manifest-path server/Cargo.toml -- --check 通过；cargo test --locked --manifest-path server/Cargo.toml 61 项通过；cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings 通过。"
+        },
+        {
+          "label": "诊断实跑与串行验证",
+          "path": "docs/acceptance/notch.md",
+          "detail": "主 App build 通过；串行 Swift 71/71、0 skip；Rust fmt/61 tests/all-target clippy 通过。统一日志证实自动紧凑 panelKey=false/appActive=false，并记录结束隐藏约 30.10 秒。菜单栏 clean serial 测试仍 AX not hittable，未点击、未计通过。"
+        },
+        {
+          "label": "真实主 App 关注切换",
+          "path": "docs/acceptance/assets/t14-verified/t14-favorite-switch.png",
+          "detail": "Cua 实际选择 Sample Driver Two，稳定 roster ID 对应 P2 +1.200；合成回放证据，不声称真实赛事。"
+        },
+        {
+          "label": "隐藏完成诊断及 UI 自动化失败边界",
+          "path": "docs/acceptance/notch.md",
+          "detail": "完成事件 observedState=hidden、visible=false、panelFrame=none、panelVisible=false；真实截图显示面板已隐藏。XCTest 对隐藏窗口仍报告 exists/hittable，visibility 重跑失败0/1；菜单栏 AX位置错误0/1。已停止UI重试、手动实例、回放和采集，不计跳过或失败为通过。最终 Xcode build exit0，task data有效。"
+        },
+        {
+          "label": "真实Session切换与旧收起取消",
+          "path": "docs/acceptance/notch.md",
+          "detail": "F1CompanionLiveAcceptance/testLiveIslandSessionSwitchCancelsOldFinishedHide 1/1通过0skip；15:32:55收到version2 Finished并scheduleHide，15:33:10收到version3新Session，15:33:42仍有WindowServer可见面板，跨过旧15:33:25隐藏期限。只运行一个主App。"
+        },
+        {
+          "label": "最新显式展开验证与停止桌面自动化",
+          "path": "docs/acceptance/notch.md",
+          "detail": "默认原生destination、串行testLiveIslandAutoShowsReplayAndExpands最新1/1通过、0skip、exit0。随后用户指出自动化抢鼠标，已停止全部桌面交互和UI测试，停止手动App及loopback回放；只读进程检查未发现F1Companion、xcodebuild、live_replay或VoiceOver引擎。鼠标干扰属于代理自动化行为，不作为系统异常证据。"
+        },
+        {
+          "label": "停止桌面交互后的当前主App编译",
+          "path": "docs/acceptance/notch.md",
+          "detail": "xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS build 退出0、BUILD SUCCEEDED；未启动App或test host。代码核对激活只在显式展开路径，不替代实际焦点验收。README明确UI测试驱动鼠标/键盘及停止交互时只做编译与日志检查。"
+        },
+        {
+          "label": "用户手动验收入口与单App启动",
+          "path": "docs/acceptance/notch.md",
+          "detail": "当前Debug主App后台启动命令exit0，进程核查仅一个F1Companion；文档列出剩余菜单/关注/焦点/VoiceOver/显示器变化手测。使用既有连接和偏好，未强制回放，未计验收通过。"
+        },
+        {
+          "label": "显式重新打开App修正",
+          "path": "docs/acceptance/notch.md",
+          "detail": "当前主App build exit0；LaunchServices显式reopen到唯一主App，日志出现manualToggle和expanded，用户可见确认仍待反馈。新增通知单测未执行，不声称通过。"
+        },
+        {
+          "label": "主App连接正常本地服务器",
+          "path": "docs/acceptance/notch.md",
+          "detail": "正常服务器启动HTTP ready；health成功status=ok/database=true，2026赛历24站；App统一日志实际snapshotAccepted version4/5/6。真实上游握手失败live=false，不声称真实Live可用，无回放替代。"
+        },
+        {
+          "label": "用户截图与共享UI修正编译",
+          "path": "docs/acceptance/notch.md",
+          "detail": "四张用户提供的修改前截图已归档；当前build及两个scheme build-for-testing成功，Swift无界面实际CalendarLogic6项assert通过。新增XCTest和改动UI测试未执行，实际新版视觉/点击待复验。"
+        },
+        {
+          "label": "Sprint真实Live与三赛段修复验证",
+          "path": "docs/acceptance/live-cookie-transport.md",
+          "detail": "真实源live/connected，Sprint Started、22车手、圈数1到2/20及赛段时间变化；App LiveStore实际接收version1767，单App自动紧凑展示且非active/key。Rust66项、fmt/clippy及Swift14项无界面校验通过，App和XCTest目标编译通过；新UI人工验收未通过，未commit/push。"
+        },
+        {
+          "label": "Kimi姓名对应与共享匹配修复",
+          "path": "docs/acceptance/notch.md",
+          "detail": "Live使用Kimi ANTONELLI，名单使用Andrea Kimi Antonelli；官方资料核实明确别名。头盔与关注共享归一化，稳定ID不变，重复与局部姓名拒绝；20项Swift无界面assert通过，build及build-for-testing通过，无桌面测试。"
+        },
+        {
+          "label": "赛道状态与关注交互修正验证",
+          "path": "docs/acceptance/notch.md",
+          "detail": "现有真实TrackStatus先SCDeployed后AllClear；共享徽标颜色+文字，未知/stale/disconnected灰色降级。顶部状态/关注持续可见，行按钮唯一身份选择和取消，紧凑可展开。Swift42项assert通过，build/build-for-testing成功，XCTest/UI未运行。"
+        },
+        {
+          "label": "排位赛切换/重连与心跳修正",
+          "path": "docs/acceptance/notch.md",
+          "detail": "Xcode主App构建、79项Rust全套、新增心跳定向1项、fmt/严格Clippy/debug构建通过；LiveIslandLogic无界面检查覆盖计划时间/结束/断开/过期/缺结束/歧义/真实Live优先/回放。2026-10-10T13:12:57Z正常源仍11383 Sprint Ends，data_stale，计时未变161秒而心跳仍推进，没有120秒误断；不计排位赛实时恢复或UI验收。"
+        },
+        {
+          "label": "状态文字与等待指示清理",
+          "path": "docs/acceptance/notch.md",
+          "detail": "Xcode主App build成功；真正LiveIslandLogic无界面会话检查通过，取消预计前缀、保留无新鲜数据时清空计时与回放保护。唯一新版后台启动，正常服务器不重启。13:19:05Z实际源切至11384 Qualifying connected/22行，但SessionStatus Inactive，未计Started/连续更新或视觉验收。"
+        }
+      ],
+      "blockers": [
+        "现有外接无刘海屏floating已实际通过并截图；用户禁止修改系统显示配置，热插拔、缩放/分辨率变化仍缺操作证据。",
+        "完整VoiceOver导航未通过。最新尝试临时开启VoiceOver干扰用户，已停止桌面操作；进程检查未发现VoiceOver引擎，最新偏好状态未经确认，不声称已恢复。",
+        "用户报告隐藏Island无反应；固定OpenNook keepVisible悬停延迟根因已修正，新隐藏/菜单共存及整体UI仍未实际复验，不计编译为通过。",
+        "正常源已切至11384/Qualifying并提供22行，但观测SessionStatus=Inactive；Started/持续计时更新与实际新版UI仍待后续证据。"
+      ],
+      "nextAction": "用户检查新版视觉、等待动画与详情入口；T14原显示器/VoiceOver等实际验收继续保持未闭合。",
+      "updatedAt": "2026-10-10T13:19:55Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-10T02:21:21Z",
+          "status": "inProgress",
+          "note": "开始按已确认方案实施 T14；保留工作区已有 T12/T13 改动，先完成同一 App 的 OpenNook 与 LiveStore 集成。"
+        },
+        {
+          "at": "2026-10-10T02:36:58Z",
+          "status": "inProgress",
+          "note": "OpenNook is pinned and resolved in the production Xcode target; shared LiveStore panel, degraded labels, preferences, focused unit tests, loopback scenarios, and UI screenshot test are in place. Build passed; runtime acceptance remains open."
+        },
+        {
+          "at": "2026-10-10T02:56:10Z",
+          "status": "inProgress",
+          "note": "Signed UI acceptance exposed missing replay status in the compact accessibility label and an unstable expand-button query. Both are fixed in the shared SwiftUI controls; the loopback UI test is rerunning. No acceptance criteria are marked done."
+        },
+        {
+          "at": "2026-10-10T03:01:39Z",
+          "status": "inProgress",
+          "note": "The first passing macOS 26.5 UI screenshots exposed black default text on the black Nook surface. Compact and expanded content now set a dark color environment and white foreground; signed UI rerun is in progress. The earlier serial unit run passed 68/68."
+        },
+        {
+          "at": "2026-10-10T03:08:19Z",
+          "status": "inProgress",
+          "note": "Visible macOS 26.5 screenshots now show readable compact and expanded replay UI, including lap, position/gap placeholders, timing, best laps, Race Control, and unavailable tire/pit data. Review found the favorite picker vanished when the standings list was empty; an accessible disabled placeholder picker and UI assertion are added for rerun."
+        },
+        {
+          "at": "2026-10-10T03:12:02Z",
+          "status": "inProgress",
+          "note": "A full serial Swift rerun reported 67/68: the existing CalendarCacheTests backoff timing assertion advanced early; running that test alone passed. T14 adds an accessible disabled favorite picker for the no-roster case, and its UI assertion plus the full suite are queued for rerun."
+        },
+        {
+          "at": "2026-10-10T03:18:48Z",
+          "status": "inProgress",
+          "note": "Normal replay and missing-field loopback UI tests each passed on macOS 26.5; the latter verifies missing lap/message and unknown Race Control fields. The first stale UI attempt connected after the 2-second replay had already gone stale, so no Started event could auto-show; fixture freshness now waits 8 seconds before stale (10 seconds for disconnect) and is queued for rerun."
+        },
+        {
+          "at": "2026-10-10T03:21:46Z",
+          "status": "inProgress",
+          "note": "The stale UI test still started after the synthetic server had crossed its 8-second freshness window, so OpenNook correctly did not auto-show a stale-only session. The loopback now waits 20 seconds for stale and 24 for disconnect, and UI waits are longer; rerun pending."
+        },
+        {
+          "at": "2026-10-10T03:25:20Z",
+          "status": "inProgress",
+          "note": "A 20-second freshness window still expired before the UI test runner connected. The fixture now waits for an actual LiveState SSE subscriber before starting stale/disconnect checks; a small subscriber-count accessor and unit test cover that signal. UI rerun pending."
+        },
+        {
+          "at": "2026-10-10T04:07:04Z",
+          "status": "inProgress",
+          "note": "完成 Live Island 实现与最终代码门禁：主 App build 通过，串行 Swift 69/69，normal / missing-fields / stale / disconnected UI 各 1/1，Rust fmt/test(61)/clippy 通过；补齐五张真实截图和验收记录。核验 Runner 临时签名有效；菜单栏可点性、外接屏变化、焦点及 VoiceOver仍缺桌面证据，因此保留 inProgress。"
+        },
+        {
+          "at": "2026-10-10T06:58:12Z",
+          "status": "inProgress",
+          "note": "用户要求代理自行完成全部验收；继续使用现有主 App，复查当前桌面与工作区，补齐剩余证据，不以旧待验收记录作为终点。"
+        },
+        {
+          "at": "2026-10-10T07:06:08Z",
+          "status": "inProgress",
+          "note": "Cua 在主 App 实际切换 Sample Driver One 至 Two，名次/gap 从 P1 LEADER 更新至 P2 +1.200。新增无 skip 菜单栏与 30 秒结束/Session 切换 UI 用例；首轮发现 UserDefaults 命令行 NO 被 object-as-Bool 丢弃并默认开启，改用 bool(forKey:)；复查还补齐计划到期隐藏与下次 Session 倒计时、明确内建刘海优先及外层滚动。"
+        },
+        {
+          "at": "2026-10-10T07:14:21Z",
+          "status": "inProgress",
+          "note": "用户明确禁止修改系统显示。只读核查显示配置未变；XCTest status item not hittable 归类为自动化坐标失败，不视为 App 显示缺陷。增加统一日志以记录 SSE 接受/丢弃、展示决策、屏幕与窗口几何、键盘焦点；不通过显示设置改动迁就测试。"
+        },
+        {
+          "at": "2026-10-10T07:19:37Z",
+          "status": "inProgress",
+          "note": "用户指出多个 Nook；确认手动主 App 与 Xcode host 重叠，停止手动进程，后续 serial-only。诊断已跑通；Swift 71/71、Rust gates 通过。Finished trace 于计划后约30.10秒 hide，截图面板消失，原 AX exists 断言不适用于隐藏残留，修正测试。干净串行菜单栏 AX 仍不可点，未盲点、未改系统显示。"
+        },
+        {
+          "at": "2026-10-10T07:22:30Z",
+          "status": "inProgress",
+          "note": "补齐 hideCompleted/window visibility/contentUpdated 日志。30.06秒 hide-fired，结束截图证实隐藏，但 AX hittability重跑仍失败，明确自动化观测阻塞，停止继续UI尝试。已关闭代理手动实例与采集/回放；最终build通过。所有硬件/辅助功能未验证项继续开放，系统显示配置未改。"
+        },
+        {
+          "at": "2026-10-10T07:29:24Z",
+          "status": "inProgress",
+          "note": "继续目标；原生只读 AX 确认一主 App、状态项(-4021,7.5)、支持AXPress；一次动作成功但弹窗(-4020,41)仍不可见。只读Bartender配置找到activeProfile.Hide包含主App状态项，修正根因判断，不更改配置、不猜屏幕坐标。"
+        },
+        {
+          "at": "2026-10-10T07:33:28Z",
+          "status": "inProgress",
+          "note": "日志揭示Session-switch未收到Finished：SSE15秒快照而示例5秒结束/10秒切换。只延长loopback示例Finished跨过快照，生产API不改；fmt/clippy通过。UI测试以WindowServer on-screen panel(layer来自固定OpenNook)观测可见性并断言一主App，串行Session-switch跑中。"
+        },
+        {
+          "at": "2026-10-10T07:40:46Z",
+          "status": "inProgress",
+          "note": "Session-switch修正示例后UI1/1通过无skip，新增真实Qualifying截图。用户关闭Bartender后AX坐标改变但菜单栏UI仍失败，未强点。逐项核对发现stale/disconnected紧凑态尚有圈数/排名/gap占位标签；按仅保留Session/降级要求删除并补强UI断言，串行单测中。"
+        },
+        {
+          "at": "2026-10-10T07:43:06Z",
+          "status": "inProgress",
+          "note": "降级字段修正后全套Swift70/71，唯一失败既有testTransientFailureBackoffAdvancesBeforeRecovering固定睡眠后计数断言(2!=1)。查共享RequestCounter所有调用，改记录单调请求时间并断言0.4/0.8/1.2秒未提前重试，不改生产退避；停止回放后全套串行重跑。Rust all-targets test并行跑中。"
+        },
+        {
+          "at": "2026-10-10T07:53:51Z",
+          "status": "inProgress",
+          "note": "完整串行单测71/71无skip；Rust all-targets61项、fmt/clippy通过。Finished UI 1/1无skip，实际schedule/fire间隔30.031秒，WindowServer证明隐藏且App仍运行；保留先前AX误报历史。"
+        },
+        {
+          "at": "2026-10-10T07:55:48Z",
+          "status": "inProgress",
+          "note": "stale原生arm64 UI1/1通过但截图处于动画，未计最终截图；disconnected因悬停已展开及误匹配说明文本失败。修正验收脚本识别紧凑按钮标签、先收起、等待动画稳定；继续串行复验。泛架构构建失败记录保留。"
+        },
+        {
+          "at": "2026-10-10T07:57:55Z",
+          "status": "inProgress",
+          "note": "disconnected修正后UI1/1无skip，稳定动画截图已保存，紧凑辅助功能文本不含圈数/名次/gap，展开保留已知Session及回放/断开标签，不显示旧Timing/RaceControl。之前转场立即断言失败与复用一次性回放的失败保留为脚本诊断。"
+        },
+        {
+          "at": "2026-10-10T07:58:42Z",
+          "status": "inProgress",
+          "note": "stale最新UI1/1无skip，紧凑与展开清晰截图已保存；Normal键盘测试初跑遇同样悬停已展开状态，修正启动状态为先收起再展开。"
+        },
+        {
+          "at": "2026-10-10T08:06:51Z",
+          "status": "inProgress",
+          "note": "Normal实际UI1/1无skip，紧凑、展开、Escape收起通过并保存稳定截图；CUA实际偏好开关off/on恢复默认on。VoiceOver已真实启动，观察App辅助功能控件，但导航证据不足未计通过，恢复off。菜单及禁止变更显示器验收仍开放，无commit/push。"
+        },
+        {
+          "at": "2026-10-10T08:08:51Z",
+          "status": "inProgress",
+          "note": "停止唯一手动测试App及loopback回放；确认无残留F1Companion/回放/Xcode测试/VoiceOver引擎。自动显示恢复on，移除仅sample-one/sample-two的测试关注ID，未改真实车手ID及系统显示。任务校验8/8与diff检查通过；验收未全闭合，保持inProgress，无commit/push。"
+        },
+        {
+          "at": "2026-10-10T08:11:34Z",
+          "status": "inProgress",
+          "note": "继续自主验收；新增仅Debug环境参数选择现有外接无刘海屏，通过OpenNook公共screenProvider复现floating，不改变系统显示。实际UI验证唯一主App/面板、外接屏几何与菜单下方位置，正在运行；不替代热插拔/分辨率验收。"
+        },
+        {
+          "at": "2026-10-10T08:14:07Z",
+          "status": "inProgress",
+          "note": "外接屏初跑失败确认工程未定义DEBUG条件，修复Debug构建条件后实际UI1/1无skip，唯一App/面板、外接屏位置和菜单下方通过并保存紧凑/展开截图。不修改系统显示，Release保持默认屏幕策略。"
+        },
+        {
+          "at": "2026-10-10T08:15:45Z",
+          "status": "inProgress",
+          "note": "单个后台主App原生AX Cache状态项在主屏(1003,7.5)可见区域，外接floating面板位置正确。菜单测试此前主动activate，现移除不必要激活进行一次证据驱动复验；尚不宣称根因修复或通过。"
+        },
+        {
+          "at": "2026-10-10T08:19:40Z",
+          "status": "inProgress",
+          "note": "移除activate后菜单首开、手动展开、稳定ID关注切换正常；再开菜单失败但AX坐标已在主屏，发现展开面板33层覆盖24层菜单。使用公共configureWindow将面板设为floating层，更新WindowServer观察器；联合验证菜单与实际紧凑/展开内容，尚未认定修复成功。"
+        },
+        {
+          "at": "2026-10-10T08:23:32Z",
+          "status": "inProgress",
+          "note": "降低面板层级实验使实际展开/菜单验证失败，已撤回并保留证据。仅显式展开按钮/菜单操作新增NSApp.activate后takeKeyboardFocus，自动/悬停/刷新不调用激活，以验证VoiceOver焦点。Debug ONLY_ACTIVE_ARCH=YES修复泛命令架构选择；正在原生默认命令实测。"
+        },
+        {
+          "at": "2026-10-10T08:29:33Z",
+          "status": "inProgress",
+          "note": "默认原生串行显式展开UI1/1通过0skip。用户指出UI自动化抢鼠标，接受纠正并停止全部桌面交互/UI测试/系统设置操作；停止手动App和loopback回放，进程核查无App、测试、回放或VoiceOver引擎。最新VoiceOver偏好未确认，不声称已恢复；不把人机操作冲突归咎于系统。仅继续终端整理，验收未闭合，保持inProgress，不commit/push。"
+        },
+        {
+          "at": "2026-10-10T08:30:16Z",
+          "status": "inProgress",
+          "note": "仅终端构建当前主App通过exit0，未运行测试或启动App；核对显式操作激活路径并补README鼠标/键盘自动化限制。菜单、VoiceOver及显示器变化证据仍不足，不缩小验收范围、不标done。"
+        },
+        {
+          "at": "2026-10-10T08:30:51Z",
+          "status": "blocked",
+          "note": "连续三轮核对同一桌面交互约束；终端构建和记录整理完成后，无可替代完整菜单、VoiceOver和显示器变化实际验收的安全动作。最新只读检查无F1Companion、xcodebuild、live_replay或VoiceOver引擎运行，非等待中的测试。记录blocked而非done；不恢复桌面自动化、不修改系统设置。"
+        },
+        {
+          "at": "2026-10-10T08:38:58Z",
+          "status": "inProgress",
+          "note": "用户要求列出手测项目并打开App；open -g后台启动成功，只读进程确认一个F1Companion。未运行UI测试、回放、显示器override或设置操作。验收文档追加逐项手测步骤，待实际反馈，不计启动为通过。"
+        },
+        {
+          "at": "2026-10-10T08:40:54Z",
+          "status": "inProgress",
+          "note": "纠正仅用PID确认启动的不足：已有后台进程但Live server_unavailable、未自动展示。AppDelegate显式reopen通知复用控制器手动打开，已构建成功并只替换代理启动的旧进程；新进程有manualToggle/expanded日志。新增通知单测未运行，避免App-host测试干扰桌面；不使用UI自动化、不改系统设置。"
+        },
+        {
+          "at": "2026-10-10T08:42:44Z",
+          "status": "inProgress",
+          "note": "用户指出漏启动服务器；启动正常pitpulse-server于loopback38701、数据库位于仓库外。health返回ok/database=true/live=false，赛历24站；App自动重连接受version4/5/6，mode=live/status=disconnected，真实上游upstream_handshake_failed。服务器留运行供用户手测，不操作鼠标或系统设置，不替换为回放。"
+        },
+        {
+          "at": "2026-10-10T08:58:39Z",
+          "status": "inProgress",
+          "note": "接收用户四张真实截图及功能反馈，启动产品修正：比赛首页完整信息、隐藏失效、稳定菜单图标、统一滚动、成绩/积分详情和Island上下文。保留全部既有证据，不改T12/T13历史，不抢鼠标或改系统设置。"
+        },
+        {
+          "at": "2026-10-10T09:06:59Z",
+          "status": "inProgress",
+          "note": "用户截图实际反馈触发共享UI修正；完整当周/最近比赛周末、固定状态图标、隐藏不再等待keepVisible悬停、统一原生overlay滚动与行间距、成绩/积分详情、Island计划倒计时。当前App与测试目标编译通过，真实代码无界面逻辑6项通过；未运行GUI测试，新UI仍待实际复验，旧历史不改写。"
+        },
+        {
+          "at": "2026-10-10T09:08:01Z",
+          "status": "inProgress",
+          "note": "修正版已启动唯一主App，正常服务器health成功；新App接受live模式version18，显式重开后日志panelVisible=true。用户可操作新版；未进行桌面自动化，UI视觉/隐藏/详情不计自动通过。任务数据8/8、diff检查通过。"
+        },
+        {
+          "at": "2026-10-10T09:22:31Z",
+          "status": "inProgress",
+          "note": "用户报告Sprint期间断开，并确认S1/S2/S3赛段、车手头盔、加宽Timing及紧凑关注信息需求。定位feed callback只读取第0个topic字符串而丢失patch/timestamp，正在修正；另发现原服务器进程已不存在，不能把旧运行记录当当前状态。保留既有历史，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T09:34:20Z",
+          "status": "inProgress",
+          "note": "确认用户要求为S1/S2/S3赛段。修复feed三参数解包与注册释放、Sprint优先名称、HTTP404协商Cookie传递；以现有TimingData添加可选赛段/分段与进站状态、修复数组稀疏增量合并。Island加宽并复用稳定ID姓名唯一匹配加载本地头盔，正在编译及真实连接验证；未操作鼠标或系统显示。"
+        },
+        {
+          "at": "2026-10-10T09:42:23Z",
+          "status": "inReview",
+          "note": "新版单App启动，真实Started自动紧凑展示；LiveStore接收version1767 connected/live/22，panelKey=false、appActive=false。21个姓名唯一匹配本地头盔，1个保留缩写防猜测。Rust66、Swift14无界面校验及build/build-for-testing通过。完整新UI仍待人工操作，不标done。"
+        },
+        {
+          "at": "2026-10-10T09:44:56Z",
+          "status": "inProgress",
+          "note": "开始Kimi身份修复：正常服务器当前Live name=Kimi ANTONELLI，名单driverId=antonelli、driverName=Andrea Kimi Antonelli；既有头盔资源存在，非素材缺失。Mercedes官方资料明确两者同一人，使用完整已核实别名，不按姓/车号/车队猜测。"
+        },
+        {
+          "at": "2026-10-10T09:45:58Z",
+          "status": "inReview",
+          "note": "Kimi明确完整姓名别名修复完成，同时修复头盔和关注路径；实际Swift逻辑20项通过，新增XCTest回归已编译但未启动App-host测试，main build与build-for-testing成功。仅替换已有主App进程，服务器保持运行；未操作鼠标或系统设置，新UI显示仍待用户确认，不标done。"
+        },
+        {
+          "at": "2026-10-10T09:46:36Z",
+          "status": "inReview",
+          "note": "Kimi修正版实际运行确认：09:45:59Z新版单App日志automaticStarted/compact，automatic=true，panelKey=false、appActive=false；既有服务器health=ok/live=true。任务数据8/8与diff检查通过；渲染头盔/关注交互仍待用户确认。"
+        },
+        {
+          "at": "2026-10-10T09:49:50Z",
+          "status": "inProgress",
+          "note": "开始用户赛道状态/关注交互反馈修复。当前正常Live返回SCDeployed；已有展开态仅显示原始文字、关注Picker在滚动底部且隐藏标签。复用既有TrackStatus和稳定ID保存路径，不订阅新Topic、不操作鼠标或系统显示。"
+        },
+        {
+          "at": "2026-10-10T09:57:19Z",
+          "status": "inProgress",
+          "note": "已实现绿旗/黄旗/SC/VSC/红旗与结束状态文字+颜色，stale/disconnected改为灰色不可用且不显示旧旗色。展开顶部持续可见、关注菜单/信息置顶，车手行星标与直接关注/取消、紧凑入口可点击；原生菜单跟踪期间用OpenNook公共配置抑制悬停收起，不激活App或抢焦点。状态解析及双向唯一身份无界面校验已通过41项，红旗暂停新增校验及最终编译进行中。"
+        },
+        {
+          "at": "2026-10-10T09:59:25Z",
+          "status": "inReview",
+          "note": "颜色状态/固定顶部关注/行选择实现完成；Swift42项无界面校验、App及测试目标编译通过，任务数据8/8通过。添加安全track/selected/matched诊断；原生菜单期间使用公共staysExpandedOnHoverExit。已替换既有主App请求后台启动，服务器不重启且继续live/connected，真实圈数11/20。未进行桌面自动化，实际颜色与选择仍待人工验收，不标done。"
+        },
+        {
+          "at": "2026-10-10T09:59:59Z",
+          "status": "inReview",
+          "note": "09:59:25Z新版单App实际snapshotAccepted version9420 connected/live/22，contentUpdated track=clear，自动Started展示且panelKey=false/appActive=false；服务器继续health=ok/live=true。没有截图或自动点击，实际颜色、关注交互和VoiceOver仍待人工确认。"
+        },
+        {
+          "at": "2026-10-10T10:04:35Z",
+          "status": "inProgress",
+          "note": "用户要求用icon替代文字展现；开始移除状态文字徽标与关注/收起操作文案，保留数据姓名/时间、回放和降级标识、辅助功能与悬停说明。不操作鼠标、系统显示，不重启服务器。"
+        },
+        {
+          "at": "2026-10-10T10:59:18Z",
+          "status": "inReview",
+          "note": "完成用户图标反馈：无文字胶囊，彩色旗帜/实心SC车/轮廓VSC车/结束时钟，星标选择/取消与收起chevron，保留完整悬停/辅助功能和实际数据。50项Swift无界面校验、10个SF Symbols检查、顺序build-for-testing/build、任务数据8/8和diff检查通过，未启动测试宿主。仅替换唯一主App；立即open遇-600，确认旧进程退出后重试成功，服务器不重启。10:57:43Z新版接受version12493 connected/live/22/track=yellow，Sprint已Ends20/20；10:58:22Z收到stale12494后track=unknown。未操作鼠标或系统显示，未计视觉/点击通过，不标done。"
+        },
+        {
+          "at": "2026-10-10T11:17:49Z",
+          "status": "inReview",
+          "note": "用户继续反馈共享成绩页面空态居中与Sprint已结束空榜；对应T08/T07修正及真实22行读取证据已追加。当前仍唯一主App/服务器，未进行桌面自动化，原T14视觉/交互边界不关闭，T12/T13历史未改。"
+        },
+        {
+          "at": "2026-10-10T13:05:34Z",
+          "status": "inProgress",
+          "note": "真实REST13:02Z显示上游仍保留11383 Sprint Ends/断开，赛历排位赛11384明确13:00Z开始。修复Island旧快照优先与收起计时器跨Session、导航仅图标；服务器收到有效Live后清零失败计数并保留silent原因。尚未声称真实排位赛数据恢复，不操作桌面。"
+        },
+        {
+          "at": "2026-10-10T13:09:18Z",
+          "status": "inProgress",
+          "note": "进一步查明cookie传输decode忽略SignalR type6心跳，可能将仍健康的socket按120秒静默误断。新增纯传输心跳事件，只刷新lastTransportAt而不刷新updatedAt/圈数/名次，保留stale边界；probe示例适配，包解码回归更新，门禁与正常服务器观测中。"
+        },
+        {
+          "at": "2026-10-10T13:12:57Z",
+          "status": "inReview",
+          "note": "完成当前计划会话替代旧Sprint展示与结束计时取消，纯逻辑检查/主App编译通过；服务器有效Live复位失败次数，type6只推进传输心跳，保持data_stale。实际正常连接超过120秒无误断，仍11383 Sprint Ends无11384计时，记录阻塞，未标done或操作桌面。"
+        },
+        {
+          "at": "2026-10-10T13:16:55Z",
+          "status": "inProgress",
+          "note": "开始用户状态文字反馈修正：移除常驻在线/过期/最近成功等文字、取消预计前缀，等待数据用原生动画并尊重Reduce Motion。实际源状态保留在详情和辅助功能，回放保持明确。"
+        },
+        {
+          "at": "2026-10-10T13:19:55Z",
+          "status": "inReview",
+          "note": "完成用户常驻状态文字反馈：Header无Live字幕、Footer无在线/最近成功；诊断转信息菜单/数据详情。Island无预计/Live不可用文字，等待动画尊重Reduce Motion，保留回放/无旧Timing边界。Xcode build和无界面会话检查通过，唯一新版后台启动；不操作桌面。正常源已切至11384 Qualifying connected/22行，Inactive，未声称Started或持续计时更新。"
         }
       ]
     },

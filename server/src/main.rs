@@ -30,7 +30,10 @@ fn install_tracing() -> anyhow::Result<()> {
         .with_target(false)
         .with_thread_ids(false);
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,signalr_client=off")),
+        )
         .with(fmt_layer)
         .init();
     Ok(())

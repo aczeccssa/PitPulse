@@ -175,9 +175,10 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 **实现范围**：`providers/`、`domain/results.rs`、`domain/standings.rs`、`services/sync.rs`、`storage/`、`api/routes.rs` 和 fixture 测试。
 
-- FP1 / FP2 / FP3、Sprint Qualifying / Sprint / Qualifying / Race；练习赛两源并行探测，谁先有可用完整成绩先使用。
+- FP1 / FP2 / FP3、Sprint Qualifying / Sprint / Qualifying / Race；练习赛两源并行探测，谁先有可用完整成绩先使用。Sprint 在 Alpha 返回空榜或失败时回退至已有 OpenF1 session_result，保留来源及 partial / provisional 标识；Alpha 后续可读时恢复主源，不从 Live 排名生成正式成绩。
 - 将练习赛最佳圈、Q1 / Q2 / Q3、Race time / gap / laps / classification 分开建模；禁止将多阶段排位挤进一个含糊 `time` 而丢字段。
 - DSQ / DNF / DNS / 无有效圈 / 缺 position 不伪造；部分数据以 partial 展示，完整判据不得固定“永远 20 名”。
+- 分析接口按已存Session与稳定身份查询OpenF1详细历史数据，轨迹/遥测限制到单车单圈时间区间；季节明细通过Jolpica实际Race/Sprint结果获得。鉴权、限流、缓存、失败保留及字段缺项可验证。
 - WDC / WCC 接官方积分快照，不自行算积分。写入事务、稳定 ID 和来源一致性；Mac 所需车队 ID 须在契约提供，不从显示名称猜素材。
 
 **验收**：每种 Session 至少一个 fixture；两源分歧、先 partial 后完整、处罚修正、空榜与可空字段测试；两种 standings API 有实际非空及鉴权测试。
@@ -187,6 +188,8 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 **实现范围**：`Features/SessionResults/`、`Features/Standings/`、`Core/Models/MotorsportAsset.swift`、App asset catalog 接入。
 
 - 结果页按 Session 类型显示适配列；积分页支持 WDC / WCC 和赛季。
+- 成绩与车手 / 车队积分详情在同一菜单栏内以二级页面打开，与赛历一致；左上角图标返回原列表，不使用 sheet 弹出层。
+- 详情增加真实逐圈/赛段、名次、轮胎/进站、天气/赛事事件图表，以及单圈轨迹速度/油门/刹车热力图；积分含逐站/累计走势、名次分布与对比。采样由服务器按需获取并限流/缓存，Mac不直连Provider。缺项/身份不明/上游不可读明确降级，不绘制假赛道或假数据。
 - 显示 driver / constructor 稳定 ID 对应头盔 / Logo；T03 交付的可发布文件由此任务转入 App build resources / `.xcassets`，素材研究 manifest 不自动加入 bundle。
 - 允许没有素材照常运行；缺图、过季图、加载失败有明确 fallback。支持 Retina、明暗背景与 VoiceOver。
 - 源时间戳、revision、partial / provisional / stale 可见；刷新不是仅重画旧缓存。
@@ -252,11 +255,13 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 **实现范围**：`Features/LiveIsland/`、AppKit 面板 / OpenNook 接入、Preferences。
 
-- 紧凑态：举办国 Emoji、Session、圈数、关注车手名次 / gap；展开态：Timing、最佳圈、可用轮胎 / 进站、TrackStatus / RaceControl。
-- Session 自动激活 / 收起，关注车手切换；Live 不可用只展示已知 Session / 计划信息与降级标签，不推进假圈数。
+- 紧凑态：举办国 Emoji、Session / 比赛状态、圈数、关注车手头盔 / 姓名 / 名次 / gap；展开态：加宽 Timing、头盔、Gap / Interval、上一圈 / 最佳圈、S1 / S2 / S3 时间与分段状态、可用进站状态、TrackStatus / RaceControl。只投影现有 Topic 字段；新增 API 字段可选并兼容旧客户端，未提供的轮胎 / 进站次数 / 遥测明确标缺。
+- Session 自动激活 / 收起，关注车手切换；赛道绿旗 / 黄旗 / SC / VSC / 红旗及结束状态以图标与对应颜色显示，展开顶部持续可见，悬停提示与辅助功能保留完整说明。关注、取消与收起操作使用图标，关注入口置顶，车手行直接关注 / 取消，紧凑态可点击进入选择。Live 不可用只展示已知 Session / 计划信息与降级标签，不推进假圈数或保留过期旗色。
 - 无刘海、外接显示器、分辨率变更和多屏策略明确；Panel 不抢焦点、不遮关键菜单区域；保留 Menu Bar 独立可用。
 
 **验收**：紧凑 / 展开 / 无刘海 / 缺字段 / stale / disconnected 实际截图和交互；OpenNook 受阻时记录边界，不临时另起一个 App。
+
+用户实际验收反馈涉及共享界面时，同步修正 T04 / T06 / T08 的入口与展示：比赛首页展示当周或最近赛事的完整周末，菜单图标固定，显式隐藏立即执行；赛历、成绩、积分统一原生滚动与行间距，成绩及积分行提供已有字段的详情。相关运行验收重新关联证据，既有历史保留。
 
 ### T15 — 部署与最终验收
 
@@ -304,3 +309,7 @@ xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion \
 - 2026-10-08：素材 Agent 首轮研究已交付（报告 + 34 项 manifest），JSON 必填字段、唯一键、UTC 时间及权利 / 打包状态隔离检查通过；尚无已下载或可发布图片。
 
 - 2026-10-08：初始化静态任务状态看板和独立 JSON；任务当前状态统一迁移至 `docs/tasks/tasks.json`，后续 Agent 更新按 `AGENTS.md` 必须维护 JSON。
+
+### T07/T08 分析加载修正约束
+
+分析由服务器在启动和结果可用后后台预加载，缓存持久化。详情 API 立即返回缓存或准备状态，不能等待上游或被其他分析的网络读取阻塞；客户端先显示既有缓存，后台进度有边界与失败提示。用真实响应延迟、离线单次刷新/重启恢复测试验收，UI 操作仍由用户执行。

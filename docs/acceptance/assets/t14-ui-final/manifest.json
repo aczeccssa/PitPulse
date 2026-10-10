@@ -1,0 +1,22 @@
+[
+  {
+    "attachments": [
+      {
+        "configurationName": "Test Scheme Action",
+        "exportedFileName": "761350E3-CE98-40F6-94E6-89709C59C0A5.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "T14 expanded replay Live Island_0_9D119438-6240-4AAC-9DAC-E0BC520474E5.png",
+        "timestamp": 1791601466.919
+      },
+      {
+        "configurationName": "Test Scheme Action",
+        "exportedFileName": "3ED06593-AE04-4B8C-87FD-AF395B0699C8.png",
+        "isAssociatedWithFailure": false,
+        "suggestedHumanReadableName": "T14 compact replay Live Island_0_FF79D46A-50E5-4ED9-BB42-CC27FEDF0D70.png",
+        "timestamp": 1791601463.82
+      }
+    ],
+    "testIdentifier": "MenuBarAcceptanceTests/testLiveIslandAutoShowsReplayAndExpands()",
+    "testIdentifierURL": "test://com.apple.xcode/F1Companion/F1CompanionUITests/MenuBarAcceptanceTests/testLiveIslandAutoShowsReplayAndExpands"
+  }
+]

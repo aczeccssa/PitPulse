@@ -22,6 +22,7 @@ const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
 const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
 const MIGRATION_0003: &str = include_str!("migrations/0003_nullable_meeting_round.sql");
 const MIGRATION_0004: &str = include_str!("migrations/0004_results.sql");
+const MIGRATION_0006: &str = include_str!("migrations/0006_analysis_cache.sql");
 const MIGRATION_0005: &str = include_str!("migrations/0005_sync_schedule.sql");
 
 struct SyncStateUpdate<'a> {
@@ -77,6 +78,56 @@ impl Database {
             Ok::<_, rusqlite::Error>(())
         })
         .await??;
+        Ok(())
+    }
+
+    pub async fn analysis_cache(
+        &self,
+        key: &str,
+    ) -> Result<Option<serde_json::Value>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let key = key.to_string();
+        Ok(spawn_blocking(move || {
+            connection
+                .blocking_lock()
+                .query_row(
+                    "SELECT value_json FROM analysis_cache WHERE cache_key=?1",
+                    [key],
+                    |row| {
+                        let json: String = row.get(0)?;
+                        serde_json::from_str(&json).map_err(|error| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                0,
+                                rusqlite::types::Type::Text,
+                                Box::new(error),
+                            )
+                        })
+                    },
+                )
+                .optional()
+        })
+        .await??)
+    }
+
+    pub async fn save_analysis_cache(
+        &self,
+        key: &str,
+        value: &serde_json::Value,
+    ) -> Result<(), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let key = key.to_string();
+        let json = value.to_string();
+        let fetched_at = value["meta"]["fetchedAt"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        spawn_blocking(move || -> Result<(), rusqlite::Error> {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            tx.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?1,?2,?3) ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at", rusqlite::params![key,json,fetched_at])?;
+            tx.execute("DELETE FROM analysis_cache WHERE cache_key IN (SELECT cache_key FROM analysis_cache ORDER BY fetched_at DESC,rowid DESC LIMIT -1 OFFSET 128)", [])?;
+            tx.commit()
+        }).await??;
         Ok(())
     }
 
@@ -887,6 +938,12 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         connection.execute_batch(MIGRATION_0005)?;
         connection.execute_batch("PRAGMA user_version = 5;")?;
     }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 6 {
+        connection.execute_batch(MIGRATION_0006)?;
+        connection.execute_batch("PRAGMA user_version = 6;")?;
+    }
+
     Ok(())
 }
 

@@ -154,7 +154,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 5);
+    assert_eq!(database.user_version().await.unwrap(), 6);
     let (rows, meta) = database.session_results("2026:1:race").await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].revision, 7);

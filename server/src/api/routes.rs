@@ -19,6 +19,14 @@ pub fn build_router(state: AppState) -> Router<AppState> {
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route("/api/v1/standings/drivers", get(driver_standings))
         .route("/api/v1/standings/constructors", get(constructor_standings))
+        .route(
+            "/api/v1/sessions/{sessionId}/drivers/{driverId}/analysis",
+            get(crate::services::analysis::session_analysis),
+        )
+        .route(
+            "/api/v1/standings/{kind}/{id}/analysis",
+            get(crate::services::analysis::season_analysis),
+        )
         .route("/api/v1/live/snapshot", get(live_snapshot))
         .route("/api/v1/live/stream", get(crate::api::sse::live_stream))
         .with_state(state)

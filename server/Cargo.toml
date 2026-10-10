@@ -21,8 +21,11 @@ futures-util = "0.3"
 httpdate = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+signalr-client = "=0.3.2"
+tokio-websockets = { version = "=0.13.3", features = ["client", "native-tls", "sha1_smol", "fastrand"] }
 
 [dev-dependencies]
+tokio-websockets = { version = "=0.13.3", features = ["server"] }
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 

@@ -1,11 +1,17 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
 use crate::{
     app_state::AppState,
     domain::calendar::{Meeting, Session, SessionType},
+    domain::live::{LiveSourceMode, LiveStatus},
     error::ProviderError,
+    providers::f1_live::{
+        client::{F1LiveClient, F1LiveError, F1LiveUpdate},
+        reducer::LiveTopicReducer,
+    },
     services::{
         results_sync::{ResultsSync, SyncOutcome},
         sync::CalendarSync,
@@ -55,20 +61,112 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
             }
         }
     });
-    let live_state = state;
-    let live = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(
-            live_state.config.live.snapshot_interval_seconds.max(1),
-        ));
-        loop {
-            interval.tick().await;
-            live_state.live.mark_status(
-                crate::domain::live::LiveStatus::Disconnected,
-                "upstream_not_implemented",
-            );
+    let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
+    let live = tokio::spawn(run_live_supervisor(state));
+    SchedulerTasks(vec![scheduler, live, analysis])
+}
+
+async fn run_live_supervisor(state: AppState) {
+    if !state.config.providers.f1_live_enabled {
+        state
+            .live
+            .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "disabled");
+        return;
+    }
+
+    let client = F1LiveClient::new(
+        true,
+        "https://livetiming.formula1.com/signalrcore".to_string(),
+    );
+    let mut failures = 0usize;
+    loop {
+        state
+            .live
+            .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "connecting");
+        let mut reducer = LiveTopicReducer::default();
+        let (update_tx, mut update_rx) = mpsc::channel(256);
+        let (stop_tx, stop_rx) = oneshot::channel();
+        let access_token = state.config.providers.f1_live_access_token.clone();
+        let connection = client.run(access_token, update_tx, stop_rx);
+        tokio::pin!(connection);
+        let mut freshness = tokio::time::interval(Duration::from_secs(1));
+        freshness.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        freshness.tick().await;
+
+        let result = loop {
+            tokio::select! {
+                update = update_rx.recv() => match update {
+                    Some(update) => {
+                        apply_live_update(&state, &mut reducer, update).await;
+                        if state.live.current().source_status == LiveStatus::Connected {
+                            if failures > 0 {
+                                tracing::info!(session_id = ?state.live.current().session_id, "F1 Live subscription recovered");
+                            }
+                            failures = 0;
+                        }
+                    },
+                    None => break Err(F1LiveError::ChannelClosed),
+                },
+                result = &mut connection => break result,
+                _ = freshness.tick() => {
+                    let stale_after = Duration::from_secs(state.config.live.stale_after_seconds.max(1));
+                    let disconnect_after = Duration::from_secs(
+                        state.config.live.disconnect_after_seconds.max(state.config.live.stale_after_seconds.saturating_add(1)),
+                    );
+                    if state.live.check_freshness(stale_after, disconnect_after) {
+                        let _ = stop_tx.send(());
+                        break Err(F1LiveError::Disconnected);
+                    }
+                }
+            }
+        };
+
+        let error = result.err().unwrap_or(F1LiveError::Disconnected);
+        let reason = if matches!(error, F1LiveError::Disconnected)
+            && state.live.current().status_reason.as_deref() == Some("upstream_silent")
+        {
+            "upstream_silent"
+        } else {
+            error.reason()
+        };
+        state.live.mark_status(LiveStatus::Disconnected, reason);
+        if matches!(error, F1LiveError::Unauthorized | F1LiveError::Forbidden) {
+            failures = 0;
+            tokio::time::sleep(Duration::from_secs(300)).await;
+            continue;
         }
-    });
-    SchedulerTasks(vec![scheduler, live])
+        let delay = [5, 15, 30, 60, 300][failures.min(4)];
+        failures = failures.saturating_add(1);
+        tracing::warn!(reason, retry_after_seconds = delay, "F1 Live disconnected");
+        tokio::time::sleep(Duration::from_secs(delay)).await;
+    }
+}
+
+async fn apply_live_update(state: &AppState, reducer: &mut LiveTopicReducer, update: F1LiveUpdate) {
+    let Ok(received_at) = state.database.utc_now().await else {
+        tracing::warn!("failed to timestamp F1 Live update");
+        return;
+    };
+    let value = match update {
+        F1LiveUpdate::InitialSnapshot(value) | F1LiveUpdate::Feed(value) => value,
+        F1LiveUpdate::TransportHeartbeat => {
+            let mut snapshot = state.live.current().clone();
+            snapshot.last_transport_at = Some(received_at);
+            state.live.publish(snapshot, false);
+            return;
+        }
+    };
+    let Some(reduced) = reducer.apply_batch(&value, &received_at) else {
+        return;
+    };
+    let data_updated = reduced.data_updated;
+    let mut snapshot = reduced.snapshot;
+    if !data_updated {
+        let current = state.live.current();
+        snapshot.source_status = current.source_status;
+        snapshot.status_reason.clone_from(&current.status_reason);
+    }
+    state.live.publish(snapshot, data_updated);
 }
 
 async fn sync_cycle(
@@ -557,7 +655,7 @@ fn jitter() -> Duration {
     Duration::from_secs((nanos % 7) as u64)
 }
 
-fn parse_utc_seconds(value: &str) -> Option<i64> {
+pub(crate) fn parse_utc_seconds(value: &str) -> Option<i64> {
     let date = value.get(..19)?;
     let year: i64 = date.get(0..4)?.parse().ok()?;
     let month: i64 = date.get(5..7)?.parse().ok()?;
@@ -592,7 +690,7 @@ fn parse_utc_seconds(value: &str) -> Option<i64> {
     )
 }
 
-fn add_seconds(value: &str, seconds: i64) -> Option<String> {
+pub(crate) fn add_seconds(value: &str, seconds: i64) -> Option<String> {
     let epoch = parse_utc_seconds(value)?.checked_add(seconds)?;
     let days = epoch.div_euclid(86400);
     let seconds = epoch.rem_euclid(86400);

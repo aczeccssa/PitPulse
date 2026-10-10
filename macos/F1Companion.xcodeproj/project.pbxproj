@@ -6,6 +6,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A014A0000000000000000001 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A014A0000000000000000002 /* AnalysisView.swift */; };
 		A013F0A12026100900000001 /* SessionResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013F0A12026100900000002 /* SessionResultsView.swift */; };
 		A013F0A12026100900000009 /* StandingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013F0A12026100900000010 /* StandingsView.swift */; };
 		A013F0A12026100900000003 /* MotorsportAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = A013F0A12026100900000004 /* MotorsportAsset.swift */; };
@@ -41,6 +42,14 @@
 		955D4F0C7B0DF6DCF7A16A69 /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16E4503FE18A7E159A4A2B4C /* CredentialStoreTests.swift */; };
 		10E82E77C2C53465709D3281 /* AppSymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626CF5B6CAE4F9464055D1FD /* AppSymbolTests.swift */; };
 		E10000000000000000000002 /* MenuBarAcceptanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000001 /* MenuBarAcceptanceTests.swift */; };
+		E10000000000000000000010 /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000020 /* LiveModels.swift */; };
+		E10000000000000000000011 /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000021 /* SSEParser.swift */; };
+		E10000000000000000000012 /* LiveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000022 /* LiveStore.swift */; };
+		E10000000000000000000013 /* LiveStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000000000000000000023 /* LiveStoreTests.swift */; };
+		F14E00000000000000000001 /* LiveIslandLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14E00000000000000000004 /* LiveIslandLogic.swift */; };
+		F14E00000000000000000002 /* LiveIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14E00000000000000000005 /* LiveIsland.swift */; };
+		F14E00000000000000000003 /* LiveIslandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14E00000000000000000006 /* LiveIslandTests.swift */; };
+		F14E00000000000000000008 /* NookApp in Frameworks */ = {isa = PBXBuildFile; productRef = F14E0000000000000000000A /* NookApp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +70,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A014A0000000000000000002 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		A013F0A12026100900000002 /* SessionResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionResultsView.swift; sourceTree = "<group>"; };
 		A013F0A12026100900000010 /* StandingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandingsView.swift; sourceTree = "<group>"; };
 		A013F0A12026100900000004 /* MotorsportAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorsportAsset.swift; sourceTree = "<group>"; };
@@ -100,10 +110,17 @@
 		16E4503FE18A7E159A4A2B4C /* CredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStoreTests.swift; sourceTree = "<group>"; };
 		626CF5B6CAE4F9464055D1FD /* AppSymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbolTests.swift; sourceTree = "<group>"; };
 		E10000000000000000000001 /* MenuBarAcceptanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarAcceptanceTests.swift; sourceTree = "<group>"; };
+		E10000000000000000000020 /* LiveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveModels.swift; sourceTree = "<group>"; };
+		E10000000000000000000021 /* SSEParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParser.swift; sourceTree = "<group>"; };
+		E10000000000000000000022 /* LiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStore.swift; sourceTree = "<group>"; };
+		E10000000000000000000023 /* LiveStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStoreTests.swift; sourceTree = "<group>"; };
+		F14E00000000000000000004 /* LiveIslandLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandLogic.swift; sourceTree = "<group>"; };
+		F14E00000000000000000005 /* LiveIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIsland.swift; sourceTree = "<group>"; };
+		F14E00000000000000000006 /* LiveIslandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7075FB1C210B30952F8028FA /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		7075FB1C210B30952F8028FA /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (F14E00000000000000000008 /* NookApp in Frameworks */, ); runOnlyForDeploymentPostprocessing = 0; };
 		BCFD3C1F23E754F757801A48 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		E10000000000000000000006 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
@@ -112,19 +129,21 @@
 		50A0C24BC240259233E3471D = {isa = PBXGroup; children = (CE726046B8FF11726A8889C2 /* App */, 6EB097821568B00EDFD0FBD4 /* Core */, A8652440757DCBC352A8A9DE /* Features */, 3B6D5438446D06FBFC2AB398 /* Tests */, E1000000000000000000000F /* UITests */, F4C6E6CF4A19B8372D2D6BA0 /* Support */, DCA3CD88DE11DBC6D6604578 /* Products */, ); sourceTree = "<group>"; };
 		DCA3CD88DE11DBC6D6604578 /* Products */ = {isa = PBXGroup; children = (EDFBF4BDF289E953A5CC463C /* F1Companion.app */, 9259AA2D016E4259998E2EB3 /* F1CompanionTests.xctest */, E10000000000000000000005 /* F1CompanionUITests.xctest */, ); name = Products; sourceTree = "<group>"; };
 		CE726046B8FF11726A8889C2 /* App */ = {isa = PBXGroup; children = (6F54A649BBBDA5447E940746 /* AppDelegate.swift */, 735F078020A1183BE1E3C70D /* F1CompanionApp.swift */, 9774499C03C0903F7F6415AB /* AppModel.swift */, ); path = App; sourceTree = "<group>"; };
-		6EB097821568B00EDFD0FBD4 /* Core */ = {isa = PBXGroup; children = (5BE01AA5B29F18C791BAE04F /* APIClient */, 74D7A3D2DCBA9C9E9D50CFAB /* Cache */, 3695FFC27E7D4FD04B0F02A1 /* Models */, F01000000000000000000005 /* Notifications */, F01000000000000000000006 /* Network */, ); path = Core; sourceTree = "<group>"; };
+		6EB097821568B00EDFD0FBD4 /* Core */ = {isa = PBXGroup; children = (5BE01AA5B29F18C791BAE04F /* APIClient */, 74D7A3D2DCBA9C9E9D50CFAB /* Cache */, 3695FFC27E7D4FD04B0F02A1 /* Models */, E10000000000000000000030 /* LiveStore */, F01000000000000000000005 /* Notifications */, F01000000000000000000006 /* Network */, ); path = Core; sourceTree = "<group>"; };
+		E10000000000000000000030 /* LiveStore */ = {isa = PBXGroup; children = (E10000000000000000000020 /* LiveModels.swift */, E10000000000000000000021 /* SSEParser.swift */, E10000000000000000000022 /* LiveStore.swift */, ); path = LiveStore; sourceTree = "<group>"; };
 		F01000000000000000000005 /* Notifications */ = {isa = PBXGroup; children = (F01000000000000000000002 /* SessionReminderCoordinator.swift */, ); path = Notifications; sourceTree = "<group>"; };
 		F01000000000000000000006 /* Network */ = {isa = PBXGroup; children = (F01000000000000000000004 /* NetworkPathMonitor.swift */, ); path = Network; sourceTree = "<group>"; };
 		5BE01AA5B29F18C791BAE04F /* APIClient */ = {isa = PBXGroup; children = (37AC0EFA71229EA685DBEF8C /* APIModels.swift */, C071040C0A6963E41B31415F /* APIClientError.swift */, B5008B0D5BC2CD8976F9EDB6 /* ServerAddress.swift */, 86A8AA9D384798685EFD3CED /* CredentialStore.swift */, 6A3EEB55DD3DD0EABA586397 /* KeychainStore.swift */, 0916E0D8DC0B29FF40B074F0 /* APIClient.swift */, ); path = APIClient; sourceTree = "<group>"; };
 		74D7A3D2DCBA9C9E9D50CFAB /* Cache */ = {isa = PBXGroup; children = (DA8244A2733F6735360CAF46 /* CalendarCache.swift */, ); path = Cache; sourceTree = "<group>"; };
 		3695FFC27E7D4FD04B0F02A1 /* Models */ = {isa = PBXGroup; children = (36858A54926220B13BADD30C /* AppSymbol.swift */, 74023021D94F52D0F394CFE8 /* CountryFlag.swift */, 1B77A4C23A228CD716536A5E /* CalendarLogic.swift */, A013F0A12026100900000004 /* MotorsportAsset.swift */, ); path = Models; sourceTree = "<group>"; };
-		A013F0A12026100900000011 /* SessionResults */ = {isa = PBXGroup; children = (A013F0A12026100900000002 /* SessionResultsView.swift */, ); path = SessionResults; sourceTree = "<group>"; };
+		A013F0A12026100900000011 /* SessionResults */ = {isa = PBXGroup; children = (A013F0A12026100900000002 /* SessionResultsView.swift */, A014A0000000000000000002 /* AnalysisView.swift */, ); path = SessionResults; sourceTree = "<group>"; };
 		A013F0A12026100900000012 /* Standings */ = {isa = PBXGroup; children = (A013F0A12026100900000010 /* StandingsView.swift */, ); path = Standings; sourceTree = "<group>"; };
-		A8652440757DCBC352A8A9DE /* Features */ = {isa = PBXGroup; children = (47C6D0259F3FAF3A34D1571F /* MenuBar */, 7105B381B44D19494030FFB9 /* Calendar */, 4F49D1B58D1C68594277DF85 /* Preferences */, A013F0A12026100900000011 /* SessionResults */, A013F0A12026100900000012 /* Standings */, ); path = Features; sourceTree = "<group>"; };
+		A8652440757DCBC352A8A9DE /* Features */ = {isa = PBXGroup; children = (47C6D0259F3FAF3A34D1571F /* MenuBar */, 7105B381B44D19494030FFB9 /* Calendar */, 4F49D1B58D1C68594277DF85 /* Preferences */, A013F0A12026100900000011 /* SessionResults */, A013F0A12026100900000012 /* Standings */, F14E00000000000000000007 /* LiveIsland */, ); path = Features; sourceTree = "<group>"; };
 		47C6D0259F3FAF3A34D1571F /* MenuBar */ = {isa = PBXGroup; children = (FC42E605243B4B8CE52759F9 /* StatusMenuLabel.swift */, 426529EA2D4DF91C75A4D708 /* MenuBarRootView.swift */, ); path = MenuBar; sourceTree = "<group>"; };
 		7105B381B44D19494030FFB9 /* Calendar */ = {isa = PBXGroup; children = (A78520DE2EAC445447FD2985 /* NextMeetingCard.swift */, 4BD03C8E1828226793B9B993 /* CalendarView.swift */, 6976FECA1664CED4520CD651 /* MeetingDetailView.swift */, ); path = Calendar; sourceTree = "<group>"; };
 		4F49D1B58D1C68594277DF85 /* Preferences */ = {isa = PBXGroup; children = (F961D1893DB8D07AB69852AA /* PreferencesView.swift */, ); path = Preferences; sourceTree = "<group>"; };
-		3B6D5438446D06FBFC2AB398 /* Tests */ = {isa = PBXGroup; children = (ADB7B2FDECB8EC3FD6C90B39 /* TestSupport.swift */, FE7E68F70C58B1AF28DAF270 /* CountryFlagTests.swift */, D6944C2A2546291A58648222 /* CalendarLogicTests.swift */, DE90F418914C16CB0AE9EB6E /* APIClientTests.swift */, 7C0765243287C05E15EA9C67 /* CalendarCacheTests.swift */, 032BAE578B740E651F67979A /* ServerAddressTests.swift */, 16E4503FE18A7E159A4A2B4C /* CredentialStoreTests.swift */, 626CF5B6CAE4F9464055D1FD /* AppSymbolTests.swift */, A013F0A12026100900000006 /* MotorsportAssetTests.swift */, ); path = Tests; sourceTree = "<group>"; };
+		F14E00000000000000000007 /* LiveIsland */ = {isa = PBXGroup; children = (F14E00000000000000000004 /* LiveIslandLogic.swift */, F14E00000000000000000005 /* LiveIsland.swift */, ); path = LiveIsland; sourceTree = "<group>"; };
+		3B6D5438446D06FBFC2AB398 /* Tests */ = {isa = PBXGroup; children = (ADB7B2FDECB8EC3FD6C90B39 /* TestSupport.swift */, FE7E68F70C58B1AF28DAF270 /* CountryFlagTests.swift */, D6944C2A2546291A58648222 /* CalendarLogicTests.swift */, DE90F418914C16CB0AE9EB6E /* APIClientTests.swift */, 7C0765243287C05E15EA9C67 /* CalendarCacheTests.swift */, 032BAE578B740E651F67979A /* ServerAddressTests.swift */, 16E4503FE18A7E159A4A2B4C /* CredentialStoreTests.swift */, 626CF5B6CAE4F9464055D1FD /* AppSymbolTests.swift */, A013F0A12026100900000006 /* MotorsportAssetTests.swift */, E10000000000000000000023 /* LiveStoreTests.swift */, F14E00000000000000000006 /* LiveIslandTests.swift */, ); path = Tests; sourceTree = "<group>"; };
 		F4C6E6CF4A19B8372D2D6BA0 /* Support */ = {isa = PBXGroup; children = (DCCDA70F6E3C5B08647F63BB /* Info.plist */, ); path = Support; sourceTree = "<group>"; };
 		E1000000000000000000000F /* UITests */ = {isa = PBXGroup; children = (E10000000000000000000001 /* MenuBarAcceptanceTests.swift */, ); path = UITests; sourceTree = "<group>"; };
 /* End PBXGroup section */
@@ -140,6 +159,7 @@
 			);
 			buildRules = ();
 			dependencies = ();
+			packageProductDependencies = (F14E0000000000000000000A /* NookApp */, );
 			name = F1Companion;
 			productName = F1Companion;
 			productReference = EDFBF4BDF289E953A5CC463C /* F1Companion.app */;
@@ -196,6 +216,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (en, Base, );
 			mainGroup = 50A0C24BC240259233E3471D;
+			packageReferences = (F14E00000000000000000009 /* XCRemoteSwiftPackageReference "opennook" */, );
 			productRefGroup = DCA3CD88DE11DBC6D6604578 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -216,12 +237,17 @@
 			0F7B58C69CCA58F6AE877D74 /* AppModel.swift in Sources */,
 			F01000000000000000000001 /* SessionReminderCoordinator.swift in Sources */,
 			F01000000000000000000003 /* NetworkPathMonitor.swift in Sources */,
+			F14E00000000000000000001 /* LiveIslandLogic.swift in Sources */,
+			F14E00000000000000000002 /* LiveIsland.swift in Sources */,
 			F428951EC21DC2FEB8EF0549 /* APIModels.swift in Sources */,
 			60DE28F0789CE893C550D973 /* APIClientError.swift in Sources */,
 			925609D4E70D7ABFAFDF50A3 /* ServerAddress.swift in Sources */,
 			53AACE3B2A2568FC65BD8BF1 /* CredentialStore.swift in Sources */,
 			EFAC734E2B0AB1FF576E31E8 /* KeychainStore.swift in Sources */,
 			9FB80DF6164E0AB8D32FCBC5 /* APIClient.swift in Sources */,
+			E10000000000000000000010 /* LiveModels.swift in Sources */,
+			E10000000000000000000011 /* SSEParser.swift in Sources */,
+			E10000000000000000000012 /* LiveStore.swift in Sources */,
 			ECA23164D32D05CDFA42F8DC /* CalendarCache.swift in Sources */,
 			C1169DEAE2710C6A6C13A945 /* AppSymbol.swift in Sources */,
 			B92ADECDE73350FBB6F4123C /* CountryFlag.swift in Sources */,
@@ -231,6 +257,7 @@
 			B9145980CF81A3C916206FCB /* NextMeetingCard.swift in Sources */,
 			A8186D9565B34A1930FDC5C1 /* CalendarView.swift in Sources */,
 			39208922DE7D6EADD3D2BBA7 /* MeetingDetailView.swift in Sources */,
+			A014A0000000000000000001 /* AnalysisView.swift in Sources */,
 			A013F0A12026100900000001 /* SessionResultsView.swift in Sources */,
 			A013F0A12026100900000009 /* StandingsView.swift in Sources */,
 			A013F0A12026100900000003 /* MotorsportAsset.swift in Sources */,
@@ -246,6 +273,8 @@
 			955D4F0C7B0DF6DCF7A16A69 /* CredentialStoreTests.swift in Sources */,
 			10E82E77C2C53465709D3281 /* AppSymbolTests.swift in Sources */,
 			A013F0A12026100900000005 /* MotorsportAssetTests.swift in Sources */,
+			E10000000000000000000013 /* LiveStoreTests.swift in Sources */,
+			F14E00000000000000000003 /* LiveIslandTests.swift in Sources */,
 		); runOnlyForDeploymentPostprocessing = 0; };
 		E10000000000000000000007 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (E10000000000000000000002 /* MenuBarAcceptanceTests.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
@@ -255,14 +284,24 @@
 		E1000000000000000000000D /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = B4ABECCEEAB2868E893CB29C /* F1Companion */; targetProxy = E1000000000000000000000C /* PBXContainerItemProxy */; };
 /* End PBXTargetDependency section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		F14E00000000000000000009 /* XCRemoteSwiftPackageReference "opennook" */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/twinkling-reality/opennook.git"; requirement = {kind = revision; revision = 2b50b5c3a99df8914e25e199d29bf7aa505f7a59; }; };
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F14E0000000000000000000A /* NookApp */ = {isa = XCSwiftPackageProductDependency; package = F14E00000000000000000009 /* XCRemoteSwiftPackageReference "opennook" */; productName = NookApp; };
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin XCBuildConfiguration section */
 		E7A448DA42BC2D91A2AECB8F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				SWIFT_VERSION = 6.0;
 				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
@@ -274,7 +313,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 				SWIFT_STRICT_CONCURRENCY = minimal;
@@ -296,7 +335,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 				SWIFT_STRICT_CONCURRENCY = minimal;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -313,7 +352,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 				SWIFT_STRICT_CONCURRENCY = minimal;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -325,7 +364,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
@@ -342,7 +381,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
@@ -357,7 +396,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
@@ -372,7 +411,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;

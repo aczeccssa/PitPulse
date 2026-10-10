@@ -87,3 +87,21 @@ extension CalendarLogicTests {
         XCTAssertNil(CalendarLogic.nextSession(in: [], now: start))
     }
 }
+
+extension CalendarLogicTests {
+    func testFeaturedMeetingKeepsCurrentWeekendAfterLastSessionStarts() {
+        let meeting = TestData.meeting()
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        XCTAssertEqual(CalendarLogic.featuredMeeting(in: [meeting], now: TestData.date("2026-03-08T05:00:00Z"), calendar: calendar)?.id, meeting.id)
+        XCTAssertNil(CalendarLogic.nextSession(in: [meeting], now: TestData.date("2026-03-08T05:00:00Z")))
+    }
+
+    func testFeaturedMeetingFallsBackToRecentAndExcludesCancelled() {
+        let recent = TestData.meeting()
+        let cancelled = TestData.meeting(id: "cancelled", status: .cancelled)
+        XCTAssertEqual(CalendarLogic.featuredMeeting(in: [cancelled, recent], now: TestData.date("2026-12-31T00:00:00Z"))?.id, recent.id)
+        XCTAssertNil(CalendarLogic.featuredMeeting(in: [cancelled], now: Date()))
+        XCTAssertNil(CalendarLogic.featuredMeeting(in: [], now: Date()))
+    }
+}

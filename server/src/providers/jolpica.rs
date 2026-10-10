@@ -130,6 +130,33 @@ impl JolpicaProvider {
         Ok(rows)
     }
 
+    pub async fn entity_races_once(
+        &self,
+        season: i64,
+        kind: &str,
+        id: &str,
+        endpoint: &str,
+    ) -> Result<Vec<Value>, ProviderError> {
+        let path = if kind.is_empty() && id.is_empty() {
+            format!("/ergast/f1/{season}/{endpoint}.json")
+        } else {
+            format!("/ergast/f1/{season}/{kind}/{id}/{endpoint}.json")
+        };
+        let url = with_query(&self.base_url, &path, &[("limit", "100".into())])?;
+        let mut rows = Vec::new();
+        get_pages_once(&self.client, &url, |page| {
+            rows.extend(
+                page.pointer("/MRData/RaceTable/Races")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default(),
+            );
+            Ok(())
+        })
+        .await?;
+        Ok(rows)
+    }
+
     pub async fn ergast_rows_once(
         &self,
         season: i64,

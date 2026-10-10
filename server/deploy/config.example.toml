@@ -13,6 +13,7 @@ user_agent = "PitPulse/0.1"
 [live]
 snapshot_interval_seconds = 15
 stale_after_seconds = 60
+disconnect_after_seconds = 120
 
 [security]
 require_token = true

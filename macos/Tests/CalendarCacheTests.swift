@@ -550,19 +550,14 @@ final class AppModelTests: XCTestCase {
         }
 
         await model.refreshNow()
-        XCTAssertEqual(counter.value, 1)
-        try await Task.sleep(for: .milliseconds(200))
-        XCTAssertEqual(counter.value, 1)
-        for _ in 0..<100 where counter.value < 2 { try await Task.sleep(for: .milliseconds(10)) }
-        XCTAssertEqual(counter.value, 2)
-        try await Task.sleep(for: .milliseconds(400))
-        XCTAssertEqual(counter.value, 2)
-        for _ in 0..<100 where counter.value < 3 { try await Task.sleep(for: .milliseconds(10)) }
-        XCTAssertEqual(counter.value, 3)
-        try await Task.sleep(for: .milliseconds(600))
-        XCTAssertEqual(counter.value, 3)
-        for _ in 0..<100 where counter.value < 4 { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<1000 where counter.value < 4 { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertEqual(counter.value, 4)
+        let timestamps = counter.timestamps
+        guard timestamps.count == 4 else { return }
+        for (index, delay) in [0.4, 0.8, 1.2].enumerated() {
+            let elapsed = Double(timestamps[index + 1] - timestamps[index]) / 1_000_000_000
+            XCTAssertGreaterThanOrEqual(elapsed, delay, "Retry advanced before its backoff")
+        }
         for _ in 0..<100 where model.connectionStatus != .connected { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertEqual(model.connectionStatus, .connected)
     }
@@ -756,6 +751,13 @@ private final class MutableMeetingFixture: @unchecked Sendable {
 private final class RequestCounter: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
+    private var requestTimes: [UInt64] = []
+
+    var timestamps: [UInt64] {
+        lock.lock()
+        defer { lock.unlock() }
+        return requestTimes
+    }
 
     var value: Int {
         lock.lock()
@@ -766,6 +768,7 @@ private final class RequestCounter: @unchecked Sendable {
     func increment() {
         lock.lock()
         count += 1
+        requestTimes.append(DispatchTime.now().uptimeNanoseconds)
         lock.unlock()
     }
 }

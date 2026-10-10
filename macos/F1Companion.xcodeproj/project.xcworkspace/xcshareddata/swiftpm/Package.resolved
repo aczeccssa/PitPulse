@@ -1,0 +1,14 @@
+{
+  "originHash" : "36af23c5005504a1a1a3a68800c72e7476c2db7fe2a332d6df5bb7960bebd8d6",
+  "pins" : [
+    {
+      "identity" : "opennook",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/twinkling-reality/opennook.git",
+      "state" : {
+        "revision" : "2b50b5c3a99df8914e25e199d29bf7aa505f7a59"
+      }
+    }
+  ],
+  "version" : 3
+}

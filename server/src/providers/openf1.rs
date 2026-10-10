@@ -69,6 +69,41 @@ impl OpenF1Provider {
         get_json_once(&self.client, url).await
     }
 
+    pub async fn analysis_rows(
+        &self,
+        resource: &str,
+        params: &[(String, String)],
+    ) -> Result<Vec<Value>, ProviderError> {
+        let params: Vec<(&str, String)> = params
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.clone()))
+            .collect();
+        let url = with_query(&self.base_url, &format!("/v1/{resource}"), &params)?;
+        let url = url
+            .replace("date%3E%3D=", "date>=")
+            .replace("date%3C%3D=", "date<=");
+        let payload = tokio::time::timeout(
+            Duration::from_secs(10),
+            get_json_with_min_interval(
+                &self.client,
+                &url,
+                &self.last_request,
+                Duration::from_millis(2100),
+            ),
+        )
+        .await
+        .map_err(|_| ProviderError::Transport {
+            url: url.clone(),
+            error: "analysis timeout".into(),
+        })??;
+        payload
+            .as_array()
+            .cloned()
+            .ok_or_else(|| ProviderError::MissingField {
+                field: resource.into(),
+            })
+    }
+
     pub async fn meetings(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
         let url = with_query(
             &self.base_url,

@@ -17,7 +17,8 @@ struct CalendarView: View {
                 if model.meetings.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
+                    ScrollViewReader { proxy in
+                      ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(model.meetings) { meeting in
                                 Button {
@@ -29,10 +30,11 @@ struct CalendarView: View {
                                             .font(.caption)
                                             .foregroundStyle(.tertiary)
                                     }
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 12)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .id(meeting.id)
                                 if meeting.id != model.meetings.last?.id {
                                     Divider()
                                 }
@@ -40,6 +42,12 @@ struct CalendarView: View {
                         }
                         .padding(.horizontal, 16)
                         .background(CalendarScrollAppearance())
+                      }
+                      .onAppear {
+                          if let meeting = CalendarLogic.featuredMeeting(in: model.meetings, now: Date()) {
+                              proxy.scrollTo(meeting.id, anchor: .top)
+                          }
+                      }
                     }
                 }
             }
@@ -106,13 +114,16 @@ struct CalendarView: View {
             Image(systemName: AppSymbol.calendar.resolvedSystemName())
                 .font(.system(size: 30))
                 .foregroundStyle(.secondary)
-            Text(model.connectionStatus == .loading ? "正在加载 \(model.selectedSeason) 赛季" : "暂无赛历")
-                .font(.headline)
-            Text("该赛季尚未同步，或当前筛选没有数据。切换服务器或年份后重试。")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 36)
+            if model.connectionStatus == .loading {
+                ProgressView().accessibilityLabel("读取 \(model.selectedSeason) 赛季")
+            } else {
+                Text("暂无赛历").font(.headline)
+                Text("该赛季尚未同步，或当前筛选没有数据。切换服务器或年份后重试。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 36)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -134,6 +145,10 @@ private struct MeetingRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            Text("\(meeting.startDate.formatted(.dateTime.month().day()))\n\(meeting.endDate.formatted(.dateTime.month().day()))")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
             statusLabel
         }
         .padding(.vertical, 3)
@@ -151,7 +166,7 @@ private struct MeetingRow: View {
     }
 }
 
-// Scope native scroll styling to the calendar; never change global scroll preferences.
+// Apply the same native overlay scroller to each App list, never global preferences.
 struct CalendarScrollAppearance: NSViewRepresentable {
     func makeNSView(context: Context) -> ScrollStyleAnchor {
         ScrollStyleAnchor()

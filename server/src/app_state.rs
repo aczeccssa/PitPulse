@@ -17,6 +17,7 @@ pub struct AppState {
     pub live: LiveState,
     pub jolpica: JolpicaProvider,
     pub openf1: OpenF1Provider,
+    pub analysis: crate::services::analysis::AnalysisCache,
 }
 
 impl AppState {
@@ -30,6 +31,7 @@ impl AppState {
             live,
             jolpica,
             openf1,
+            analysis: crate::services::analysis::AnalysisCache::default(),
         }
     }
 }

@@ -46,12 +46,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var reminderMessage: String?
     @Published private(set) var reminderPermissionDenied = false
     @Published private(set) var favoriteDriverId: String?
+    @Published private(set) var notchAutoShowEnabled: Bool
 
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
     private let cache: DiskCalendarCache
     private let reminderCenter: any SessionReminderCenter
     private let networkMonitor: any NetworkPathMonitoring
+    let liveStore = LiveStore()
     private let retryDelays: [TimeInterval]
     private var generation = 0
     private var resultGeneration = 0
@@ -92,6 +94,8 @@ final class AppModel: ObservableObject {
         let savedMinutes = defaults.object(forKey: PreferenceKeys.reminderMinutes) as? Int ?? 15
         self.reminderMinutes = SessionReminderPlanner.allowedMinutes.contains(savedMinutes) ? savedMinutes : 15
         self.favoriteDriverId = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
+        self.notchAutoShowEnabled = defaults.object(forKey: PreferenceKeys.notchAutoShowEnabled) == nil
+            ? true : defaults.bool(forKey: PreferenceKeys.notchAutoShowEnabled)
 
         let savedAddress = defaults.string(forKey: PreferenceKeys.serverAddress)
         let fallbackAddress = "http://localhost:38701"
@@ -136,6 +140,26 @@ final class AppModel: ObservableObject {
         nextSession?.meeting
     }
 
+    var currentIslandSession: NextSession? {
+        LiveIslandLogic.currentScheduledSession(in: meetings, now: Date())
+    }
+
+    func islandFlag(for snapshot: LiveSnapshot) -> String {
+        let meeting = LiveIslandLogic.meeting(for: snapshot, in: meetings, now: Date())
+            ?? currentIslandSession?.meeting
+        return CountryFlag.emoji(for: meeting?.countryCode) ?? "🌐"
+    }
+
+    func plannedIslandSessionLabel(for snapshot: LiveSnapshot, now: Date = Date()) -> String {
+        if let currentIslandSession = LiveIslandLogic.currentScheduledSession(in: meetings, now: now) {
+            return currentIslandSession.session.sessionType.displayName
+        }
+        if let nextSession = CalendarLogic.nextSession(in: meetings, now: now) {
+            return "下次 \(nextSession.session.sessionType.displayName) · 还有 \(CalendarLogic.countdownText(until: nextSession.session.startTime, now: now))"
+        }
+        return "暂无赛程"
+    }
+
     var availableResultSessions: [NextSession] {
         meetings.flatMap { meeting in
             meeting.sessions
@@ -167,7 +191,10 @@ final class AppModel: ObservableObject {
         didBootstrap = true
         await loadCachedIfAvailable()
         await refreshTokenStatus()
-        if networkAvailable { await refreshCalendar() }
+        if networkAvailable {
+            startLiveStream()
+            await refreshCalendar()
+        }
         else { markOffline(); await refreshPageData() }
     }
 
@@ -206,6 +233,52 @@ final class AppModel: ObservableObject {
         showingConstructorStandings = isConstructor
         standingsError = nil
         Task { await refreshStandings() }
+    }
+
+
+    func sessionAnalysis(sessionID: String, driverID: String, season: Int, lap: Int?) async throws -> APIEnvelope<SessionAnalysis> {
+        try await analysis(key: "analysis-\(sessionID)-\(driverID)-\(lap ?? 0)", season: season) { client, token in
+            try await client.sessionAnalysis(sessionId: sessionID, driverId: driverID, lap: lap, token: token)
+        }
+    }
+
+    func seasonAnalysis(kind: String, id: String, season: Int) async throws -> APIEnvelope<SeasonAnalysis> {
+        try await analysis(key: "analysis-\(kind)-\(id)", season: season) { client, token in
+            try await client.seasonAnalysis(kind: kind, id: id, season: season, token: token)
+        }
+    }
+
+    func cachedAnalysis<Value: Codable & Sendable>(key: String, season: Int, as type: Value.Type) async -> APIEnvelope<Value>? {
+        guard let server = configuredServer else { return nil }
+        let value = try? await cache.load(server: server.url, season: season, key: key, as: type)
+        guard server == configuredServer, !Task.isCancelled else { return nil }
+        return value
+    }
+
+    private func analysis<Value: Codable & Sendable>(key: String, season: Int,
+        fetch: (APIClient, String?) async throws -> APIEnvelope<Value>) async throws -> APIEnvelope<Value> {
+        guard let server = configuredServer else { throw APIClientError.invalidServerAddress(serverAddress) }
+        do {
+            let token = try credentials.token(for: server.url)
+            let value = try await fetch(APIClient(baseURL: server.url, session: session), token)
+            try Task.checkCancellation()
+            guard server == configuredServer else { throw CancellationError() }
+            if value.meta.analysisCanBeCached {
+                try? await cache.save(server: server.url, season: season, key: key, envelope: value)
+            }
+            return value
+        } catch {
+            if error is CancellationError { throw error }
+            guard server == configuredServer else { throw CancellationError() }
+            // Authorization failures must not expose a previous authenticated response.
+            if let apiError = error as? APIClientError, apiError == .unauthorized { throw error }
+            if let old = try? await cache.load(server: server.url, season: season, key: key, as: Value.self) {
+                return APIEnvelope(data: old.data, meta: ResponseMeta(schemaVersion: old.meta.schemaVersion,
+                    revision: old.meta.revision, stale: true, quality: old.meta.quality, source: old.meta.source,
+                    fetchedAt: old.meta.fetchedAt, sourceUpdatedAt: old.meta.sourceUpdatedAt))
+            }
+            throw error
+        }
     }
 
     func refreshResults() async {
@@ -334,6 +407,7 @@ final class AppModel: ObservableObject {
         do {
             let server = try ServerAddress(rawValue: rawValue)
             invalidateConnection()
+            liveStore.stop(reason: "server_changed")
             serverAddress = server.url.absoluteString
             configuredServer = server
             defaults.set(serverAddress, forKey: PreferenceKeys.serverAddress)
@@ -346,6 +420,7 @@ final class AppModel: ObservableObject {
                 await reminderCenter.removeAllPending()
                 await loadCachedIfAvailable()
                 await refreshTokenStatus()
+                startLiveStream()
                 await refreshCalendar(server: server, season: selectedSeason)
             }
             return true
@@ -366,6 +441,7 @@ final class AppModel: ObservableObject {
             settingsMessage = "Token 已保存到 Keychain"
             retryAttempt = 0
             retryTask?.cancel()
+            startLiveStream()
             refresh(force: true)
         } catch {
             settingsMessage = error.localizedDescription
@@ -380,6 +456,7 @@ final class AppModel: ObservableObject {
             settingsMessage = "Token 已删除"
             retryAttempt = 0
             retryTask?.cancel()
+            startLiveStream()
             refresh(force: true)
         } catch {
             settingsMessage = error.localizedDescription
@@ -481,6 +558,37 @@ final class AppModel: ObservableObject {
         else { defaults.removeObject(forKey: PreferenceKeys.favoriteDriverId) }
     }
 
+    func setNotchAutoShowEnabled(_ enabled: Bool) {
+        notchAutoShowEnabled = enabled
+        defaults.set(enabled, forKey: PreferenceKeys.notchAutoShowEnabled)
+    }
+
+    func ensureDriverStandingsLoaded() {
+        guard driverStandings.isEmpty, let server = configuredServer else { return }
+        let season = selectedSeason
+        Task { [weak self] in
+            guard let self else { return }
+            if let cached = try? await self.cache.load(server: server.url, season: season, key: "standings-drivers", as: [DriverStanding].self),
+               self.selectedSeason == season, self.driverStandings.isEmpty {
+                self.driverStandings = cached.data
+                self.standingsMeta = cached.meta
+            }
+            guard self.driverStandings.isEmpty, self.networkAvailable else { return }
+            do {
+                let token = try self.credentials.token(for: server.url)
+                let response = try await APIClient(baseURL: server.url, session: self.session)
+                    .driverStandings(season: season, token: token)
+                guard self.selectedSeason == season, self.configuredServer == server else { return }
+                self.driverStandings = response.data
+                self.standingsMeta = response.meta
+                try? await self.cache.save(server: server.url, season: season, key: "standings-drivers", envelope: response)
+            } catch {
+                guard self.selectedSeason == season, self.configuredServer == server else { return }
+                self.standingsError = error.localizedDescription
+            }
+        }
+    }
+
     func openNotificationSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") else { return }
         NSWorkspace.shared.open(url)
@@ -492,8 +600,10 @@ final class AppModel: ObservableObject {
         if isAvailable {
             retryAttempt = 0
             retryTask?.cancel()
+            if didBootstrap { startLiveStream() }
             refresh(force: true)
         } else {
+            liveStore.stop(reason: "offline")
             markOffline()
             retryTask?.cancel()
         }
@@ -508,13 +618,27 @@ final class AppModel: ObservableObject {
         retryTask?.cancel()
         popupRefreshTask?.cancel()
         popupRefreshTask = nil
+        liveStore.stop(reason: "sleep")
         markOffline()
     }
 
     private func resumeAfterWake() async {
         markOffline()
-        if networkAvailable { await refreshCalendar() }
+        if networkAvailable {
+            await refreshTokenStatus()
+            if didBootstrap { startLiveStream() }
+            await refreshCalendar()
+        }
         else { await refreshPageData() }
+    }
+
+    private func startLiveStream() {
+        guard didBootstrap, networkAvailable, let server = configuredServer else { return }
+        do {
+            liveStore.start(serverURL: server.url, token: try credentials.token(for: server.url))
+        } catch {
+            liveStore.stop(reason: "credentials_unavailable")
+        }
     }
 
     private func markOffline() {
@@ -743,4 +867,5 @@ enum PreferenceKeys {
     static let remindersEnabled = "remindersEnabled"
     static let reminderMinutes = "reminderMinutes"
     static let favoriteDriverId = "favoriteDriverId"
+    static let notchAutoShowEnabled = "notchAutoShowEnabled"
 }

@@ -6,6 +6,23 @@ struct NextSession: Equatable, Sendable {
 }
 
 enum CalendarLogic {
+    static func featuredMeeting(in meetings: [Meeting], now: Date, calendar: Calendar = .current) -> Meeting? {
+        let available = meetings.filter { $0.status != .cancelled }
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)
+        let thisWeek = available.filter {
+            guard let week else { return false }
+            return $0.startDate < week.end && $0.endDate >= week.start
+        }
+        func distance(_ meeting: Meeting) -> TimeInterval {
+            if now < meeting.startDate { return meeting.startDate.timeIntervalSince(now) }
+            return max(0, now.timeIntervalSince(meeting.endDate))
+        }
+        return (thisWeek.isEmpty ? available : thisWeek).sorted {
+            let left = distance($0), right = distance($1)
+            return left == right ? $0.startDate < $1.startDate : left < right
+        }.first
+    }
+
     static func nextSession(
         in meetings: [Meeting],
         now: Date,
