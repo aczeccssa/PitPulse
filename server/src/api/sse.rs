@@ -16,14 +16,21 @@ pub async fn live_stream(
     let interval = tokio::time::interval(Duration::from_secs(
         state.config.live.snapshot_interval_seconds.clamp(10, 30),
     ));
+    let mut updates = tokio::time::interval(Duration::from_millis(100));
+    updates.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    updates.tick().await;
     let mut interval = interval;
     interval.tick().await;
     let stream = stream::unfold(
-        (receiver, interval, current, true),
-        |(mut receiver, mut interval, mut current, initial)| async move {
+        (receiver, interval, updates, current, 0, true),
+        |(mut receiver, mut interval, mut updates, mut current, mut sent_version, initial)| async move {
             if initial {
+                sent_version = current.state_version;
                 let event = snapshot_event(&current);
-                return Some((Ok(event), (receiver, interval, current, false)));
+                return Some((
+                    Ok(event),
+                    (receiver, interval, updates, current, sent_version, false),
+                ));
             }
             loop {
                 tokio::select! {
@@ -37,14 +44,24 @@ pub async fn live_stream(
                             || next.status_reason != current.status_reason;
                         current = next;
                         if status_changed {
+                            sent_version = current.state_version;
                             let event = snapshot_event(&current);
-                            return Some((Ok(event), (receiver, interval, current, false)));
+                            return Some((Ok(event), (receiver, interval, updates, current, sent_version, false)));
+                        }
+                    }
+                    _ = updates.tick() => {
+                        current = receiver.borrow_and_update().clone();
+                        if current.state_version != sent_version {
+                            sent_version = current.state_version;
+                            let event = snapshot_event(&current);
+                            return Some((Ok(event), (receiver, interval, updates, current, sent_version, false)));
                         }
                     }
                     _ = interval.tick() => {
                         current = receiver.borrow_and_update().clone();
+                        sent_version = current.state_version;
                         let event = snapshot_event(&current);
-                        return Some((Ok(event), (receiver, interval, current, false)));
+                        return Some((Ok(event), (receiver, interval, updates, current, sent_version, false)));
                     }
                 }
             }

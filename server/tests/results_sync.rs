@@ -112,6 +112,7 @@ async fn test_sprint_fallback_preserves_primary_priority_rate_limit_and_cached_r
         openf1_session_key: Some(10),
     };
     let meeting = Meeting {
+        circuit: None,
         id: "2026:1".into(),
         season: 2026,
         round: Some(1),
@@ -252,6 +253,7 @@ async fn test_split_sync_targets_fetch_and_preserve_results_and_both_standings()
     database
         .replace_calendar(
             &[Meeting {
+                circuit: None,
                 id: "2026:1".into(),
                 season: 2026,
                 round: Some(1),

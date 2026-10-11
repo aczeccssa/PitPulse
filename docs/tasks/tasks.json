@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-10T16:49:45Z",
+  "updatedAt": "2026-10-11T09:32:35Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -63,6 +63,18 @@
       "description": "本地演练与真实 VPS／赛事证据分别记录",
       "taskIds": [
         "T15"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "地图与赛事信息",
+      "description": "Notch 3D Live Map、赛历地图、天气、Race Control 与 Team Radio；真实上游验收单独记录",
+      "taskIds": [
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20"
       ]
     }
   ],
@@ -228,7 +240,7 @@
       "milestone": "M2",
       "area": "Asset Agent",
       "status": "done",
-      "summary": "按用户限定的本机私人使用范围完成素材收集与文件核验：39 个本地文件，22/22 当前车手单盔图、11/11 当前车队 Logo。用户授权将私用素材纳入本地版本控制 commit；不 push 或公开发布。设计年与再分发权仅为发布范围后续限制。",
+      "summary": "按用户限定的本机私人使用范围完成素材收集与文件核验：39 个本地文件，22/22 当前车手单盔图、11/11 当前车队 Logo。用户授权将私用素材纳入本地版本控制 commit；不 push 或公开发布。2026-10-11 第六轮：应用户要求新增 11 个官方 F1 CDN 2026 全彩 SVG 车队徽标下载（累计 50 个 private-local 文件），bundle 内 team-logo imageset 全部换为 512px 全彩 PNG，4 个黑标车队（Aston Martin/Audi/Cadillac/Mercedes）增加 dark appearance 白色版；权利状态与 shipping-ready=0 不变。设计年与再分发权仅为发布范围后续限制。",
       "dependencies": [],
       "relatedTasks": [],
       "scope": "当前赛季名单证据、逐车手头盔 / 逐车队 Logo 覆盖矩阵、可审计 manifest、实际本人本机私用素材及缺失清单。用户明确仅本机私人使用；不以对外分发许可作为本地收集前置条件。",
@@ -356,7 +368,7 @@
       ],
       "blockers": [],
       "nextAction": "T03 已完成。若未来要 push、公开发布或将素材纳入发布 bundle，先重新核验设计年份和相关权利。",
-      "updatedAt": "2026-10-09T06:07:34Z",
+      "updatedAt": "2026-10-11T08:44:14Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -497,6 +509,11 @@
           "at": "2026-10-09T06:07:34Z",
           "status": "done",
           "note": "用户明确仓库只用于本机私人版本控制，并授权本地 commit；取消 private-local 忽略规则，将素材纳入本地版本控制。保持 no push/publication，rightsStatus、bundlePath 和 shippingReady 不变。"
+        },
+        {
+          "at": "2026-10-11T08:44:14Z",
+          "status": "done",
+          "note": "第六轮：用户要求收集全彩 svg/png 车队 logo。11 个官方 F1 CDN 2026 全彩 SVG 全部 HTTP 200 下载并归档 private-local，XML/脚本/外链/位图核验通过；bundle image.png 更新为 512px 透明底全彩 PNG，Aston Martin/Audi/Cadillac/Mercedes 增加 dark appearance 白色变体；manifest 新增 11 条下载记录与各资产 colorVariant 字段，34 个三元键唯一保持；报告新增第六轮小节。原白色 webp 参考保留，rightsStatus/shippingReady 不变。"
         }
       ]
     },
@@ -736,8 +753,8 @@
       "priority": "P0",
       "milestone": "M1",
       "area": "macOS",
-      "status": "inReview",
-      "summary": "macOS 26 Liquid Glass 设置重做与窗口激活修复已实现；82 项单测、2 项设置 UI 测试通过，浅深色四类截图已复核；最小尺寸和实际桌面切换仍待验收。",
+      "status": "inProgress",
+      "summary": "继续验收：两个 Swift 回归、三项 SSE 测试、五项地图 JS 与 Swift CLI 通过；实际消息展开可见两条 MOCK 赛会消息。",
       "dependencies": [
         "T01",
         "T04"
@@ -986,8 +1003,8 @@
         "Computer Use Helper 缺少辅助功能授权，实际 Dock/Cmd+Tab、最小化恢复和独立 Cmd+, 打开缺少证据。",
         "两次 XCTest 拖拽缩放均仍报告 800×640；760×560 与滚动未通过实际验收，未确定是工具限制还是窗口行为。"
       ],
-      "nextAction": "补足实际 760×560 缩放/滚动、Dock/Cmd+Tab 返回、最小化恢复与设置关闭时独立 Cmd+, 打开证据；A4/A5 通过后完成 T05。",
-      "updatedAt": "2026-10-10T16:49:45Z",
+      "nextAction": "完成两种收起方式的原生交互，保存截图与验收记录；保留真实音频、真实赛事和完整设备验收边界。",
+      "updatedAt": "2026-10-11T07:24:20Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -1093,6 +1110,36 @@
           "at": "2026-10-10T16:49:45Z",
           "status": "inReview",
           "note": "启动最终构建并确认 App 进程运行。遵照用户要求，不使用 subagent，不再扩展或重复设置 UI 测试；现有未验收项保留，T05 维持 inReview。"
+        },
+        {
+          "at": "2026-10-11T06:37:24Z",
+          "status": "inProgress",
+          "note": "用户新增要求：消息详情按需展开，设置鼠标移出或点击外部收起，增加 telemetry 更新频率。SSE 与 Mock 当前均 250ms，拟提高到 100ms；Swift 无额外 throttle。"
+        },
+        {
+          "at": "2026-10-11T06:41:00Z",
+          "status": "inProgress",
+          "note": "已实现折叠按钮、偏好 Picker、原生 hover pin 和外部点击收起，折叠停止 Radio；SSE 和 replay 上限改为 10 Hz。首轮 App build 通过，追加测试和清理监听生命周期。"
+        },
+        {
+          "at": "2026-10-11T06:42:41Z",
+          "status": "inProgress",
+          "note": "最终 build-for-testing 通过。Rust 95 项含虚拟时钟 100ms 合并和慢消费者回归通过；fmt/clippy、Swift CLI、地图 JS 五项通过。真实赛事采样频率仍未验证。"
+        },
+        {
+          "at": "2026-10-11T06:46:16Z",
+          "status": "inProgress",
+          "note": "消息默认折叠/展开已在原生 UI 验证；两个 Swift 单测通过。新版 replay 网络测量约 10.00 Hz、100.03ms，普通与 replay 服务健康。发现 OpenNook onExpand 在 @Published willSet 触发导致收起偏好读取旧 state，修正生命周期参数并追加回归。"
+        },
+        {
+          "at": "2026-10-11T07:08:28Z",
+          "status": "inProgress",
+          "note": "新聊天继续 Mapbox & Race Control & TR 中断的验收；保留现有实现、证据及未完成的真实赛事/设备边界。"
+        },
+        {
+          "at": "2026-10-11T07:24:20Z",
+          "status": "inProgress",
+          "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
         }
       ]
     },
@@ -2702,7 +2749,7 @@
       "milestone": "M3",
       "area": "Full stack",
       "status": "inReview",
-      "summary": "真实Sprint全链路已观察：feed三参数及注册释放修复、协商Cookie适配；服务器与主App均live/connected，Started、22车手、圈数与赛段变化。Rust66项通过，旧压缩Topic和授权边界保留。",
+      "summary": "真实源恢复由Taskdeck管理；单一最新版App日志接受live/stale、22车手，Session11384 Ends；持续真实赛期与授权边界保留。",
       "dependencies": [
         "T01",
         "T05",
@@ -2784,15 +2831,19 @@
           "label": "Sprint真实Live与三赛段修复验证",
           "path": "docs/acceptance/live-cookie-transport.md",
           "detail": "真实源live/connected，Sprint Started、22车手、圈数1到2/20及赛段时间变化；App LiveStore实际接收version1767，单App自动紧凑展示且非active/key。Rust66项、fmt/clippy及Swift14项无界面校验通过，App和XCTest目标编译通过；新UI人工验收未通过，未commit/push。"
+        },
+        {
+          "label": "真实源与Taskdeck本地运行接管",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
         }
       ],
       "blockers": [
         "新实时界面与回放/降级标签仍需用户操作确认；禁止桌面自动化，不能将编译或API响应当界面验收。",
-        "Position.z / CarData.z未订阅及解码，压缩损坏路径仍未覆盖；本次只投影原有TimingData。",
         "合法用户Token真实上游授权未验证，当前运行证据为匿名连接。"
       ],
-      "nextAction": "确认真实上游持续feed、运行Rust检查与Swift无界面校验，启动新版单App；记录未通过验收边界。",
-      "updatedAt": "2026-10-10T09:42:23Z",
+      "nextAction": "在真实运行赛期独立验证持续Topic更新、定位、天气与Radio；保留现有未通过验收项。",
+      "updatedAt": "2026-10-11T07:52:45Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -2828,6 +2879,26 @@
           "at": "2026-10-10T09:42:23Z",
           "status": "inReview",
           "note": "真实源live/connected持续到version1746，Started、圈数1到2/20、22车手和赛段值变化；主App实际snapshotAccepted version1767闭环已观察。Rust66项无skip，Cookie订阅/拆帧/关闭loopback协议测试通过；旧压缩Topic边界保留，未操作桌面。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "T16 已实现 Position.z/CarData.z 的订阅、有界解码与损坏/超限回归，删除已解除的实现阻塞；历史未订阅证据保留，新增 Topic 的真实验收仍由 T16 跟踪。"
+        },
+        {
+          "at": "2026-10-11T07:40:13Z",
+          "status": "inProgress",
+          "note": "用户授权切回真实源、更新运行及 taskdeck init 配置 Run Server / Run App。当前普通服务38701为live/stale、Session11384 Ends；App带参数连接38974 replay。保留全部既有修改和验收边界。"
+        },
+        {
+          "at": "2026-10-11T07:45:51Z",
+          "status": "inProgress",
+          "note": "taskdeck init/register及update完成，Run Server / Run App均running且PID直属Taskdeck。最新Rust/Xcode build成功；停止旧Server/replay/App，新App明确38701，snapshotAccepted mode=live/status=stale/drivers=22。开始针对两任务验证restart。"
+        },
+        {
+          "at": "2026-10-11T07:52:45Z",
+          "status": "inReview",
+          "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
         }
       ]
     },
@@ -2838,7 +2909,7 @@
       "milestone": "M3",
       "area": "macOS",
       "status": "inReview",
-      "summary": "常驻连接/缓存/加载文字已收进详情；主界面和Island用图标/等待指示，赛历会话取消预计前缀，回放保留。构建与无界面会话检查通过，唯一新版后台运行；实际UI验收待用户。",
+      "summary": "Release App 已由 Taskdeck 编译并启动，连接真实 38701；完整 UI 验收仍未完成。",
       "dependencies": [
         "T12",
         "T13"
@@ -2970,6 +3041,22 @@
         {
           "label": "状态文字修正前用户反馈",
           "path": "docs/acceptance/assets/t14-user-feedback/20261010-status-text.png"
+        },
+        {
+          "label": "Singapore Sprint mock fixture",
+          "path": "server/tests/fixtures/singapore-sprint-demo.json"
+        },
+        {
+          "label": "Singapore Sprint 动态 replay",
+          "path": "server/examples/support/singapore_sprint.rs"
+        },
+        {
+          "label": "Singapore Sprint Nook 实际截图",
+          "path": "docs/acceptance/assets/singapore-sprint-demo/telemetry.png"
+        },
+        {
+          "label": "Nook 截图反馈修复验收",
+          "path": "docs/acceptance/nook-live-feedback.md"
         }
       ],
       "evidence": [
@@ -3077,6 +3164,21 @@
           "label": "状态文字与等待指示清理",
           "path": "docs/acceptance/notch.md",
           "detail": "Xcode主App build成功；真正LiveIslandLogic无界面会话检查通过，取消预计前缀、保留无新鲜数据时清空计时与回放保护。唯一新版后台启动，正常服务器不重启。13:19:05Z实际源切至11384 Qualifying connected/22行，但SessionStatus Inactive，未计Started/连续更新或视觉验收。"
+        },
+        {
+          "label": "Singapore Sprint mock 原生展示与检查",
+          "path": "docs/acceptance/singapore-sprint-demo.md",
+          "detail": "明确 Replay/MOCK，动态 22 车手与天气/遥测/地图；普通服务健康且持久 serverAddress 未改。Rust 95+example 1、fmt/clippy、Xcode build、Swift CLI、JS 4、任务 8 检查通过，真实 feed/播放/完整设备验收未完成。"
+        },
+        {
+          "label": "新版原生 Nook 实屏与回归检查",
+          "path": "docs/acceptance/nook-live-feedback.md",
+          "detail": "Max 头盔/天气详情/消息计数与过滤/真实 3D 建筑/车队色和车号/整圈居中/跟随缩放/收起和隐藏恢复均有原生观察及截图。最终 App build、Swift CLI、JS 5 项、Rust fmt、任务 8 项通过；无真实车位/音频/FPS或完整 XCTest 证明。"
+        },
+        {
+          "label": "真实源与Taskdeck本地运行接管",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
         }
       ],
       "blockers": [
@@ -3085,8 +3187,8 @@
         "用户报告隐藏Island无反应；固定OpenNook keepVisible悬停延迟根因已修正，新隐藏/菜单共存及整体UI仍未实际复验，不计编译为通过。",
         "正常源已切至11384/Qualifying并提供22行，但观测SessionStatus=Inactive；Started/持续计时更新与实际新版UI仍待后续证据。"
       ],
-      "nextAction": "用户检查新版视觉、等待动画与详情入口；T14原显示器/VoiceOver等实际验收继续保持未闭合。",
-      "updatedAt": "2026-10-10T13:19:55Z",
+      "nextAction": "继续用 Taskdeck 管理 Release App；界面验收另行进行。",
+      "updatedAt": "2026-10-11T09:32:35Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3377,6 +3479,101 @@
           "at": "2026-10-10T13:19:55Z",
           "status": "inReview",
           "note": "完成用户常驻状态文字反馈：Header无Live字幕、Footer无在线/最近成功；诊断转信息菜单/数据详情。Island无预计/Live不可用文字，等待动画尊重Reduce Motion，保留回放/无旧Timing边界。Xcode build和无界面会话检查通过，唯一新版后台启动；不操作桌面。正常源已切至11384 Qualifying connected/22行，Inactive，未声称Started或持续计时更新。"
+        },
+        {
+          "at": "2026-10-11T05:48:24Z",
+          "status": "inReview",
+          "note": "用户明确请求原生 Nook mock 演示，本次仅授权所需的启动和面板交互；保留其他真实 feed、设备、VoiceOver 验收未完成。"
+        },
+        {
+          "at": "2026-10-11T05:52:28Z",
+          "status": "inReview",
+          "note": "实际 Nook AX 确认 22 车手、Kimi P1、L8/19、模拟 Weather 和动态遥测。地图底图可见但错误状态出现，车辆图层尚未验证；本次只演示 mock。"
+        },
+        {
+          "at": "2026-10-11T05:57:20Z",
+          "status": "inReview",
+          "note": "实际截图确认空白页加载消除 createImageBitmap 错误，并显示移动 mock 车标。夜间点/线/文字设置 emissive strength，标签启用碰撞避免；待最终原生截图。"
+        },
+        {
+          "at": "2026-10-11T06:06:46Z",
+          "status": "inReview",
+          "note": "用户 mock 展示已交付并继续运行；原生截图、WebKit file-origin 错误与修复验证分开记录。最终夜间 paint/标签设置有构建和四项 JS 检查，原生最终截图未记录；没有扩大鼠标操作或宣称真实赛事验收。"
+        },
+        {
+          "at": "2026-10-11T06:07:42Z",
+          "status": "inProgress",
+          "note": "用户提供两张 mock Nook 截图并授权修正体验；不启用付费地图功能，保留真实 feed/音频验收边界。"
+        },
+        {
+          "at": "2026-10-11T06:16:33Z",
+          "status": "inProgress",
+          "note": "修复源代码已覆盖 controller-owned 状态、hover pin、天气详情、明确消息筛选/空态及地图动画。JS 五项和 Swift CLI 检查通过；本轮实际 UI 尚未确认。"
+        },
+        {
+          "at": "2026-10-11T06:20:34Z",
+          "status": "inProgress",
+          "note": "实际 Nook UI 已显示 Max 头盔、两条赛会消息、车队色及全赛道地图，无资源报错；车号密集重叠追加碰撞避让和选中优先显示。"
+        },
+        {
+          "at": "2026-10-11T06:26:06Z",
+          "status": "inReview",
+          "note": "用户截图反馈修复已完成并留运行中的主 App demo；实际验证同服务器隐藏重开相机和筛选保留，补齐跟随缩放、号码避让/淡入与资源清理回归。独立验收记录分开标记真实地图、mock 车辆及未完成项。"
+        },
+        {
+          "at": "2026-10-11T06:37:24Z",
+          "status": "inProgress",
+          "note": "用户新增要求：消息详情按需展开，设置鼠标移出或点击外部收起，增加 telemetry 更新频率。SSE 与 Mock 当前均 250ms，拟提高到 100ms；Swift 无额外 throttle。"
+        },
+        {
+          "at": "2026-10-11T06:41:00Z",
+          "status": "inProgress",
+          "note": "已实现折叠按钮、偏好 Picker、原生 hover pin 和外部点击收起，折叠停止 Radio；SSE 和 replay 上限改为 10 Hz。首轮 App build 通过，追加测试和清理监听生命周期。"
+        },
+        {
+          "at": "2026-10-11T06:42:41Z",
+          "status": "inProgress",
+          "note": "最终 build-for-testing 通过。Rust 95 项含虚拟时钟 100ms 合并和慢消费者回归通过；fmt/clippy、Swift CLI、地图 JS 五项通过。真实赛事采样频率仍未验证。"
+        },
+        {
+          "at": "2026-10-11T06:46:16Z",
+          "status": "inProgress",
+          "note": "消息默认折叠/展开已在原生 UI 验证；两个 Swift 单测通过。新版 replay 网络测量约 10.00 Hz、100.03ms，普通与 replay 服务健康。发现 OpenNook onExpand 在 @Published willSet 触发导致收起偏好读取旧 state，修正生命周期参数并追加回归。"
+        },
+        {
+          "at": "2026-10-11T07:08:28Z",
+          "status": "inProgress",
+          "note": "新聊天继续 Mapbox & Race Control & TR 中断的验收；保留现有实现、证据及未完成的真实赛事/设备边界。"
+        },
+        {
+          "at": "2026-10-11T07:24:20Z",
+          "status": "inProgress",
+          "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
+        },
+        {
+          "at": "2026-10-11T07:40:13Z",
+          "status": "inProgress",
+          "note": "用户授权切回真实源、更新运行及 taskdeck init 配置 Run Server / Run App。当前普通服务38701为live/stale、Session11384 Ends；App带参数连接38974 replay。保留全部既有修改和验收边界。"
+        },
+        {
+          "at": "2026-10-11T07:45:51Z",
+          "status": "inProgress",
+          "note": "taskdeck init/register及update完成，Run Server / Run App均running且PID直属Taskdeck。最新Rust/Xcode build成功；停止旧Server/replay/App，新App明确38701，snapshotAccepted mode=live/status=stale/drivers=22。开始针对两任务验证restart。"
+        },
+        {
+          "at": "2026-10-11T07:52:45Z",
+          "status": "inReview",
+          "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
+        },
+        {
+          "at": "2026-10-11T09:30:16Z",
+          "status": "inProgress",
+          "note": "用户要求运行 Release App。脚本改为 configuration Release，随后仅重启 Run App。"
+        },
+        {
+          "at": "2026-10-11T09:32:35Z",
+          "status": "inReview",
+          "note": "Taskdeck 重启 Run App 后实际进程为 Release 构建产物，参数仅指定真实服务 38701。Debug 实例已停止。"
         }
       ]
     },
@@ -3386,15 +3583,15 @@
       "priority": "P1",
       "milestone": "M4",
       "area": "Operations / QA",
-      "status": "pending",
-      "summary": "完成部署演练与运行证据；真实 VPS／赛期需要独立验收。",
+      "status": "inReview",
+      "summary": "Run App 已切为 Release 构建后启动，Server 保持运行；正式部署验收仍待完成。",
       "dependencies": [
         "T11"
       ],
       "relatedTasks": [
         "T14"
       ],
-      "scope": "现有 `server/deploy/`、必要的可选 Docker 改进、README、`docs/acceptance/deployment.md` / `live.md`。",
+      "scope": "现有 server/deploy/、可选 Docker、README、部署/运行验收；本地Taskdeck标准开发任务与AGENTS.md优先规范。",
       "steps": [
         "Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。",
         "有 VPS 访问授权再部署；没有则本地先验收，不捏造远程上线结果。除非用户另行授权，不 commit / push / 创建 PR / 发布 release。",
@@ -3418,16 +3615,910 @@
           "done": false
         }
       ],
-      "deliverables": [],
-      "evidence": [],
+      "deliverables": [
+        {
+          "label": "Taskdeck双任务运行配置",
+          "path": "taskdeck.yaml"
+        },
+        {
+          "label": "真实Server运行脚本",
+          "path": "scripts/run-server.py"
+        },
+        {
+          "label": "原生App运行脚本",
+          "path": "scripts/run-app.sh"
+        },
+        {
+          "label": "Taskdeck优先代理规范",
+          "path": "AGENTS.md"
+        },
+        {
+          "label": "隔离编译与测试宿主保护",
+          "path": "scripts/xcode-task.sh"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "真实源与Taskdeck本地运行接管",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
+        },
+        {
+          "label": "Taskdeck标准开发任务加载与实际执行",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "14个具名任务加载通过；Test Server、fmt、all-target Clippy、Build App Tests、地图JS5项、Swift CLI、任务报告8项均exit0。Test App运行中保护已验证，未执行完整XCTest或所有Release构建；两个运行任务PID未变。"
+        }
+      ],
       "blockers": [],
-      "nextAction": "完成部署演练与运行证据；真实 VPS／赛期需要独立验收。",
-      "updatedAt": "2026-10-08T08:54:47Z",
+      "nextAction": "本地继续使用 Taskdeck；正式部署项保持未完成。",
+      "updatedAt": "2026-10-11T09:32:35Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
           "status": "pending",
           "note": "初始化任务状态；按仓库已有证据核对，未开始业务实现。"
+        },
+        {
+          "at": "2026-10-11T07:40:13Z",
+          "status": "inProgress",
+          "note": "用户授权切回真实源、更新运行及 taskdeck init 配置 Run Server / Run App。当前普通服务38701为live/stale、Session11384 Ends；App带参数连接38974 replay。保留全部既有修改和验收边界。"
+        },
+        {
+          "at": "2026-10-11T07:45:51Z",
+          "status": "inProgress",
+          "note": "taskdeck init/register及update完成，Run Server / Run App均running且PID直属Taskdeck。最新Rust/Xcode build成功；停止旧Server/replay/App，新App明确38701，snapshotAccepted mode=live/status=stale/drivers=22。开始针对两任务验证restart。"
+        },
+        {
+          "at": "2026-10-11T07:50:18Z",
+          "status": "inProgress",
+          "note": "首次Run Server restart遇旧launchctl com.pitpulse.local-acceptance-server KeepAlive拉起实例、端口冲突；已按用户接管授权bootout该旧运行注册，暂时停止App以验证接管。未删除配置、DB或日志。"
+        },
+        {
+          "at": "2026-10-11T07:52:45Z",
+          "status": "inReview",
+          "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
+        },
+        {
+          "at": "2026-10-11T08:36:11Z",
+          "status": "inProgress",
+          "note": "开始新增Rust/macOS build、test、lint及地图/任务报告检查任务；维护现有AGENTS.md的Taskdeck优先规范，保留运行实例及既有配置。"
+        },
+        {
+          "at": "2026-10-11T09:26:06Z",
+          "status": "inReview",
+          "note": "继续中断后的收尾：确认14项配置和七类检查exit0，Run Server/Run App保持原PID运行；补齐标准开发任务验收记录、AGENTS.md交付引用和T15范围。保留正式部署与完整XCTest/真实界面未验收，不标done。"
+        },
+        {
+          "at": "2026-10-11T09:30:16Z",
+          "status": "inProgress",
+          "note": "用户要求运行 Release App。脚本改为 configuration Release，随后仅重启 Run App。"
+        },
+        {
+          "at": "2026-10-11T09:32:35Z",
+          "status": "inReview",
+          "note": "Taskdeck 重启 Run App 后实际进程为 Release 构建产物，参数仅指定真实服务 38701。Debug 实例已停止。"
+        }
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Live 位置、车辆遥测与高频 SSE",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inReview",
+      "summary": "最新版100ms SSE服务已切回真实上游；Ends/stale场次有天气和12条Radio，当前没有Position/CarData，持续真实采样验收保留。",
+      "dependencies": [
+        "T13"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 Rust provider、domain、SQLite、API 与 Swift LiveStore、Notch、赛历；Mapbox 底图直连为明确例外。",
+      "steps": [
+        "压缩、多帧、乱序、局部更新及 Session 清理测试通过",
+        "4 Hz 合并推送与旧契约兼容测试通过",
+        "真实赛事 Position/CarData/WeatherData/TeamRadio 独立验收"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T16-A1",
+          "text": "压缩、多帧、乱序、局部更新及 Session 清理测试通过",
+          "done": true
+        },
+        {
+          "id": "T16-A2",
+          "text": "10 Hz 合并推送与旧契约兼容测试通过",
+          "done": true
+        },
+        {
+          "id": "T16-A3",
+          "text": "真实赛事 Position/CarData/WeatherData/TeamRadio 独立验收",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "有界压缩解码",
+          "path": "server/src/providers/f1_live/compressed.rs"
+        },
+        {
+          "label": "Topic reducer",
+          "path": "server/src/providers/f1_live/reducer.rs"
+        },
+        {
+          "label": "合并 SSE",
+          "path": "server/src/api/sse.rs"
+        },
+        {
+          "label": "Swift 可选扩展",
+          "path": "macos/Core/LiveStore/LiveModels.swift"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "实施与验收分界记录",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "压缩 Live 扩展、独立 UTC 与 100ms/最多10Hz SSE 已通过回归；真实新增 Topic 持续 feed 尚待验收。"
+        },
+        {
+          "label": "隔离 replay SSE cadence 复测",
+          "path": "docs/acceptance/assets/nook-live-controls/replay-cadence-continuation.json",
+          "detail": "6.087 秒收到 62 个不同 stateVersion，约 10.02 Hz，平均间隔 99.78ms；sourceMode=replay，不代表真实赛事采样。"
+        },
+        {
+          "label": "真实源与Taskdeck本地运行接管",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
+        }
+      ],
+      "blockers": [
+        "新增四个 Topic 的持续真实 feed 与实时界面未通过独立验收。"
+      ],
+      "nextAction": "在真实运行赛期独立验证持续Topic更新、定位、天气与Radio；保留现有未通过验收项。",
+      "updatedAt": "2026-10-11T07:52:45Z",
+      "history": [
+        {
+          "at": "2026-10-10T17:59:26Z",
+          "status": "inProgress",
+          "note": "用户授权实施 Notch 地图与赛事信息方案；登记任务与验收边界。"
+        },
+        {
+          "at": "2026-10-10T18:03:08Z",
+          "status": "inProgress",
+          "note": "已实现有界压缩解码、多帧车辆数据和 4 Hz SSE，正在补齐验证。"
+        },
+        {
+          "at": "2026-10-10T18:16:21Z",
+          "status": "inProgress",
+          "note": "Live 数据扩展及限频快照已实现；Rust 回归通过，正在补边界验证。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "压缩 Live 扩展、独立 UTC 与 4 Hz SSE 已通过回归；真实新增 Topic 持续 feed 尚待验收。 未完成的真实验收保持未勾选，未标 done。"
+        },
+        {
+          "at": "2026-10-11T05:02:25Z",
+          "status": "inReview",
+          "note": "本机新版服务真实重连后 sourceMode=live/connected、22 位车手，已收到 WeatherData 和 12 条 Radio；Position/CarData 当前未提供，尚无持续真实新增 Topic 验收。"
+        },
+        {
+          "at": "2026-10-11T06:37:24Z",
+          "status": "inProgress",
+          "note": "用户新增要求：消息详情按需展开，设置鼠标移出或点击外部收起，增加 telemetry 更新频率。SSE 与 Mock 当前均 250ms，拟提高到 100ms；Swift 无额外 throttle。"
+        },
+        {
+          "at": "2026-10-11T06:41:00Z",
+          "status": "inProgress",
+          "note": "已实现折叠按钮、偏好 Picker、原生 hover pin 和外部点击收起，折叠停止 Radio；SSE 和 replay 上限改为 10 Hz。首轮 App build 通过，追加测试和清理监听生命周期。"
+        },
+        {
+          "at": "2026-10-11T06:42:41Z",
+          "status": "inProgress",
+          "note": "最终 build-for-testing 通过。Rust 95 项含虚拟时钟 100ms 合并和慢消费者回归通过；fmt/clippy、Swift CLI、地图 JS 五项通过。真实赛事采样频率仍未验证。"
+        },
+        {
+          "at": "2026-10-11T06:46:16Z",
+          "status": "inProgress",
+          "note": "消息默认折叠/展开已在原生 UI 验证；两个 Swift 单测通过。新版 replay 网络测量约 10.00 Hz、100.03ms，普通与 replay 服务健康。发现 OpenNook onExpand 在 @Published willSet 触发导致收起偏好读取旧 state，修正生命周期参数并追加回归。"
+        },
+        {
+          "at": "2026-10-11T07:08:28Z",
+          "status": "inProgress",
+          "note": "新聊天继续 Mapbox & Race Control & TR 中断的验收；保留现有实现、证据及未完成的真实赛事/设备边界。"
+        },
+        {
+          "at": "2026-10-11T07:24:20Z",
+          "status": "inProgress",
+          "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
+        },
+        {
+          "at": "2026-10-11T07:40:13Z",
+          "status": "inProgress",
+          "note": "用户授权切回真实源、更新运行及 taskdeck init 配置 Run Server / Run App。当前普通服务38701为live/stale、Session11384 Ends；App带参数连接38974 replay。保留全部既有修改和验收边界。"
+        },
+        {
+          "at": "2026-10-11T07:45:51Z",
+          "status": "inProgress",
+          "note": "taskdeck init/register及update完成，Run Server / Run App均running且PID直属Taskdeck。最新Rust/Xcode build成功；停止旧Server/replay/App，新App明确38701，snapshotAccepted mode=live/status=stale/drivers=22。开始针对两任务验证restart。"
+        },
+        {
+          "at": "2026-10-11T07:52:45Z",
+          "status": "inReview",
+          "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
+        }
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Notch 3D 地图与赛道校准",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inReview",
+      "summary": "真实 WKWebView Standard 3D 已实屏显示建筑，整圈居中、车队色/车号、选中高亮、号码避让和跟随近景恢复通过；车辆仍是 mock。",
+      "dependencies": [
+        "T16"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 Rust provider、domain、SQLite、API 与 Swift LiveStore、Notch、赛历；Mapbox 底图直连为明确例外。",
+      "steps": [
+        "Mapbox 配置、赛道地点及几何接口测试通过",
+        "新加坡及下一站校准有独立控制点与误差证据",
+        "真实 Mapbox 3D、车手标记及交互验收"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T17-A1",
+          "text": "Mapbox 配置、赛道地点及几何接口测试通过",
+          "done": true
+        },
+        {
+          "id": "T17-A2",
+          "text": "新加坡及下一站校准有独立控制点与误差证据",
+          "done": false
+        },
+        {
+          "id": "T17-A3",
+          "text": "真实 Mapbox 3D、车手标记及交互验收",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "WKWebView 地图",
+          "path": "macos/Features/Maps/MapView.swift"
+        },
+        {
+          "label": "固定地图页面",
+          "path": "macos/Features/Maps/map.html"
+        },
+        {
+          "label": "赛道控制点与来源",
+          "path": "server/resources/circuits/README.md"
+        },
+        {
+          "label": "地图接口",
+          "path": "server/src/api/maps.rs"
+        },
+        {
+          "label": "Nook 截图反馈修复验收",
+          "path": "docs/acceptance/nook-live-feedback.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "实施与验收分界记录",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "固定版本 3D 地图与鉴权配置已接入；新加坡 2026 归档控制点通过，Austin 2026 仍禁止车辆叠加。"
+        },
+        {
+          "label": "真实 Mapbox 3D 浏览器截图",
+          "path": "docs/acceptance/assets/t17-mapbox-browser/singapore-3d.png",
+          "detail": "真实官方 Standard 夜间地图，55 度、建筑/地标/地形与归属标注；不含模拟车辆，不代表原生 WKWebView 验收。"
+        },
+        {
+          "label": "地图加载与交互复核",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "styleLoaded=true、无错误；真实按钮检查 2D/3D、缩放、复位，赛道线渲染查询成功；修复 wasm-unsafe-eval CSP。"
+        },
+        {
+          "label": "Singapore Sprint mock 原生展示与检查",
+          "path": "docs/acceptance/singapore-sprint-demo.md",
+          "detail": "明确 Replay/MOCK，动态 22 车手与天气/遥测/地图；普通服务健康且持久 serverAddress 未改。Rust 95+example 1、fmt/clippy、Xcode build、Swift CLI、JS 4、任务 8 检查通过，真实 feed/播放/完整设备验收未完成。"
+        },
+        {
+          "label": "新版原生 Nook 实屏与回归检查",
+          "path": "docs/acceptance/nook-live-feedback.md",
+          "detail": "Max 头盔/天气详情/消息计数与过滤/真实 3D 建筑/车队色和车号/整圈居中/跟随缩放/收起和隐藏恢复均有原生观察及截图。最终 App build、Swift CLI、JS 5 项、Rust fmt、任务 8 项通过；无真实车位/音频/FPS或完整 XCTest 证明。"
+        }
+      ],
+      "blockers": [
+        "Austin 仅 2025 归档控制点通过，2026 原点与布局未核验。",
+        "原生 WKWebView 基本 3D/跟随/状态恢复已通过 Mock 实屏验证；真实比赛车辆定位及外接屏/VoiceOver 仍未完成，公开 token 受上游用量限制。"
+      ],
+      "nextAction": "完成 Austin 2026 校准、真实运行场次位置及剩余设备交互验收。",
+      "updatedAt": "2026-10-11T06:26:06Z",
+      "history": [
+        {
+          "at": "2026-10-10T17:59:26Z",
+          "status": "pending",
+          "note": "用户授权实施 Notch 地图与赛事信息方案；登记任务与验收边界。"
+        },
+        {
+          "at": "2026-10-10T18:03:08Z",
+          "status": "inProgress",
+          "note": "已固定 Mapbox 接入方案及赛道 GeoJSON 来源版本，正在接入地图与校准。"
+        },
+        {
+          "at": "2026-10-10T18:16:21Z",
+          "status": "inProgress",
+          "note": "WKWebView 地图与校准门槛已接入；已获取当前新加坡归档坐标，核验历史轮廓匹配。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "固定版本 3D 地图与鉴权配置已接入；新加坡 2026 归档控制点通过，Austin 2026 仍禁止车辆叠加。 未完成的真实验收保持未勾选，未标 done。"
+        },
+        {
+          "at": "2026-10-10T18:47:18Z",
+          "status": "inReview",
+          "note": "最终复查修复地图切换比赛的晚到响应隔离，以及取消后的天气写入；实际 MapStore 旧请求/释放检查和 Xcode 测试目标编译再次通过。未启动原生 App 或测试宿主。"
+        },
+        {
+          "at": "2026-10-11T04:48:02Z",
+          "status": "inProgress",
+          "note": "用户确认当前 Google 账号就是指定账号，继续已授权的 Mapbox 注册和公开只读 token 创建；账号信息及凭据不写入任务报告。"
+        },
+        {
+          "at": "2026-10-11T04:51:04Z",
+          "status": "inProgress",
+          "note": "已按已确认账号填写个人/无需银行卡的注册表并提交；Mapbox 返回 unexpected error，正在正常重试并核对是否产生验证邮件，不更改用户网络或浏览器全局设置。"
+        },
+        {
+          "at": "2026-10-11T04:51:24Z",
+          "status": "inProgress",
+          "note": "正常重试后 Mapbox 成功跳转账户页并提示验证邮件已发送；正在使用用户授权的账号完成邮箱验证，未填写银行卡。"
+        },
+        {
+          "at": "2026-10-11T04:57:53Z",
+          "status": "inProgress",
+          "note": "Mapbox 账号验证及用途问卷完成，公开 token 已保存于仓库外受限配置并由本机服务读取；专用 token 需付款方式，因此使用自动生成的公开 token，未添加银行卡。Standard 样式 HTTP 200，服务健康及配置接口确认成功。"
+        },
+        {
+          "at": "2026-10-11T05:02:25Z",
+          "status": "inProgress",
+          "note": "真实 Mapbox GL JS 3.32.0/Standard 夜间页面已加载，55 度俯仰、地形、建筑与地标截图已观察；定位 CSP 缺少 wasm-unsafe-eval 并修复。公开 token 已外部配置，未提交银行卡，原生 WKWebView 和当前车辆叠加仍待验收。"
+        },
+        {
+          "at": "2026-10-11T05:04:37Z",
+          "status": "inReview",
+          "note": "Mapbox 注册、验证、公开 token 外部配置及真实 3D 浏览器加载通过；修复 WASM CSP，完成 2D/3D/缩放/复位与截图。原生地图及车辆叠加仍待验收。 详细证据更新至 live-map 验收记录，没有将编译/浏览器检查当作原生 UI 或持续真实 feed 验收。"
+        },
+        {
+          "at": "2026-10-11T05:54:51Z",
+          "status": "inReview",
+          "note": "用户要求 Nook mock 展示触发原生地图诊断；局部复现 file worker 图像解码错误，blank/HTTPS worker 均成功。修复不放宽 CSP 或导航主机。"
+        },
+        {
+          "at": "2026-10-11T05:57:20Z",
+          "status": "inReview",
+          "note": "实际截图确认空白页加载消除 createImageBitmap 错误，并显示移动 mock 车标。夜间点/线/文字设置 emissive strength，标签启用碰撞避免；待最终原生截图。"
+        },
+        {
+          "at": "2026-10-11T06:06:46Z",
+          "status": "inReview",
+          "note": "用户 mock 展示已交付并继续运行；原生截图、WebKit file-origin 错误与修复验证分开记录。最终夜间 paint/标签设置有构建和四项 JS 检查，原生最终截图未记录；没有扩大鼠标操作或宣称真实赛事验收。"
+        },
+        {
+          "at": "2026-10-11T06:07:42Z",
+          "status": "inProgress",
+          "note": "用户提供两张 mock Nook 截图并授权修正体验；不启用付费地图功能，保留真实 feed/音频验收边界。"
+        },
+        {
+          "at": "2026-10-11T06:16:33Z",
+          "status": "inProgress",
+          "note": "修复源代码已覆盖 controller-owned 状态、hover pin、天气详情、明确消息筛选/空态及地图动画。JS 五项和 Swift CLI 检查通过；本轮实际 UI 尚未确认。"
+        },
+        {
+          "at": "2026-10-11T06:20:34Z",
+          "status": "inProgress",
+          "note": "实际 Nook UI 已显示 Max 头盔、两条赛会消息、车队色及全赛道地图，无资源报错；车号密集重叠追加碰撞避让和选中优先显示。"
+        },
+        {
+          "at": "2026-10-11T06:21:18Z",
+          "status": "inProgress",
+          "note": "原生点击跟随发现每帧居中会取消缩放动画；改为一次设置近景缩放并减少跟随时相机桥接。追加回归断言后地图 JS 5 项通过，等待新版 UI 复验。"
+        },
+        {
+          "at": "2026-10-11T06:26:06Z",
+          "status": "inReview",
+          "note": "用户截图反馈修复已完成并留运行中的主 App demo；实际验证同服务器隐藏重开相机和筛选保留，补齐跟随缩放、号码避让/淡入与资源清理回归。独立验收记录分开标记真实地图、mock 车辆及未完成项。"
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "赛历地图、天气预报与降雨雷达",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inReview",
+      "summary": "天气/雷达接口与赛历地图实现已交付；本机旧缓存由调度器回填后 24 站均有真实地点坐标。原生交互仍待验收。",
+      "dependencies": [
+        "T17"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 Rust provider、domain、SQLite、API 与 Swift LiveStore、Notch、赛历；Mapbox 底图直连为明确例外。",
+      "steps": [
+        "赛历地点持久化、旧缓存兼容及预报窗口测试通过",
+        "雷达缓存、限流、无覆盖和失败状态测试通过",
+        "比赛首页、赛历地图及天气交互验收"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T18-A1",
+          "text": "赛历地点持久化、旧缓存兼容及预报窗口测试通过",
+          "done": true
+        },
+        {
+          "id": "T18-A2",
+          "text": "雷达缓存、限流、无覆盖和失败状态测试通过",
+          "done": false
+        },
+        {
+          "id": "T18-A3",
+          "text": "比赛首页、赛历地图及天气交互验收",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "赛历列表与地图",
+          "path": "macos/Features/Calendar/CalendarView.swift"
+        },
+        {
+          "label": "地点迁移",
+          "path": "server/src/storage/migrations/0007_circuit_location.sql"
+        },
+        {
+          "label": "地点预报",
+          "path": "server/src/providers/weather.rs"
+        },
+        {
+          "label": "历史雷达",
+          "path": "server/src/providers/radar.rs"
+        },
+        {
+          "label": "缓存与限流",
+          "path": "server/src/providers/resources.rs"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "实施与验收分界记录",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "赛历地图、持久化、天气预报与历史雷达已接入；真实鉴权服务取回预报、13 个雷达帧及 PNG 瓦片。"
+        }
+      ],
+      "blockers": [
+        "真实 WKWebView 雷达覆盖和失败显示、比赛页/赛历地图点击未完成实屏验收。"
+      ],
+      "nextAction": "在实际 WKWebView 验证无覆盖遮罩、雷达时间轴及天气/赛历点击；复核缺失和 stale 界面。",
+      "updatedAt": "2026-10-11T05:04:37Z",
+      "history": [
+        {
+          "at": "2026-10-10T17:59:26Z",
+          "status": "pending",
+          "note": "用户授权实施 Notch 地图与赛事信息方案；登记任务与验收边界。"
+        },
+        {
+          "at": "2026-10-10T18:03:08Z",
+          "status": "inProgress",
+          "note": "已扩展赛历地点存储及天气/雷达 adapter，正在接入界面。"
+        },
+        {
+          "at": "2026-10-10T18:16:21Z",
+          "status": "inProgress",
+          "note": "赛历地点迁移、地点地图与天气/雷达界面已接入，正在核验缺失及限流路径。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "赛历地图、持久化、天气预报与历史雷达已接入；真实鉴权服务取回预报、13 个雷达帧及 PNG 瓦片。 未完成的真实验收保持未勾选，未标 done。"
+        },
+        {
+          "at": "2026-10-10T18:47:18Z",
+          "status": "inReview",
+          "note": "最终复查修复地图切换比赛的晚到响应隔离，以及取消后的天气写入；实际 MapStore 旧请求/释放检查和 Xcode 测试目标编译再次通过。未启动原生 App 或测试宿主。"
+        },
+        {
+          "at": "2026-10-11T05:02:25Z",
+          "status": "inReview",
+          "note": "已有赛历缓存缺少 circuit 字段，保持结果与数据不变、保留错误冷却，将成功的 Jolpica 赛历同步标为待刷新；现有调度器刷新后 24 站均有地点坐标。"
+        },
+        {
+          "at": "2026-10-11T05:04:37Z",
+          "status": "inReview",
+          "note": "天气/雷达接口与赛历地图实现已交付；本机旧缓存由调度器回填后 24 站均有真实地点坐标。原生交互仍待验收。 详细证据更新至 live-map 验收记录，没有将编译/浏览器检查当作原生 UI 或持续真实 feed 验收。"
+        }
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Race Control 与 Team Radio",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inProgress",
+      "summary": "继续验收：两个 Swift 回归、三项 SSE 测试、五项地图 JS 与 Swift CLI 通过；实际消息展开可见两条 MOCK 赛会消息。",
+      "dependencies": [
+        "T16"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 Rust provider、domain、SQLite、API 与 Swift LiveStore、Notch、赛历；Mapbox 底图直连为明确例外。",
+      "steps": [
+        "消息稳定 ID、过滤、排序及去重测试通过",
+        "音频鉴权、路径及重定向防护测试通过",
+        "播放暂停、切换取消、隐藏清理和真实音频验收"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T19-A1",
+          "text": "消息稳定 ID、过滤、排序及去重测试通过",
+          "done": true
+        },
+        {
+          "id": "T19-A2",
+          "text": "音频鉴权、路径及重定向防护测试通过",
+          "done": true
+        },
+        {
+          "id": "T19-A3",
+          "text": "播放暂停、切换取消、隐藏清理和真实音频验收",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "消息与 Radio 播放器",
+          "path": "macos/Features/Maps/LiveExtras.swift"
+        },
+        {
+          "label": "固定主机音频 adapter",
+          "path": "server/src/providers/radio.rs"
+        },
+        {
+          "label": "Swift 取消检查",
+          "path": "macos/Tests/live-map-check.swift"
+        },
+        {
+          "label": "Nook 截图反馈修复验收",
+          "path": "docs/acceptance/nook-live-feedback.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "实施与验收分界记录",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "Race Control 元数据、车手过滤和单条 Radio 播放链路已实现；鉴权路径与下载切换取消检查通过。"
+        },
+        {
+          "label": "真实 Radio 音频下载",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "HTTP 200/audio-mpeg，206976 字节、MP3 签名有效、source=f1-live/stale=false；没有启动原生播放器。"
+        },
+        {
+          "label": "新版原生 Nook 实屏与回归检查",
+          "path": "docs/acceptance/nook-live-feedback.md",
+          "detail": "Max 头盔/天气详情/消息计数与过滤/真实 3D 建筑/车队色和车号/整圈居中/跟随缩放/收起和隐藏恢复均有原生观察及截图。最终 App build、Swift CLI、JS 5 项、Rust fmt、任务 8 项通过；无真实车位/音频/FPS或完整 XCTest 证明。"
+        }
+      ],
+      "blockers": [
+        "真实 Radio 音频播放、暂停/进度及所有隐藏路径没有实屏验收。"
+      ],
+      "nextAction": "完成两种收起方式的原生交互，保存截图与验收记录；保留真实音频、真实赛事和完整设备验收边界。",
+      "updatedAt": "2026-10-11T07:24:20Z",
+      "history": [
+        {
+          "at": "2026-10-10T17:59:26Z",
+          "status": "pending",
+          "note": "用户授权实施 Notch 地图与赛事信息方案；登记任务与验收边界。"
+        },
+        {
+          "at": "2026-10-10T18:03:08Z",
+          "status": "inProgress",
+          "note": "已实现固定主机与路径校验的音频 adapter，正在接入消息及播放器。"
+        },
+        {
+          "at": "2026-10-10T18:16:21Z",
+          "status": "inProgress",
+          "note": "消息面板与单条音频播放器已接入，正在核验取消与鉴权路径。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "Race Control 元数据、车手过滤和单条 Radio 播放链路已实现；鉴权路径与下载切换取消检查通过。 未完成的真实验收保持未勾选，未标 done。"
+        },
+        {
+          "at": "2026-10-11T05:02:25Z",
+          "status": "inReview",
+          "note": "按真实已接收 Radio 条目 ID 下载成功，HTTP 200/audio-mpeg，206976 字节，MP3 签名有效，source=f1-live/stale=false；没有执行原生播放。"
+        },
+        {
+          "at": "2026-10-11T05:04:37Z",
+          "status": "inReview",
+          "note": "消息过滤、排序及单条播放器实现已交付；真实接收 12 条 Radio，已知条目音频下载 HTTP 200/有效 MP3，原生播放仍待验收。 详细证据更新至 live-map 验收记录，没有将编译/浏览器检查当作原生 UI 或持续真实 feed 验收。"
+        },
+        {
+          "at": "2026-10-11T06:07:42Z",
+          "status": "inProgress",
+          "note": "用户提供两张 mock Nook 截图并授权修正体验；不启用付费地图功能，保留真实 feed/音频验收边界。"
+        },
+        {
+          "at": "2026-10-11T06:16:33Z",
+          "status": "inProgress",
+          "note": "修复源代码已覆盖 controller-owned 状态、hover pin、天气详情、明确消息筛选/空态及地图动画。JS 五项和 Swift CLI 检查通过；本轮实际 UI 尚未确认。"
+        },
+        {
+          "at": "2026-10-11T06:20:34Z",
+          "status": "inProgress",
+          "note": "实际 Nook UI 已显示 Max 头盔、两条赛会消息、车队色及全赛道地图，无资源报错；车号密集重叠追加碰撞避让和选中优先显示。"
+        },
+        {
+          "at": "2026-10-11T06:26:06Z",
+          "status": "inReview",
+          "note": "用户截图反馈修复已完成并留运行中的主 App demo；实际验证同服务器隐藏重开相机和筛选保留，补齐跟随缩放、号码避让/淡入与资源清理回归。独立验收记录分开标记真实地图、mock 车辆及未完成项。"
+        },
+        {
+          "at": "2026-10-11T06:37:24Z",
+          "status": "inProgress",
+          "note": "用户新增要求：消息详情按需展开，设置鼠标移出或点击外部收起，增加 telemetry 更新频率。SSE 与 Mock 当前均 250ms，拟提高到 100ms；Swift 无额外 throttle。"
+        },
+        {
+          "at": "2026-10-11T06:41:00Z",
+          "status": "inProgress",
+          "note": "已实现折叠按钮、偏好 Picker、原生 hover pin 和外部点击收起，折叠停止 Radio；SSE 和 replay 上限改为 10 Hz。首轮 App build 通过，追加测试和清理监听生命周期。"
+        },
+        {
+          "at": "2026-10-11T06:42:41Z",
+          "status": "inProgress",
+          "note": "最终 build-for-testing 通过。Rust 95 项含虚拟时钟 100ms 合并和慢消费者回归通过；fmt/clippy、Swift CLI、地图 JS 五项通过。真实赛事采样频率仍未验证。"
+        },
+        {
+          "at": "2026-10-11T06:46:16Z",
+          "status": "inProgress",
+          "note": "消息默认折叠/展开已在原生 UI 验证；两个 Swift 单测通过。新版 replay 网络测量约 10.00 Hz、100.03ms，普通与 replay 服务健康。发现 OpenNook onExpand 在 @Published willSet 触发导致收起偏好读取旧 state，修正生命周期参数并追加回归。"
+        },
+        {
+          "at": "2026-10-11T07:08:28Z",
+          "status": "inProgress",
+          "note": "新聊天继续 Mapbox & Race Control & TR 中断的验收；保留现有实现、证据及未完成的真实赛事/设备边界。"
+        },
+        {
+          "at": "2026-10-11T07:24:20Z",
+          "status": "inProgress",
+          "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
+        }
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "地图与赛事信息综合验收",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inReview",
+      "summary": "真实源与本地Taskdeck运行接管已记录；build、任务加载/重启、App连接通过，真实赛期和完整原生验收仍待完成。",
+      "dependencies": [
+        "T17",
+        "T18",
+        "T19"
+      ],
+      "relatedTasks": [
+        "T14"
+      ],
+      "scope": "现有 Rust provider、domain、SQLite、API 与 Swift LiveStore、Notch、赛历；Mapbox 底图直连为明确例外。",
+      "steps": [
+        "Rust、Xcode 及任务数据检查通过",
+        "Notch 与外接屏 floating、键盘及 VoiceOver 有真实 UI 证据",
+        "回放、真实地图及真实赛事验收分开记录"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T20-A1",
+          "text": "Rust、Xcode 及任务数据检查通过",
+          "done": false
+        },
+        {
+          "id": "T20-A2",
+          "text": "Notch 与外接屏 floating、键盘及 VoiceOver 有真实 UI 证据",
+          "done": false
+        },
+        {
+          "id": "T20-A3",
+          "text": "回放、真实地图及真实赛事验收分开记录",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "综合验收记录",
+          "path": "docs/acceptance/live-map.md"
+        },
+        {
+          "label": "地图页面独立检查",
+          "path": "macos/Tests/map-page.test.mjs"
+        },
+        {
+          "label": "Swift 无界面校验入口",
+          "path": "macos/Tests/run-live-map-check.sh"
+        },
+        {
+          "label": "Nook 截图反馈修复验收",
+          "path": "docs/acceptance/nook-live-feedback.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "实施与验收分界记录",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "Rust 95 项、fmt/clippy、Xcode 测试目标编译、Swift 独立检查和地图 stub 2 项通过；真实验收边界分开记录。"
+        },
+        {
+          "label": "MapStore 异步隔离与释放",
+          "path": "macos/Tests/run-live-map-check.sh",
+          "detail": "独立 CLI 编译实际 MapStore/RadioPlayer，旧比赛错误不覆盖新状态，release 后晚到配置不能恢复 token；不创建 WKWebView、不启动 App。"
+        },
+        {
+          "label": "Singapore Sprint mock 原生展示与检查",
+          "path": "docs/acceptance/singapore-sprint-demo.md",
+          "detail": "明确 Replay/MOCK，动态 22 车手与天气/遥测/地图；普通服务健康且持久 serverAddress 未改。Rust 95+example 1、fmt/clippy、Xcode build、Swift CLI、JS 4、任务 8 检查通过，真实 feed/播放/完整设备验收未完成。"
+        },
+        {
+          "label": "新版原生 Nook 实屏与回归检查",
+          "path": "docs/acceptance/nook-live-feedback.md",
+          "detail": "Max 头盔/天气详情/消息计数与过滤/真实 3D 建筑/车队色和车号/整圈居中/跟随缩放/收起和隐藏恢复均有原生观察及截图。最终 App build、Swift CLI、JS 5 项、Rust fmt、任务 8 项通过；无真实车位/音频/FPS或完整 XCTest 证明。"
+        },
+        {
+          "label": "真实源与Taskdeck本地运行接管",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
+        }
+      ],
+      "blockers": [
+        "Austin 2026 校准、正在比赛的 Position/CarData/WeatherData/Radio 与 Notch/floating/键盘/VoiceOver/播放验收未完成。",
+        "本次仅开展用户要求的 mock 展示，完整 Xcode XCTest、设备与真实赛事验收仍待完成。"
+      ],
+      "nextAction": "在真实运行赛期独立验证持续Topic更新、定位、天气与Radio；保留现有未通过验收项。",
+      "updatedAt": "2026-10-11T07:52:45Z",
+      "history": [
+        {
+          "at": "2026-10-10T17:59:26Z",
+          "status": "pending",
+          "note": "用户授权实施 Notch 地图与赛事信息方案；登记任务与验收边界。"
+        },
+        {
+          "at": "2026-10-10T18:16:21Z",
+          "status": "inProgress",
+          "note": "服务端测试及主 App 构建通过；补充专项检查，真实地图与设备验收仍未完成。"
+        },
+        {
+          "at": "2026-10-10T18:44:40Z",
+          "status": "inReview",
+          "note": "Rust 95 项、fmt/clippy、Xcode 测试目标编译、Swift 独立检查和地图 stub 2 项通过；真实验收边界分开记录。 未完成的真实验收保持未勾选，未标 done。"
+        },
+        {
+          "at": "2026-10-10T18:47:18Z",
+          "status": "inReview",
+          "note": "最终复查修复地图切换比赛的晚到响应隔离，以及取消后的天气写入；实际 MapStore 旧请求/释放检查和 Xcode 测试目标编译再次通过。未启动原生 App 或测试宿主。"
+        },
+        {
+          "at": "2026-10-11T05:02:25Z",
+          "status": "inReview",
+          "note": "继续将真实 Mapbox 浏览器截图、真实 feed 缓存与真实 Radio 下载同原生 UI/播放验收区分；本次未启动原生 App 或测试宿主。"
+        },
+        {
+          "at": "2026-10-11T05:04:37Z",
+          "status": "inReview",
+          "note": "新增真实 Mapbox 3D 浏览器截图、token 配置、已结束场次 WeatherData/Radio 状态和真实音频下载证据；原生 UI 与当前车辆流验收保持未完成。 详细证据更新至 live-map 验收记录，没有将编译/浏览器检查当作原生 UI 或持续真实 feed 验收。"
+        },
+        {
+          "at": "2026-10-11T05:48:24Z",
+          "status": "inReview",
+          "note": "用户明确请求原生 Nook mock 演示，本次仅授权所需的启动和面板交互；保留其他真实 feed、设备、VoiceOver 验收未完成。"
+        },
+        {
+          "at": "2026-10-11T05:52:28Z",
+          "status": "inReview",
+          "note": "实际 Nook AX 确认 22 车手、Kimi P1、L8/19、模拟 Weather 和动态遥测。地图底图可见但错误状态出现，车辆图层尚未验证；本次只演示 mock。"
+        },
+        {
+          "at": "2026-10-11T05:57:20Z",
+          "status": "inReview",
+          "note": "实际截图确认空白页加载消除 createImageBitmap 错误，并显示移动 mock 车标。夜间点/线/文字设置 emissive strength，标签启用碰撞避免；待最终原生截图。"
+        },
+        {
+          "at": "2026-10-11T06:06:46Z",
+          "status": "inReview",
+          "note": "用户 mock 展示已交付并继续运行；原生截图、WebKit file-origin 错误与修复验证分开记录。最终夜间 paint/标签设置有构建和四项 JS 检查，原生最终截图未记录；没有扩大鼠标操作或宣称真实赛事验收。"
+        },
+        {
+          "at": "2026-10-11T06:07:42Z",
+          "status": "inProgress",
+          "note": "用户提供两张 mock Nook 截图并授权修正体验；不启用付费地图功能，保留真实 feed/音频验收边界。"
+        },
+        {
+          "at": "2026-10-11T06:16:33Z",
+          "status": "inProgress",
+          "note": "修复源代码已覆盖 controller-owned 状态、hover pin、天气详情、明确消息筛选/空态及地图动画。JS 五项和 Swift CLI 检查通过；本轮实际 UI 尚未确认。"
+        },
+        {
+          "at": "2026-10-11T06:20:34Z",
+          "status": "inProgress",
+          "note": "实际 Nook UI 已显示 Max 头盔、两条赛会消息、车队色及全赛道地图，无资源报错；车号密集重叠追加碰撞避让和选中优先显示。"
+        },
+        {
+          "at": "2026-10-11T06:21:18Z",
+          "status": "inProgress",
+          "note": "原生点击跟随发现每帧居中会取消缩放动画；改为一次设置近景缩放并减少跟随时相机桥接。追加回归断言后地图 JS 5 项通过，等待新版 UI 复验。"
+        },
+        {
+          "at": "2026-10-11T06:26:06Z",
+          "status": "inReview",
+          "note": "用户截图反馈修复已完成并留运行中的主 App demo；实际验证同服务器隐藏重开相机和筛选保留，补齐跟随缩放、号码避让/淡入与资源清理回归。独立验收记录分开标记真实地图、mock 车辆及未完成项。"
+        },
+        {
+          "at": "2026-10-11T06:37:24Z",
+          "status": "inProgress",
+          "note": "用户新增要求：消息详情按需展开，设置鼠标移出或点击外部收起，增加 telemetry 更新频率。SSE 与 Mock 当前均 250ms，拟提高到 100ms；Swift 无额外 throttle。"
+        },
+        {
+          "at": "2026-10-11T06:41:00Z",
+          "status": "inProgress",
+          "note": "已实现折叠按钮、偏好 Picker、原生 hover pin 和外部点击收起，折叠停止 Radio；SSE 和 replay 上限改为 10 Hz。首轮 App build 通过，追加测试和清理监听生命周期。"
+        },
+        {
+          "at": "2026-10-11T06:42:41Z",
+          "status": "inProgress",
+          "note": "最终 build-for-testing 通过。Rust 95 项含虚拟时钟 100ms 合并和慢消费者回归通过；fmt/clippy、Swift CLI、地图 JS 五项通过。真实赛事采样频率仍未验证。"
+        },
+        {
+          "at": "2026-10-11T06:46:16Z",
+          "status": "inProgress",
+          "note": "消息默认折叠/展开已在原生 UI 验证；两个 Swift 单测通过。新版 replay 网络测量约 10.00 Hz、100.03ms，普通与 replay 服务健康。发现 OpenNook onExpand 在 @Published willSet 触发导致收起偏好读取旧 state，修正生命周期参数并追加回归。"
+        },
+        {
+          "at": "2026-10-11T07:08:28Z",
+          "status": "inProgress",
+          "note": "新聊天继续 Mapbox & Race Control & TR 中断的验收；保留现有实现、证据及未完成的真实赛事/设备边界。"
+        },
+        {
+          "at": "2026-10-11T07:24:20Z",
+          "status": "inProgress",
+          "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
+        },
+        {
+          "at": "2026-10-11T07:40:13Z",
+          "status": "inProgress",
+          "note": "用户授权切回真实源、更新运行及 taskdeck init 配置 Run Server / Run App。当前普通服务38701为live/stale、Session11384 Ends；App带参数连接38974 replay。保留全部既有修改和验收边界。"
+        },
+        {
+          "at": "2026-10-11T07:45:51Z",
+          "status": "inProgress",
+          "note": "taskdeck init/register及update完成，Run Server / Run App均running且PID直属Taskdeck。最新Rust/Xcode build成功；停止旧Server/replay/App，新App明确38701，snapshotAccepted mode=live/status=stale/drivers=22。开始针对两任务验证restart。"
+        },
+        {
+          "at": "2026-10-11T07:52:45Z",
+          "status": "inReview",
+          "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
         }
       ]
     }

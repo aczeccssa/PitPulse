@@ -31,6 +31,8 @@ pub struct ProvidersConfig {
     pub f1_live_enabled: bool,
     pub user_agent: String,
     #[serde(skip)]
+    pub mapbox_public_token: Option<String>,
+    #[serde(skip)]
     pub f1_live_access_token: Option<String>,
 }
 
@@ -76,6 +78,7 @@ impl Default for AppConfig {
                 f1_live_enabled: true,
                 user_agent: "PitPulse/0.1 (+https://github.com/)".to_string(),
                 f1_live_access_token: None,
+                mapbox_public_token: None,
             },
             live: LiveConfig {
                 snapshot_interval_seconds: 15,
@@ -108,6 +111,16 @@ impl AppConfig {
                 error,
             })?;
             config.merge(file);
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_MAPBOX_PUBLIC_TOKEN") {
+            if !value.starts_with("pk.") || value.chars().any(char::is_whitespace) {
+                return Err(ConfigError::InvalidValue {
+                    field: "mapbox_public_token".into(),
+                    error: "expected a public pk token".into(),
+                });
+            }
+            config.providers.mapbox_public_token = Some(value);
         }
 
         if let Ok(value) = std::env::var("F1_COMPANION_BIND") {

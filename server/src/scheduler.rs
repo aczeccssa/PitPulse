@@ -797,6 +797,7 @@ mod tests {
     #[test]
     fn test_calendar_due_window_ignores_cancelled_sessions() {
         let mut meeting = Meeting {
+            circuit: None,
             id: "2026:1".into(),
             season: 2026,
             round: Some(1),
@@ -837,6 +838,7 @@ mod tests {
         assert!(!interval_elapsed(now, "2026-10-09T06:00:01Z", SIX_HOURS));
         assert!(interval_elapsed(now, "2026-10-09T06:00:00Z", SIX_HOURS));
         let meeting = Meeting {
+            circuit: None,
             id: "2026:1".into(),
             season: 2026,
             round: Some(1),

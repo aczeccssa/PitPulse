@@ -5,6 +5,7 @@ use std::{
 };
 
 use rusqlite::{Connection, OptionalExtension};
+use serde_json::Value;
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::{
@@ -18,6 +19,7 @@ use crate::{
     error::StorageError,
 };
 
+const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
 const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
 const MIGRATION_0003: &str = include_str!("migrations/0003_nullable_meeting_round.sql");
@@ -318,7 +320,7 @@ impl Database {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
                 "SELECT id, season, round, name, country, location, start_date, end_date, \
-                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id \
+                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id, circuit_json \
                  FROM meetings WHERE (?1 IS NULL OR season = ?1) ORDER BY COALESCE(round, 9999), id",
             )?;
             let mut meetings = Vec::new();
@@ -328,6 +330,7 @@ impl Database {
                     season: row.get(1)?,
                     round: row.get(2)?,
                     jolpica_round_id: row.get(14)?,
+                    circuit: row.get::<_, Option<String>>(15)?.and_then(|v| serde_json::from_str(&v).ok()),
                     name: row.get(3)?,
                     country: row.get(4)?,
                     country_code: row.get(8)?,
@@ -854,7 +857,7 @@ fn next_meeting_at(
         Some(id) => connection
             .query_row(
                 "SELECT id, season, round, name, country, location, start_date, end_date, \
-                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id \
+                        country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id, circuit_json \
                  FROM meetings WHERE id = ?1",
                 [&id],
                 |row| {
@@ -863,6 +866,7 @@ fn next_meeting_at(
                         season: row.get(1)?,
                         round: row.get(2)?,
                         jolpica_round_id: row.get(14)?,
+                    circuit: row.get::<_, Option<String>>(15)?.and_then(|v| serde_json::from_str(&v).ok()),
                         name: row.get(3)?,
                         country: row.get(4)?,
                         country_code: row.get(8)?,
@@ -943,6 +947,10 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         connection.execute_batch(MIGRATION_0006)?;
         connection.execute_batch("PRAGMA user_version = 6;")?;
     }
+    if version < 7 {
+        connection.execute_batch(MIGRATION_0007)?;
+        connection.execute_batch("PRAGMA user_version = 7;")?;
+    }
 
     Ok(())
 }
@@ -971,7 +979,7 @@ fn upsert_calendar(
     for meeting in meetings {
         let source = meeting.source.as_deref().unwrap_or("jolpica-alpha");
         let existing = tx.query_row(
-            "SELECT season,round,name,country,country_code,location,start_date,end_date,status,source,jolpica_round_id,revision FROM meetings WHERE id = ?1",
+            "SELECT season,round,name,country,country_code,location,start_date,end_date,status,source,jolpica_round_id,revision,circuit_json FROM meetings WHERE id = ?1",
             [&meeting.id],
             |row| {
                 Ok((
@@ -980,7 +988,7 @@ fn upsert_calendar(
                     row.get::<_, Option<String>>(4)?, row.get::<_, String>(5)?,
                     row.get::<_, String>(6)?, row.get::<_, String>(7)?,
                     row.get::<_, String>(8)?, row.get::<_, String>(9)?,
-                    row.get::<_, Option<String>>(10)?, row.get::<_, i64>(11)?,
+                    row.get::<_, Option<String>>(10)?, row.get::<_, i64>(11)?, row.get::<_, Option<String>>(12)?,
                 ))
             },
         );
@@ -998,8 +1006,10 @@ fn upsert_calendar(
                 old_source,
                 round_id,
                 revision,
+                old_circuit,
             )) => {
-                let changed = season != meeting.season
+                let changed = old_circuit != meeting.circuit.as_ref().map(Value::to_string)
+                    || season != meeting.season
                     || round != meeting.round
                     || name != meeting.name
                     || country != meeting.country
@@ -1025,10 +1035,10 @@ fn upsert_calendar(
         };
         max_revision = max_revision.max(revision as u64);
         tx.execute(
-            "INSERT INTO meetings (id, season, round, name, country, country_code, location, start_date, end_date, status, source, source_updated_at, fetched_at, revision, jolpica_round_id, openf1_meeting_key) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16) \
-             ON CONFLICT(id) DO UPDATE SET season=excluded.season, round=excluded.round, name=excluded.name, country=excluded.country, country_code=excluded.country_code, location=excluded.location, start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, source=excluded.source, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_round_id=excluded.jolpica_round_id, openf1_meeting_key=excluded.openf1_meeting_key",
-            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), source, meeting.source_updated_at, fetched_at, revision, meeting.jolpica_round_id, None::<i64>],
+            "INSERT INTO meetings (id, season, round, name, country, country_code, location, start_date, end_date, status, source, source_updated_at, fetched_at, revision, jolpica_round_id, openf1_meeting_key, circuit_json) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17) \
+             ON CONFLICT(id) DO UPDATE SET season=excluded.season, round=excluded.round, name=excluded.name, country=excluded.country, country_code=excluded.country_code, location=excluded.location, start_date=excluded.start_date, end_date=excluded.end_date, status=excluded.status, source=excluded.source, source_updated_at=excluded.source_updated_at, fetched_at=excluded.fetched_at, revision=excluded.revision, jolpica_round_id=excluded.jolpica_round_id, openf1_meeting_key=excluded.openf1_meeting_key, circuit_json=excluded.circuit_json",
+            rusqlite::params![meeting.id, meeting.season, meeting.round, meeting.name, meeting.country, meeting.country_code, meeting.location, meeting.start_date, meeting.end_date, meeting.status.as_str(), source, meeting.source_updated_at, fetched_at, revision, meeting.jolpica_round_id, None::<i64>, meeting.circuit.as_ref().map(Value::to_string)],
         )?;
         if let Some(round_id) = &meeting.jolpica_round_id {
             insert_mapping(&tx, "jolpica-alpha", round_id, Some(&meeting.id), None)?;
@@ -1176,6 +1186,7 @@ fn stable_calendar_hash(meetings: &[&Meeting]) -> String {
                 "country": meeting.country,
                 "countryCode": meeting.country_code,
                 "location": meeting.location,
+                "circuit": meeting.circuit,
                 "start": meeting.start_date,
                 "end": meeting.end_date,
                 "status": meeting.status.as_str(),

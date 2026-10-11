@@ -17,6 +17,9 @@ use pitpulse_server::{
 };
 use serde_json::Value;
 
+#[path = "support/singapore_sprint.rs"]
+mod singapore_sprint;
+
 const FIXTURE: &str = include_str!("../tests/fixtures/f1-live-replay.json");
 
 #[tokio::main]
@@ -31,10 +34,11 @@ async fn main() -> anyhow::Result<()> {
             "stale",
             "disconnected",
             "finished",
-            "session-switch"
+            "session-switch",
+            "singapore-sprint"
         ]
         .contains(&scenario.as_str()),
-        "usage: cargo run --example live_replay -- [normal|missing-fields|stale|disconnected|finished|session-switch]"
+        "usage: cargo run --example live_replay -- [normal|missing-fields|stale|disconnected|finished|session-switch|singapore-sprint]"
     );
     let mut config = AppConfig::load(None).context("load local server settings")?;
     config.server.bind =
@@ -55,6 +59,9 @@ async fn main() -> anyhow::Result<()> {
     }
     let database = Database::open(&config.database.path).await?;
     database.migrate().await?;
+    if scenario == "singapore-sprint" {
+        return singapore_sprint::run(config, database).await;
+    }
     if scenario != "missing-fields" {
         let fetched_at = database.utc_now().await?;
         let season = fetched_at[..4].parse::<i64>()?;

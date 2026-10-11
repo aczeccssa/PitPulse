@@ -197,6 +197,16 @@ struct PreferencesView: View {
             Text("收到 Session 实时开始状态后显示；关闭后仍可从菜单栏手动打开。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+            Picker("展开后收起方式", selection: Binding(
+                get: { model.notchCollapseOnMouseExit },
+                set: { model.setNotchCollapseOnMouseExit($0) }
+            )) {
+                Text("点击 Nook 外部收起").tag(false)
+                Text("鼠标移出 Nook 自动收起").tag(true)
+            }
+            .accessibilityIdentifier("preferences.notchCollapseBehavior")
+            Text("收起后保留车手、地图视角和消息选项；菜单及天气详情打开时保持展开。")
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 

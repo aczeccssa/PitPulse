@@ -122,6 +122,16 @@ async fn test_calendar_revision_hash_ignores_fetch_metadata_and_tracks_schedule_
         .unwrap();
     let (_, source_meta) = database.calendar(Some(2026)).await.unwrap();
     assert_eq!(source_meta.revision, 3);
+    meetings[0].circuit = Some(
+        serde_json::json!({"id":"albert_park","name":"Albert Park","latitude":-37.8497,"longitude":144.968}),
+    );
+    database
+        .replace_calendar(&meetings, "2026-10-09T04:00:00Z")
+        .await
+        .unwrap();
+    let (rows, meta) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(meta.revision, 4);
+    assert_eq!(rows[0].circuit, meetings[0].circuit);
 }
 
 #[tokio::test]
@@ -154,7 +164,10 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 6);
+    assert_eq!(database.user_version().await.unwrap(), 7);
+    let (meetings, _) = database.calendar(Some(2026)).await.unwrap();
+    assert_eq!(meetings.len(), 1);
+    assert!(meetings[0].circuit.is_none());
     let (rows, meta) = database.session_results("2026:1:race").await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].revision, 7);

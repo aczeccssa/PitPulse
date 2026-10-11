@@ -51,6 +51,9 @@
 		F14E00000000000000000002 /* LiveIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14E00000000000000000005 /* LiveIsland.swift */; };
 		F14E00000000000000000003 /* LiveIslandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14E00000000000000000006 /* LiveIslandTests.swift */; };
 		F14E00000000000000000008 /* NookApp in Frameworks */ = {isa = PBXBuildFile; productRef = F14E0000000000000000000A /* NookApp */; };
+		F16000000000000000000001 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F16000000000000000000011; };
+		F16000000000000000000002 /* LiveExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = F16000000000000000000012; };
+		F16000000000000000000003 /* map.html in Resources */ = {isa = PBXBuildFile; fileRef = F16000000000000000000013; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -119,6 +122,9 @@
 		F14E00000000000000000004 /* LiveIslandLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandLogic.swift; sourceTree = "<group>"; };
 		F14E00000000000000000005 /* LiveIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIsland.swift; sourceTree = "<group>"; };
 		F14E00000000000000000006 /* LiveIslandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandTests.swift; sourceTree = "<group>"; };
+		F16000000000000000000011 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Maps/MapView.swift; sourceTree = SOURCE_ROOT; };
+		F16000000000000000000012 /* LiveExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Maps/LiveExtras.swift; sourceTree = SOURCE_ROOT; };
+		F16000000000000000000013 /* map.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = Features/Maps/map.html; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,7 +150,7 @@
 		47C6D0259F3FAF3A34D1571F /* MenuBar */ = {isa = PBXGroup; children = (FC42E605243B4B8CE52759F9 /* StatusMenuLabel.swift */, 426529EA2D4DF91C75A4D708 /* MenuBarRootView.swift */, ); path = MenuBar; sourceTree = "<group>"; };
 		7105B381B44D19494030FFB9 /* Calendar */ = {isa = PBXGroup; children = (A78520DE2EAC445447FD2985 /* NextMeetingCard.swift */, 4BD03C8E1828226793B9B993 /* CalendarView.swift */, 6976FECA1664CED4520CD651 /* MeetingDetailView.swift */, ); path = Calendar; sourceTree = "<group>"; };
 		4F49D1B58D1C68594277DF85 /* Preferences */ = {isa = PBXGroup; children = (F961D1893DB8D07AB69852AA /* PreferencesView.swift */, ); path = Preferences; sourceTree = "<group>"; };
-		F14E00000000000000000007 /* LiveIsland */ = {isa = PBXGroup; children = (F14E00000000000000000004 /* LiveIslandLogic.swift */, F14E00000000000000000005 /* LiveIsland.swift */, ); path = LiveIsland; sourceTree = "<group>"; };
+		F14E00000000000000000007 /* LiveIsland */ = {isa = PBXGroup; children = (F16000000000000000000011 /* MapView.swift */, F14E00000000000000000004 /* LiveIslandLogic.swift */, F14E00000000000000000005 /* LiveIsland.swift */, ); path = LiveIsland; sourceTree = "<group>"; };
 		3B6D5438446D06FBFC2AB398 /* Tests */ = {isa = PBXGroup; children = (ADB7B2FDECB8EC3FD6C90B39 /* TestSupport.swift */, FE7E68F70C58B1AF28DAF270 /* CountryFlagTests.swift */, D6944C2A2546291A58648222 /* CalendarLogicTests.swift */, DE90F418914C16CB0AE9EB6E /* APIClientTests.swift */, 7C0765243287C05E15EA9C67 /* CalendarCacheTests.swift */, 032BAE578B740E651F67979A /* ServerAddressTests.swift */, 16E4503FE18A7E159A4A2B4C /* CredentialStoreTests.swift */, 626CF5B6CAE4F9464055D1FD /* AppSymbolTests.swift */, A013F0A12026100900000006 /* MotorsportAssetTests.swift */, E10000000000000000000023 /* LiveStoreTests.swift */, F14E00000000000000000006 /* LiveIslandTests.swift */, ); path = Tests; sourceTree = "<group>"; };
 		F4C6E6CF4A19B8372D2D6BA0 /* Support */ = {isa = PBXGroup; children = (DCCDA70F6E3C5B08647F63BB /* Info.plist */, ); path = Support; sourceTree = "<group>"; };
 		E1000000000000000000000F /* UITests */ = {isa = PBXGroup; children = (E10000000000000000000001 /* MenuBarAcceptanceTests.swift */, ); path = UITests; sourceTree = "<group>"; };
@@ -227,7 +233,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		40360614CC5B025D84C2A848 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A013F0A12026100900000007 /* PitPulseAssets.xcassets in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		40360614CC5B025D84C2A848 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (F16000000000000000000003 /* map.html in Resources */, A013F0A12026100900000007 /* PitPulseAssets.xcassets in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
 		64CC51937722E1F3C4FE9815 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		E10000000000000000000008 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
@@ -242,6 +248,8 @@
 			F01000000000000000000003 /* NetworkPathMonitor.swift in Sources */,
 			F14E00000000000000000001 /* LiveIslandLogic.swift in Sources */,
 			F14E00000000000000000002 /* LiveIsland.swift in Sources */,
+			F16000000000000000000002 /* LiveExtras.swift in Sources */,
+			F16000000000000000000001 /* MapView.swift in Sources */,
 			F428951EC21DC2FEB8EF0549 /* APIModels.swift in Sources */,
 			60DE28F0789CE893C550D973 /* APIClientError.swift in Sources */,
 			925609D4E70D7ABFAFDF50A3 /* ServerAddress.swift in Sources */,

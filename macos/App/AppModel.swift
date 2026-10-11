@@ -47,6 +47,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var reminderPermissionDenied = false
     @Published private(set) var favoriteDriverId: String?
     @Published private(set) var notchAutoShowEnabled: Bool
+    @Published private(set) var notchCollapseOnMouseExit: Bool
 
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
@@ -96,6 +97,7 @@ final class AppModel: ObservableObject {
         self.favoriteDriverId = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         self.notchAutoShowEnabled = defaults.object(forKey: PreferenceKeys.notchAutoShowEnabled) == nil
             ? true : defaults.bool(forKey: PreferenceKeys.notchAutoShowEnabled)
+        self.notchCollapseOnMouseExit = defaults.bool(forKey: PreferenceKeys.notchCollapseOnMouseExit)
 
         let savedAddress = defaults.string(forKey: PreferenceKeys.serverAddress)
         let fallbackAddress = "http://localhost:38701"
@@ -563,6 +565,11 @@ final class AppModel: ObservableObject {
         defaults.set(enabled, forKey: PreferenceKeys.notchAutoShowEnabled)
     }
 
+    func setNotchCollapseOnMouseExit(_ enabled: Bool) {
+        notchCollapseOnMouseExit = enabled
+        defaults.set(enabled, forKey: PreferenceKeys.notchCollapseOnMouseExit)
+    }
+
     func ensureDriverStandingsLoaded() {
         guard driverStandings.isEmpty, let server = configuredServer else { return }
         let season = selectedSeason
@@ -630,6 +637,14 @@ final class AppModel: ObservableObject {
             await refreshCalendar()
         }
         else { await refreshPageData() }
+    }
+
+    func mapData(path: String) async throws -> Data {
+        guard let server = configuredServer else { throw APIClientError.transport("请先配置服务器") }
+        let address = serverAddress
+        let result = try await APIClient(baseURL: server.url, session: session).mapData(path: path, token: credentials.token(for: server.url))
+        guard address == serverAddress else { throw CancellationError() }
+        return result
     }
 
     private func startLiveStream() {
@@ -868,4 +883,5 @@ enum PreferenceKeys {
     static let reminderMinutes = "reminderMinutes"
     static let favoriteDriverId = "favoriteDriverId"
     static let notchAutoShowEnabled = "notchAutoShowEnabled"
+    static let notchCollapseOnMouseExit = "notchCollapseOnMouseExit"
 }

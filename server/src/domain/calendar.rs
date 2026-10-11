@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Meeting {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub circuit: Option<serde_json::Value>,
     pub id: String,
     pub season: i64,
     pub round: Option<i64>,

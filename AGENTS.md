@@ -10,11 +10,25 @@ PitPulse (F1 Companion) is a self-hosted F1 timing system with two deliverables.
 
 ## Build, Test, and Development Commands
 
-- `cargo build --release --manifest-path server/Cargo.toml` — production server binary.
-- `cargo run --manifest-path server/Cargo.toml` — run the server locally (config via env/TOML).
-- `cargo test --manifest-path server/Cargo.toml` — unit and integration tests.
-- `cargo fmt --manifest-path server/Cargo.toml -- --check` and `cargo clippy --manifest-path server/Cargo.toml -- -D warnings` — formatting and lint gates.
-- `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build` — build the macOS app.
+**Prefer Taskdeck for routine development, builds, tests, lint, and runtime control.** `taskdeck.yaml` is the command source of truth for the `PitPulse` session. Before acting, inspect `taskdeck status --session PitPulse --json`; register the existing config on a new machine with `taskdeck register --session PitPulse`, and use `taskdeck update --session PitPulse` after changing it. `taskdeck init` is only for the first initialization and refuses to overwrite an existing file.
+
+Start one named task with `taskdeck start --session PitPulse --task "<label>"`; inspect its status and logs until it exits, and verify its exit code. A start response or `running` state is not a passing build/check. For the development services, use targeted `restart` / `stop` for `Run Server` or `Run App`; do not launch a second unmanaged instance.
+
+| Task | Purpose |
+| --- | --- |
+| `Run Server`, `Run App` | Build then run the real local server and the Release native App under Taskdeck |
+| `Build Server`, `Build Server Release` | Locked Rust debug/release build |
+| `Test Server` | Locked Rust unit/integration tests with fixtures |
+| `Check Server Format`, `Lint Server` | rustfmt check and strict Clippy across all targets |
+| `Build App`, `Build App Release` | Swift debug/release build, separate from the running App bundle |
+| `Build App Tests` | Compile App and XCTest targets without starting a test host |
+| `Test App` | Run the unit XCTest scheme; launches a native App test host |
+| `Check Map Page`, `Check Live Models` | Map JavaScript checks and production Swift CLI model/store checks |
+| `Check Task Report` | Validate task JSON, run task-data tests, and check board JavaScript syntax |
+
+All tasks are manual (`auto_start: false`). Always select a task explicitly: a start/restart of the entire session would also run builds and the App-host tests. Serialize Rust build/test/lint tasks that share Cargo artifacts, and Xcode tasks that share their development DerivedData. `Test App` refuses to run while F1Companion is running; coordinate with the user before stopping their App or running desktop-affecting tests. Prefer `Build App Tests` when desktop interaction is out of scope. UI acceptance schemes remain a separate, explicitly authorized workflow.
+
+Use direct `cargo`, `xcodebuild`, or `node` only when Taskdeck is unavailable or a focused diagnostic is not represented by a task; explain the fallback. Keep standard task commands in YAML aligned with required repository gates. Tokens, config, SQLite and Xcode products stay outside Git. Build/test success does not replace real UI or upstream acceptance.
 
 ## Coding Style & Naming Conventions
 

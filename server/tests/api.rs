@@ -288,3 +288,75 @@ async fn test_nonempty_standings_endpoints_return_snapshot_meta() {
     .unwrap();
     assert_eq!(constructor_value["data"][0]["constructorId"], "ferrari");
 }
+
+#[tokio::test]
+async fn test_map_weather_radar_and_radio_routes_are_authenticated_and_lookup_only() {
+    let (mut state, _temp) = test_state().await;
+    let mut config = AppConfig::default();
+    config.security.require_token = true;
+    config.security.token = Some("test-token".into());
+    config.providers.mapbox_public_token = Some("pk.test-public".into());
+    state.config = std::sync::Arc::new(config);
+    let router = server::router(state);
+    for path in [
+        "/api/v1/maps/config",
+        "/api/v1/meetings/unknown/geometry",
+        "/api/v1/meetings/unknown/weather",
+        "/api/v1/weather/radar",
+        "/api/v1/weather/tiles/radar/0/7/0/0",
+        "/api/v1/live/radio/unknown/0",
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/maps/config")
+                .header(header::AUTHORIZATION, "Bearer test-token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    let body = axum::body::to_bytes(response.into_body(), 65536)
+        .await
+        .unwrap();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(value["data"]["publicToken"], "pk.test-public");
+    assert!(!String::from_utf8_lossy(&body).contains("test-token"));
+    for (path, status) in [
+        ("/api/v1/live/radio/unknown/0", StatusCode::NOT_FOUND),
+        (
+            "/api/v1/weather/tiles/radar/0/8/0/0",
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            "/api/v1/weather/tiles/bogus/0/0/0/0",
+            StatusCode::BAD_REQUEST,
+        ),
+    ] {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(path)
+                    .header(header::AUTHORIZATION, "Bearer test-token")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status, "{path}");
+        let body = axum::body::to_bytes(response.into_body(), 65536)
+            .await
+            .unwrap();
+        assert!(serde_json::from_slice::<Value>(&body).unwrap()["error"]["code"].is_string());
+    }
+}

@@ -30,6 +30,7 @@ struct NextMeetingCard: View {
                             .padding(14)
                             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
                         }
+                        MeetingMapView(meeting: meeting)
                         VStack(alignment: .leading, spacing: 0) {
                             Text("比赛周末").font(.headline).padding(.bottom, 10)
                             ForEach(meeting.sessions.sorted { $0.startTime < $1.startTime }) { session in

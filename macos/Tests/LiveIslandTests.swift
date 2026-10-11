@@ -4,6 +4,42 @@ import XCTest
 
 final class LiveIslandTests: XCTestCase {
     @MainActor
+    func testCollapsePreferenceAppliedBeforeNookPublishesExpandedState() {
+        let suite = "LiveIslandCollapse-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: PreferenceKeys.notchAutoShowEnabled)
+        let model = AppModel(defaults: defaults, reminderCenter: TestReminderCenter(), networkMonitor: TestNetworkPathMonitor(), autoBootstrap: false)
+        let controller = LiveIslandController(model: model)
+        controller.nook.onExpand?()
+        XCTAssertTrue(controller.nook.staysExpandedOnHoverExit)
+        model.setNotchCollapseOnMouseExit(true)
+        controller.nook.onExpand?()
+        XCTAssertFalse(controller.nook.staysExpandedOnHoverExit)
+    }
+
+    @MainActor
+    func testPresentationChoicesSurviveExpandedViewRecreation() {
+        let model = AppModel(reminderCenter: TestReminderCenter(), networkMonitor: TestNetworkPathMonitor(), autoBootstrap: false)
+        let actions = LiveIslandActions()
+        XCTAssertFalse(actions.messagesExpanded)
+        let first = LiveIslandExpandedView(model: model, actions: actions)
+        first.actions.mode = "Live Map"
+        first.actions.selectedNumber = "3"
+        first.actions.messagePage = "Team Radio"
+        first.actions.messageFilter = "driver"
+        first.actions.messagesExpanded = true
+        actions.presentation = "hidden"
+        let reopened = LiveIslandExpandedView(model: model, actions: actions)
+        XCTAssertEqual(reopened.actions.mode, "Live Map")
+        XCTAssertEqual(reopened.actions.selectedNumber, "3")
+        XCTAssertEqual(reopened.actions.messagePage, "Team Radio")
+        XCTAssertEqual(reopened.actions.messageFilter, "driver")
+        XCTAssertTrue(reopened.actions.messagesExpanded)
+        XCTAssertTrue(reopened.actions.map === first.actions.map)
+    }
+
+    @MainActor
     func testReopeningPostsManualPresentationRequest() {
         let request = expectation(forNotification: AppDelegate.reopenNotification, object: nil)
         XCTAssertFalse(AppDelegate().applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: false))
@@ -154,6 +190,12 @@ final class LiveIslandTests: XCTestCase {
         model.setNotchAutoShowEnabled(false)
         XCTAssertFalse(model.notchAutoShowEnabled)
         XCTAssertFalse(defaults.bool(forKey: PreferenceKeys.notchAutoShowEnabled))
+        XCTAssertFalse(model.notchCollapseOnMouseExit)
+        model.setNotchCollapseOnMouseExit(true)
+        let reopened = AppModel(defaults: defaults, reminderCenter: TestReminderCenter(), networkMonitor: TestNetworkPathMonitor(), autoBootstrap: false)
+        XCTAssertTrue(reopened.notchCollapseOnMouseExit)
+        model.setNotchCollapseOnMouseExit(false)
+        XCTAssertFalse(defaults.bool(forKey: PreferenceKeys.notchCollapseOnMouseExit))
     }
 
     @MainActor

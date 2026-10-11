@@ -1,8 +1,35 @@
 # T03 素材收集报告
 
-> 首轮记录：2026-10-08；最近复核：`2026-10-09T06:01:35Z`（UTC）。
-> 最新状态：T03 本机私用素材收集与文件核验已完成。累计 39 个 private-local 文件：22 张单车手头盔 PNG、6 张 2026 英国站官方编辑照片拼图、11 个车队 Logo。2026 设计年份与再分发权仍未独立核验；这是发布范围的后续限制，不阻止本机私用交付。未进入 bundle，shipping-ready 为 0。
-> 早期轮次中的下载数量、素材目录为空等结论均为对应时间的历史快照；仓库外 6 个既有参考文件仍单独记录，不计入本轮 private-local 39 个文件。素材 Agent 未修改任务 JSON、业务代码或工程资源；主 Agent 按仓库要求更新任务状态，并依用户授权将本次 T03/T07 工作纳入本地版本控制 commit；未 push 或公开发布。
+> 首轮记录：2026-10-08；最近复核：`2026-10-11T08:42:27Z`（UTC）。
+> 最新状态：T03 本机私用素材收集与文件核验已完成。累计 50 个 private-local 文件：22 张单车手头盔 PNG、6 张 2026 英国站官方编辑照片拼图、22 个车队 Logo 文件（11 个白色 64px webp 参考 + 11 个官方 F1 CDN 2026 全彩 SVG 原件）。2026 设计年份与再分发权仍未独立核验；这是发布范围的后续限制，不阻止本机私用交付。shipping-ready 为 0；App 内 bundle 使用按用户 2026-10-09 授权执行。
+> 早期轮次中的下载数量、素材目录为空等结论均为对应时间的历史快照；仓库外 6 个既有参考文件仍单独记录，不计入本轮 private-local 50 个文件。素材 Agent 未修改任务 JSON、业务代码或工程资源；主 Agent 按仓库要求更新任务状态，并依用户授权将本次 T03/T07 工作纳入本地版本控制 commit；未 push 或公开发布。
+
+## 第六轮追加：全彩车队 Logo 下载与 bundle 替换（2026-10-11T08:42:27Z）
+
+### 结果与范围
+
+应用户 2026-10-11 要求（"收集所有 app 需要的 F1 车队 logo，colorful + svg/png"），本轮为 11 个 `teamLogo` 目标新增全彩来源下载与本地渲染， helmets 及历史记录未改动：
+
+- 下载源：官方 F1 CDN 显式 2026 路径 `https://media.formula1.com/image/upload/common/f1/2026/<slug>/2026<slug>logo.svg`（slug：alpine、astonmartin、audi、cadillac、ferrari、haas、mclaren、mercedes、racingbulls、redbullracing、williams）。11 个 URL 全部 HTTP 200，无认证 GET。
+- 原件归档：`macos/Resources/MotorsportAssets/private-local/team-logos/2026-<slug>-f1-cdn-color.svg`，逐文件 SHA-256、字节数、MIME 记录于 `manifest.json` 的 `privateLocalDownloads`（新增 11 条，append-only）与各资产项 `colorVariant` 字段。
+- 矢量核验：11 个文件 XML well-formed；0 个 `<script>`、0 个外部引用（`xlink:href`/`<image>`/`data:` 均无；4 个文件含内部 `url(#clip…)` 裁剪路径，属常规导出）、0 个内嵌位图；画布均为 `viewBox 0 0 96 96`。
+- 颜色核验：纯矢量品牌色（如 Ferrari #E30518/#FCEA19/#008D3F、McLaren #FF8000、Williams #0042FF、Racing Bulls #1434CB、Red Bull #E2071F/#FFD800、Alpine #00A1E8、Haas #D6001C；Aston Martin/Audi/Cadillac 为黑色标、Mercedes 为 #1D1D1B）。
+- bundle 替换：11 个 `team-logo-*-2026.imageset/image.png` 更新为本地渲染的 512×512 透明底全彩 PNG（ImageMagick 7，`-background none -density 300`），渲染 PNG 与 dark 变体的 SHA-256 记录于 manifest。
+- dark appearance：Aston Martin、Audi、Cadillac、Mercedes 四个以黑色为主的标志在深色背景下不可读，各自 imageset 增加 `image-dark.png`（对同一 SVG 全部填充重着色为 #FFFFFF 后本地渲染），`Contents.json` 使用标准 luminosity dark appearance；其余 7 个车队深浅色均使用全彩版。
+- 视觉抽查：11 个全彩 PNG 在深/浅两种底色的触表上逐一目检通过（Ferrari 盾徽、红牛双牛、法拉利/红牛/Racing Bulls 细节在 512px 渲染下完整）。
+
+### 校验命令与本轮边界
+
+```text
+curl -A <browser UA> -o ... : 11 次 HTTP 200 下载官方 CDN SVG
+file --mime-type           : image/svg+xml 确认
+python3 xml.dom.minidom    : XML well-formed；grep 级外部引用/脚本/位图检查为 0
+magick -background none -density 300 -resize 512x512 : 22 张渲染（11 全彩 + 11 白色）
+python3 PIL                : 尺寸/透明度检查；深浅底触表目检
+python3 -m json.tool       : manifest 解析；34 个 (kind,id,season) 三元键唯一保持
+```
+
+本轮权利边界不变：官方 CDN 徽标仍为权利人专有资产，CDN 显式 2026 路径只证明版本年份、不构成许可或官方 2026 赞助商完整字标确认；本机私用与 App 内打包按既有用户授权执行，`rightsStatus=restricted`、`shippingReady=false` 不变。
 
 ## 第五轮追加：本机私用素材收集（2026-10-09T06:01:35Z）
 

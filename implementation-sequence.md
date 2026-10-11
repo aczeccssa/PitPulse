@@ -258,6 +258,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 - 紧凑态：举办国 Emoji、Session / 比赛状态、圈数、关注车手头盔 / 姓名 / 名次 / gap；展开态：加宽 Timing、头盔、Gap / Interval、上一圈 / 最佳圈、S1 / S2 / S3 时间与分段状态、可用进站状态、TrackStatus / RaceControl。只投影现有 Topic 字段；新增 API 字段可选并兼容旧客户端，未提供的轮胎 / 进站次数 / 遥测明确标缺。
 - Session 自动激活 / 收起，关注车手切换；赛道绿旗 / 黄旗 / SC / VSC / 红旗及结束状态以图标与对应颜色显示，展开顶部持续可见，悬停提示与辅助功能保留完整说明。关注、取消与收起操作使用图标，关注入口置顶，车手行直接关注 / 取消，紧凑态可点击进入选择。Live 不可用只展示已知 Session / 计划信息与降级标签，不推进假圈数或保留过期旗色。
 - 无刘海、外接显示器、分辨率变更和多屏策略明确；Panel 不抢焦点、不遮关键菜单区域；保留 Menu Bar 独立可用。
+- 消息详情默认折叠，按需展开并保留选择；设置提供鼠标移出自动收起或点击外部收起，菜单/天气详情保持展开。
 
 **验收**：紧凑 / 展开 / 无刘海 / 缺字段 / stale / disconnected 实际截图和交互；OpenNook 受阻时记录边界，不临时另起一个 App。
 
@@ -268,6 +269,8 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 **实现范围**：现有 `server/deploy/`、必要的可选 Docker 改进、README、`docs/acceptance/deployment.md` / `live.md`。
 
 - Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。
+- 本地开发使用 `taskdeck init` 注册 PitPulse，配置 `Run Server` / `Run App`：启动前分别构建 Rust/Swift，前台进程由 Taskdeck 管理；Server 读取仓库外配置与数据库，App 默认连接真实本机服务38701。停止和重启只操作本会话任务，回放始终独立。
+- 常用本地开发检查由Taskdeck具名任务统一入口：Rust debug/release、test/fmt/clippy，Swift debug/release、测试目标编译/单测，以及地图和任务报告检查；遵循AGENTS.md的Taskdeck优先、具名启动和桌面测试隔离规范。
 - 有 VPS 访问授权再部署；没有则本地先验收，不捏造远程上线结果。除非用户另行授权，不 commit / push / 创建 PR / 发布 release。
 - 真实练习赛后 5 / 15 / 30 / 45 / 60 分钟记录 Provider 可读性；真实 Session 记录 Live 字段、分钟级时效及降级。
 - 闲置 / 赛事 RSS / CPU 实测，无硬编码低内存承诺；区分 Linux 服务指标和本机 App 指标。
@@ -313,3 +316,34 @@ xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion \
 ### T07/T08 分析加载修正约束
 
 分析由服务器在启动和结果可用后后台预加载，缓存持久化。详情 API 立即返回缓存或准备状态，不能等待上游或被其他分析的网络读取阻塞；客户端先显示既有缓存，后台进度有边界与失败提示。用真实响应延迟、离线单次刷新/重启恢复测试验收，UI 操作仍由用户执行。
+
+
+## 地图与赛事信息扩展（M5）
+
+T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、天气与雷达；T19 消息与音频依赖 T16；T20 综合验收依赖 T17–T19。当前进度只记录在 tasks.json。
+
+- T16：Position.z / CarData.z 有界解码、逐字段更新与时间、WeatherData / TeamRadio、最多 10 Hz SSE（100ms 合并），保持慢消费者只取最新状态、连接状态立即发送；实际遥测频率受上游采样限制。
+- T17：WKWebView + 固定版本 Mapbox GL JS Standard 夜间 3D，赛道几何与版本化校准；整圈居中、车队颜色/车号、位置插值、地点标签隐藏、收起/隐藏后恢复展示选项与相机。至少三个控制点拟合、独立点误差 ≤20m；首批为新加坡当前布局及下一站。未校准不得产生车位。Mapbox 渲染资源直连为第三方网络规则的明确例外，其余数据经 Rust adapter。
+- T18：Jolpica 赛道经纬度持久化，比赛首页和赛历列表/地图切换；Open-Meteo 近期预报、RainViewer 历史两小时雷达与覆盖状态。
+- T19：固定可见的 Race Control / Team Radio 分页及消息条数，详情默认折叠、按需展开；明确的全部/指定车手过滤和空态，手动单条音频播放；鉴权下载、固定上游路径和隐藏/折叠清理。
+- T20：Rust/Xcode/任务校验、真实 Notch/floating/键盘/VoiceOver；回放与真实 Mapbox、赛事 feed 分开验收。不新增独立 Live 窗口，不做未来雷达、转写、追车镜头或全季一次性校准。
+
+### T16 — Live 数据扩展
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+### T17 — Notch 3D 地图与校准
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+### T18 — 赛历地图、天气与雷达
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+### T19 — 消息与音频
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+### T20 — 综合验收
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。

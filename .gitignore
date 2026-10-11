@@ -22,3 +22,14 @@ xcuserdata/
 # Editor
 .idea/
 .vscode/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Editor / local tooling
+.zcode/
+.zcodeignore
+
+# Local capture dumps. Screenshots used as acceptance evidence stay tracked.
+docs/acceptance/assets/**/*.mp4

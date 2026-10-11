@@ -8,6 +8,15 @@ import SwiftUI
 final class LiveIslandActions: ObservableObject {
     @Published var snapshot = LiveSnapshot.disconnected()
     @Published var flag = ""
+    @Published var presentation = "hidden"
+    @Published var mode = "Telemetry"
+    @Published var selectedNumber: String?
+    @Published var showRadar = false
+    @Published var messagePage = "Race Control"
+    @Published var messageFilter = "all"
+    @Published var messagesExpanded = false
+    let map = MapStore()
+    let radio = RadioPlayer()
     var expand: (() -> Void)?
     var collapse: (() -> Void)?
     var hide: (() -> Void)?
@@ -33,6 +42,8 @@ final class LiveIslandController: ObservableObject {
     private var automaticallyShown = false
     private var dismissedSessionKey: String?
     private var plannedSessionKey: String?
+    private var transientPanels = 0
+    private var clickMonitors: [Any] = []
 
     init(model: AppModel) {
         self.model = model
@@ -74,18 +85,29 @@ final class LiveIslandController: ObservableObject {
             }
         }
         nook.onExpand = { [weak self] in
+            self?.updateCollapseBehavior(expanded: true)
             self?.isVisible = true
             self?.configurePanel()
+            self?.actions.presentation = "expanded"
             self?.diagnose("expanded")
         }
         nook.onCompact = { [weak self] in
+            self?.stopClickMonitoring()
+            self?.nook.staysExpandedOnHoverExit = false
+            self?.actions.map.pause()
+            self?.actions.radio.stop()
             self?.isVisible = true
             self?.configurePanel()
+            self?.actions.presentation = "compact"
             self?.diagnose("compact")
         }
         nook.onHide = { [weak self] in
             guard let self else { return }
             self.isVisible = false
+            self.stopClickMonitoring()
+            self.actions.presentation = "hidden"
+            self.actions.radio.stop()
+            self.actions.map.release(preserveCamera: true)
             if self.automaticallyShown { self.dismissedSessionKey = self.activeSessionKey }
             self.automaticallyShown = false
             self.diagnose("hidden")
@@ -99,15 +121,18 @@ final class LiveIslandController: ObservableObject {
                 self.toggleManually()
             }
             .store(in: &cancellables)
-        // Native selection menus can extend beyond the island's hover region.
-        NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)
-            .sink { [weak nook] _ in
-                guard let nook, nook.state == .expanded else { return }
-                nook.staysExpandedOnHoverExit = true
-            }
-            .store(in: &cancellables)
-        NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)
-            .sink { [weak nook] _ in nook?.staysExpandedOnHoverExit = false }
+        // Menus and popovers extend beyond the island's hover region.
+        for (name, delta) in [(NSMenu.didBeginTrackingNotification, 1), (NSMenu.didEndTrackingNotification, -1),
+                              (NSPopover.willShowNotification, 1), (NSPopover.didCloseNotification, -1)] {
+            NotificationCenter.default.publisher(for: name)
+                .sink { [weak self] _ in
+                    guard let self else { return }
+                    self.transientPanels = max(0, self.transientPanels + delta)
+                    self.updateCollapseBehavior()
+                }.store(in: &cancellables)
+        }
+        model.$notchCollapseOnMouseExit
+            .sink { [weak self] automatic in self?.updateCollapseBehavior(automatic: automatic) }
             .store(in: &cancellables)
         liveStore.$snapshot
             .sink { [weak self] snapshot in self?.reconcile(snapshot: snapshot) }
@@ -143,6 +168,38 @@ final class LiveIslandController: ObservableObject {
             }
             .store(in: &cancellables)
         reconcile()
+    }
+
+    private func updateCollapseBehavior(automatic: Bool? = nil, expanded: Bool? = nil) {
+        let automatic = automatic ?? model.notchCollapseOnMouseExit
+        let expanded = expanded ?? (nook.state == .expanded)
+        nook.staysExpandedOnHoverExit = expanded && (!automatic || transientPanels > 0)
+        stopClickMonitoring()
+        guard expanded, !automatic else { return }
+        if let monitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] _ in
+            Task { @MainActor [weak self] in self?.collapseForOutsideClick() }
+        }) { clickMonitors.append(monitor) }
+        if let monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] event in
+            if MainActor.assumeIsolated({ self?.transientPanels == 0 }) {
+                Task { @MainActor [weak self] in self?.collapseForOutsideClick() }
+            }
+            return event
+        }) { clickMonitors.append(monitor) }
+    }
+
+    private func collapseForOutsideClick() {
+        guard nook.state == .expanded, !model.notchCollapseOnMouseExit,
+              transientPanels == 0, !nook.isHovering else { return }
+        actions.collapse?()
+    }
+
+    private func stopClickMonitoring() {
+        clickMonitors.forEach(NSEvent.removeMonitor)
+        clickMonitors.removeAll()
+    }
+
+    isolated deinit {
+        clickMonitors.forEach(NSEvent.removeMonitor)
     }
 
     var snapshot: LiveSnapshot {
@@ -182,6 +239,7 @@ final class LiveIslandController: ObservableObject {
         finishTask?.cancel()
         finishTask = nil
         isVisible = false
+        actions.presentation = "hidden"
         Task { await nook.hide() }
     }
 
@@ -210,6 +268,13 @@ final class LiveIslandController: ObservableObject {
             finishTask?.cancel()
             finishTask = nil
             self.finishSessionKey = nil
+        }
+        if actions.snapshot.sessionId != displayed.sessionId {
+            actions.selectedNumber = nil
+            actions.showRadar = false
+            actions.messageFilter = "all"
+            actions.radio.stop()
+            actions.map.release()
         }
         actions.snapshot = displayed
         if incomingSnapshot != nil {
@@ -439,6 +504,19 @@ struct LiveIslandExpandedView: View {
     @ObservedObject var actions: LiveIslandActions
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @ObservedObject private var map: MapStore
+    @ObservedObject private var radio: RadioPlayer
+    init(model: AppModel, actions: LiveIslandActions) {
+        self.model = model
+        self.actions = actions
+        self.map = actions.map
+        self.radio = actions.radio
+    }
+    private var mode: String { actions.mode }
+    private var showRadar: Bool { actions.showRadar }
+    private var selectedDriver: LiveDriver? { snapshot.drivers.first { $0.number == actions.selectedNumber } ?? favorite ?? snapshot.drivers.first }
+    private var meeting: Meeting? { LiveIslandLogic.meeting(for: snapshot, in: model.meetings, now: Date()) }
+
     private var snapshot: LiveSnapshot { actions.snapshot }
     private var hasTiming: Bool { snapshot.sourceStatus == .connected }
     private var title: String {
@@ -466,7 +544,7 @@ struct LiveIslandExpandedView: View {
 
     private var followControls: some View {
         HStack(spacing: 10) {
-            if let favorite { LiveHelmetView(model: model, driver: favorite, size: 26) }
+            if let selectedDriver { LiveHelmetView(model: model, driver: selectedDriver, size: 28) }
             Menu {
                 Button("不关注") { model.setFavoriteDriver(nil) }
                 ForEach(model.favoriteDrivers) { driver in
@@ -490,182 +568,178 @@ struct LiveIslandExpandedView: View {
             .help("选择或切换关注车手")
             .accessibilityLabel("选择关注车手")
             .accessibilityIdentifier("liveIsland.favoriteDriver")
-            if let selected = model.favoriteDrivers.first(where: { $0.id == model.favoriteDriverId }) {
-                Text(selected.name).font(.subheadline.weight(.medium)).lineLimit(1)
-            }
-            if let favorite {
-                Text("P\(favorite.position.map(String.init) ?? "—") · Gap \(favorite.gap ?? "—")")
-                    .font(.caption).monospacedDigit()
-            } else if model.favoriteDriverId != nil {
-                if hasTiming {
-                    Image(systemName: "person.crop.circle.badge.questionmark")
-                        .help("关注车手暂无数据")
-                        .accessibilityLabel("关注车手暂无数据")
-                }
+            if let driver = selectedDriver {
+                Text("#\(driver.number) \(driver.name ?? "车手")")
+                    .font(.caption.weight(.semibold)).lineLimit(1)
+                Text("P\(driver.position.map(String.init) ?? "—") · \(driver.gap ?? "—")")
+                    .font(.caption2).monospacedDigit().foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
-            if model.favoriteDriverId != nil {
-                Button { model.setFavoriteDriver(nil) } label: {
-                    Image(systemName: "star.slash").frame(width: 24, height: 24)
-                }
-                .buttonStyle(.borderless)
-                .help("取消关注")
-                .accessibilityLabel("取消关注")
-            }
+
         }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        if actions.flag.isEmpty {
-                            Image(systemName: AppSymbol.menuBar.resolvedSystemName())
-                        } else {
-                            Text(actions.flag)
-                        }
-                        Text(title)
-                    }
-                        .font(.headline)
-                        .lineLimit(1)
-                        .accessibilityValue("\(snapshot.sessionStateLabel)，\(snapshot.statusLabel)")
-                    if snapshot.sourceMode == .replay {
-                        Text("回放").font(.caption).foregroundStyle(.orange)
-                    }
-                }
-                Spacer()
-                Button { actions.collapse?() } label: { Image(systemName: "chevron.up") }
-                    .buttonStyle(.borderless)
-                    .help("收起 Live Island")
-                    .accessibilityLabel("收起 Live Island")
-                    .accessibilityIdentifier("liveIsland.collapse")
-                    .keyboardShortcut(.cancelAction)
-                Button { actions.hide?() } label: { Image(systemName: "xmark") }
-                    .buttonStyle(.borderless)
-                    .help("隐藏 Live Island")
-                    .accessibilityLabel("隐藏 Live Island")
-            }
+    private func modeButton(_ value: String, title: String, icon: String) -> some View {
+        Button { actions.mode = value } label: {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 6)
+                .background(mode == value ? Color.white.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 7))
+        }.buttonStyle(.plain)
+            .accessibilityLabel(title).accessibilityAddTraits(mode == value ? .isSelected : [])
+            .accessibilityIdentifier("liveIsland.mode.\(value)")
+    }
 
-            HStack {
-                if hasTiming {
-                    Text(snapshot.lapLabel)
-                        .font(.subheadline.weight(.medium)).monospacedDigit()
-                } else {
-                    LiveWaitingIndicator(detail: snapshot.statusReason == "scheduled_session_waiting_for_live"
-                        ? "赛历安排；等待实时数据" : snapshot.statusLabel)
-                }
-                Spacer()
-                if hasTiming { LiveTrackStatusBadge(snapshot: snapshot) }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(actions.flag).font(.headline)
+                Text(title).font(.headline).lineLimit(1)
+                if snapshot.sourceMode == .replay { Text("回放").font(.caption2).foregroundStyle(.orange) }
+                Spacer(minLength: 8)
+                HStack(spacing: 2) {
+                    modeButton("Telemetry", title: "计时", icon: "chart.bar.xaxis")
+                    modeButton("Live Map", title: "地图", icon: "map")
+                }.padding(2).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+                Button { actions.collapse?() } label: { Image(systemName: "chevron.up") }
+                    .buttonStyle(.borderless).help("收起 Live Island").accessibilityLabel("收起 Live Island")
+                    .accessibilityIdentifier("liveIsland.collapse").keyboardShortcut(.cancelAction)
+                Button { actions.hide?() } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.borderless).help("隐藏 Live Island").accessibilityLabel("隐藏 Live Island")
             }
-            followControls
+            HStack(spacing: 10) {
+                followControls
+                LiveWeatherView(snapshot: snapshot)
+                if hasTiming {
+                    Text(snapshot.lapLabel).font(.caption.weight(.semibold)).monospacedDigit()
+                    LiveTrackStatusBadge(snapshot: snapshot, compact: true)
+                } else { LiveWaitingIndicator(detail: snapshot.statusLabel) }
+                if mode == "Live Map" {
+                    Button { actions.showRadar.toggle() } label: {
+                        Image(systemName: "cloud.rain").foregroundStyle(showRadar ? Color.blue : Color.secondary)
+                    }.buttonStyle(.borderless).help("历史降雨雷达")
+                        .accessibilityLabel("历史降雨雷达").accessibilityValue(showRadar ? "开启" : "关闭")
+                }
+            }
+            if mode == "Telemetry" { LiveTelemetryView(driver: selectedDriver, snapshot: snapshot) }
             ScrollView {
+
                 VStack(alignment: .leading, spacing: 10) {
 
-                    if hasTiming {
-                        HStack(spacing: 8) {
-                            HStack(spacing: 7) {
-                                Image(systemName: "star").frame(width: 17)
-                                Text("位置 / 车手")
-                            }.frame(width: 224, alignment: .leading)
-                            timingHeader("Gap", width: 58)
-                            timingHeader("Interval", width: 58)
-                            timingHeader("上一圈", width: 76)
-                            timingHeader("最佳圈", width: 76)
-                            ForEach(0..<3) { index in timingHeader("S\(index + 1)", width: 88) }
-                        }
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        LazyVStack(spacing: 6) {
-                            ForEach(snapshot.drivers, id: \.number) { driver in
-                                let driverID = LiveIslandLogic.followableDriverID(for: driver, favorites: model.favoriteDrivers, drivers: snapshot.drivers)
-                                let followed = driverID != nil && driverID == model.favoriteDriverId
-                                Button {
-                                    guard let driverID else { return }
-                                    model.setFavoriteDriver(followed ? nil : driverID)
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        HStack(spacing: 7) {
-                                            Image(systemName: followed ? "star.fill" : "star")
-                                                .font(.caption).foregroundStyle(followed ? Color.yellow : Color.gray)
-                                                .frame(width: 17)
-                                            Text(driver.position.map(String.init) ?? "—")
-                                                .font(.system(.body, design: .rounded).weight(.bold))
-                                                .frame(width: 24)
-                                                .accessibilityLabel("名次 P\(driver.position.map(String.init) ?? "未知")")
-                                            LiveHelmetView(model: model, driver: driver, size: 32)
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text(driver.name ?? "#\(driver.number)").font(.caption.weight(.semibold)).lineLimit(1)
-                                                Text(driver.retired == true ? "已退赛" : driver.inPit == true ? "进站中" : driver.team ?? "—")
-                                                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                                            }
-                                        }.frame(width: 224, alignment: .leading)
-                                        timingValue(driver.gap, label: "距领先车手", width: 58)
-                                        timingValue(driver.interval, label: "距前车", width: 58)
-                                        timingValue(driver.lastLap, label: "上一圈", width: 76)
-                                        timingValue(driver.bestLap, label: "最佳圈", width: 76)
-                                        ForEach(0..<3) { index in
-                                            LiveSectorView(sector: driver.sectors.flatMap { index < $0.count ? $0[index] : nil }, index: index)
-                                                .frame(width: 88)
-                                        }
-                                    }
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 8)
-                                    .background(followed ? Color.blue.opacity(0.22) : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(driverID == nil)
-                                .help(driverID == nil ? "名单暂不可用，无法确认车手身份" : followed ? "点击取消关注" : "点击关注这名车手")
-                                .accessibilityHint(followed ? "激活后取消关注" : "激活后关注这名车手")
-                                .accessibilityValue(followed ? "已关注" : "未关注")
-                                .accessibilityIdentifier("liveIsland.follow.\(driver.number)")
-                                .accessibilityElement(children: .combine)
+                    if mode == "Telemetry" {
+                        if hasTiming {
+                            HStack(spacing: 8) {
+                                HStack(spacing: 7) {
+                                    Image(systemName: "star").frame(width: 17)
+                                    Text("位置 / 车手")
+                                }.frame(width: 224, alignment: .leading)
+                                timingHeader("Gap", width: 58)
+                                timingHeader("Interval", width: 58)
+                                timingHeader("上一圈", width: 76)
+                                timingHeader("最佳圈", width: 76)
+                                ForEach(0..<3) { index in timingHeader("S\(index + 1)", width: 88) }
                             }
-                        }
-
-                    } else {
-                        TimelineView(.periodic(from: .now, by: 1)) { context in
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(model.plannedIslandSessionLabel(for: snapshot, now: context.date))
-                                    .font(.subheadline)
-                                if let meeting = CalendarLogic.featuredMeeting(in: model.meetings, now: context.date) {
-                                    Text(meeting.name).font(.headline)
-                                    Text(meeting.location).font(.caption).foregroundStyle(.secondary)
-                                    ForEach(meeting.sessions.sorted { $0.startTime < $1.startTime }) { session in
-                                        HStack {
-                                            Text(session.sessionType.displayName)
-                                            Spacer()
-                                            Text(session.startTime.formatted(.dateTime.weekday().hour().minute()))
-                                                .monospacedDigit()
-                                        }
-                                        .font(.caption)
-                                        .padding(.vertical, 3)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if hasTiming {
-                        Text("轮胎、进站次数、车辆遥测 · 未提供")
-                            .font(.caption)
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
-                    }
+                            LazyVStack(spacing: 6) {
+                                ForEach(snapshot.drivers, id: \.number) { driver in
+                                    let driverID = LiveIslandLogic.followableDriverID(for: driver, favorites: model.favoriteDrivers, drivers: snapshot.drivers)
+                                    let followed = driverID != nil && driverID == model.favoriteDriverId
+                                    HStack(spacing: 0) {
+                                            Button {
+                                                if let driverID { model.setFavoriteDriver(followed ? nil : driverID) }
+                                            } label: {
+                                                Image(systemName: followed ? "star.fill" : "star").font(.caption).foregroundStyle(followed ? Color.yellow : Color.gray).frame(width: 25)
+                                            }.buttonStyle(.plain).disabled(driverID == nil)
+                                            .accessibilityLabel(followed ? "取消关注车手" : "关注车手")
+                                            .accessibilityIdentifier("liveIsland.follow.\(driver.number)")
+                                        Button {
+                                            actions.selectedNumber = driver.number
+                                        } label: {
+                                            HStack(spacing: 8) {
+                                                HStack(spacing: 7) {
+                                                    Text(driver.position.map(String.init) ?? "—")
+                                                        .font(.system(.body, design: .rounded).weight(.bold))
+                                                        .frame(width: 24)
+                                                        .accessibilityLabel("名次 P\(driver.position.map(String.init) ?? "未知")")
+                                                    LiveHelmetView(model: model, driver: driver, size: 32)
+                                                    VStack(alignment: .leading, spacing: 3) {
+                                                        Text(driver.name ?? "#\(driver.number)").font(.caption.weight(.semibold)).lineLimit(1)
+                                                        Text(driver.retired == true ? "已退赛" : driver.inPit == true ? "进站中" : driver.team ?? "—")
+                                                            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                                    }
+                                                }.frame(width: 199, alignment: .leading)
+                                                timingValue(driver.gap, label: "距领先车手", width: 58)
+                                                timingValue(driver.interval, label: "距前车", width: 58)
+                                                timingValue(driver.lastLap, label: "上一圈", width: 76)
+                                                timingValue(driver.bestLap, label: "最佳圈", width: 76)
+                                                ForEach(0..<3) { index in
+                                                    LiveSectorView(sector: driver.sectors.flatMap { index < $0.count ? $0[index] : nil }, index: index)
+                                                        .frame(width: 88)
+                                                }
+                                            }
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 8)
+                                            .background(followed ? Color.blue.opacity(0.22) : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .contextMenu {
+                                            if let driverID { Button(followed ? "取消关注" : "关注车手") { model.setFavoriteDriver(followed ? nil : driverID) } }
+                                        }
+                                        .help("点击查看车辆遥测，右键可关注车手")
+                                        .accessibilityHint("激活后选择这名车手查看遥测")
+                                        .accessibilityValue(followed ? "已关注" : "未关注")
+                                        .accessibilityIdentifier("liveIsland.select.\(driver.number)")
+                                        .accessibilityElement(children: .combine)
+                                    }
+                                }
+                            }
 
-                    if let raceControl = snapshot.raceControl, hasTiming, !raceControl.isEmpty {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Race Control").font(.caption.weight(.semibold))
-                            ForEach(Array(raceControl.prefix(5).enumerated()), id: \.offset) { _, item in
-                                Text([item.flag, item.category, item.message].compactMap { $0 }.joined(separator: " · "))
-                                    .font(.caption2)
-                                    .lineLimit(2)
+                        } else {
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(model.plannedIslandSessionLabel(for: snapshot, now: context.date))
+                                        .font(.subheadline)
+                                    if let meeting = CalendarLogic.featuredMeeting(in: model.meetings, now: context.date) {
+                                        Text(meeting.name).font(.headline)
+                                        Text(meeting.location).font(.caption).foregroundStyle(.secondary)
+                                        ForEach(meeting.sessions.sorted { $0.startTime < $1.startTime }) { session in
+                                            HStack {
+                                                Text(session.sessionType.displayName)
+                                                Spacer()
+                                                Text(session.startTime.formatted(.dateTime.weekday().hour().minute()))
+                                                    .monospacedDigit()
+                                            }
+                                            .font(.caption)
+                                            .padding(.vertical, 3)
+                                        }
+                                    }
+                                }
                             }
                         }
+
                     }
+                    MapView(store: map, meeting: meeting, snapshot: snapshot, selected: selectedDriver?.number, radar: showRadar, active: mode == "Live Map" && actions.presentation == "expanded")
+                        .frame(height: mode == "Live Map" ? (showRadar ? 210 : 250) : 0)
+                        .opacity(mode == "Live Map" ? 1 : 0)
+                        .allowsHitTesting(mode == "Live Map")
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    if mode == "Live Map" {
+                        if let error = map.error {
+                            HStack(spacing: 8) {
+                                Label("地图暂时不可用", systemImage: "exclamationmark.triangle").help(error)
+                                Button("重试") { Task { map.release(); await map.load(model: model, meeting: meeting); map.onDriver = { actions.selectedNumber = $0 } } }
+                                Spacer()
+                            }.font(.caption2).foregroundStyle(.secondary)
+                        }
+                        if showRadar { RadarControls(model: model, map: map) }
+                    }
+
+
                 }
                 .background(CalendarScrollAppearance())
             }
+            Divider()
+            LiveMessagesView(model: model, player: radio, snapshot: snapshot, selected: selectedDriver?.number, page: $actions.messagePage, filter: $actions.messageFilter, expanded: $actions.messagesExpanded)
         }
         .padding(16)
         .frame(width: 860)
@@ -673,6 +747,19 @@ struct LiveIslandExpandedView: View {
         .foregroundStyle(Color.white)
         .accessibilityElement(children: .contain)
         .onAppear(perform: model.ensureDriverStandingsLoaded)
+        .task(id: "\(model.serverAddress)-\(meeting?.id ?? "none")-\(actions.presentation)") {
+            guard actions.presentation == "expanded" else { return }
+            await map.load(model: model, meeting: meeting)
+            map.onDriver = { actions.selectedNumber = $0 }
+        }
+        .onChange(of: actions.presentation) { _, value in
+            if value != "expanded" { radio.stop(); map.pause() }
+            if value == "hidden" { map.release(preserveCamera: true) }
+        }
+        .onChange(of: model.favoriteDriverId) { _, _ in actions.selectedNumber = nil }
+
+        .onChange(of: model.serverAddress) { _, _ in radio.stop() }
+        .onDisappear { radio.stop(); map.pause() }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: hasTiming)
         .environment(\.colorScheme, .dark)
     }

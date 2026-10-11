@@ -8,6 +8,7 @@ struct MeetingDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 Divider()
+                MeetingMapView(meeting: meeting)
                 sessions
             }
             .padding(16)

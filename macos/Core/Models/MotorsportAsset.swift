@@ -5,6 +5,7 @@ enum MotorsportAsset {
 
     static func name(kind: Kind, id: String, season: Int) -> String {
         let prefix = kind == .helmet ? "helmet" : "team-logo"
+        let id = kind == .helmet ? ["verstappen": "max_verstappen", "lindblad": "arvid_lindblad"][id] ?? id : id
         return "\(prefix)-\(id)-\(season)"
     }
 

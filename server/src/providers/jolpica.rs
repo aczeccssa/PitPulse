@@ -293,6 +293,7 @@ fn decode_event(event: &Value, season: Option<i64>) -> Result<Option<Meeting>, P
         .map(|session| session.start_time.clone())
         .unwrap_or_else(|| start_date.clone());
     Ok(Some(Meeting {
+        circuit: circuit_location(&circuit),
         id,
         season,
         round: round_number,
@@ -395,9 +396,30 @@ fn chrono_free_rfc3339(value: &str) -> bool {
     date.len() == 10 && time.len() >= 8 && date.as_bytes().get(4) == Some(&b'-')
 }
 
+fn circuit_location(value: &Value) -> Option<Value> {
+    let lat = value.get("latitude")?.as_f64()?;
+    let lon = value.get("longitude")?.as_f64()?;
+    if !(-90.0..=90.0).contains(&lat) || !(-180.0..=180.0).contains(&lon) {
+        return None;
+    }
+    Some(
+        serde_json::json!({"id": value.get("id"), "name": value.get("name"), "latitude":lat, "longitude":lon}),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_circuit_location_keeps_identity_and_rejects_invalid_coordinates() {
+        let raw =
+            json!({"id":"marina_bay","name":"Marina Bay","latitude":1.292,"longitude":103.864});
+        assert_eq!(circuit_location(&raw).unwrap(), raw);
+        assert!(circuit_location(&json!({"latitude":91,"longitude":103})).is_none());
+        assert!(circuit_location(&json!({"country":"Singapore"})).is_none());
+    }
 
     #[test]
     fn test_alpha_weekend_fixture_decodes_sessions_and_utc() {

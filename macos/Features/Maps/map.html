@@ -1,0 +1,102 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://api.mapbox.com 'unsafe-inline' 'wasm-unsafe-eval'; style-src https://api.mapbox.com 'unsafe-inline'; connect-src https://*.mapbox.com pitpulse-radar:; img-src data: blob: https://*.mapbox.com pitpulse-radar:; worker-src blob:; child-src blob:; font-src https://*.mapbox.com;">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.css" rel="stylesheet"><script src="https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.js"></script>
+<style>body{margin:0;background:#111722;color:#cfd7e3;font:12px system-ui}#map{position:absolute;inset:0}.mapboxgl-ctrl-attrib{font-size:9px}#status{position:absolute;top:8px;left:8px;max-width:75%;background:#111d;padding:5px 8px;border-radius:6px;pointer-events:none}#tools{position:absolute;bottom:24px;left:8px;display:flex;gap:4px}button{background:#152031;color:white;border:1px solid #526070;border-radius:6px;padding:5px 8px}button[aria-pressed="true"]{background:#23568a;border-color:#8ac8ff}button:focus-visible{outline:2px solid #70bafa}.mapboxgl-popup-content{color:#111}</style></head>
+<body><div id="map" role="application" aria-label="赛道及比赛地点地图"></div><div id="status" role="status">正在加载地图…</div><div id="tools"><button id="dimension" aria-label="切换二维三维地图">3D</button><button id="reset">全赛道</button><button id="follow" aria-pressed="false">跟随车手</button></div>
+<script>
+'use strict';
+let map, loaded=false, current, selected=null, following=false, paused=false;
+let cameraKey=null, geometryKey=null, markersKey=null, fittedGeometryKey=null;
+let pendingRadar=null, radarLayer=null, failedStatus=null, animation=null, lastDraw=0;
+const motions=new Map(), meetingMarkers=[];
+const status=document.getElementById('status');
+function signal(type,value){window.webkit.messageHandlers.map.postMessage({type,value});}
+function showStatus(){status.textContent=failedStatus ? '地图部分资源加载失败' : current?.status??'';status.hidden=!status.textContent;}
+function source(id,data){if(!map.getSource(id))map.addSource(id,{type:'geojson',data});else map.getSource(id).setData(data);}
+function rememberCamera(){if(!map||!current)return;signal('camera',{cameraKey:current.cameraKey,center:map.getCenter().toArray(),zoom:map.getZoom(),pitch:map.getPitch(),bearing:map.getBearing(),following});}
+function circuitBounds(){
+ const g=current?.geometry?.geometry;if(!g)return null;
+ const points=g.type==='LineString'?g.coordinates:g.coordinates.flat();
+ if(!points.length)return null;
+ return [[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1]))],[Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))]];
+}
+function resetCamera(restore=false){
+ following=false;
+ if(restore&&current.camera?.cameraKey===current.cameraKey){map.jumpTo(current.camera);following=!!current.camera.following;}
+ else if(circuitBounds()&&!(current.meetings?.length)&&current.pitch>0){
+  map.fitBounds(circuitBounds(),{padding:{top:26,bottom:36,left:28,right:68},maxZoom:16,pitch:current.pitch,bearing:0,duration:0});
+ }else map.jumpTo({center:current.center,zoom:current.zoom??15.5,pitch:current.pitch??55,bearing:0});
+ fittedGeometryKey=current.geometry?current.cameraKey:null;
+ document.getElementById('dimension').textContent=map.getPitch()>0?'3D':'2D';
+ document.getElementById('follow').setAttribute('aria-pressed',String(following));
+ rememberCamera();
+}
+function position(m,now){const t=Math.min(1,Math.max(0,(now-m.start)/m.duration));return [m.from[0]+(m.to[0]-m.from[0])*t,m.from[1]+(m.to[1]-m.from[1])*t];}
+function receiveCars(cars){
+ const now=performance.now(), numbers=new Set(cars.map(c=>c.number));
+ for(const number of motions.keys())if(!numbers.has(number))motions.delete(number);
+ for(const car of cars){
+  const old=motions.get(car.number), target=[car.longitude,car.latitude];
+  if(!old||old.to[0]!==target[0]||old.to[1]!==target[1]){
+   const animate=old&&!current.reduceMotion&&now-old.start<1500;
+   motions.set(car.number,{car,from:animate?position(old,now):target,to:target,start:now,duration:animate?Math.max(80,Math.min(750,now-old.start)):1});
+  }else old.car=car;
+ }
+}
+function drawCars(now){
+ if(!loaded||paused)return;
+ const cars=[...motions.values()].map(m=>({type:'Feature',geometry:{type:'Point',coordinates:position(m,now)},properties:{number:m.car.number,color:m.car.color??'#94A3B8',selected:m.car.number===selected}}));
+ source('cars',{type:'FeatureCollection',features:cars});
+ if(following){const car=cars.find(c=>c.properties.number===selected);if(car)map.jumpTo({center:car.geometry.coordinates});}
+}
+function animateCars(now){
+ animation=null;
+ if(paused||!loaded)return;
+ const moving=[...motions.values()].some(m=>now<m.start+m.duration);
+ if(now-lastDraw>=33||!moving){drawCars(now);lastDraw=now;}
+ if(moving)animation=requestAnimationFrame(animateCars);
+}
+function render(){
+ if(!loaded||!current)return;const d=current;
+ const nextGeometry=JSON.stringify(d.geometry??null);
+ if(nextGeometry!==geometryKey){geometryKey=nextGeometry;source('track',{type:'FeatureCollection',features:d.geometry?[d.geometry]:[]});}
+ if(d.cameraKey!==cameraKey){cameraKey=d.cameraKey;resetCamera(true);}
+ else if(d.geometry&&fittedGeometryKey!==cameraKey){resetCamera();}
+ const nextMarkers=JSON.stringify(d.meetings??[]);
+ if(nextMarkers!==markersKey){
+  markersKey=nextMarkers;meetingMarkers.splice(0).forEach(m=>m.remove());
+  for(const m of d.meetings??[]){const button=document.createElement('button');button.textContent=m.round??'•';button.setAttribute('aria-label',m.name);button.onclick=()=>signal('meeting',m.id);meetingMarkers.push(new mapboxgl.Marker({element:button}).setLngLat([m.longitude,m.latitude]).addTo(map));}
+ }
+ selected=d.selected;receiveCars(d.drivers??[]);drawCars(performance.now());
+ if(!animation&&!d.reduceMotion)animation=requestAnimationFrame(animateCars);
+ showStatus();
+}
+window.updateMap=function(d){
+ const wasPaused=paused;current=d;paused=false;
+ if(!map){
+  if(!window.mapboxgl){failedStatus='Mapbox 脚本加载失败';showStatus();signal('error',failedStatus);return;}
+  if(!d.publicToken){status.textContent='未配置 Mapbox 公开 token';status.hidden=false;return;}
+  map=new mapboxgl.Map({container:'map',accessToken:d.publicToken,style:'mapbox://styles/mapbox/standard',center:d.center,zoom:d.zoom??15.5,pitch:d.pitch??55,fadeDuration:0,
+   config:{basemap:{lightPreset:'night',show3dObjects:true,show3dBuildings:true,show3dLandmarks:true,showPlaceLabels:false,showRoadLabels:false,showTransitLabels:false,showPointOfInterestLabels:false,showLandmarkIcons:false,showLandmarkIconLabels:false}},attributionControl:true});
+  map.addControl(new mapboxgl.NavigationControl({visualizePitch:true}),'top-right');
+  map.on('error',e=>{failedStatus=e.error?.status===401||e.error?.status===403?'Mapbox token 无效或权限不足':'地图资源不可用：'+String(e.error?.message??'未知错误').replace(/https?:\/\/\S+/g,'[Mapbox resource]').slice(0,180);showStatus();signal('error',failedStatus);});
+  map.on('moveend',()=>{if(!following)rememberCamera();});
+  map.on('load',()=>{
+   loaded=true;map.setTerrain({source:'terrain',exaggeration:1});render();
+   map.addLayer({id:'track-line',type:'line',source:'track',slot:'top',paint:{'line-color':'#e1e9f5','line-width':3,'line-emissive-strength':1}});
+   map.addLayer({id:'driver-dots',type:'circle',source:'cars',slot:'top',layout:{'circle-sort-key':['case',['get','selected'],1,0]},paint:{'circle-emissive-strength':1,'circle-radius':['case',['get','selected'],14,9],'circle-color':['get','color'],'circle-stroke-color':['case',['get','selected'],'#fff','#111827'],'circle-stroke-width':['case',['get','selected'],3,1]}});
+   map.addLayer({id:'driver-labels',type:'symbol',source:'cars',slot:'top',layout:{'text-field':['get','number'],'text-size':['case',['get','selected'],12,10],'text-allow-overlap':false,'symbol-sort-key':['case',['get','selected'],0,1]},paint:{'text-emissive-strength':1,'text-color':'#fff','text-halo-color':'#111827','text-halo-width':1.5}});
+   if(pendingRadar!==null)window.setRadar(pendingRadar);
+   for(const layer of ['driver-dots','driver-labels'])map.on('click',layer,e=>signal('driver',e.features?.[0]?.properties?.number));
+  });
+  map.on('style.load',()=>{map.addSource('terrain',{type:'raster-dem',url:'mapbox://mapbox.mapbox-terrain-dem-v1',tileSize:512,maxzoom:14});});
+ }else{if(wasPaused)map.resize();render();}
+};
+window.setRadar=function(frame){pendingRadar=frame;if(!loaded)return;if(radarLayer===frame)return;if(radarLayer!==null){map.removeLayer('radar');map.removeSource('radar');radarLayer=null;}if(frame!==null){if(!map.getSource('coverage')){map.addSource('coverage',{type:'raster',tiles:['pitpulse-radar://coverage/0/{z}/{x}/{y}'],tileSize:256,maxzoom:7});map.addLayer({id:'coverage',type:'raster',source:'coverage',slot:'top',paint:{'raster-opacity':0.45}});}map.addSource('radar',{type:'raster',tiles:[`pitpulse-radar://radar/${frame}/{z}/{x}/{y}`],tileSize:256,maxzoom:7});map.addLayer({id:'radar',type:'raster',source:'radar',slot:'top',paint:{'raster-opacity':0.65,'raster-fade-duration':0}});radarLayer=frame;}else if(map.getLayer('coverage')){map.removeLayer('coverage');map.removeSource('coverage');}};
+window.pauseMap=()=>{paused=true;if(animation)cancelAnimationFrame(animation);animation=null;if(map){rememberCamera();map.stop();}};
+window.disposeMap=()=>{window.pauseMap();if(map)map.remove();map=null;loaded=false;cameraKey=null;geometryKey=null;markersKey=null;fittedGeometryKey=null;failedStatus=null;radarLayer=null;pendingRadar=null;motions.clear();meetingMarkers.splice(0).forEach(m=>m.remove());};
+document.getElementById('dimension').onclick=()=>{if(!map)return;const pitch=map.getPitch()>0?0:55;if(following)map.jumpTo({pitch});else map.easeTo({pitch});document.getElementById('dimension').textContent=pitch>0?'3D':'2D';};
+document.getElementById('reset').onclick=()=>{if(map&&current)resetCamera();};
+document.getElementById('follow').onclick=()=>{if(!map)return;following=!following;document.getElementById('follow').setAttribute('aria-pressed',String(following));if(following)map.jumpTo({zoom:16.5,pitch:55});rememberCamera();drawCars(performance.now());};
+</script></body></html>

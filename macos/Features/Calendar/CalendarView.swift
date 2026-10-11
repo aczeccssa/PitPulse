@@ -4,6 +4,8 @@ import SwiftUI
 struct CalendarView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedMeeting: Meeting?
+    @State private var showMap = false
+    @StateObject private var map = MapStore()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,7 +16,10 @@ struct CalendarView: View {
             } else {
                 seasonPicker
                 Divider()
-                if model.meetings.isEmpty {
+                if showMap && !model.meetings.isEmpty {
+                    MapView(store: map, meetings: model.meetings).frame(maxHeight: .infinity)
+                    if let error = map.error { Text(error).font(.caption).padding(8) }
+                } else if model.meetings.isEmpty {
                     emptyState
                 } else {
                     ScrollViewReader { proxy in
@@ -52,6 +57,13 @@ struct CalendarView: View {
                 }
             }
         }
+        .task(id: "\(model.serverAddress)-\(model.selectedSeason)-\(showMap)") {
+            if showMap {
+                await map.load(model: model, meeting: nil)
+                map.onMeeting = { id in selectedMeeting = model.meetings.first { $0.id == id } }
+            } else { map.release() }
+        }
+        .onDisappear { map.release() }
         .onChange(of: model.selectedSeason) { _, _ in selectedMeeting = nil }
         .onChange(of: model.serverAddress) { _, _ in selectedMeeting = nil }
     }
@@ -99,6 +111,7 @@ struct CalendarView: View {
             .accessibilityLabel("下一年")
 
             Spacer()
+            Button { showMap.toggle() } label: { Image(systemName: showMap ? "list.bullet" : "map") }.buttonStyle(.borderless).accessibilityLabel(showMap ? "显示赛历列表" : "显示赛历地图")
 
             if model.isRefreshing {
                 ProgressView()

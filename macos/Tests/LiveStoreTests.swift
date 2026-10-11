@@ -87,6 +87,32 @@ final class LiveStoreTests: XCTestCase {
         XCTAssertTrue(store.accept(snapshot(version: 1), generation: nextGeneration))
     }
 
+    func testOldSnapshotsAndNewTelemetryKeepIndependentFreshness() throws {
+        let old = try JSONDecoder().decode(LiveSnapshot.self, from: Data(#"{"schemaVersion":1,"stateVersion":1,"sourceStatus":"connected","sourceMode":"live","drivers":[{"number":"44"}]}"#.utf8))
+        XCTAssertNil(old.weather)
+        XCTAssertNil(old.teamRadio)
+        XCTAssertNil(old.drivers[0].location)
+        let driver = try JSONDecoder().decode(LiveDriver.self, from: Data(#"{"number":"44","telemetry":{"utc":"2026-10-10T10:00:00Z","speed":300,"rpm":12000,"gear":8,"throttle":100,"brake":0,"drs":12},"location":{"x":100,"y":200,"utc":"2026-10-10T10:00:05Z"}}"#.utf8))
+        XCTAssertEqual(driver.telemetry?.speed, 300)
+        let now = RFC3339.parse("2026-10-10T10:00:12Z")!
+        XCTAssertFalse(LiveFreshness.isFresh(driver.telemetry?.utc, now: now))
+        XCTAssertTrue(LiveFreshness.isFresh(driver.location?.utc, now: now))
+        XCTAssertFalse(LiveFreshness.isFresh(nil, now: now))
+        XCTAssertFalse(LiveFreshness.isFresh("2026-10-10T10:00:30Z", now: now))
+    }
+
+    @MainActor
+    func testMapReleaseClearsResourcesAndCallbacks() {
+        let map = MapStore()
+        _ = map.view()
+        map.publicToken = "pk.test"
+        map.onDriver = { _ in }
+        map.release()
+        XCTAssertNil(map.webView)
+        XCTAssertNil(map.publicToken)
+        XCTAssertNil(map.onDriver)
+    }
+
     private func snapshot(version: Int) -> LiveSnapshot {
         LiveSnapshot(
             schemaVersion: 1,

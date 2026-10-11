@@ -1,0 +1,96 @@
+[
+  {
+    "circuitKey": "61",
+    "season": 2026,
+    "layout": "Marina Bay 2023-present 19-turn layout, checked against 2026 qualifying archive",
+    "geometryId": "sg-2008",
+    "anchors": [
+      {
+        "x": 411,
+        "y": -2655,
+        "longitude": 103.863821,
+        "latitude": 1.288685
+      },
+      {
+        "x": -13146,
+        "y": -2256,
+        "longitude": 103.851648,
+        "latitude": 1.288962
+      },
+      {
+        "x": -953,
+        "y": 4038,
+        "longitude": 103.862481,
+        "latitude": 1.294775
+      }
+    ],
+    "validation": [
+      {
+        "x": -10635,
+        "y": -4745,
+        "longitude": 103.853943,
+        "latitude": 1.286718
+      },
+      {
+        "x": -9356,
+        "y": 639,
+        "longitude": 103.855001,
+        "latitude": 1.291576
+      },
+      {
+        "x": -93,
+        "y": 3674,
+        "longitude": 103.863273,
+        "latitude": 1.29445
+      }
+    ],
+    "source": "https://livetiming.formula1.com/static/2026/2026-10-11_Singapore_Grand_Prix/2026-10-10_Qualifying/Position.z.jsonStream ; GeoJSON commit 394d8fbe70ef2c0b0c8d23ff7bee61fa09606055 ; vertex controls 8,60,100 and held-out 36,76,108"
+  },
+  {
+    "circuitKey": "9",
+    "season": 2025,
+    "layout": "COTA Formula 1 full 20-turn layout; 2025 qualifying archive; 2026 origin and layout need confirmation",
+    "geometryId": "us-2012",
+    "anchors": [
+      {
+        "x": 1051,
+        "y": -2217,
+        "longitude": -97.639651,
+        "latitude": 30.13176
+      },
+      {
+        "x": 15417,
+        "y": 6421,
+        "longitude": -97.624629,
+        "latitude": 30.139453
+      },
+      {
+        "x": 2848,
+        "y": 3023,
+        "longitude": -97.637787,
+        "latitude": 30.136474
+      }
+    ],
+    "validation": [
+      {
+        "x": 9495,
+        "y": 2447,
+        "longitude": -97.630826,
+        "latitude": 30.135876
+      },
+      {
+        "x": 3866,
+        "y": 2600,
+        "longitude": -97.636639,
+        "latitude": 30.136088
+      },
+      {
+        "x": 3464,
+        "y": 353,
+        "longitude": -97.637089,
+        "latitude": 30.134023
+      }
+    ],
+    "source": "https://livetiming.formula1.com/static/2025/2025-10-19_United_States_Grand_Prix/2025-10-18_Qualifying/Position.z.jsonStream ; https://circuitoftheamericas.com/event/f1/map/ ; GeoJSON commit 394d8fbe70ef2c0b0c8d23ff7bee61fa09606055 ; controls 0,90,130 and held-out 60,120,140"
+  }
+]

@@ -98,3 +98,63 @@ async fn test_live_stream_starts_with_full_snapshot_and_emits_status_immediately
             .contains("\"sourceStatus\":\"stale\"")
     );
 }
+
+#[tokio::test(start_paused = true)]
+async fn test_live_stream_coalesces_bursts_and_slow_reader_gets_latest() {
+    let (state, _temp) = test_state().await;
+    state.live.publish(
+        LiveSnapshot {
+            source_status: LiveStatus::Connected,
+            ..LiveSnapshot::default()
+        },
+        true,
+    );
+    let response = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/live/stream")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let mut chunks = response.into_body().into_data_stream();
+    chunks.next().await.unwrap().unwrap();
+    for lap in 1..=40 {
+        let mut s = (*state.live.current()).clone();
+        s.lap_count = Some(lap);
+        state.live.publish(s, true);
+    }
+    assert!(
+        tokio::time::timeout(Duration::from_millis(99), chunks.next())
+            .await
+            .is_err()
+    );
+    let next = tokio::time::timeout(Duration::from_millis(2), chunks.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(
+        String::from_utf8(next.to_vec())
+            .unwrap()
+            .contains("\"lapCount\":40")
+    );
+    for lap in 41..=80 {
+        let mut s = (*state.live.current()).clone();
+        s.lap_count = Some(lap);
+        state.live.publish(s, true);
+    }
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let latest = chunks.next().await.unwrap().unwrap();
+    assert!(
+        String::from_utf8(latest.to_vec())
+            .unwrap()
+            .contains("\"lapCount\":80")
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_millis(100), chunks.next())
+            .await
+            .is_err()
+    );
+}

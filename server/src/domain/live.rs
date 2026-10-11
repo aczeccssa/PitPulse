@@ -28,6 +28,10 @@ pub struct LiveSector {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveDriver {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<LiveLocation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<LiveTelemetry>,
     pub number: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -55,7 +59,63 @@ pub struct LiveDriver {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct LiveLocation {
+    pub x: f64,
+    pub y: f64,
+    pub utc: String,
+    pub status: Option<String>,
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveTelemetry {
+    pub utc: String,
+    pub rpm: Option<f64>,
+    pub speed: Option<f64>,
+    pub gear: Option<f64>,
+    pub throttle: Option<f64>,
+    pub brake: Option<f64>,
+    pub drs: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveWeather {
+    pub utc: String,
+    pub air_temp: Option<f64>,
+    pub track_temp: Option<f64>,
+    pub humidity: Option<f64>,
+    pub pressure: Option<f64>,
+    pub wind_speed: Option<f64>,
+    pub wind_direction: Option<f64>,
+    pub rainfall: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveRadio {
+    pub id: String,
+    pub utc: String,
+    pub driver_number: String,
+    #[serde(skip)]
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct LiveSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub circuit_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub circuit_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weather: Option<LiveWeather>,
+    #[serde(default)]
+    pub team_radio: Vec<LiveRadio>,
+    #[serde(skip)]
+    pub session_path: Option<String>,
     pub schema_version: u32,
     pub state_version: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -93,6 +153,11 @@ impl Default for LiveSnapshot {
     fn default() -> Self {
         Self {
             schema_version: 1,
+            circuit_key: None,
+            circuit_name: None,
+            weather: None,
+            team_radio: Vec::new(),
+            session_path: None,
             state_version: 0,
             session_id: None,
             session_name: None,

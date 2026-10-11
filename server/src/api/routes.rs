@@ -27,6 +27,21 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             "/api/v1/standings/{kind}/{id}/analysis",
             get(crate::services::analysis::season_analysis),
         )
+        .route("/api/v1/maps/config", get(super::maps::config))
+        .route(
+            "/api/v1/meetings/{meetingId}/geometry",
+            get(super::maps::geometry),
+        )
+        .route(
+            "/api/v1/meetings/{meetingId}/weather",
+            get(super::maps::weather),
+        )
+        .route("/api/v1/weather/radar", get(super::maps::radar_frames))
+        .route(
+            "/api/v1/weather/tiles/{kind}/{frame}/{z}/{x}/{y}",
+            get(super::maps::radar_tile),
+        )
+        .route("/api/v1/live/radio/{session}/{id}", get(super::maps::radio))
         .route("/api/v1/live/snapshot", get(live_snapshot))
         .route("/api/v1/live/stream", get(crate::api::sse::live_stream))
         .with_state(state)

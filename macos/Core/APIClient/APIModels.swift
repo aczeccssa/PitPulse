@@ -37,7 +37,15 @@ enum DataQuality: String, Codable, Sendable {
     }
 }
 
+struct CircuitLocation: Codable, Equatable, Sendable {
+    let id: String?
+    let name: String?
+    let latitude: Double
+    let longitude: Double
+}
+
 struct Meeting: Codable, Identifiable, Equatable, Sendable {
+    var circuit: CircuitLocation? = nil
     let id: String
     let season: Int
     let round: Int?

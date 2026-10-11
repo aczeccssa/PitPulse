@@ -24,7 +24,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 signalr-client = "=0.3.2"
 tokio-websockets = { version = "=0.13.3", features = ["client", "native-tls", "sha1_smol", "fastrand"] }
 
+base64 = "0.22"
+flate2 = "1"
+
 [dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
 tokio-websockets = { version = "=0.13.3", features = ["server"] }
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }

@@ -75,6 +75,17 @@ actor APIClient {
             queryItems: [URLQueryItem(name: "season", value: String(season))], token: token)
     }
 
+    func mapData(path: String, token: String?) async throws -> Data {
+        var request = try makeRequest(path: path, queryItems: [])
+        applyToken(token, to: &request)
+        let (data, response) = try await data(for: request)
+        try validate(response: response, data: data)
+        if path.hasPrefix("/api/v1/weather/tiles/"), (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "X-PitPulse-Stale") == "true" {
+            throw APIClientError.transport("雷达瓦片已过期，请稍后重试")
+        }
+        return data
+    }
+
     func liveStream(
         token: String?,
         onSnapshot: @escaping @MainActor @Sendable (LiveSnapshot) async -> Void

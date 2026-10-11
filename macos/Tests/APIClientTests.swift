@@ -233,6 +233,23 @@ final class APIClientTests: XCTestCase {
     }
     """#
 
+    func testMapResourcesStayAuthenticatedAndStaleRadarIsRejected() async throws {
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
+            return Self.response(for: request, headers: ["Content-Type":"image/png", "X-PitPulse-Stale":"true"], body: "cached")
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        do {
+            _ = try await client.mapData(path: "/api/v1/weather/tiles/radar/1/0/0/0", token: "secret")
+            XCTFail("Expected stale radar error")
+        } catch let error as APIClientError {
+            guard case .transport = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        URLProtocolStub.handler = { request in Self.response(for: request, body: "public config") }
+        let config = try await client.mapData(path: "/api/v1/maps/config", token: "secret")
+        XCTAssertEqual(config, Data("public config".utf8))
+    }
+
     private static func session() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

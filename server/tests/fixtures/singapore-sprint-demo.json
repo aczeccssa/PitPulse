@@ -1,0 +1,1086 @@
+{
+  "description": "Synthetic visual demo only. Timing order, laps, weather, telemetry and positions are invented; not Singapore 2026 race results or a recorded feed. Circuit/session metadata matches the server calendar.",
+  "meeting": {
+    "circuit": {
+      "id": "circuit_DAiie4ft",
+      "latitude": 1.2914,
+      "longitude": 103.864,
+      "name": "Marina Bay Street Circuit"
+    },
+    "country": "Singapore",
+    "countryCode": "SG",
+    "endDate": "2026-10-11T12:00:00Z",
+    "id": "2026:17",
+    "location": "Marina Bay",
+    "name": "Singapore Grand Prix",
+    "round": 17,
+    "season": 2026,
+    "sessions": [
+      {
+        "endTime": "2026-10-09T09:30:00Z",
+        "id": "2026:17:fp1",
+        "jolpicaSessionId": "session_0EjgZzkY",
+        "meetingId": "2026:17",
+        "openf1SessionKey": 11378,
+        "sessionType": "fp1",
+        "startTime": "2026-10-09T08:30:00Z",
+        "status": "scheduled"
+      },
+      {
+        "endTime": "2026-10-09T13:14:00Z",
+        "id": "2026:17:sprintQualifying",
+        "jolpicaSessionId": "session_TXKnuu16",
+        "meetingId": "2026:17",
+        "openf1SessionKey": 11379,
+        "sessionType": "sprintQualifying",
+        "startTime": "2026-10-09T12:30:00Z",
+        "status": "scheduled"
+      },
+      {
+        "endTime": "2026-10-10T10:00:00Z",
+        "id": "2026:17:sprint",
+        "jolpicaSessionId": "session_KoIcSFvz",
+        "meetingId": "2026:17",
+        "openf1SessionKey": 11383,
+        "sessionType": "sprint",
+        "startTime": "2026-10-10T09:00:00Z",
+        "status": "scheduled"
+      },
+      {
+        "endTime": "2026-10-10T14:30:00Z",
+        "id": "2026:17:qualifying",
+        "jolpicaSessionId": "session_UKGSNyjM",
+        "meetingId": "2026:17",
+        "openf1SessionKey": 11384,
+        "sessionType": "qualifying",
+        "startTime": "2026-10-10T13:00:00Z",
+        "status": "scheduled"
+      },
+      {
+        "endTime": "2026-10-11T14:00:00Z",
+        "id": "2026:17:race",
+        "jolpicaSessionId": "session_mX6LKHiG",
+        "meetingId": "2026:17",
+        "openf1SessionKey": 11388,
+        "sessionType": "race",
+        "startTime": "2026-10-11T12:00:00Z",
+        "status": "scheduled"
+      }
+    ],
+    "source": "fixture_mock",
+    "startDate": "2026-10-09T08:30:00Z",
+    "status": "scheduled"
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "stateVersion": 0,
+    "sessionId": "mock-singapore-2026-sprint",
+    "sessionName": "Sprint \u00b7 MOCK",
+    "meetingName": "Singapore Grand Prix",
+    "countryCode": "SG",
+    "circuitKey": "61",
+    "circuitName": "Marina Bay Street Circuit",
+    "sourceMode": "replay",
+    "sourceStatus": "connected",
+    "statusReason": "synthetic_demo_only",
+    "sessionType": "Sprint",
+    "sessionStatus": "Started",
+    "trackStatus": "1",
+    "lapCount": 8,
+    "totalLaps": 19,
+    "drivers": [
+      {
+        "number": "12",
+        "name": "Kimi ANTONELLI",
+        "team": "Mercedes",
+        "position": 1,
+        "gap": "LEADER",
+        "interval": "LEADER",
+        "lapCount": 8,
+        "lastLap": "1:32.125",
+        "bestLap": "1:31.442",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": true,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "1",
+        "name": "Lando NORRIS",
+        "team": "McLaren",
+        "position": 2,
+        "gap": "+1.350",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:32.166",
+        "bestLap": "1:31.479",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "63",
+        "name": "George RUSSELL",
+        "team": "Mercedes",
+        "position": 3,
+        "gap": "+2.700",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:32.207",
+        "bestLap": "1:31.516",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "81",
+        "name": "Oscar PIASTRI",
+        "team": "McLaren",
+        "position": 4,
+        "gap": "+4.050",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:32.248",
+        "bestLap": "1:31.553",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "3",
+        "name": "Max VERSTAPPEN",
+        "team": "Red Bull Racing",
+        "position": 5,
+        "gap": "+5.400",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:32.289",
+        "bestLap": "1:31.590",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "16",
+        "name": "Charles LECLERC",
+        "team": "Ferrari",
+        "position": 6,
+        "gap": "+6.750",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:33.330",
+        "bestLap": "1:32.627",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "44",
+        "name": "Lewis HAMILTON",
+        "team": "Ferrari",
+        "position": 7,
+        "gap": "+8.100",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:33.371",
+        "bestLap": "1:32.664",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "6",
+        "name": "Isack HADJAR",
+        "team": "Red Bull Racing",
+        "position": 8,
+        "gap": "+9.450",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:33.412",
+        "bestLap": "1:32.701",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "55",
+        "name": "Carlos SAINZ",
+        "team": "Williams",
+        "position": 9,
+        "gap": "+10.800",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:33.453",
+        "bestLap": "1:32.738",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "14",
+        "name": "Fernando ALONSO",
+        "team": "Aston Martin",
+        "position": 10,
+        "gap": "+12.150",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:33.494",
+        "bestLap": "1:32.775",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "10",
+        "name": "Pierre GASLY",
+        "team": "Alpine",
+        "position": 11,
+        "gap": "+13.500",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:34.535",
+        "bestLap": "1:33.812",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "23",
+        "name": "Alexander ALBON",
+        "team": "Williams",
+        "position": 12,
+        "gap": "+14.850",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:34.576",
+        "bestLap": "1:33.849",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "87",
+        "name": "Oliver BEARMAN",
+        "team": "Haas F1 Team",
+        "position": 13,
+        "gap": "+16.200",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:34.617",
+        "bestLap": "1:33.886",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "30",
+        "name": "Liam LAWSON",
+        "team": "Racing Bulls",
+        "position": 14,
+        "gap": "+17.550",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:34.658",
+        "bestLap": "1:33.923",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "27",
+        "name": "Nico HULKENBERG",
+        "team": "Audi",
+        "position": 15,
+        "gap": "+18.900",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:34.699",
+        "bestLap": "1:33.960",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "31",
+        "name": "Esteban OCON",
+        "team": "Haas F1 Team",
+        "position": 16,
+        "gap": "+20.250",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:35.740",
+        "bestLap": "1:34.997",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "41",
+        "name": "Arvid LINDBLAD",
+        "team": "Racing Bulls",
+        "position": 17,
+        "gap": "+21.600",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:35.781",
+        "bestLap": "1:34.034",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "5",
+        "name": "Gabriel BORTOLETO",
+        "team": "Audi",
+        "position": 18,
+        "gap": "+22.950",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:35.822",
+        "bestLap": "1:34.071",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "43",
+        "name": "Franco COLAPINTO",
+        "team": "Alpine",
+        "position": 19,
+        "gap": "+24.300",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:35.863",
+        "bestLap": "1:34.108",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "18",
+        "name": "Lance STROLL",
+        "team": "Aston Martin",
+        "position": 20,
+        "gap": "+25.650",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:35.904",
+        "bestLap": "1:34.145",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "11",
+        "name": "Sergio PEREZ",
+        "team": "Cadillac",
+        "position": 21,
+        "gap": "+27.000",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:36.945",
+        "bestLap": "1:35.182",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      },
+      {
+        "number": "77",
+        "name": "Valtteri BOTTAS",
+        "team": "Cadillac",
+        "position": 22,
+        "gap": "+28.350",
+        "interval": "+1.350",
+        "lapCount": 8,
+        "lastLap": "1:36.986",
+        "bestLap": "1:35.219",
+        "inPit": false,
+        "retired": false,
+        "sectors": [
+          {
+            "value": "28.142",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "39.613",
+            "personalFastest": true,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2049,
+              2048
+            ]
+          },
+          {
+            "value": "24.801",
+            "personalFastest": false,
+            "overallFastest": false,
+            "segments": [
+              2049,
+              2051,
+              2048
+            ]
+          }
+        ]
+      }
+    ],
+    "raceControl": [],
+    "teamRadio": []
+  }
+}

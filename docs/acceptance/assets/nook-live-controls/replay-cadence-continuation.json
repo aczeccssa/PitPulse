@@ -1,0 +1,11 @@
+{
+  "sourceMode": [
+    "replay"
+  ],
+  "events": 62,
+  "measuredSeconds": 6.087,
+  "updatesPerSecond": 10.02,
+  "meanIntervalMs": 99.78,
+  "distinctVersions": 62,
+  "note": "Isolated synthetic Singapore Sprint replay measured during continuation; no real feed or UI frame-rate evidence."
+}
