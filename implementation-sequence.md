@@ -322,11 +322,12 @@ xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion \
 
 T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、天气与雷达；T19 消息与音频依赖 T16；T20 综合验收依赖 T17–T19。当前进度只记录在 tasks.json。
 
-- T16：Position.z / CarData.z 有界解码、逐字段更新与时间、WeatherData / TeamRadio、最多 10 Hz SSE（100ms 合并），保持慢消费者只取最新状态、连接状态立即发送；实际遥测频率受上游采样限制。
-- T17：WKWebView + 固定版本 Mapbox GL JS Standard 夜间 3D，赛道几何与版本化校准；整圈居中、车队颜色/车号、位置插值、地点标签隐藏、收起/隐藏后恢复展示选项与相机。至少三个控制点拟合、独立点误差 ≤20m；首批为新加坡当前布局及下一站。未校准不得产生车位。Mapbox 渲染资源直连为第三方网络规则的明确例外，其余数据经 Rust adapter。
+- T16：Position.z / CarData.z 有界解码、逐字段更新与时间、WeatherData / TeamRadio、最多 10 Hz SSE（100ms 合并），保持慢消费者只取最新状态、连接状态立即发送；位置与遥测用独立 `receivedAt` 判断样本新鲜度，重复帧和初始化快照不续期，停流 10 秒清除实时位置/遥测；实际遥测频率受上游采样限制。
+- T17：WKWebView + 固定版本 Mapbox GL JS Standard 夜间 3D，赛道几何与版本化校准；应用内共享 MapStore、交互小地图按需创建、隐藏暂停后复用，同 token 换数据服务器不重新初始化，token 变化/进程故障/隐藏实例内存压力才释放；整圈居中、车队颜色/车号、位置插值、地点标签隐藏、收起/隐藏后恢复展示选项与相机。至少三个控制点拟合、独立点误差 ≤20m；首批为新加坡当前布局及下一站。未校准不得产生车位。Mapbox 渲染资源直连为第三方网络规则的明确例外，其余数据经 Rust adapter。
 - T18：Jolpica 赛道经纬度持久化，比赛首页和赛历列表/地图切换；Open-Meteo 近期预报、RainViewer 历史两小时雷达与覆盖状态。
 - T19：固定可见的 Race Control / Team Radio 分页及消息条数，详情默认折叠、按需展开；明确的全部/指定车手过滤和空态，手动单条音频播放；鉴权下载、固定上游路径和隐藏/折叠清理。
 - T20：Rust/Xcode/任务校验、真实 Notch/floating/键盘/VoiceOver；回放与真实 Mapbox、赛事 feed 分开验收。不新增独立 Live 窗口，不做未来雷达、转写、追车镜头或全季一次性校准。
+- T21：鉴权手动刷新以当前菜单页面为优先目标，复用 scheduler/provider 与 `sync_state` 的限流窗口；同目标请求合并，其余页面数据后台刷新并通过 Live SSE 的 `dataRefresh` 事件通知。客户端点击后先读本地服务缓存，完成后重读当前页；菜单打开、切页与 SSE 重连补读缓存，旧服务器/赛季/Session 响应不得覆盖当前状态。
 
 ### T16 — Live 数据扩展
 
@@ -347,3 +348,23 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 ### T20 — 综合验收
 
 范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+### T21 — 菜单栏手动刷新与服务端优先队列
+
+范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+
+## 多系列 Live 扩展（M6）
+
+在 F1 默认行为不变的前提下，用 opt-in 适配器验证第二个赛事数据源。M6 只覆盖 Live 快照与客户端数据源切换；WEC 赛历、成绩、积分与 SQLite 多系列维度留到后续里程碑。上游使用 FIA WEC 官方 Live Timing 背后的 Griiip 公开接口，未文档化，必须保持 feature flag、低频率轮询与明确的 `stale` / `disconnected` 降级。
+
+### T22 — WEC Live PoC（Griiip 公开接口）
+
+**范围**：`server/src/providers/wec_live.rs`、`server/src/config.rs`、`server/src/app_state.rs`、`server/src/scheduler.rs`、`server/src/api/`、`macos/Core/LiveStore/`、`macos/App/AppModel.swift`、`macos/Features/Preferences/PreferencesView.swift`、`macos/Features/LiveIsland/LiveIsland.swift`、`docs/acceptance/wec-live-poc.md`。
+
+**验收**：默认关闭；F1 快照与 SSE 不变；`series=wec` 返回独立 Live 状态；WEC bootstrap 映射多组别、车组、计时赛剩余时间、天气与赛会消息；macOS 可切换数据源并显示组别/FCY/剩余时间；用真实 WEC Live 会话验证快照；Rust 测试、macOS 目标编译与任务报告校验通过。原始抓取载荷、凭证与机器私有路径不得进入仓库或任务报告。
+
+### T23 — Live Island 展示增强与双系列切换
+
+**范围**：`server/src/domain/live.rs`、`server/src/providers/f1_live/`、`server/src/providers/wec_live.rs`、`macos/Core/LiveStore/`、`macos/Core/Models/`、`macos/Features/LiveIsland/`、`macos/Features/MenuBar/`。
+
+**验收**：F1 从 `Stints` topic、WEC 从 bootstrap 映射轮胎；WEC 映射虚拟能量与制造商；计时表可切换 Gap、轮胎、虚拟能量列并持久化；关注车手焦点卡展示头盔、车队 logo（或首字母徽章）与本地车身剪影，不联网抓取第三方素材；Live Island 与菜单栏可在 F1/WEC 同时进行时随时切换；真实 WEC 数据、replay fixture、Rust 测试与 macOS 编译通过。

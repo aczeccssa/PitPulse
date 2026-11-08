@@ -188,6 +188,19 @@ struct PreferencesView: View {
 
     private var liveIslandSettings: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Picker("实时数据源", selection: Binding(
+                get: { model.liveSeries },
+                set: { model.setLiveSeries($0) }
+            )) {
+                ForEach(LiveSeries.allCases) { series in
+                    Text(series.title).tag(series)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("preferences.liveSeries")
+            Text("WEC 使用 FIA WEC 官方 Live Timing 的公开数据，目前为 PoC；赛历、成绩与积分仍为 F1。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
             Toggle("Session 期间自动显示 Notch", isOn: Binding(
                 get: { model.notchAutoShowEnabled },
                 set: { model.setNotchAutoShowEnabled($0) }
@@ -217,7 +230,7 @@ struct PreferencesView: View {
                 set: { model.setFavoriteDriver($0.isEmpty ? nil : $0) }
             )) {
                 Text("不关注").tag("")
-                ForEach(model.favoriteDrivers) { driver in
+                ForEach(LiveIslandLogic.favorites(for: .f1, in: model.favoriteDrivers)) { driver in
                     Text(driver.name).tag(driver.id)
                 }
             }

@@ -64,11 +64,21 @@ impl DisconnectionHandler for DisconnectNotifier {
 pub struct F1LiveClient {
     pub enabled: bool,
     pub base_url: String,
+    pub interface: Option<String>,
 }
 
 impl F1LiveClient {
     pub const fn new(enabled: bool, base_url: String) -> Self {
-        Self { enabled, base_url }
+        Self {
+            enabled,
+            base_url,
+            interface: None,
+        }
+    }
+
+    pub fn with_interface(mut self, interface: Option<String>) -> Self {
+        self.interface = interface;
+        self
     }
 
     pub async fn run(
@@ -96,6 +106,18 @@ impl F1LiveClient {
         let overflow_signal = disconnected_tx.clone();
         let token = access_token.filter(|token| !token.trim().is_empty());
         let fallback_token = token.clone();
+        if let Some(interface) = self.interface.as_deref() {
+            // Binding outbound sockets to a physical interface bypasses a transparent
+            // proxy/TUN that would otherwise route the live feed through a blocked egress.
+            return super::protocol::run_cookie_transport(
+                &self.base_url,
+                fallback_token.as_deref(),
+                Some(interface),
+                updates,
+                &mut stop,
+            )
+            .await;
+        }
         let connect = tokio::time::timeout(
             CONNECT_TIMEOUT,
             SignalRClient::connect_with(&domain, &hub, move |config| {
@@ -117,6 +139,7 @@ impl F1LiveClient {
                 return super::protocol::run_cookie_transport(
                     &self.base_url,
                     fallback_token.as_deref(),
+                    self.interface.as_deref(),
                     updates,
                     &mut stop,
                 )

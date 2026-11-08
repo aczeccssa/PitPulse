@@ -46,8 +46,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var reminderMessage: String?
     @Published private(set) var reminderPermissionDenied = false
     @Published private(set) var favoriteDriverId: String?
+    @Published private(set) var favoriteWecDriverId: String?
+    @Published private(set) var favoriteWecDriverName: String?
     @Published private(set) var notchAutoShowEnabled: Bool
     @Published private(set) var notchCollapseOnMouseExit: Bool
+    @Published private(set) var liveSeries: LiveSeries
 
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
@@ -55,6 +58,7 @@ final class AppModel: ObservableObject {
     private let reminderCenter: any SessionReminderCenter
     private let networkMonitor: any NetworkPathMonitoring
     let liveStore = LiveStore()
+    let mapStore = MapStore()
     private let retryDelays: [TimeInterval]
     private var generation = 0
     private var resultGeneration = 0
@@ -69,6 +73,9 @@ final class AppModel: ObservableObject {
     private var retryTask: Task<Void, Never>?
     private var activeRefreshTask: Task<Void, Never>?
     private var activeRefreshID: UUID?
+    private var manualRefreshTask: Task<Void, Never>?
+    private var manualRefreshID: UUID?
+    private var isManualRefreshActive = false
     private var retryAttempt = 0
     private var networkAvailable = true
 
@@ -95,9 +102,12 @@ final class AppModel: ObservableObject {
         let savedMinutes = defaults.object(forKey: PreferenceKeys.reminderMinutes) as? Int ?? 15
         self.reminderMinutes = SessionReminderPlanner.allowedMinutes.contains(savedMinutes) ? savedMinutes : 15
         self.favoriteDriverId = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
+        self.favoriteWecDriverId = defaults.string(forKey: PreferenceKeys.favoriteWecDriverId)
+        self.favoriteWecDriverName = defaults.string(forKey: PreferenceKeys.favoriteWecDriverName)
         self.notchAutoShowEnabled = defaults.object(forKey: PreferenceKeys.notchAutoShowEnabled) == nil
             ? true : defaults.bool(forKey: PreferenceKeys.notchAutoShowEnabled)
         self.notchCollapseOnMouseExit = defaults.bool(forKey: PreferenceKeys.notchCollapseOnMouseExit)
+        self.liveSeries = LiveSeries(rawValue: defaults.string(forKey: PreferenceKeys.liveSeries) ?? "") ?? .f1
 
         let savedAddress = defaults.string(forKey: PreferenceKeys.serverAddress)
         let fallbackAddress = "http://localhost:38701"
@@ -107,6 +117,16 @@ final class AppModel: ObservableObject {
 
         let currentYear = Calendar.current.component(.year, from: Date())
         self.selectedSeason = defaults.object(forKey: PreferenceKeys.selectedSeason) as? Int ?? currentYear
+        self.liveStore.onDataRefresh = { [weak self] event in
+            Task { @MainActor [weak self] in await self?.handleDataRefresh(event) }
+        }
+        self.liveStore.onStreamConnected = { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                await self.refreshCalendar()
+                await self.refreshPageData()
+            }
+        }
         self.workspaceObservers = [NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification].map { name in
             NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -146,12 +166,6 @@ final class AppModel: ObservableObject {
         LiveIslandLogic.currentScheduledSession(in: meetings, now: Date())
     }
 
-    func islandFlag(for snapshot: LiveSnapshot) -> String {
-        let meeting = LiveIslandLogic.meeting(for: snapshot, in: meetings, now: Date())
-            ?? currentIslandSession?.meeting
-        return CountryFlag.emoji(for: meeting?.countryCode) ?? "🌐"
-    }
-
     func plannedIslandSessionLabel(for snapshot: LiveSnapshot, now: Date = Date()) -> String {
         if let currentIslandSession = LiveIslandLogic.currentScheduledSession(in: meetings, now: now) {
             return currentIslandSession.session.sessionType.displayName
@@ -184,7 +198,12 @@ final class AppModel: ObservableObject {
         var names: [String: String] = [:]
         (driverStandings.map { ($0.driverId, $0.driverName) } + sessionResults.map { ($0.driverId, $0.driverName) })
             .forEach { names[$0.0] = $0.1 }
-        if let favoriteDriverId, names[favoriteDriverId] == nil { names[favoriteDriverId] = favoriteDriverId }
+        if let favoriteDriverId, names[favoriteDriverId] == nil {
+            names[favoriteDriverId] = favoriteDriverId
+        }
+        if let favoriteWecDriverId, names[favoriteWecDriverId] == nil {
+            names[favoriteWecDriverId] = favoriteWecDriverName ?? favoriteWecDriverId
+        }
         return names.map { FavoriteDriver(id: $0.key, name: $0.value) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
@@ -206,12 +225,10 @@ final class AppModel: ObservableObject {
             Task { await bootstrap() }
             return
         }
-        if let lastSuccessfulAttemptAt,
-           Date().timeIntervalSince(lastSuccessfulAttemptAt) < Self.refreshInterval {
-            return
+        Task {
+            await refreshCalendar()
+            await refreshPageData()
         }
-        Task { await refreshPageData() }
-        refresh(force: true)
     }
 
     func popupDidDisappear() {
@@ -359,12 +376,107 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshPageData() async {
+    func refreshPageData(target: ManualRefreshTarget? = nil) async {
+        if target == .calendar {
+            await refreshCalendar()
+            return
+        }
         if selectedResultSessionID == nil {
             selectedResultSessionID = availableResultSessions.first?.session.id
         }
-        await refreshResults()
-        await refreshStandings()
+        if target == nil || target == .results { await refreshResults() }
+        if target == nil || target == .standings { await refreshStandings() }
+    }
+
+    func refreshCurrentPage(target: ManualRefreshTarget) {
+        guard !isManualRefreshActive else { return }
+        guard let server = configuredServer else {
+            errorMessage = APIClientError.invalidServerAddress(serverAddress).localizedDescription
+            return
+        }
+        if target == .results, selectedResultSessionID == nil {
+            selectedResultSessionID = availableResultSessions.first?.session.id
+        }
+        guard target != .results || selectedResultSessionID != nil else {
+            resultError = "当前赛季没有可刷新的 Session。"
+            return
+        }
+
+        let season = selectedSeason
+        let sessionID = target == .results ? selectedResultSessionID : nil
+        let requestID = UUID()
+        manualRefreshID = requestID
+        isManualRefreshActive = true
+        isRefreshing = true
+        manualRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.manualRefreshID == requestID {
+                    self.manualRefreshID = nil
+                    self.manualRefreshTask = nil
+                    self.isManualRefreshActive = false
+                    self.isRefreshing = false
+                }
+            }
+            await self.refreshPageData(target: target)
+            guard server == self.configuredServer, season == self.selectedSeason,
+                  target != .results || sessionID == self.selectedResultSessionID,
+                  self.networkAvailable, !Task.isCancelled else { return }
+            do {
+                let token = try self.credentials.token(for: server.url)
+                let client = APIClient(baseURL: server.url, session: self.session)
+                let event = try await client.refresh(target: target, season: season, sessionId: sessionID, token: token)
+                guard server == self.configuredServer, season == self.selectedSeason,
+                      target != .results || sessionID == self.selectedResultSessionID else { return }
+                if event.status == .completed || event.status == .partial {
+                    await self.refreshPageData(target: target)
+                } else {
+                    self.setRefreshError(event, target: target)
+                }
+            } catch {
+                guard server == self.configuredServer, season == self.selectedSeason,
+                      target != .results || sessionID == self.selectedResultSessionID else { return }
+                self.setRefreshError(error, target: target)
+            }
+        }
+    }
+
+    func menuSectionDidChange(target: ManualRefreshTarget) {
+        Task { await refreshPageData(target: target) }
+    }
+
+    private func handleDataRefresh(_ event: DataRefreshEvent) async {
+        guard !isManualRefreshActive else { return }
+        guard event.season == selectedSeason,
+              event.status != .inProgress else { return }
+        if event.target == .results, event.sessionId != selectedResultSessionID { return }
+        switch event.status {
+        case .completed, .partial:
+            await refreshPageData(target: event.target)
+        case .failed, .rateLimited:
+            setRefreshError(event, target: event.target)
+        case .inProgress:
+            break
+        }
+    }
+
+    private func setRefreshError(_ event: DataRefreshEvent, target: ManualRefreshTarget) {
+        let message = event.status == .rateLimited
+            ? "上游限流，稍后再试。\(event.retryAfter.map { "下次尝试：\($0)" } ?? "")"
+            : "上游刷新失败，保留现有缓存。"
+        switch target {
+        case .calendar: errorMessage = message
+        case .results: resultError = message
+        case .standings: standingsError = message
+        }
+    }
+
+    private func setRefreshError(_ error: Error, target: ManualRefreshTarget) {
+        switch target {
+        case .calendar: errorMessage = error.localizedDescription
+        case .results: resultError = error.localizedDescription
+        case .standings: standingsError = error.localizedDescription
+        }
     }
 
     func refresh(force: Bool = false) {
@@ -554,10 +666,24 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func setFavoriteDriver(_ id: String?) {
-        favoriteDriverId = id
-        if let id { defaults.set(id, forKey: PreferenceKeys.favoriteDriverId) }
-        else { defaults.removeObject(forKey: PreferenceKeys.favoriteDriverId) }
+    func favoriteDriverId(for series: LiveSeries) -> String? {
+        series == .wec ? favoriteWecDriverId : favoriteDriverId
+    }
+
+    func setFavoriteDriver(_ id: String?, name: String? = nil, series: LiveSeries = .f1) {
+        if series == .wec {
+            favoriteWecDriverId = id
+            // WEC drivers are not in the F1 roster, so keep a display name with the id.
+            favoriteWecDriverName = id == nil ? nil : name
+            if let id { defaults.set(id, forKey: PreferenceKeys.favoriteWecDriverId) }
+            else { defaults.removeObject(forKey: PreferenceKeys.favoriteWecDriverId) }
+            if let favoriteWecDriverName { defaults.set(favoriteWecDriverName, forKey: PreferenceKeys.favoriteWecDriverName) }
+            else { defaults.removeObject(forKey: PreferenceKeys.favoriteWecDriverName) }
+        } else {
+            favoriteDriverId = id
+            if let id { defaults.set(id, forKey: PreferenceKeys.favoriteDriverId) }
+            else { defaults.removeObject(forKey: PreferenceKeys.favoriteDriverId) }
+        }
     }
 
     func setNotchAutoShowEnabled(_ enabled: Bool) {
@@ -568,6 +694,15 @@ final class AppModel: ObservableObject {
     func setNotchCollapseOnMouseExit(_ enabled: Bool) {
         notchCollapseOnMouseExit = enabled
         defaults.set(enabled, forKey: PreferenceKeys.notchCollapseOnMouseExit)
+    }
+
+    func setLiveSeries(_ series: LiveSeries) {
+        guard series != liveSeries else { return }
+        liveSeries = series
+        defaults.set(series.rawValue, forKey: PreferenceKeys.liveSeries)
+        if didBootstrap {
+            startLiveStream()
+        }
     }
 
     func ensureDriverStandingsLoaded() {
@@ -621,6 +756,10 @@ final class AppModel: ObservableObject {
         activeRefreshTask?.cancel()
         activeRefreshTask = nil
         activeRefreshID = nil
+        manualRefreshTask?.cancel()
+        manualRefreshTask = nil
+        manualRefreshID = nil
+        isManualRefreshActive = false
         isRefreshing = false
         retryTask?.cancel()
         popupRefreshTask?.cancel()
@@ -650,7 +789,11 @@ final class AppModel: ObservableObject {
     private func startLiveStream() {
         guard didBootstrap, networkAvailable, let server = configuredServer else { return }
         do {
-            liveStore.start(serverURL: server.url, token: try credentials.token(for: server.url))
+            liveStore.start(
+                serverURL: server.url,
+                token: try credentials.token(for: server.url),
+                series: liveSeries
+            )
         } catch {
             liveStore.stop(reason: "credentials_unavailable")
         }
@@ -688,6 +831,10 @@ final class AppModel: ObservableObject {
         activeRefreshTask?.cancel()
         activeRefreshTask = nil
         activeRefreshID = nil
+        manualRefreshTask?.cancel()
+        manualRefreshTask = nil
+        manualRefreshID = nil
+        isManualRefreshActive = false
         retryTask?.cancel()
         resultGeneration += 1
         standingsGeneration += 1
@@ -774,7 +921,7 @@ final class AppModel: ObservableObject {
             if !unauthorized { Task { await refreshPageData() } }
             scheduleRetry(for: error)
         }
-        if requestGeneration == generation { isRefreshing = false }
+        if requestGeneration == generation && !isManualRefreshActive { isRefreshing = false }
     }
 
     private func scheduleRetry(for error: Error) {
@@ -879,9 +1026,12 @@ final class AppModel: ObservableObject {
 enum PreferenceKeys {
     static let serverAddress = "serverAddress"
     static let selectedSeason = "selectedSeason"
+    static let liveSeries = "liveSeries"
     static let remindersEnabled = "remindersEnabled"
     static let reminderMinutes = "reminderMinutes"
     static let favoriteDriverId = "favoriteDriverId"
+    static let favoriteWecDriverId = "favoriteWecDriverId"
+    static let favoriteWecDriverName = "favoriteWecDriverName"
     static let notchAutoShowEnabled = "notchAutoShowEnabled"
     static let notchCollapseOnMouseExit = "notchCollapseOnMouseExit"
 }

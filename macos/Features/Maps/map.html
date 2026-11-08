@@ -7,7 +7,7 @@
 <script>
 'use strict';
 let map, loaded=false, current, selected=null, following=false, paused=false;
-let cameraKey=null, geometryKey=null, markersKey=null, fittedGeometryKey=null;
+let cameraKey=null, geometryKey=null, markersKey=null, fittedGeometryKey=null, diagnosticKey=null;
 let pendingRadar=null, radarLayer=null, failedStatus=null, animation=null, lastDraw=0;
 const motions=new Map(), meetingMarkers=[];
 const status=document.getElementById('status');
@@ -48,6 +48,8 @@ function drawCars(now){
  if(!loaded||paused)return;
  const cars=[...motions.values()].map(m=>({type:'Feature',geometry:{type:'Point',coordinates:position(m,now)},properties:{number:m.car.number,color:m.car.color??'#94A3B8',selected:m.car.number===selected}}));
  source('cars',{type:'FeatureCollection',features:cars});
+ const diagnostic={...(current.positionDiagnostics??{}),accepted:current.clientAccepted??0,drawn:cars.length};
+ const nextDiagnostic=JSON.stringify(diagnostic);if(nextDiagnostic!==diagnosticKey){diagnosticKey=nextDiagnostic;signal('positionDiagnostics',diagnostic);}
  if(following){const car=cars.find(c=>c.properties.number===selected);if(car)map.jumpTo({center:car.geometry.coordinates});}
 }
 function animateCars(now){
@@ -94,8 +96,9 @@ window.updateMap=function(d){
  }else{if(wasPaused)map.resize();render();}
 };
 window.setRadar=function(frame){pendingRadar=frame;if(!loaded)return;if(radarLayer===frame)return;if(radarLayer!==null){map.removeLayer('radar');map.removeSource('radar');radarLayer=null;}if(frame!==null){if(!map.getSource('coverage')){map.addSource('coverage',{type:'raster',tiles:['pitpulse-radar://coverage/0/{z}/{x}/{y}'],tileSize:256,maxzoom:7});map.addLayer({id:'coverage',type:'raster',source:'coverage',slot:'top',paint:{'raster-opacity':0.45}});}map.addSource('radar',{type:'raster',tiles:[`pitpulse-radar://radar/${frame}/{z}/{x}/{y}`],tileSize:256,maxzoom:7});map.addLayer({id:'radar',type:'raster',source:'radar',slot:'top',paint:{'raster-opacity':0.65,'raster-fade-duration':0}});radarLayer=frame;}else if(map.getLayer('coverage')){map.removeLayer('coverage');map.removeSource('coverage');}};
-window.pauseMap=()=>{paused=true;if(animation)cancelAnimationFrame(animation);animation=null;if(map){rememberCamera();map.stop();}};
-window.disposeMap=()=>{window.pauseMap();if(map)map.remove();map=null;loaded=false;cameraKey=null;geometryKey=null;markersKey=null;fittedGeometryKey=null;failedStatus=null;radarLayer=null;pendingRadar=null;motions.clear();meetingMarkers.splice(0).forEach(m=>m.remove());};
+window.pauseMap=()=>{paused=true;if(animation)cancelAnimationFrame(animation);animation=null;if(map){rememberCamera();map.stop();window.setRadar(null);}};
+window.resizeMap=()=>{if(map)requestAnimationFrame(()=>map&&map.resize());};
+window.disposeMap=()=>{window.pauseMap();if(map)map.remove();map=null;loaded=false;cameraKey=null;geometryKey=null;markersKey=null;fittedGeometryKey=null;diagnosticKey=null;failedStatus=null;radarLayer=null;pendingRadar=null;motions.clear();meetingMarkers.splice(0).forEach(m=>m.remove());};
 document.getElementById('dimension').onclick=()=>{if(!map)return;const pitch=map.getPitch()>0?0:55;if(following)map.jumpTo({pitch});else map.easeTo({pitch});document.getElementById('dimension').textContent=pitch>0?'3D':'2D';};
 document.getElementById('reset').onclick=()=>{if(map&&current)resetCamera();};
 document.getElementById('follow').onclick=()=>{if(!map)return;following=!following;document.getElementById('follow').setAttribute('aria-pressed',String(following));if(following)map.jumpTo({zoom:16.5,pitch:55});rememberCamera();drawCars(performance.now());};

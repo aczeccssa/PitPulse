@@ -5,7 +5,6 @@ struct CalendarView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selectedMeeting: Meeting?
     @State private var showMap = false
-    @StateObject private var map = MapStore()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,8 +16,8 @@ struct CalendarView: View {
                 seasonPicker
                 Divider()
                 if showMap && !model.meetings.isEmpty {
-                    MapView(store: map, meetings: model.meetings).frame(maxHeight: .infinity)
-                    if let error = map.error { Text(error).font(.caption).padding(8) }
+                    MapView(store: model.mapStore, meetings: model.meetings).frame(maxHeight: .infinity)
+                    if let error = model.mapStore.error { Text(error).font(.caption).padding(8) }
                 } else if model.meetings.isEmpty {
                     emptyState
                 } else {
@@ -59,11 +58,11 @@ struct CalendarView: View {
         }
         .task(id: "\(model.serverAddress)-\(model.selectedSeason)-\(showMap)") {
             if showMap {
-                await map.load(model: model, meeting: nil)
-                map.onMeeting = { id in selectedMeeting = model.meetings.first { $0.id == id } }
-            } else { map.release() }
+                await model.mapStore.load(model: model, meeting: nil)
+                model.mapStore.onMeeting = { id in selectedMeeting = model.meetings.first { $0.id == id } }
+            } else { model.mapStore.pause() }
         }
-        .onDisappear { map.release() }
+        .onDisappear { model.mapStore.pause() }
         .onChange(of: model.selectedSeason) { _, _ in selectedMeeting = nil }
         .onChange(of: model.serverAddress) { _, _ in selectedMeeting = nil }
     }

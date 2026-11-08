@@ -123,6 +123,19 @@ async fn test_bearer_token_is_enforced_when_enabled() {
         .unwrap();
     assert_eq!(missing_constructor.status(), StatusCode::UNAUTHORIZED);
 
+    let missing_refresh = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/refresh")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"season":2026,"target":"calendar"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(missing_refresh.status(), StatusCode::UNAUTHORIZED);
+
     let authorized = server::router(state.clone())
         .oneshot(
             Request::builder()
@@ -184,6 +197,44 @@ async fn test_unknown_session_and_invalid_standings_season_are_rejected() {
         .await
         .unwrap();
     assert_eq!(invalid_zero.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_manual_refresh_requires_valid_target_and_session_scope() {
+    let (state, _temp) = test_state().await;
+    let router = server::router(state);
+    for (body, expected) in [
+        (
+            r#"{"season":1949,"target":"calendar"}"#,
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            r#"{"season":2026,"target":"results"}"#,
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            r#"{"season":2026,"target":"calendar","sessionId":"unknown"}"#,
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            r#"{"season":2026,"target":"results","sessionId":"unknown"}"#,
+            StatusCode::NOT_FOUND,
+        ),
+    ] {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/refresh")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected);
+    }
 }
 
 #[tokio::test]

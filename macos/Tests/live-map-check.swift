@@ -2,6 +2,26 @@
 import Foundation
 import SwiftUI
 
+final class RefreshURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            client?.urlProtocol(self, didFailWithError: URLError(.unknown))
+            return
+        }
+        let (response, data) = handler(request)
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     var requests = 0
@@ -22,6 +42,43 @@ enum MotorsportAsset {
 struct LiveMapCheck {
     @MainActor
     static func main() async throws {
+        let refreshConfiguration = URLSessionConfiguration.ephemeral
+        refreshConfiguration.protocolClasses = [RefreshURLProtocol.self]
+        let refreshSession = URLSession(configuration: refreshConfiguration)
+        RefreshURLProtocol.handler = { request in
+            precondition(request.httpMethod == "POST")
+            precondition(request.value(forHTTPHeaderField: "Authorization") == "Bearer mock-token")
+            let bodyData: Data
+            if let body = request.httpBody {
+                bodyData = body
+            } else {
+                let stream = request.httpBodyStream!
+                stream.open()
+                defer { stream.close() }
+                var bytes = [UInt8](repeating: 0, count: 1024)
+                var data = Data()
+                while stream.hasBytesAvailable {
+                    let count = stream.read(&bytes, maxLength: bytes.count)
+                    if count <= 0 { break }
+                    data.append(contentsOf: bytes.prefix(count))
+                }
+                bodyData = data
+            }
+            let body = try! JSONSerialization.jsonObject(with: bodyData) as! [String: Any]
+            precondition(body["season"] as? Int == 2026 && body["target"] as? String == "results")
+            precondition(body["sessionId"] as? String == "2026:17:race")
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, Data(#"{"target":"results","season":2026,"sessionId":"2026:17:race","status":"completed","updatedAt":"2026-10-12T00:00:00Z","retryAfter":null}"#.utf8))
+        }
+        let refreshClient = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: refreshSession)
+        let refreshEvent = try await refreshClient.refresh(target: .results, season: 2026, sessionId: "2026:17:race", token: "mock-token")
+        precondition(refreshEvent.status == .completed && refreshEvent.sessionId == "2026:17:race")
+        refreshSession.invalidateAndCancel()
+        RefreshURLProtocol.handler = nil
+
         let decoder = JSONDecoder()
         let old = try decoder.decode(LiveSnapshot.self, from: Data(#"{"schemaVersion":1,"stateVersion":1,"sourceStatus":"connected","sourceMode":"live","drivers":[{"number":"44"}]}"#.utf8))
         precondition(old.weather == nil && old.teamRadio == nil && old.drivers[0].location == nil)
@@ -30,6 +87,10 @@ struct LiveMapCheck {
         precondition(!LiveFreshness.isFresh(driver.telemetry?.utc, now: now))
         precondition(LiveFreshness.isFresh(driver.location?.utc, now: now))
         precondition(driver.location?.longitude == nil)
+        let delayed = try decoder.decode(LiveDriver.self, from: Data(#"{"number":"44","location":{"x":100,"y":200,"utc":"2026-10-10T10:00:00Z","receivedAt":"2026-10-10T10:00:11Z"}}"#.utf8))
+        precondition(LiveFreshness.age(delayed.location?.utc, now: now) == 12)
+        precondition(LiveFreshness.isFresh(delayed.location?.receivedAt, now: now))
+        precondition(!LiveFreshness.isFresh(delayed.location?.receivedAt, now: now.addingTimeInterval(11)))
         let redBull = try decoder.decode(LiveDriver.self, from: Data(#"{"number":"3","team":"Red Bull Racing"}"#.utf8))
         let mercedes = try decoder.decode(LiveDriver.self, from: Data(#"{"number":"12","team":"Mercedes"}"#.utf8))
         precondition(redBull.teamColorHex == "#3671C6" && mercedes.teamColorHex == "#27F4D2")
@@ -53,9 +114,11 @@ struct LiveMapCheck {
         try await Task.sleep(for: .milliseconds(450))
         precondition(model.requests == 2 && player.loadingID == nil && player.playingID == nil && player.error == nil && player.progress == 0)
         let maps = MapStore(), mapModel = AppModel()
+        var oldGeometryStarted = false
         mapModel.response = { path in
             if path == "/api/v1/maps/config" { return Data(#"{"data":{"publicToken":"pk.test"}}"#.utf8) }
             if path.contains("2026:17") {
+                oldGeometryStarted = true
                 await withCheckedContinuation { continuation in DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { continuation.resume() } }
                 throw URLError(.timedOut)
             }
@@ -63,10 +126,11 @@ struct LiveMapCheck {
         }
         let newer = try decoder.decode(Meeting.self, from: Data(#"{"id":"2026:18","season":2026,"name":"Austin","country":"USA","location":"Austin","startDate":"2026-10-23T00:00:00Z","endDate":"2026-10-25T00:00:00Z","status":"scheduled","sessions":[]}"#.utf8))
         let first = Task { await maps.load(model: mapModel, meeting: meeting) }
-        try await Task.sleep(for: .milliseconds(20))
+        while !oldGeometryStarted { await Task.yield() }
         await maps.load(model: mapModel, meeting: newer)
         await first.value
-        precondition(maps.error == nil && maps.publicToken == "pk.test" && maps.webView == nil)
+        precondition(maps.error == nil && maps.publicToken == "pk.test" && maps.webView == nil,
+                     "stale geometry response changed map state: error=\(String(describing: maps.error)), token=\(maps.publicToken ?? "nil"), webView=\(maps.webView != nil)")
         let requestsBeforeHide = mapModel.requests
         maps.release(preserveCamera: true)
         await maps.load(model: mapModel, meeting: newer)

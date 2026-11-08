@@ -105,6 +105,12 @@ pub enum ApiError {
     #[error("invalid query parameter {field}: {error}")]
     InvalidQuery { field: String, error: String },
 
+    #[error("refresh queue is full")]
+    RefreshQueueFull,
+
+    #[error("refresh scheduler is unavailable")]
+    RefreshUnavailable,
+
     #[error("storage error: {0}")]
     Storage(#[from] StorageError),
 }
@@ -120,6 +126,17 @@ impl IntoResponse for ApiError {
             Self::NotFound => (
                 StatusCode::NOT_FOUND,
                 Json(json!({"error": {"code": "not_found", "message": "resource not found"}})),
+            )
+                .into_response(),
+            Self::RefreshQueueFull => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                [(axum::http::header::RETRY_AFTER, "5")],
+                Json(json!({"error": {"code": "refresh_queue_full", "message": "refresh queue is full"}})),
+            )
+                .into_response(),
+            Self::RefreshUnavailable => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": {"code": "refresh_unavailable", "message": "refresh scheduler is unavailable"}})),
             )
                 .into_response(),
             Self::Storage(error) => error.into_response(),

@@ -7082,5 +7082,16 @@
    "magick -background none -density 300 -resize 512x512",
    "xcodebuild asset catalog build (see T03 history)"
   ]
+ },
+ "wecLocalCollection": {
+  "manifest": "wec-assets-2026.json",
+  "season": 2026,
+  "sourcePages": [
+   "https://www.fiawec.com/en/page/grid",
+   "https://www.fiawec.com/en/car/2026/{number}"
+  ],
+  "rightsBasis": "localAuthorizationProvidedByOwner",
+  "redistribution": "localUseOnly",
+  "notes": "WEC 官方 Grid 页面提供的车队/制造商 logo、赛车侧面图与车手官方肖像；仅本地自托管 App 使用，不对外分发，不运行时联网抓取。"
  }
 }

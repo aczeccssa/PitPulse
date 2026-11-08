@@ -56,3 +56,34 @@ RainViewer 使用 [历史雷达/覆盖 API](https://www.rainviewer.com/api/weath
 - 沿用此前停止桌面自动化和 App-host/UI 测试的限制（见 [Notch 验收记录](notch.md)）；本次没有启动主 App、测试宿主或操纵原生桌面。浏览器注册授权不扩展为原生 UI 自动化授权。
 
 有效 token 与浏览器底图已验证；下一步检查原生 WKWebView 401/403、弱网重试、雷达跨域和实际覆盖，再用正在比赛的 Session 验证 Position/CarData/WeatherData/TeamRadio、切换 Session/服务器和隐藏时清理。记录截图和具体 UTC，仍需把离线回放、真实地图与真实 feed 分开；全部通过前不得标记任务 done。
+
+## 2026-10-11 Mapbox GL JS 额度与实例生命周期方案
+
+- 官方 [GL JS 计费说明](https://docs.mapbox.com/mapbox-gl-js/guides/pricing/)确认：每次初始化 `Map` 对象计一个 Map Load；地图交互和切换图层不额外计数；单次会话最多 12 小时。当前公开[价格页](https://www.mapbox.com/pricing)列出 Map Loads for Web 每月前 50,000 次免费，但本机账号验收记录中的控制台额度是 5K，两个数字不一致；实施前应以该账号控制台显示的产品项/上限为准。
+- 官方 [GL JS API](https://docs.mapbox.com/mapbox-gl-js/api/properties/#prewarm)说明 `prewarm()` 预先创建可在后续地图之间复用的 worker，主要减少频繁创建/销毁实例时的等待。结合“每个 `Map` 初始化计费”的规则，`prewarm()` 本身不是额度优化。
+- 官方[成本管理指南](https://docs.mapbox.com/help/troubleshooting/manage-web-map-costs/)建议对非交互小地图采用静态图；需要交互的地图采用延迟初始化，并在用户需要时再创建。静态图属于独立 API 计量项，替换前需按账号实际额度核算。
+- 当前 `map.html` 只在 `window.updateMap` 且 `map == null` 时执行 `new mapboxgl.Map(...)`；同一实例上的相机、图层、车辆更新不会再次初始化。Swift `MapStore.release()` 会调用 `disposeMap()`/`map.remove()` 并丢弃 `WKWebView`，再次显示会新建实例。赛历切图、Notch 隐藏、详情页离开和服务器地址变化都可能触发释放。
+- 推荐实现：进程内保留每个可同时显示的交互地图实例；临时隐藏只暂停并复用 `MapStore`/`WKWebView`，应用退出、内存回收或 Mapbox token 真正改变时才释放。主窗口与 Notch 可以同时显示，需各自保留一个实例；单实例不能同时绘制到两个容器。赛事详情的小地图改为静态预览，或在明确的“打开交互地图”操作后再初始化。只切换 PitPulse 数据服务器且 token 未变化时刷新数据，不销毁 Mapbox 实例。
+- Map 对象包含页面容器、WebGL 与 worker 运行时，按磁盘持久化实例不可行；持久化的目标应是当前进程内保留实例，而不是落盘缓存 Map 对象或自行缓存 Mapbox 瓦片。尚未实施，也未验证实际账户额度变化。
+
+## 2026-10-12 Mapbox 保活、Live 位置与手动刷新实施
+
+- 菜单栏首页、赛历和赛事详情共用 `AppModel.mapStore`；Live Island 保留独立实例。详情地图只有点击“打开赛道地图”才创建 Mapbox 地图。隐藏/切页暂停雷达请求与动画并保留 `WKWebView`，重现后复用；切换数据服务器时取消旧请求并重读配置，同公开 token 保留实例，token 改变、Web 内容进程终止或隐藏实例遇到内存压力时释放。Session/相机键变化清除旧车辆和选择状态；无赛道地点时以有效车辆坐标作为相机中心候选。
+- `LiveLocation` / `LiveTelemetry` 新增可选 `receivedAt`，契约仍为 schemaVersion 1。仅有效且上游 UTC 前进的新 Position/CarData 样本记录收样时间；初始化快照、重复帧、Heartbeat 和其他主题不续期。Swift 对位置和遥测分别按 10 秒接收时效清除实时内容，保留并展示上游 UTC 延迟；旧服务器缺少字段时回退到 UTC。地图展示等待、解码失败、缺校准、停更和比赛结束状态，并记录收到、解码、校准、客户端接受、最终绘制数量。
+- 新加坡 Replay mock 现在合成压缩后的原始 `Position.z` / `CarData.z`，走生产解码、reducer 和赛道校准后推送，继续明确标为 Replay/MOCK；它不能证明真实赛事 feed 已恢复。
+- 新增鉴权 `POST /api/v1/refresh`，校验赛季、目标及 Session；同目标合并、手动刷新优先，并用现有 `sync_state` 保存失败与 `Retry-After`。当前菜单页先重新读取缓存并等待上游刷新完成后再读；其他目标排入后台，完成状态通过独立 `dataRefresh` SSE 事件发送。切页、换赛季/服务器的旧响应由客户端请求代次和上下文校验拦截。
+
+### 检查结果
+
+- Taskdeck `Test Server`：退出码 0；服务器测试套件通过，新增 `manual_refresh` mock 实际返回上游 HTTP 429、客户端事件 `rateLimited`，并验证 SQLite 保存重试截止时间。此前直接 `cargo test --example live_replay` 通过 1 项生产解码/校准 mock。
+- Taskdeck `Check Server Format` 和 `Lint Server`：退出码均为 0。
+- Taskdeck `Check Map Page`：退出码 0，Mapbox stub 验证同实例暂停/恢复、雷达暂停与恢复和车辆清理。
+- Taskdeck `Check Live Models`：退出码 0；无 App 宿主的脚本通过独立接收时效、旧响应隔离，并以 mock URLProtocol 调用生产 `APIClient.refresh`，检查 POST、Bearer、赛季/目标/Session 与响应解码。
+- Taskdeck `Build App Tests`：`TEST BUILD SUCCEEDED`，主 App 和测试目标编译通过；新增的手动刷新旧 Session 失败隔离用例已编译。测试宿主没有运行；App 当前保持运行。
+- Taskdeck `Check Task Report`：最终任务状态更新后退出码 0；`validate.mjs`、任务数据测试 8/8 与 board.js 语法检查通过。真实当前赛事 feed、原生 App UI 和 Mapbox 账号额度效果不由这些 mock/编译检查代替。
+
+### 未完成的真实验收
+
+- 当前可观测的真实 F1 Session 已结束，没有新的 Position/CarData feed；因此真实比赛期间车辆位置缺失的上游断点尚未复现。新诊断计数可在下一场进行中 Session 区分接收、解码、校准、客户端接受与绘制阶段。
+- 未在真实原生 WKWebView 中重复开关菜单、切页、切 Session、换服务器/token 或制造内存压力；mock 通过不证明设备上 Mapbox `Map` 初始化次数或账号用量实际下降。
+- `Test App` 未运行，因为 F1Companion 当前由用户保持运行；测试目标仅完成编译。真实比赛位置、外接屏/VoiceOver、Mapbox 账号计费以及失败/弱网原生 UI 仍需独立验收。

@@ -27,7 +27,7 @@ function page() {
     getCenter() { return { toArray() { return [103.864, 1.292]; } }; }
     getZoom() { return this.zoom ?? 15; }
     getBearing() { return 0; }
-    resize() {}
+    resize() { calls.push('resize'); }
     easeTo(options) { this.pitch = options.pitch ?? this.pitch; }
     getPitch() { return this.pitch; }
     stop() { calls.push('pause'); }
@@ -123,4 +123,28 @@ test('Whole circuit is fitted once; 10Hz car updates interpolate and leave geome
   p.window.updateMap({ ...data, camera }); p.map.events['style.load'](); p.map.events.load();
   assert.equal(p.calls.filter(c => c.fit).length, 1, 'Reopen restores the saved camera');
   assert.equal(p.calls.filter(c => c === 'jump').length, 1);
+});
+
+test('Map instance survives hide and resume, resizes, and reports vehicle counts', () => {
+  const p = page();
+  const data = { publicToken: 'pk.test', center: [103.864, 1.292], cameraKey: 'race-1', geometry: null,
+    clientAccepted: 1, positionDiagnostics: { received: 1, decoded: 1, calibrated: 1 },
+    drivers: [{ number: '44', longitude: 103.864, latitude: 1.292 }] };
+  p.window.updateMap(data); p.map.events['style.load'](); p.map.events.load();
+  p.window.pauseMap(); p.window.updateMap(data);
+  assert.equal(p.calls.filter(c => c === 'create').length, 1);
+  assert.ok(p.calls.includes('resize'));
+  const diagnostics = p.calls.find(c => c.type === 'positionDiagnostics');
+  assert.equal(diagnostics.value.accepted, 1);
+  assert.equal(diagnostics.value.drawn, 1);
+  p.window.setRadar(17);
+  assert.ok(p.map.getSource('radar'));
+  p.window.pauseMap();
+  assert.equal(p.map.getSource('radar'), undefined, 'hidden maps stop requesting radar tiles');
+  p.window.updateMap(data);
+  p.window.setRadar(17);
+  assert.ok(p.map.getSource('radar'), 'radar resumes on the retained map');
+  p.window.updateMap({ ...data, cameraKey: 'race-2', drivers: [] });
+  assert.equal(p.map.getSource('cars').data.features.length, 0, 'a new session clears the old car layer');
+  assert.equal(p.calls.filter(c => c === 'create').length, 1);
 });

@@ -1,8 +1,12 @@
 use std::time::Duration;
 
-use axum::{body::Body, http::Request};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
 use futures_util::StreamExt;
 use pitpulse_server::{
+    api::refresh::{DataRefreshEvent, RefreshStatus, RefreshTarget},
     app_state::AppState,
     config::AppConfig,
     domain::live::{LiveSnapshot, LiveSourceMode, LiveStatus},
@@ -97,6 +101,130 @@ async fn test_live_stream_starts_with_full_snapshot_and_emits_status_immediately
             .unwrap()
             .contains("\"sourceStatus\":\"stale\"")
     );
+}
+
+#[tokio::test]
+async fn test_live_stream_emits_independent_data_refresh_events() {
+    let (state, _temp) = test_state().await;
+    let response = server::router(state.clone())
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/live/stream")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let mut chunks = response.into_body().into_data_stream();
+    let _ = chunks.next().await.unwrap().unwrap();
+    state
+        .refresh_events
+        .send(DataRefreshEvent {
+            target: RefreshTarget::Results,
+            season: 2026,
+            session_id: Some("race-2026".to_string()),
+            status: RefreshStatus::Completed,
+            updated_at: "2026-10-12T00:00:00Z".to_string(),
+            retry_after: None,
+        })
+        .unwrap();
+    let event = tokio::time::timeout(Duration::from_secs(1), chunks.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let event = String::from_utf8(event.to_vec()).unwrap();
+    assert!(event.contains("event: dataRefresh"));
+    assert!(event.contains("\"target\":\"results\""));
+    assert!(event.contains("\"sessionId\":\"race-2026\""));
+    assert!(event.contains("\"status\":\"completed\""));
+}
+
+#[tokio::test]
+async fn test_snapshot_series_query_reads_the_matching_live_state() {
+    let (state, _temp) = test_state().await;
+    state.live.publish(
+        LiveSnapshot {
+            series: Some("f1".to_string()),
+            source_status: LiveStatus::Connected,
+            session_id: Some("f1-session".to_string()),
+            ..LiveSnapshot::default()
+        },
+        true,
+    );
+    state.live_wec.publish(
+        LiveSnapshot {
+            series: Some("wec".to_string()),
+            source_status: LiveStatus::Connected,
+            session_id: Some("wec:18162".to_string()),
+            ..LiveSnapshot::default()
+        },
+        true,
+    );
+    for (uri, expected) in [
+        ("/api/v1/live/snapshot", "f1-session"),
+        ("/api/v1/live/snapshot?series=f1", "f1-session"),
+        ("/api/v1/live/snapshot?series=wec", "wec:18162"),
+    ] {
+        let response = server::router(state.clone())
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{uri}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let value: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(value["data"]["sessionId"], expected, "{uri}");
+    }
+}
+
+#[tokio::test]
+async fn test_live_series_query_rejects_unknown_series() {
+    let (state, _temp) = test_state().await;
+    for uri in [
+        "/api/v1/live/snapshot?series=indycar",
+        "/api/v1/live/stream?series=indycar",
+    ] {
+        let response = server::router(state.clone())
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{uri}");
+    }
+}
+
+#[tokio::test]
+async fn test_live_stream_series_query_streams_the_wec_snapshot() {
+    let (state, _temp) = test_state().await;
+    state.live_wec.publish(
+        LiveSnapshot {
+            series: Some("wec".to_string()),
+            source_status: LiveStatus::Connected,
+            session_id: Some("wec:18162".to_string()),
+            ..LiveSnapshot::default()
+        },
+        true,
+    );
+    let response = server::router(state)
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/live/stream?series=wec")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let mut chunks = response.into_body().into_data_stream();
+    let first = tokio::time::timeout(Duration::from_secs(1), chunks.next())
+        .await
+        .expect("initial event is immediate")
+        .unwrap()
+        .unwrap();
+    let first = String::from_utf8(first.to_vec()).unwrap();
+    assert!(first.contains("event: snapshot"));
+    assert!(first.contains("\"series\":\"wec\""));
+    assert!(first.contains("\"sessionId\":\"wec:18162\""));
 }
 
 #[tokio::test(start_paused = true)]

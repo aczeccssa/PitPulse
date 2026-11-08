@@ -121,6 +121,26 @@ final class APIClientTests: XCTestCase {
         }
     }
 
+    func testManualRefreshPostsCurrentTargetAndDecodesResult() async throws {
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/api/v1/refresh")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            let body = try XCTUnwrap(request.httpBody)
+            let value = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(value["season"] as? Int, 2026)
+            XCTAssertEqual(value["target"] as? String, "results")
+            XCTAssertEqual(value["sessionId"] as? String, "2026:1:race")
+            return Self.response(for: request, body: #"{"target":"results","season":2026,"sessionId":"2026:1:race","status":"completed","updatedAt":"2026-10-12T00:00:00Z"}"#)
+        }
+        let client = APIClient(baseURL: URL(string: "https://pitpulse.example")!, session: Self.session())
+        let event = try await client.refresh(target: .results, season: 2026, sessionId: "2026:1:race", token: "secret")
+        XCTAssertEqual(event.status, .completed)
+        XCTAssertEqual(event.target, .results)
+        XCTAssertEqual(event.sessionId, "2026:1:race")
+    }
+
     func testRateLimitParsesHTTPDateRetryAfter() async {
         URLProtocolStub.handler = { request in
             Self.response(for: request, status: 429, headers: ["Retry-After": "Wed, 02 Jan 2030 03:04:05 GMT"], body: "{}")
