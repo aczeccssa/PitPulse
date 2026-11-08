@@ -23,11 +23,15 @@ use super::{
 pub(super) async fn run_cookie_transport(
     base: &str,
     token: Option<&str>,
+    interface: Option<&str>,
     updates: mpsc::Sender<F1LiveUpdate>,
     stop: &mut oneshot::Receiver<()>,
 ) -> Result<(), F1LiveError> {
-    let mut negotiate = reqwest::Client::builder()
-        .timeout(Duration::from_secs(20))
+    let mut negotiate_builder = reqwest::Client::builder().timeout(Duration::from_secs(20));
+    if let Some(interface) = interface {
+        negotiate_builder = negotiate_builder.interface(interface);
+    }
+    let mut negotiate = negotiate_builder
         .build()
         .map_err(|_| F1LiveError::HandshakeFailed)?
         .post(format!(
@@ -105,10 +109,34 @@ pub(super) async fn run_cookie_transport(
             )
             .map_err(|_| F1LiveError::HandshakeFailed)?;
     }
-    let (mut socket, _) = tokio::time::timeout(Duration::from_secs(20), builder.connect())
+    let connect = async {
+        if let Some(interface) = interface {
+            let host = endpoint
+                .host_str()
+                .ok_or(F1LiveError::HandshakeFailed)?
+                .to_string();
+            let port = endpoint.port_or_known_default().unwrap_or(443);
+            let transport = connect_tcp_bound(&host, port, interface).await?;
+            let connector =
+                tokio_websockets::Connector::new().map_err(|_| F1LiveError::HandshakeFailed)?;
+            let tls = connector
+                .wrap(&host, transport)
+                .await
+                .map_err(|_| F1LiveError::HandshakeFailed)?;
+            builder
+                .connect_on(tls)
+                .await
+                .map_err(|_| F1LiveError::HandshakeFailed)
+        } else {
+            builder
+                .connect()
+                .await
+                .map_err(|_| F1LiveError::HandshakeFailed)
+        }
+    };
+    let (mut socket, _) = tokio::time::timeout(Duration::from_secs(20), connect)
         .await
-        .map_err(|_| F1LiveError::ConnectTimeout)?
-        .map_err(|_| F1LiveError::HandshakeFailed)?;
+        .map_err(|_| F1LiveError::ConnectTimeout)??;
     socket
         .send(Message::text("{\"protocol\":\"json\",\"version\":1}\u{1e}"))
         .await
@@ -160,6 +188,65 @@ pub(super) async fn run_cookie_transport(
             }
         }
     }
+}
+
+/// Opens a TCP connection bound to a specific network interface.
+///
+/// On macOS this uses `IP_BOUND_IF`/`IPV6_BOUND_IF` via socket2 so the socket
+/// leaves through the named physical interface instead of a transparent
+/// proxy/TUN default route.
+async fn connect_tcp_bound(
+    host: &str,
+    port: u16,
+    interface: &str,
+) -> Result<tokio::net::TcpStream, F1LiveError> {
+    use std::num::NonZeroU32;
+
+    use socket2::{Domain, Protocol, Socket, Type};
+
+    let name = std::ffi::CString::new(interface).map_err(|_| F1LiveError::HandshakeFailed)?;
+    let index = unsafe { libc::if_nametoindex(name.as_ptr()) };
+    let index = NonZeroU32::new(index).ok_or(F1LiveError::HandshakeFailed)?;
+    let addrs = tokio::net::lookup_host((host, port))
+        .await
+        .map_err(|_| F1LiveError::HandshakeFailed)?;
+    for addr in addrs {
+        let domain = if addr.is_ipv4() {
+            Domain::IPV4
+        } else {
+            Domain::IPV6
+        };
+        let Ok(socket) = Socket::new(domain, Type::STREAM, Some(Protocol::TCP)) else {
+            continue;
+        };
+        let bound = match addr {
+            std::net::SocketAddr::V4(_) => socket.bind_device_by_index_v4(Some(index)),
+            std::net::SocketAddr::V6(_) => socket.bind_device_by_index_v6(Some(index)),
+        };
+        if bound.is_err() || socket.set_nonblocking(true).is_err() {
+            continue;
+        }
+        match socket.connect(&addr.into()) {
+            Ok(()) => {}
+            Err(error)
+                if error.raw_os_error() == Some(libc::EINPROGRESS)
+                    || error.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(_) => continue,
+        }
+        let std_stream: std::net::TcpStream = socket.into();
+        let Ok(stream) = tokio::net::TcpStream::from_std(std_stream) else {
+            continue;
+        };
+        let writable = tokio::time::timeout(Duration::from_secs(15), stream.writable()).await;
+        if !matches!(writable, Ok(Ok(()))) {
+            continue;
+        }
+        match stream.take_error() {
+            Ok(None) => return Ok(stream),
+            _ => continue,
+        }
+    }
+    Err(F1LiveError::HandshakeFailed)
 }
 
 fn decode_packet(packet: &Value) -> Result<Option<F1LiveUpdate>, F1LiveError> {
@@ -267,6 +354,7 @@ mod tests {
             run_cookie_transport(
                 &format!("http://{address}/signalrcore"),
                 Some("test-token"),
+                None,
                 updates,
                 &mut stopped,
             )

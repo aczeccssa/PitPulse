@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-10-11T09:32:35Z",
+  "updatedAt": "2026-11-08T14:45:11Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -74,7 +74,17 @@
         "T17",
         "T18",
         "T19",
-        "T20"
+        "T20",
+        "T21"
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "多系列 Live（WEC PoC）",
+      "description": "在 F1 Live 之外以 opt-in 方式验证 FIA WEC 官方实时计时；只覆盖 Live 快照与数据源切换，不改变赛历/成绩范围",
+      "taskIds": [
+        "T22",
+        "T23"
       ]
     }
   ],
@@ -3707,7 +3717,7 @@
       "milestone": "M5",
       "area": "Rust / macOS / QA",
       "status": "inReview",
-      "summary": "最新版100ms SSE服务已切回真实上游；Ends/stale场次有天气和12条Radio，当前没有Position/CarData，持续真实采样验收保留。",
+      "summary": "Position/CarData 独立 receivedAt、10 秒停流清理与位置诊断已实现；压缩原始帧经生产 reducer/校准的 Replay mock 和服务端回归通过，真实进行中赛事位置仍待验收。",
       "dependencies": [
         "T13"
       ],
@@ -3735,6 +3745,11 @@
           "id": "T16-A3",
           "text": "真实赛事 Position/CarData/WeatherData/TeamRadio 独立验收",
           "done": false
+        },
+        {
+          "id": "T16-A4",
+          "text": "独立位置/遥测 receivedAt、10 秒停流清理及重复/损坏/延迟样本 mock 回归通过",
+          "done": true
         }
       ],
       "deliverables": [
@@ -3770,13 +3785,24 @@
           "label": "真实源与Taskdeck本地运行接管",
           "path": "docs/acceptance/taskdeck-local-runtime.md",
           "detail": "locked Rust/Xcode build及两任务注册/启动/重启通过；旧launchctl KeepAlive冲突已解除；App接收live/stale 22车手，replay停止。真实赛车遥测/UI/Radio播放不计通过。"
+        },
+        {
+          "label": "原始压缩帧 Replay Mock",
+          "path": "server/examples/support/singapore_sprint.rs",
+          "detail": "Taskdeck 服务端全套测试与定向 live_replay example 测试通过；Position.z / CarData.z 经生产解码、reducer 和新加坡校准，数据明确标记 Replay。"
+        },
+        {
+          "label": "位置样本接收时效与诊断",
+          "path": "server/src/providers/f1_live/reducer.rs",
+          "detail": "测试覆盖初始化快照不续期、重复帧、损坏帧、单独推进的遥测样本和缺少校准；真实活动赛事 feed 未复现。"
         }
       ],
       "blockers": [
-        "新增四个 Topic 的持续真实 feed 与实时界面未通过独立验收。"
+        "新增四个 Topic 的持续真实 feed 与实时界面未通过独立验收。",
+        "没有真实进行中 F1 Session 的 Position/CarData 样本，无法确认真实比赛位置缺失的上游断点。"
       ],
-      "nextAction": "在真实运行赛期独立验证持续Topic更新、定位、天气与Radio；保留现有未通过验收项。",
-      "updatedAt": "2026-10-11T07:52:45Z",
+      "nextAction": "在下一场进行中 Session 记录 Position/CarData 诊断计数，定位真实 feed 到地图绘制的断点。",
+      "updatedAt": "2026-10-11T17:56:57Z",
       "history": [
         {
           "at": "2026-10-10T17:59:26Z",
@@ -3847,6 +3873,21 @@
           "at": "2026-10-11T07:52:45Z",
           "status": "inReview",
           "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
+        },
+        {
+          "at": "2026-10-11T17:29:01Z",
+          "status": "inProgress",
+          "note": "用户授权按 Mapbox 保活、Live 位置与菜单刷新方案实施；保留已有改动并补充生产 reducer/Mapbox 页面 mock 检查，真实赛事与原生 UI 仍单独验收。"
+        },
+        {
+          "at": "2026-10-11T17:38:42Z",
+          "status": "inProgress",
+          "note": "已实现 Position/CarData 接收时刻、严格递增样本去重、初始化快照不续期与位置状态/计数；正在运行 Taskdeck 服务端测试，真实上游期间位置流仍待赛事验收。"
+        },
+        {
+          "at": "2026-10-11T17:56:57Z",
+          "status": "inReview",
+          "note": "位置/遥测独立接收时间、停流清理和诊断已实现；原始压缩帧 Replay mock 与服务端测试通过。当前真实 Session 已结束，没有活动位置 feed，保留进行中赛事验收。"
         }
       ]
     },
@@ -3857,7 +3898,7 @@
       "milestone": "M5",
       "area": "Rust / macOS / QA",
       "status": "inReview",
-      "summary": "真实 WKWebView Standard 3D 已实屏显示建筑，整圈居中、车队色/车号、选中高亮、号码避让和跟随近景恢复通过；车辆仍是 mock。",
+      "summary": "首页/赛历/赛事详情共享主 MapStore，小地图按需创建，隐藏后暂停并复用；Mapbox stub 与无 App 宿主 MapStore 检查通过，原生生命周期和真实用量尚待验收。",
       "dependencies": [
         "T16"
       ],
@@ -3885,6 +3926,11 @@
           "id": "T17-A3",
           "text": "真实 Mapbox 3D、车手标记及交互验收",
           "done": false
+        },
+        {
+          "id": "T17-A4",
+          "text": "共享 MapStore、交互小地图延迟创建、隐藏暂停/恢复的 mock 生命周期检查通过",
+          "done": true
         }
       ],
       "deliverables": [
@@ -3911,6 +3957,11 @@
       ],
       "evidence": [
         {
+          "label": "Mapbox 额度与实例生命周期方案研究",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "核对 Mapbox GL JS 3.32 当前计费与成本管理文档；建议临时隐藏时复用进程内 MapStore、独立保留同时显示的交互地图、小地图静态预览或按需初始化。账号控制台记录的 5K 与公开价格页 50K 免费档不一致，实施前需复核账号额度。"
+        },
+        {
           "label": "实施与验收分界记录",
           "path": "docs/acceptance/live-map.md",
           "detail": "固定版本 3D 地图与鉴权配置已接入；新加坡 2026 归档控制点通过，Austin 2026 仍禁止车辆叠加。"
@@ -3934,14 +3985,26 @@
           "label": "新版原生 Nook 实屏与回归检查",
           "path": "docs/acceptance/nook-live-feedback.md",
           "detail": "Max 头盔/天气详情/消息计数与过滤/真实 3D 建筑/车队色和车号/整圈居中/跟随缩放/收起和隐藏恢复均有原生观察及截图。最终 App build、Swift CLI、JS 5 项、Rust fmt、任务 8 项通过；无真实车位/音频/FPS或完整 XCTest 证明。"
+        },
+        {
+          "label": "Mapbox 页面生命周期 mock",
+          "path": "macos/Tests/map-page.test.mjs",
+          "detail": "Taskdeck Check Map Page 退出码 0；stub 检查实例暂停/恢复、车辆清理及雷达隐藏时移除和恢复。"
+        },
+        {
+          "label": "MapStore 隐藏请求与旧响应检查",
+          "path": "macos/Tests/live-map-check.swift",
+          "detail": "Taskdeck Check Live Models 退出码 0；无 App 宿主检查服务器切换时旧几何响应隔离及释放后晚到配置不恢复状态。"
         }
       ],
       "blockers": [
         "Austin 仅 2025 归档控制点通过，2026 原点与布局未核验。",
-        "原生 WKWebView 基本 3D/跟随/状态恢复已通过 Mock 实屏验证；真实比赛车辆定位及外接屏/VoiceOver 仍未完成，公开 token 受上游用量限制。"
+        "原生 WKWebView 基本 3D/跟随/状态恢复已通过 Mock 实屏验证；真实比赛车辆定位及外接屏/VoiceOver 仍未完成，公开 token 受上游用量限制。",
+        "没有在真实原生 WKWebView 中测量隐藏/切页/服务器切换后的 Map 初始化次数或账号额度变化。",
+        "Mapbox 账号控制台用量变化尚未复核，Map Loads 实际节省量未知。"
       ],
-      "nextAction": "完成 Austin 2026 校准、真实运行场次位置及剩余设备交互验收。",
-      "updatedAt": "2026-10-11T06:26:06Z",
+      "nextAction": "在原生 App 中核验重复隐藏/切页/切 Session、服务器与 token 变化及内存压力，并观察 Mapbox 账号 Map Loads。",
+      "updatedAt": "2026-10-11T17:56:57Z",
       "history": [
         {
           "at": "2026-10-10T17:59:26Z",
@@ -4037,6 +4100,31 @@
           "at": "2026-10-11T06:26:06Z",
           "status": "inReview",
           "note": "用户截图反馈修复已完成并留运行中的主 App demo；实际验证同服务器隐藏重开相机和筛选保留，补齐跟随缩放、号码避让/淡入与资源清理回归。独立验收记录分开标记真实地图、mock 车辆及未完成项。"
+        },
+        {
+          "at": "2026-10-11T11:52:18Z",
+          "status": "inReview",
+          "note": "用户要求先研究并给出合理方案。开始审查 MapStore/WKWebView/GL JS 生命周期与官方 map load 计费，不改变运行中 App 和地图实现，原验收 criteria 与 blockers 保留。"
+        },
+        {
+          "at": "2026-10-11T12:27:48Z",
+          "status": "inReview",
+          "note": "官方文档确认每个 GL JS Map 初始化计一次 Map Load、交互不另计、会话最长 12 小时；prewarm 只复用 worker。建议每个同时可见的交互面保留进程内实例、隐藏时暂停、小地图静态预览或按需加载，并先核对账号控制台 5K 与公开价格页 50K 免费档的差异。实现及原生用量验收待后续。"
+        },
+        {
+          "at": "2026-10-11T17:29:01Z",
+          "status": "inProgress",
+          "note": "用户授权按 Mapbox 保活、Live 位置与菜单刷新方案实施；保留已有改动并补充生产 reducer/Mapbox 页面 mock 检查，真实赛事与原生 UI 仍单独验收。"
+        },
+        {
+          "at": "2026-10-11T17:38:42Z",
+          "status": "inProgress",
+          "note": "主菜单 MapStore 已改为共享，NextMeeting/详情小地图延迟创建，隐藏暂停保留、内存压力/进程终止释放和 session 切换清车已实现；Mapbox JS 生命周期 mock 待复跑。"
+        },
+        {
+          "at": "2026-10-11T17:56:57Z",
+          "status": "inReview",
+          "note": "菜单主地图共享 MapStore，小地图按需加载，隐藏保活和释放边界已实现；Mapbox stub 与无 App 宿主检查通过。真实 WKWebView 生命周期、进行中赛事车位和账号计费效果未验证。"
         }
       ]
     },
@@ -4519,6 +4607,503 @@
           "at": "2026-10-11T07:52:45Z",
           "status": "inReview",
           "note": "Run Server / Run App配置和真实源切换完成。解除旧launchctl KeepAlive端口冲突后Server正常退出0并重启，App stop/start/restart成功；两任务保持running，保留真实Ends/stale状态和所有未完成验收。"
+        }
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "菜单栏手动刷新与服务端优先队列",
+      "priority": "P1",
+      "milestone": "M5",
+      "area": "Rust / macOS / QA",
+      "status": "inReview",
+      "summary": "鉴权刷新 API、手动优先/同目标合并/后台队列、sync_state Retry-After 与 dataRefresh SSE 已实现；429 服务端 mock 和无 App 宿主 APIClient 请求 mock 通过，AppModel 页面顺序 XCTest 仅编译。",
+      "dependencies": [
+        "T07",
+        "T16"
+      ],
+      "relatedTasks": [
+        "T20"
+      ],
+      "scope": "现有 Rust scheduler、sync_state、API/SSE 与 Swift AppModel 菜单缓存刷新；保留请求失败时已缓存内容。",
+      "steps": [
+        "新增 POST /api/v1/refresh 并复用既有 Provider 同步与 Retry-After",
+        "当前页面优先执行，其余页面数据进入后台队列并通过 SSE dataRefresh 通知",
+        "客户端菜单重开、切页、重连补读缓存并隔离旧服务器/赛季响应",
+        "用 mock provider 覆盖优先级、并发合并、限流、失败和缓存保留"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T21-A1",
+          "text": "鉴权 refresh 请求校验 target/season/session 并优先刷新当前页面",
+          "done": false
+        },
+        {
+          "id": "T21-A2",
+          "text": "其余数据后台更新、重复请求合并、Retry-After 生效并以 SSE 通知",
+          "done": true
+        },
+        {
+          "id": "T21-A3",
+          "text": "客户端刷新指示等待目标数据重读完成且旧响应不能覆盖当前页面",
+          "done": false
+        },
+        {
+          "id": "T21-A4",
+          "text": "Taskdeck 服务端测试、无 App 宿主刷新 mock、客户端测试目标编译与任务报告校验通过",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "刷新接口与队列",
+          "path": "server/src/api/refresh.rs"
+        },
+        {
+          "label": "scheduler 同步执行",
+          "path": "server/src/scheduler.rs"
+        },
+        {
+          "label": "SSE 客户端与菜单刷新",
+          "path": "macos/App/AppModel.swift"
+        },
+        {
+          "label": "实施与验收记录",
+          "path": "docs/acceptance/live-map.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "手动刷新上游 429 与 Retry-After 集成 mock",
+          "path": "server/tests/manual_refresh.rs",
+          "detail": "Taskdeck Test Server 退出码 0；真实调用 refresh route 和 scheduler，检查 rateLimited 事件及 SQLite 重试截止时间。"
+        },
+        {
+          "label": "无 App 宿主 APIClient 刷新请求 mock",
+          "path": "macos/Tests/live-map-check.swift",
+          "detail": "Taskdeck Check Live Models 退出码 0；mock URLProtocol 检查生产 APIClient 发出 POST、Bearer、season/target/sessionId 并解码刷新响应。"
+        },
+        {
+          "label": "Taskdeck 任务报告校验",
+          "path": "docs/acceptance/live-map.md",
+          "detail": "最终任务状态更新后 Check Task Report 退出码 0，validate.mjs、任务数据测试 8/8、board.js 语法检查通过。"
+        },
+        {
+          "label": "手动刷新旧 Session 错误隔离用例编译",
+          "path": "macos/Tests/CalendarCacheTests.swift",
+          "detail": "Taskdeck Build App Tests 退出码 0；新增的晚到 429 不得污染新 Session 用例已编译，但未启动 App 测试宿主。"
+        }
+      ],
+      "blockers": [
+        "App 当前由用户保持运行，未运行会启动测试宿主的 XCTest；菜单刷新顺序和旧页面响应隔离只有编译证据。"
+      ],
+      "nextAction": "App 可安全退出后运行刷新相关 XCTest，验证菜单页缓存先读、完成后重读及旧响应隔离，再进行真实菜单交互验收。",
+      "updatedAt": "2026-10-11T17:59:44Z",
+      "history": [
+        {
+          "at": "2026-10-11T17:29:01Z",
+          "status": "inProgress",
+          "note": "按用户确认的当前页立即刷新、其他页面后台同步策略登记；尚无实现或验收证据。"
+        },
+        {
+          "at": "2026-10-11T17:38:42Z",
+          "status": "inProgress",
+          "note": "已加入鉴权 POST refresh、当前页优先的单飞队列、后台任务、sync_state Retry-After 处理与 dataRefresh SSE/Swift POST 接收；Taskdeck 服务端测试正在编译，客户端尚待构建。"
+        },
+        {
+          "at": "2026-10-11T17:56:57Z",
+          "status": "inReview",
+          "note": "手动刷新路由、优先/单飞队列、后台同步、Retry-After 与 dataRefresh SSE 实现；服务端 429 mock、无宿主 APIClient mock、服务器套件通过。AppModel 菜单顺序用例只编译，未运行测试宿主。"
+        },
+        {
+          "at": "2026-10-11T17:57:52Z",
+          "status": "inReview",
+          "note": "最终任务数据经 Taskdeck Check Task Report 校验通过（validator、8 项任务测试和 board.js 语法）。仅 T21-A4 通过；菜单顺序的 App XCTest 尚未运行，整体保持 inReview。"
+        },
+        {
+          "at": "2026-10-11T17:59:44Z",
+          "status": "inReview",
+          "note": "复核并修复晚到手动刷新错误可能覆盖新 Session 错误状态的边界，新增 XCTest 回归用例；Taskdeck Build App Tests 成功，测试宿主仍未运行。"
+        }
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "WEC Live PoC（Griiip 公开接口）",
+      "priority": "P1",
+      "milestone": "M6",
+      "area": "Rust / macOS / QA",
+      "status": "done",
+      "summary": "已完成 FIA WEC Live PoC：默认关闭的 Griiip bootstrap 适配器、独立 live_wec 状态与 series=wec API/SSE、多组别/计时赛/FCY 映射，以及 macOS 数据源切换与展示代码；真实 Monza 会话复核通过（countryCode=IT、35 辆车、剩余约 5.5 小时），全量 Rust 测试与任务校验通过。仅剩运行中 App 的交互式界面验收。",
+      "dependencies": [
+        "T13"
+      ],
+      "relatedTasks": [
+        "T14",
+        "T16"
+      ],
+      "scope": "server/src/providers/wec_live.rs、config、app_state、scheduler、api；macOS LiveModels/LiveStore/AppModel/Preferences/LiveIsland；docs/acceptance/wec-live-poc.md。仅 Live PoC，不改赛历/成绩/DB。",
+      "steps": [
+        "以默认关闭的 opt-in 适配器轮询 Griiip 公开 bootstrap，并自动发现当前 Live WEC 会话",
+        "把多组别、车组、计时赛剩余时间、天气与赛会消息映射到 LiveSnapshot",
+        "新增独立 live_wec 状态与 series=wec 的 snapshot/SSE，F1 默认行为不变",
+        "macOS 增加 F1/WEC 数据源切换、组别标签、FCY 与剩余时间显示",
+        "用真实 WEC 会话、Rust 测试、macOS 编译与任务校验记录证据"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T22-A1",
+          "text": "WEC provider 解析公开 bootstrap，映射 series、组别、车组、计时赛剩余时间、天气与赛会消息；默认关闭",
+          "done": true
+        },
+        {
+          "id": "T22-A2",
+          "text": "snapshot/SSE 支持 series=wec 且使用独立 Live 状态；F1 默认与未知 series 行为有测试覆盖",
+          "done": true
+        },
+        {
+          "id": "T22-A3",
+          "text": "macOS 可切换 F1/WEC，解码并显示组别、FCY 与剩余时间；App 与 XCTest 目标编译通过",
+          "done": true
+        },
+        {
+          "id": "T22-A4",
+          "text": "真实 WEC Live 会话快照验证，并完成 Rust 测试、任务数据校验与验收记录",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "WEC provider 与映射",
+          "path": "server/src/providers/wec_live.rs"
+        },
+        {
+          "label": "独立 WEC live 调度与 API",
+          "path": "server/src/scheduler.rs"
+        },
+        {
+          "label": "WEC SSE series 选择",
+          "path": "server/src/api/sse.rs"
+        },
+        {
+          "label": "macOS 数据模型与数据源切换",
+          "path": "macos/Core/LiveStore/LiveModels.swift"
+        },
+        {
+          "label": "PoC 验收记录",
+          "path": "docs/acceptance/wec-live-poc.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "WEC 映射单元测试",
+          "path": "server/src/providers/wec_live.rs",
+          "detail": "cargo test --lib wec_live 4 项通过：bootstrap 映射、组别/计时、会话发现、RFC 3339。"
+        },
+        {
+          "label": "series=wec API/SSE 集成测试",
+          "path": "server/tests/live.rs",
+          "detail": "cargo test --test live 7 项通过；覆盖默认 F1、series=wec、未知 series 400 与 WEC SSE。"
+        },
+        {
+          "label": "真实 Monza Live 快照",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "2026-11-08 10:24 UTC 读取 35 辆车、HYPERCAR/LMGT3、lap 14、剩余 20112 秒、40 条赛会日志。"
+        },
+        {
+          "label": "全量 Rust 测试与静态检查",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "2026-11-08 10:31 UTC：cargo test 109 项全部通过；cargo fmt --check 与 clippy -D warnings 通过。"
+        },
+        {
+          "label": "WEC 快照复核与 Swift 模型运行时检查",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "10:30 UTC 复核 session 18162：countryCode=IT、lap 18、剩余 19775 秒、35 辆车、40 条赛会日志；swiftc 解码 WEC 快照确认 series/isWec/FCY/组别标签。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "PoC 已完成；展示增强与双系列切换见 T23。",
+      "updatedAt": "2026-11-08T11:08:00Z",
+      "history": [
+        {
+          "at": "2026-11-08T10:30:00Z",
+          "status": "inProgress",
+          "note": "登记 WEC Live PoC；已实现 Griiip bootstrap 适配器、独立 live_wec 状态、series=wec API 与多组别/计时映射，真实 Monza 快照已取得；App 编译与 UI 验收待完成。"
+        },
+        {
+          "at": "2026-11-08T10:32:00Z",
+          "status": "inReview",
+          "note": "完成全量 Rust 测试（109 项）、fmt/clippy、Swift 模型运行时解码检查，并复核真实 Monza 会话（countryCode=IT）。A4 完成；A3 仅剩运行中 App 的交互式界面验收，状态转 inReview。"
+        },
+        {
+          "at": "2026-11-08T11:08:00Z",
+          "status": "done",
+          "note": "用户在运行中的 App 上确认 WEC Monza 实时数据可见；A3 完成，T22 全部验收项通过，PoC 结项。"
+        }
+      ]
+    },
+    {
+      "id": "T23",
+      "title": "Live Island 展示增强与双系列切换",
+      "priority": "P1",
+      "milestone": "M6",
+      "area": "Rust / macOS",
+      "status": "done",
+      "summary": "在恢复 F1 原计时表布局的前提下，为 F1/WEC 增加轮胎与虚拟能量行内数据及持久化开关；WEC 计时行显示制造商标志本身（不含文字组合），详情条显示官方赛车侧面图与车手肖像；F1 详情条新增 2026 各队官方赛车侧视图；折叠 Nook 与展开头部使用官方 F1/WEC 系列标识替代国家旗帜；仅通过 Live Island 赛事标题菜单切换 F1/WEC；WEC 提供组别标签页、按车手身份关注与“旗标 + 文字”状态标识。折叠 Nook 显示短代码警示胶囊；列表行选择与星标关注互相独立，关注车手不在会话时显示 No selected。",
+      "dependencies": [
+        "T22"
+      ],
+      "relatedTasks": [
+        "T13",
+        "T14",
+        "T16"
+      ],
+      "scope": "server/src/domain/live.rs、f1_live/reducer.rs、wec_live.rs；macos/Core/LiveStore、Core/Models、Features/LiveIsland、Features/MenuBar、Resources/PitPulseAssets.xcassets。",
+      "steps": [
+        "F1 订阅 Stints topic 并映射当前轮胎与圈龄",
+        "WEC 映射 tires、carsEnergyTanks 与 manufacturer",
+        "恢复 F1 计时表原始布局，轮胎与虚拟能量以行内数据展示并可持久化开关",
+        "WEC 官方车队/制造商 logo、赛车侧面图与车手肖像入本地素材库",
+        "Live Island 与菜单栏增加与现有控件风格一致的 F1/WEC 切换"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T23-A1",
+          "text": "F1 Stints 与 WEC tires/energy/manufacturer 映射完成，Rust 测试覆盖",
+          "done": true
+        },
+        {
+          "id": "T23-A2",
+          "text": "Gap 列保留，轮胎与虚拟能量可切换并持久化，F1/WEC 均可显示",
+          "done": true
+        },
+        {
+          "id": "T23-A3",
+          "text": "WEC 车队/制造商 logo、赛车侧面图与车手肖像在界面正确呈现，缺失时有本地回退",
+          "done": true
+        },
+        {
+          "id": "T23-A4",
+          "text": "Live Island 与菜单栏可在 F1/WEC 冲突时随时切换，真实 WEC 数据验证",
+          "done": true
+        },
+        {
+          "id": "T23-A5",
+          "text": "WEC 按 HYPERCAR/LMP2/LMGT3 标签页区分，WEC 车组可关注并在折叠 Notch 显示，SC/FCY/VSC 标识清晰",
+          "done": true
+        },
+        {
+          "id": "T23-A6",
+          "text": "列表行选择只改变顶部车组详情，星标只改变关注；关注按车手身份持久化，车手缺席时显示 No selected（F1/WEC）",
+          "done": true
+        },
+        {
+          "id": "T23-A7",
+          "text": "WEC/F1 轮胎回到 S/M/H 文字与圈龄显示，不再使用轮胎贴图",
+          "done": true
+        },
+        {
+          "id": "T23-A8",
+          "text": "F1 详情条显示 2026 官方赛车侧视图，折叠与展开头部使用官方 F1/WEC 系列标识替代国家旗帜",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "F1/WEC 轮胎与能量映射",
+          "path": "server/src/providers/wec_live.rs"
+        },
+        {
+          "label": "F1 Stints 映射",
+          "path": "server/src/providers/f1_live/reducer.rs"
+        },
+        {
+          "label": "Live Island 展示与列切换",
+          "path": "macos/Features/LiveIsland/LiveIsland.swift"
+        },
+        {
+          "label": "WEC 本地素材清单",
+          "path": "macos/Resources/MotorsportAssets/wec-assets-2026.json"
+        },
+        {
+          "label": "验收记录",
+          "path": "docs/acceptance/wec-live-poc.md"
+        },
+        {
+          "label": "F1 本地素材清单",
+          "path": "macos/Resources/MotorsportAssets/f1-assets-2026.json"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "WEC 真实数据",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "session 18162：SOFT 31、虚拟能量 91%、Cadillac V-Series.R、35 辆车。"
+        },
+        {
+          "label": "F1 轮胎 replay 验证",
+          "path": "server/tests/fixtures/f1-live-replay.json",
+          "detail": "replay 快照显示 SOFT 4 与 HARD 12。"
+        },
+        {
+          "label": "测试与编译",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "cargo test 110 项通过、clippy 通过；App 与 XCTest build-for-testing 通过。"
+        },
+        {
+          "label": "WEC 官方本地素材",
+          "path": "macos/Resources/MotorsportAssets/wec-assets-2026.json",
+          "detail": "23 个车队/制造商 logo、35 张赛车侧面图、100 位车手肖像；来源 fiawec.com，localAuthorizationProvidedByOwner，仅本地使用。"
+        },
+        {
+          "label": "本轮 macOS 编译",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "恢复 F1 布局并接入本地素材后，xcodebuild Debug build 与 build-for-testing 均以 exit 0 完成。"
+        },
+        {
+          "label": "WEC 组别与关注编译",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "新增组别标签页、车号关注、SC/FCY/VSC 文字状态与 WEC 肖像后，Debug build 与 build-for-testing 均以 exit 0 完成；Release 已由 Taskdeck 重启。"
+        },
+        {
+          "label": "赛道状态修复",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "raceFlags 改为取最新记录；cargo test --lib wec_live 5 项通过，重启后线上快照 trackStatus 由 SafetyCar 恢复为 Green。"
+        },
+        {
+          "label": "折叠 Nook 调整",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "圈数移至左侧并优先使用关注车组圈数；移除差距；绿旗默认隐藏，事件时使用旗帜色胶囊与角标；Menu Bar 移除数据源切换。Debug build exit 0。"
+        },
+        {
+          "label": "WEC 素材与表格密度",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "补入 Jonny Edgar 官方肖像（车手肖像共 101 位，Live 名单全部覆盖）；WEC 区段列收窄至 50pt 并隐藏无颜色分段条，新增轮胎/能量大号单元；折叠角标改为 YF/RF。xcodebuild Debug exit 0，Assets.car 含新素材。"
+        },
+        {
+          "label": "肖像、关注与轮胎贴图",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "Alex Lynn 官方肖像（2025 车辆页）与 7 张 Michelin/Goodyear 官方轮胎贴图打包；关注改为按车手姓名匹配，缺席显示 No selected；行选择与星标分离。xcodebuild Debug build 与 build-for-testing exit 0，Assets.car 含全部新素材。"
+        },
+        {
+          "label": "F1 赛车侧视图与系列标识",
+          "path": "macos/Resources/MotorsportAssets/f1-assets-2026.json",
+          "detail": "从 formula1.com 车队页下载 11 支车队 2026 赛车右侧视图，以 480px 透明 PNG 打包为 car-side-<team>-2026；官方 F1 与 WEC 系列标识打包为 series-f1 / series-wec。仅本地使用，运行时不联网。Assets.car 校验全部车图与标识存在，Debug build exit 0。"
+        },
+        {
+          "label": "轮胎改回文字",
+          "path": "macos/Features/LiveIsland/LiveIsland.swift",
+          "detail": "移除 Michelin/Goodyear 轮胎贴图与 tireAssetID，WEC 行与详情条恢复 S/M/H + 圈龄文字；素材库删除 7 张轮胎图。Debug build exit 0。"
+        },
+        {
+          "label": "Release 重启与实时复核",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "含本轮改动的 Release 由 Taskdeck 重建并重启；/api/v1/live/snapshot?series=wec 返回 session 18162、35 辆车、Green，以及 Cadillac/Alpine/BMW/Ferrari 制造商字段，可映射本地品牌素材。"
+        },
+        {
+          "label": "WEC 制造商标志规范化",
+          "path": "macos/Resources/MotorsportAssets/wec-assets-2026.json",
+          "detail": "14 个制造商统一为标志本身：BMW 圆标（移除 ///M）、Mercedes 三叉星、Toyota 椭圆标、Lexus L、Cadillac 盾徽、Corvette 交叉旗、Ford 椭圆、Aston Martin/Genesis 翼徽、McLaren Speedmark；Alpine/Ferrari/Peugeot/Porsche 维持原标志。素材来自 WEC 官方 Grid 与 Wikimedia Commons（PD/CC0/CC BY-SA），仅本地打包。Debug build exit 0。"
+        },
+        {
+          "label": "制造商标志 Release 复核",
+          "path": "macos/Resources/MotorsportAssets/wec-assets-2026.json",
+          "detail": "Release Assets.car 校验 team-logo-wec_bmw-2026 为 320×320 单一圆标、Cadillac 320×123 盾徽、Mercedes 83×83 三叉星、Toyota 320×206 椭圆标；含本轮改动的 Release 已由 Taskdeck 重启运行。"
+        },
+        {
+          "label": "用户验收",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "用户在运行中的 Release App 上确认 WEC 制造商标志与列表显示正常，T23 验收关闭。"
+        },
+        {
+          "label": "制造商标志尺寸微调",
+          "path": "docs/acceptance/wec-live-poc.md",
+          "detail": "按验收反馈将 WEC 列表制造商标志缩至 80%（保留 32pt 行槽），Debug build exit 0。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "无；T23 已由用户在运行中的 App 上验收。",
+      "updatedAt": "2026-11-08T14:45:11Z",
+      "history": [
+        {
+          "at": "2026-11-08T11:08:00Z",
+          "status": "inReview",
+          "note": "完成 Gap/轮胎/虚拟能量列、焦点卡、车队与车身视觉回退及双系列快速切换；数据映射与编译通过，等待界面观感确认。"
+        },
+        {
+          "at": "2026-11-08T11:10:00Z",
+          "status": "inReview",
+          "note": "含全部改动的 Release 构建已由 Taskdeck 重启并在 38701 服务端上运行；实时复核 session 18162 仍返回 35 辆车、SOFT/MEDIUM 圈龄与 71–95% 虚拟能量。"
+        },
+        {
+          "at": "2026-11-08T11:45:00Z",
+          "status": "inReview",
+          "note": "按用户反馈移除焦点卡与密集列，恢复 F1 原始计时表布局；轮胎/虚拟能量改为行内数据。使用 ego-browser 从 FIA WEC 官方 Grid 与车辆页下载 23 个 logo、35 张赛车侧面图和 100 位车手肖像并打包到本地素材库，未运行时联网抓取。"
+        },
+        {
+          "at": "2026-11-08T11:45:30Z",
+          "status": "inReview",
+          "note": "按观感反馈移除独立分段控件：改用赛事标题下拉菜单切换系列，剩余时间与圈数合并为一项，头部与状态行恢复原有控件数量；Release 已重启，WEC session 18162 实时数据正常。"
+        },
+        {
+          "at": "2026-11-08T12:20:00Z",
+          "status": "inReview",
+          "note": "按运行截图反馈增加 WEC 组别标签页（全部/HYPERCAR/LMP2/LMGT3）、按车号关注并在折叠 Notch 显示车组信息，SC/FCY/VSC 改为文字胶囊；F1 关注与 WEC 关注分开持久化。Debug 与 build-for-testing 通过，Release 已重启。"
+        },
+        {
+          "at": "2026-11-08T13:12:30Z",
+          "status": "inReview",
+          "note": "修复 raceFlags 取全场最高严重度导致绿旗仍显示 SC 的问题，改为取最新一条；折叠标题会话类型恢复首字母大写并垂直居中；选中 WEC 车辆详情增加车手肖像、总名次与差距；状态标识改为旗标加 SC/FCY/VSC 文字。cargo wec_live 5 项通过，Debug/build-for-testing 通过，服务端与新 Release 已重启。"
+        },
+        {
+          "at": "2026-11-08T13:21:00Z",
+          "status": "inReview",
+          "note": "按折叠 Nook 反馈：圈数移到左侧，WEC 使用关注车组圈数；右侧关注信息去掉差距；绿旗默认隐藏，仅黄旗/FCY/SC/VSC/红旗时把左侧整组包成旗帜色胶囊并显示角标；Menu Bar 移除 F1/WEC 切换，仅保留 Live Island 标题菜单。Debug build 通过，Release 已重启。"
+        },
+        {
+          "at": "2026-11-08T13:33:35Z",
+          "status": "inReview",
+          "note": "按运行反馈补入 Jonny Edgar 官方肖像并核对当前 35 位车手均有本地素材；折叠警示角标改为 YF/RF 等短代码；WEC 无分段颜色数据，S1–S3 收窄并去掉灰条，轮胎与能量改为独立大号单元。Debug build exit 0。"
+        },
+        {
+          "at": "2026-11-08T13:58:45Z",
+          "status": "inReview",
+          "note": "补入 Alex Lynn 官方肖像；关注按车手姓名匹配，车号换人不继承，缺席显示 No selected；移除星标改动导致的 selectedNumber 清空，顶部详情只随行选择变化；WEC 轮胎改用官方 Michelin/Goodyear 官方指南贴图（26pt 圆形），并按组别选择供应商。Debug build 与 build-for-testing exit 0。"
+        },
+        {
+          "at": "2026-11-08T14:27:12Z",
+          "status": "inReview",
+          "note": "按反馈移除 WEC 轮胎贴图，F1/WEC 统一回到配方文字 + 圈龄；WEC 计时行改显制造商 logo；F1 详情条接入 11 支车队 2026 官方赛车侧视图；折叠与展开头部以官方 F1/WEC 系列标识替代国家旗帜。Debug build exit 0，Assets.car 校验新增车图与系列标识。"
+        },
+        {
+          "at": "2026-11-08T14:31:33Z",
+          "status": "inReview",
+          "note": "含系列标识、F1 赛车侧视图与文字轮胎的 Release 构建已由 Taskdeck 重启并在 38701 上运行；实时 WEC 快照 session 18162 仍为 35 辆车。折叠 Nook 不再重复显示 WEC 文字标签，由 WEC 标识本身区分系列。"
+        },
+        {
+          "at": "2026-11-08T14:40:17Z",
+          "status": "inReview",
+          "note": "按反馈将 WEC 制造商显示统一为标志本身，去除 BMW 圆标旁的 ///M 及 Cadillac/Corvette/Ford/Mercedes/Lexus/Toyota/McLaren 的文字或组合版本，改用圆标、盾徽、交叉旗、椭圆、三叉星、L、椭圆标与 Speedmark；Debug build exit 0。"
+        },
+        {
+          "at": "2026-11-08T14:41:13Z",
+          "status": "inReview",
+          "note": "含新制造商标志的 Release 已重建并重启；Assets.car 确认 BMW 仅保留圆标（无 ///M），其余品牌为纯标志版本。"
+        },
+        {
+          "at": "2026-11-08T14:42:59Z",
+          "status": "done",
+          "note": "用户确认 WEC 制造商标志与列表显示正常；全部验收标准（A1–A8）通过，阻塞项清空，T23 关闭。"
+        },
+        {
+          "at": "2026-11-08T14:44:17Z",
+          "status": "done",
+          "note": "验收后微调：WEC 列表制造商标志按 80% 尺寸绘制，行位仍为 32pt；Debug build exit 0，Release 待重启。"
+        },
+        {
+          "at": "2026-11-08T14:45:11Z",
+          "status": "done",
+          "note": "含 80% 制造商标志尺寸的 Release 已重建并重启，App 正在运行。"
         }
       ]
     }

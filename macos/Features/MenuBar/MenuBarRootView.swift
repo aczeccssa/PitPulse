@@ -19,6 +19,14 @@ struct MenuBarRootView: View {
             }
         }
 
+        var refreshTarget: ManualRefreshTarget {
+            switch self {
+            case .next, .calendar: .calendar
+            case .results: .results
+            case .standings: .standings
+            }
+        }
+
         var symbol: String {
             switch self {
             case .next: "flag.checkered"
@@ -92,6 +100,7 @@ struct MenuBarRootView: View {
         .onDisappear {
             model.popupDidDisappear()
         }
+        .onChange(of: section) { _, section in model.menuSectionDidChange(target: section.refreshTarget) }
     }
 
     private var header: some View {
@@ -105,7 +114,7 @@ struct MenuBarRootView: View {
             }
             Spacer()
             Button {
-                model.refresh(force: true)
+                model.refreshCurrentPage(target: section.refreshTarget)
             } label: {
                 Image(systemName: AppSymbol.refresh.resolvedSystemName())
             }

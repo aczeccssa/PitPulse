@@ -6,6 +6,8 @@ final class LiveStore: ObservableObject {
     @Published private(set) var snapshot = LiveSnapshot.disconnected()
     @Published private(set) var isConnecting = false
     @Published private(set) var requiresCredentials = false
+    var onDataRefresh: ((DataRefreshEvent) -> Void)?
+    var onStreamConnected: (() -> Void)?
 
     private let logger = Logger(subsystem: "com.pitpulse.F1Companion", category: "LiveStore")
     private var generation = 0
@@ -20,10 +22,15 @@ final class LiveStore: ObservableObject {
         self.retryDelays = retryDelays.isEmpty ? [5, 15, 30, 60, 300] : retryDelays
     }
 
-    func start(serverURL: URL, token: String?) {
+    func start(serverURL: URL, token: String?, series: LiveSeries = .f1) {
         let current = beginConnection()
         streamTask = Task { [weak self] in
-            await self?.run(serverURL: serverURL, token: token, generation: current)
+            await self?.run(
+                serverURL: serverURL,
+                token: token,
+                series: series,
+                generation: current
+            )
         }
     }
 
@@ -80,17 +87,26 @@ final class LiveStore: ObservableObject {
         return connectionGeneration
     }
 
-    private func run(serverURL: URL, token: String?, generation current: Int) async {
+    private func run(
+        serverURL: URL,
+        token: String?,
+        series: LiveSeries,
+        generation current: Int
+    ) async {
         let client = APIClient(baseURL: serverURL, session: session)
         var attempts = 0
         while current == generation && !Task.isCancelled {
             isConnecting = true
             guard let connection = beginStream(generation: current) else { return }
             do {
-                try await client.liveStream(token: token) { [weak self] incoming in
+                try await client.liveStream(token: token, series: series.rawValue, onConnected: { [weak self] in
+                    if connection > 1 { self?.onStreamConnected?() }
+                }, onSnapshot: { [weak self] incoming in
                     guard let self else { return }
                     self.accept(incoming, generation: current, connection: connection)
-                }
+                }, onDataRefresh: { [weak self] event in
+                    self?.onDataRefresh?(event)
+                })
                 throw APIClientError.transport("live stream ended")
             } catch is CancellationError {
                 return

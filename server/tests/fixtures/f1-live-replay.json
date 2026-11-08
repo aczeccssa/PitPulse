@@ -149,5 +149,31 @@
         "Flag": "GREEN"
       }
     }
+  },
+  "Stints": {
+    "Stints": {
+      "44": [
+        {
+          "Compound": "MEDIUM",
+          "New": "true",
+          "TotalLaps": 10,
+          "StartLaps": 0
+        },
+        {
+          "Compound": "SOFT",
+          "New": "true",
+          "TotalLaps": 4,
+          "StartLaps": 0
+        }
+      ],
+      "16": [
+        {
+          "Compound": "HARD",
+          "New": "true",
+          "TotalLaps": 12,
+          "StartLaps": 0
+        }
+      ]
+    }
   }
 }

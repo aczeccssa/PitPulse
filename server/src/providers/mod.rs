@@ -9,3 +9,4 @@ pub mod radar;
 pub mod radio;
 pub mod resources;
 pub mod weather;
+pub mod wec_live;

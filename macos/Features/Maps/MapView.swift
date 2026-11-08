@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SwiftUI
 @preconcurrency import WebKit
 
@@ -16,21 +17,52 @@ final class MapStore: ObservableObject {
     private var radarFrame: Int?
     fileprivate var camera: [String: Any]?
     private var generation = 0
+    private var isVisible = false
+    fileprivate let logger = Logger(subsystem: "com.pitpulse.F1Companion", category: "MapStore")
+    private var memoryPressure: DispatchSourceMemoryPressure?
     weak var model: AppModel?
     var onDriver: ((String) -> Void)?
     var onMeeting: ((String) -> Void)?
 
+    init() {
+        let source = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .main)
+        source.setEventHandler { [weak self] in
+            Task { @MainActor in
+                guard let self, !self.isVisible else { return }
+                self.release()
+            }
+        }
+        memoryPressure = source
+        source.resume()
+    }
+
     func load(model: AppModel, meeting: Meeting?) async {
         let changedServer = serverAddress != model.serverAddress
-        if changedServer { release(); serverAddress = model.serverAddress }
+        if changedServer {
+            generation += 1
+            handler?.cancel()
+            geometry = nil
+            geometryID = nil
+            layoutVerified = false
+            payloadJSON = nil
+            radarFrame = nil
+            serverAddress = model.serverAddress
+        }
         self.model = model
-        let requestGeneration = generation
+        var requestGeneration = generation
         if changedServer || publicToken == nil {
             do {
                 let data = try await model.mapData(path: "/api/v1/maps/config")
                 guard !Task.isCancelled, requestGeneration == generation else { return }
                 let config = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                publicToken = (config?["data"] as? [String: Any])?["publicToken"] as? String
+                let token = (config?["data"] as? [String: Any])?["publicToken"] as? String
+                if let publicToken, publicToken != token, webView != nil {
+                    release(preserveCamera: true)
+                    serverAddress = model.serverAddress
+                    self.model = model
+                    requestGeneration = generation
+                }
+                publicToken = token
                 error = publicToken == nil ? "未配置 Mapbox 公开 token" : nil
             } catch { if !Task.isCancelled && requestGeneration == generation { self.error = error.localizedDescription } }
         }
@@ -68,22 +100,43 @@ final class MapStore: ObservableObject {
         return web
     }
 
-    func update(meeting: Meeting?, meetings: [Meeting], snapshot: LiveSnapshot?, selected: String?, radar: Bool, active: Bool) {
+    func update(meeting: Meeting?, meetings: [Meeting], snapshot: LiveSnapshot?, selected: String?, radar: Bool, active: Bool, now: Date = Date()) {
         guard let webView else { return }
-        guard active else { webView.isHidden = true; webView.evaluateJavaScript("window.pauseMap && window.pauseMap()"); return }
+        guard active else { pause(); return }
+        isVisible = true
         webView.isHidden = false
         let point = meeting?.circuit
         let markers: [[String: Any]] = meetings.compactMap { meeting in
             guard let c = meeting.circuit else { return nil }
             return ["id": meeting.id, "name": meeting.name, "round": meeting.round.map(String.init) ?? "•", "longitude": c.longitude, "latitude": c.latitude]
         }
+        let sessionEnded = ["finished", "finalised", "finalized", "ends", "aborted"].contains(snapshot?.sessionStatus?.lowercased() ?? "")
         let locations: [[String: Any]] = (snapshot?.drivers ?? []).compactMap { driver in
             guard snapshot?.sourceStatus == .connected, let p = driver.location,
-                  snapshot?.sourceMode == .replay || LiveFreshness.isFresh(p.utc), let lon = p.longitude, let lat = p.latitude else { return nil }
-            return ["number": driver.number, "label": MotorsportAsset.abbreviation(driver.name ?? driver.number), "color": driver.teamColorHex, "utc": p.utc, "longitude": lon, "latitude": lat]
+                  !sessionEnded,
+                  snapshot?.sourceMode == .replay || LiveFreshness.isFresh(p.receivedAt ?? p.utc, now: now), let lon = p.longitude, let lat = p.latitude else { return nil }
+            return ["number": driver.number, "label": MotorsportAsset.abbreviation(driver.name ?? driver.number), "color": driver.teamColorHex, "utc": p.utc, "receivedAt": p.receivedAt ?? p.utc, "longitude": lon, "latitude": lat]
         }
-        let status = radar ? "历史降雨雷达 · 黑色区域无覆盖" : snapshot == nil ? geometry != nil && !layoutVerified ? "赛道轮廓当前年份尚待核验" : "" : snapshot?.sourceStatus != .connected ? "\(snapshot?.statusLabel ?? "已断开") · 位置未更新" : locations.isEmpty ? "车辆定位未校准或暂无新位置" : ""
-        let payload: [String: Any] = ["publicToken": publicToken ?? "", "center": [point?.longitude ?? markers.first?["longitude"] as? Double ?? 0, point?.latitude ?? markers.first?["latitude"] as? Double ?? 20], "zoom": radar ? 8 : meetings.isEmpty ? 15.5 : 1.5, "pitch": meetings.isEmpty && !radar ? 55 : 0, "cameraKey": "\(meeting?.id ?? "season")-\(radar)", "camera": camera as Any? ?? NSNull(), "geometry": geometry as Any? ?? NSNull(), "drivers": locations, "selected": selected ?? "", "meetings": markers, "status": status, "reduceMotion": NSWorkspace.shared.accessibilityDisplayShouldReduceMotion]
+        let decoded = snapshot?.positionDiagnostics?.decoded ?? 0
+        let hasCalibratedPosition = snapshot?.drivers.compactMap(\.location).contains { $0.longitude != nil && $0.latitude != nil } ?? false
+        let hasUncalibratedPosition = snapshot?.drivers.compactMap(\.location).contains { $0.longitude == nil || $0.latitude == nil } ?? false
+        let latestUpstreamDelay = snapshot?.drivers.compactMap(\.location).compactMap { LiveFreshness.age($0.utc, now: now) }.max()
+        let latestSampleAge = snapshot?.drivers.compactMap(\.location).compactMap { LiveFreshness.age($0.receivedAt ?? $0.utc, now: now) }.max()
+        let status: String
+        if radar { status = "历史降雨雷达 · 黑色区域无覆盖" }
+        else if sessionEnded { status = "比赛已结束" }
+        else if let snapshot, snapshot.sourceStatus != .connected { status = "\(snapshot.statusLabel) · 位置未更新" }
+        else if !locations.isEmpty, let latestUpstreamDelay { status = "位置实时 · 上游 UTC 延迟 \(String(format: "%.1fs", max(0, latestUpstreamDelay)))" }
+        else if let snapshot, snapshot.positionStatus == "decode_error" { status = "位置数据解码失败" }
+        else if hasCalibratedPosition { status = "车辆位置停止更新 · 最后样本 \(String(format: "%.1fs", max(0, latestSampleAge ?? 0)))" }
+        else if decoded > 0 || hasUncalibratedPosition { status = "缺少本赛季赛道校准" }
+        else if snapshot != nil { status = "等待车辆位置流" }
+        else { status = geometry != nil && !layoutVerified ? "赛道轮廓当前年份尚待核验" : "" }
+        let locationCenter = locations.first
+        let center: [Double] = [point?.longitude ?? markers.first?["longitude"] as? Double ?? locationCenter?["longitude"] as? Double ?? 0,
+                                point?.latitude ?? markers.first?["latitude"] as? Double ?? locationCenter?["latitude"] as? Double ?? 20]
+        let cameraKey = "\(meeting?.id ?? "season")-\(snapshot?.sessionId ?? "")-\(radar)"
+        let payload: [String: Any] = ["publicToken": publicToken ?? "", "center": center, "zoom": radar ? 8 : meetings.isEmpty ? (locationCenter == nil ? 15.5 : 14.5) : 1.5, "pitch": meetings.isEmpty && !radar ? 55 : 0, "cameraKey": cameraKey, "camera": camera as Any? ?? NSNull(), "geometry": geometry as Any? ?? NSNull(), "drivers": locations, "selected": selected ?? "", "meetings": markers, "status": status, "clientAccepted": locations.count, "positionDiagnostics": ["received": snapshot?.positionDiagnostics?.received ?? 0, "decoded": decoded, "calibrated": snapshot?.positionDiagnostics?.calibrated ?? 0], "reduceMotion": NSWorkspace.shared.accessibilityDisplayShouldReduceMotion]
         guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
         payloadJSON = json
         applyPayload()
@@ -101,12 +154,14 @@ final class MapStore: ObservableObject {
     }
 
     func pause() {
+        isVisible = false
         handler?.cancel()
         webView?.isHidden = true
         webView?.evaluateJavaScript("window.pauseMap && window.pauseMap()")
     }
 
     func release(preserveCamera: Bool = false) {
+        isVisible = false
         generation += 1
         model = nil
         handler?.cancel()
@@ -125,6 +180,12 @@ final class MapStore: ObservableObject {
         if !preserveCamera { camera = nil; serverAddress = nil }
         onDriver = nil
         onMeeting = nil
+    }
+
+    func webContentProcessTerminated(_ webView: WKWebView) {
+        guard self.webView === webView else { return }
+        release()
+        error = "地图内容进程已重启，请重新打开地图"
     }
 }
 
@@ -145,12 +206,17 @@ private final class MapHandler: NSObject, WKScriptMessageHandler, WKNavigationDe
             owner?.camera = camera
             return
         }
+        if body["type"] as? String == "positionDiagnostics", let values = body["value"] as? [String: Int] {
+            owner?.logger.info("positions received=\(values["received"] ?? 0) decoded=\(values["decoded"] ?? 0) calibrated=\(values["calibrated"] ?? 0) accepted=\(values["accepted"] ?? 0) drawn=\(values["drawn"] ?? 0)")
+            return
+        }
         guard let value = body["value"] as? String else { return }
         if body["type"] as? String == "error" { owner?.error = value }
         if body["type"] as? String == "driver" { owner?.onDriver?(value) }
         if body["type"] as? String == "meeting" { owner?.onMeeting?(value) }
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { owner?.applyPayload() }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { owner?.webContentProcessTerminated(webView) }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
         if url.absoluteString == "about:blank" && action.navigationType == .other { decisionHandler(.allow) } else {
@@ -190,6 +256,7 @@ struct MapView: NSViewRepresentable {
     var selected: String? = nil
     var radar = false
     var active = true
+    var now = Date()
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ container: NSView, context: Context) {
         guard active else { store.pause(); return }
@@ -200,21 +267,35 @@ struct MapView: NSViewRepresentable {
             web.autoresizingMask = [.width, .height]
             container.addSubview(web)
         }
-        store.update(meeting: meeting, meetings: meetings, snapshot: snapshot, selected: selected, radar: radar, active: active)
+        store.update(meeting: meeting, meetings: meetings, snapshot: snapshot, selected: selected, radar: radar, active: active, now: now)
     }
 }
 
 struct MeetingMapView: View {
     @EnvironmentObject var model: AppModel
     let meeting: Meeting
-    @StateObject private var map = MapStore()
+    @State private var mapExpanded = false
     @State private var forecast: [ForecastHour] = []
     @State private var weatherStatus = "正在读取预报…"
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if meeting.circuit != nil {
-                MapView(store: map, meeting: meeting).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 10))
-                if let error = map.error { Text(error).font(.caption).foregroundStyle(.secondary) }
+                if mapExpanded {
+                    MapView(store: model.mapStore, meeting: meeting).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 10))
+                    Button("收起地图") { mapExpanded = false; model.mapStore.pause() }.font(.caption)
+                    if let error = model.mapStore.error { Text(error).font(.caption).foregroundStyle(.secondary) }
+                } else {
+                    Button {
+                        mapExpanded = true
+                        Task { await model.mapStore.load(model: model, meeting: meeting) }
+                    } label: {
+                        Label("打开赛道地图 · \(meeting.circuit?.name ?? meeting.location)", systemImage: "map")
+                            .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
             } else { Text("暂无赛道地点坐标").font(.caption).foregroundStyle(.secondary) }
             Text(weatherStatus).font(.caption).foregroundStyle(.secondary)
             ForEach(meeting.sessions) { session in
@@ -226,7 +307,6 @@ struct MeetingMapView: View {
             }
         }
         .task(id: "\(meeting.id)-\(model.serverAddress)") {
-            await map.load(model: model, meeting: meeting)
             forecast = []
             do {
                 let data = try await model.mapData(path: "/api/v1/meetings/\(meeting.id)/weather")
@@ -236,7 +316,7 @@ struct MeetingMapView: View {
                 weatherStatus = envelope.data.status == "available" ? "Open-Meteo 预报\(envelope.meta.stale ? " · 已过期" : "")" : envelope.data.status == "past_event" ? "已结束赛事不提供当前天气预报" : "尚无比赛日期预报"
             } catch { if !Task.isCancelled { weatherStatus = "天气暂不可用：\(error.localizedDescription)" } }
         }
-        .onDisappear { map.release() }
+        .onDisappear { model.mapStore.pause() }
     }
 }
 private struct ForecastEnvelope: Decodable { let data: ForecastData; let meta: ForecastMeta }

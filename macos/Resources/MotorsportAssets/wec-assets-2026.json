@@ -1,0 +1,1147 @@
+{
+  "schemaVersion": 1,
+  "season": 2026,
+  "collectedAt": "2026-11-08T11:30:00Z",
+  "rightsBasis": "localAuthorizationProvidedByOwner",
+  "redistribution": "localUseOnly",
+  "sourcePages": [
+    "https://www.fiawec.com/en/page/grid",
+    "https://www.fiawec.com/en/car/2026/{number}",
+    "https://press.fiawec.com/assets/fileuploads/69/f3/69f36281048a5.pdf#page=10",
+    "https://press.fiawec.com/assets/fileuploads/67/bc/67bc4d2dc2206.pdf#page=14"
+  ],
+  "records": [
+    {
+      "kind": "teamLogo",
+      "id": "wec_alpine",
+      "asset": "team-logo-wec_alpine-2026",
+      "source": "brand-alpine.png",
+      "sha256": "ec89400ad610f7d95137539153e63d060166c2aea4dee019e07975e6a6eda65a"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_aston_martin",
+      "asset": "team-logo-wec_aston_martin-2026",
+      "source": "brand-aston_martin.png",
+      "sha256": "0b54b987df142683d8b1eb0ce7b93805fa1f3291416b7cbfd532e6f7d7998e61"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_bmw",
+      "asset": "team-logo-wec_bmw-2026",
+      "source": "https://commons.wikimedia.org/wiki/File:BMW.svg",
+      "sha256": "553b65c609666226dc6592c289212d483425dcfb0f8fc97e8d7b1584114448aa",
+      "license": "public domain"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_cadillac",
+      "asset": "team-logo-wec_cadillac-2026",
+      "source": "https://commons.wikimedia.org/wiki/File:Cadillac_Logo_2021.svg",
+      "sha256": "62c4aa6aa5b88409d7150fe206595effb6aa0dd7ab6f26e3b6e3130cf6186748",
+      "license": "public domain"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_corvette",
+      "asset": "team-logo-wec_corvette-2026",
+      "source": "https://commons.wikimedia.org/wiki/File:Logo_Corvette_-Transparency.png",
+      "sha256": "bef9ef0e59771402915618b8908128da32f024d137aed345942af5f2f82bd924",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_ferrari",
+      "asset": "team-logo-wec_ferrari-2026",
+      "source": "brand-ferrari.png",
+      "sha256": "05922c7dab1fdd204b8225c0a822f11972efab746518dcd06b36aa8bdfaf375f"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_ford",
+      "asset": "team-logo-wec_ford-2026",
+      "source": "brand-ford.png",
+      "sha256": "e12ef457c29539d5a691832f46fad1c027a4f496b3fe43ddf94447c148c7faf6"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_genesis",
+      "asset": "team-logo-wec_genesis-2026",
+      "source": "brand-genesis.png",
+      "sha256": "45514ae29f30bc319a87189a4b7795980a82b2a88725074795d92f0f0eb398d7"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_lexus",
+      "asset": "team-logo-wec_lexus-2026",
+      "source": "brand-lexus.png",
+      "sha256": "6f6b29c04415ead1dfddc99d68d410e4520a1264d947d2e692c4a80f22c1c733"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_mclaren",
+      "asset": "team-logo-wec_mclaren-2026",
+      "source": "https://commons.wikimedia.org/wiki/File:McLaren_Speedmark_(white).svg",
+      "sha256": "34aa702c9be82692f34a2f747adf0d773fe6e6dac3b94ead7893b9ff1ad16d57",
+      "license": "public domain"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_mercedes",
+      "asset": "team-logo-wec_mercedes-2026",
+      "source": "brand-mercedes.png",
+      "sha256": "22aa0fbd394974bddb8dc1a34f4a9f4b7f9926806653a864827ad95c6f28438f"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_peugeot",
+      "asset": "team-logo-wec_peugeot-2026",
+      "source": "brand-peugeot.png",
+      "sha256": "e6bbcf3cb7602754880552ad1b28eb7209714c02918d77093ad628b49d0e570c"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_porsche",
+      "asset": "team-logo-wec_porsche-2026",
+      "source": "brand-porsche.png",
+      "sha256": "69851540d739f3da9188217dcea291f4fca5961b0154c77c67d91a43cbf3415b"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_toyota",
+      "asset": "team-logo-wec_toyota-2026",
+      "source": "https://commons.wikimedia.org/wiki/File:Toyota_logo_(Red).svg",
+      "sha256": "51580939b33865ed7e1a059233f2befe2c548b2216ffe0b204280852c3426d20",
+      "license": "public domain"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_akkodis_asp",
+      "asset": "team-logo-wec_akkodis_asp-2026",
+      "source": "/tmp/wec-assets/raw/team-AKKODIS ASP TEAM.png",
+      "sha256": "47387ec3a0aad418db359037f259cf087c8ea0d97d1a4baae572d78e67954259"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_garage_59",
+      "asset": "team-logo-wec_garage_59-2026",
+      "source": "/tmp/wec-assets/raw/team-GARAGE 59.jpg",
+      "sha256": "52a2c6c541a7e9fbee046f64410630d9d088a0e2c467546249df2c913271d716"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_heart_of_racing",
+      "asset": "team-logo-wec_heart_of_racing-2026",
+      "source": "/tmp/wec-assets/raw/team-HEART OF RACING TEAM.png",
+      "sha256": "2a1105eb88fbe9db44015ebea2f74aa8c1ef3d6527cbce1313c0be6ef2ca7c15"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_iron_lynx",
+      "asset": "team-logo-wec_iron_lynx-2026",
+      "source": "/tmp/wec-assets/raw/team-IRON LYNX.png",
+      "sha256": "e5492c19f70115a538a6a9af2c8279e5dd1305005a94a0e482861e1228f6b976"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_manthey_dk",
+      "asset": "team-logo-wec_manthey_dk-2026",
+      "source": "/tmp/wec-assets/raw/team-MANTHEY DK ENGINEERING.jpg",
+      "sha256": "630892ea9a9f9c6859e16e2f223f6c82ee0711aa496db4ad07458de725685657"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_proton_competition",
+      "asset": "team-logo-wec_proton_competition-2026",
+      "source": "/tmp/wec-assets/raw/team-PROTON COMPETITION.jpg",
+      "sha256": "18753ed8a04d78795f101914433588d4623f89d82909b66bf2a77a1f00024079"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_team_wrt",
+      "asset": "team-logo-wec_team_wrt-2026",
+      "source": "/tmp/wec-assets/raw/team-TEAM WRT.jpeg",
+      "sha256": "c3787e631ef2078334444dab9cb3146ee6e8675011eb8d79bd62535da94bd113"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_tf_sport",
+      "asset": "team-logo-wec_tf_sport-2026",
+      "source": "/tmp/wec-assets/raw/team-TF SPORT.png",
+      "sha256": "097c08f4a238227d7c1a4dedbbe321025088949ecbe7cc53863b29e713af1fa0"
+    },
+    {
+      "kind": "teamLogo",
+      "id": "wec_the_bend_manthey",
+      "asset": "team-logo-wec_the_bend_manthey-2026",
+      "source": "/tmp/wec-assets/raw/team-THE BEND MANTHEY.jpg",
+      "sha256": "bd377346f069f56905db1720e111695b7546b9a491ee9322686380ba2263671e"
+    },
+    {
+      "kind": "carSide",
+      "id": "007",
+      "asset": "car-side-007-2026",
+      "source": "/tmp/wec-assets/raw/car-007.png",
+      "sha256": "b18f0ffa846823668e3344d1630b9b0f2a07d1a4579ffa0f95e0eb3832c769c5"
+    },
+    {
+      "kind": "carSide",
+      "id": "009",
+      "asset": "car-side-009-2026",
+      "source": "/tmp/wec-assets/raw/car-009.png",
+      "sha256": "3f4290c68275124bbcdefd5f6b18c6b6c24cdf2bf274f5e3c35873645c2977a2"
+    },
+    {
+      "kind": "carSide",
+      "id": "10",
+      "asset": "car-side-10-2026",
+      "source": "/tmp/wec-assets/raw/car-10.png",
+      "sha256": "aab6c1ad3ec45e8dbfe12a428f567bede456ca54e36659fcffff0e6ed0741047"
+    },
+    {
+      "kind": "carSide",
+      "id": "12",
+      "asset": "car-side-12-2026",
+      "source": "/tmp/wec-assets/raw/car-12.png",
+      "sha256": "6503c67551be998e6789644837b3dcbc745b43d4f59f74a1146d66d995ea5085"
+    },
+    {
+      "kind": "carSide",
+      "id": "15",
+      "asset": "car-side-15-2026",
+      "source": "/tmp/wec-assets/raw/car-15.png",
+      "sha256": "449a3659207264f309443359f2f732eda9ffae14123cb24a2f36688a2f3216a6"
+    },
+    {
+      "kind": "carSide",
+      "id": "17",
+      "asset": "car-side-17-2026",
+      "source": "/tmp/wec-assets/raw/car-17.png",
+      "sha256": "e9b781f3dd7a254bf28ca9bc7c203c9b29983eac95ee2406efea154f399b90b8"
+    },
+    {
+      "kind": "carSide",
+      "id": "19",
+      "asset": "car-side-19-2026",
+      "source": "/tmp/wec-assets/raw/car-19.png",
+      "sha256": "588a9e298f61b373352e82aba1efce95bfd53c7ec7eea303f3adcc1a1d927a2c"
+    },
+    {
+      "kind": "carSide",
+      "id": "20",
+      "asset": "car-side-20-2026",
+      "source": "/tmp/wec-assets/raw/car-20.png",
+      "sha256": "c0ea352fe7c13fa5e73eb8aacb1db75018557762ea555c9d1d82b5ddb158b88d"
+    },
+    {
+      "kind": "carSide",
+      "id": "21",
+      "asset": "car-side-21-2026",
+      "source": "/tmp/wec-assets/raw/car-21.png",
+      "sha256": "55fd3cd80fd7fc7401309e3a3335fd27ad29cc293f119a9a701a07536434cc30"
+    },
+    {
+      "kind": "carSide",
+      "id": "23",
+      "asset": "car-side-23-2026",
+      "source": "/tmp/wec-assets/raw/car-23.png",
+      "sha256": "7bce2a99595a93f2aa08d70b0ee3ac250fb5d7b2d89f420353a012e7cc5aa32d"
+    },
+    {
+      "kind": "carSide",
+      "id": "27",
+      "asset": "car-side-27-2026",
+      "source": "/tmp/wec-assets/raw/car-27.png",
+      "sha256": "0750994ede14cf16571925fa08c2237e983bf9acb641853f241193782a6b8ce5"
+    },
+    {
+      "kind": "carSide",
+      "id": "32",
+      "asset": "car-side-32-2026",
+      "source": "/tmp/wec-assets/raw/car-32.png",
+      "sha256": "b84f018a53424c0684ef2ba97e4a246199abca39595428a13c87fa7e540ab679"
+    },
+    {
+      "kind": "carSide",
+      "id": "33",
+      "asset": "car-side-33-2026",
+      "source": "/tmp/wec-assets/raw/car-33.png",
+      "sha256": "2ace7982471a4ce2ecd0db177950bef5de3761dc70def669fb7bdbfe156452b1"
+    },
+    {
+      "kind": "carSide",
+      "id": "34",
+      "asset": "car-side-34-2026",
+      "source": "/tmp/wec-assets/raw/car-34.png",
+      "sha256": "a4df620de214ecacc92b6fa625f01c0ef14b9e4f13e3fb4c37e5f3673d93bdae"
+    },
+    {
+      "kind": "carSide",
+      "id": "35",
+      "asset": "car-side-35-2026",
+      "source": "/tmp/wec-assets/raw/car-35.png",
+      "sha256": "e350bf2617411f4b28b28cd17e749a3ad42fcb8c527a341242c36482945e7626"
+    },
+    {
+      "kind": "carSide",
+      "id": "36",
+      "asset": "car-side-36-2026",
+      "source": "/tmp/wec-assets/raw/car-36.png",
+      "sha256": "fd4a12be0bc352926b298fb92d3a85e8875e176b43b62a825d41298df918bf6a"
+    },
+    {
+      "kind": "carSide",
+      "id": "38",
+      "asset": "car-side-38-2026",
+      "source": "/tmp/wec-assets/raw/car-38.png",
+      "sha256": "7935e9c95be0f8c628b466dd083cfe36852e65051d85549b86850b51b5aab0d8"
+    },
+    {
+      "kind": "carSide",
+      "id": "50",
+      "asset": "car-side-50-2026",
+      "source": "/tmp/wec-assets/raw/car-50.png",
+      "sha256": "3dd16bf39e467514ef8d52c483297cd0e5a7dc4194dee763111ebdc9ee94f9a1"
+    },
+    {
+      "kind": "carSide",
+      "id": "51",
+      "asset": "car-side-51-2026",
+      "source": "/tmp/wec-assets/raw/car-51.png",
+      "sha256": "68d0c964589d783e1d3f762e73aa87d04393fa402a967daa7b1b991003eeb5a7"
+    },
+    {
+      "kind": "carSide",
+      "id": "54",
+      "asset": "car-side-54-2026",
+      "source": "/tmp/wec-assets/raw/car-54.png",
+      "sha256": "55c537a3967fd19f9bd3f998d50736d5f6e8dcda852445f04d6435e88df040db"
+    },
+    {
+      "kind": "carSide",
+      "id": "58",
+      "asset": "car-side-58-2026",
+      "source": "/tmp/wec-assets/raw/car-58.png",
+      "sha256": "17c3876c62c4a6680861d0d672affd03352a03cc442159953c7db0e7d1b79e16"
+    },
+    {
+      "kind": "carSide",
+      "id": "61",
+      "asset": "car-side-61-2026",
+      "source": "/tmp/wec-assets/raw/car-61.png",
+      "sha256": "cb9eb4111c2dd42f999fce87c991ca8f1418018569f541526ffc4915debefec2"
+    },
+    {
+      "kind": "carSide",
+      "id": "69",
+      "asset": "car-side-69-2026",
+      "source": "/tmp/wec-assets/raw/car-69.png",
+      "sha256": "c71f59758c43860356e9966b564c94d14d8c5da84e01a1f7d2408d018e51a2ca"
+    },
+    {
+      "kind": "carSide",
+      "id": "7",
+      "asset": "car-side-7-2026",
+      "source": "/tmp/wec-assets/raw/car-7.png",
+      "sha256": "c795628a99e10b97d2ab4037e242de04c177ad286d92317c908df5a59800e7a1"
+    },
+    {
+      "kind": "carSide",
+      "id": "77",
+      "asset": "car-side-77-2026",
+      "source": "/tmp/wec-assets/raw/car-77.png",
+      "sha256": "afdbd1b6589282bdb377c4a1af9946e2689fea9fc23c5a166dc53c8966a01580"
+    },
+    {
+      "kind": "carSide",
+      "id": "78",
+      "asset": "car-side-78-2026",
+      "source": "/tmp/wec-assets/raw/car-78.png",
+      "sha256": "cdeb677828d1e330f018e2c64bcbed8d843c6e33609879872afcc329bc623f53"
+    },
+    {
+      "kind": "carSide",
+      "id": "79",
+      "asset": "car-side-79-2026",
+      "source": "/tmp/wec-assets/raw/car-79.png",
+      "sha256": "4f214331129eef425ec7a3ab6cbf188d711e1762ceab3ed2e346cea69c6e214b"
+    },
+    {
+      "kind": "carSide",
+      "id": "8",
+      "asset": "car-side-8-2026",
+      "source": "/tmp/wec-assets/raw/car-8.png",
+      "sha256": "d82e6f0f7fa13125b7013f424207e498399127ef84c9e35277c535241cadc3f6"
+    },
+    {
+      "kind": "carSide",
+      "id": "83",
+      "asset": "car-side-83-2026",
+      "source": "/tmp/wec-assets/raw/car-83.png",
+      "sha256": "dcf79f9c3e2ce337bd17be8cba6f20caebbfeb83af1f1085ab762e6c908afe35"
+    },
+    {
+      "kind": "carSide",
+      "id": "87",
+      "asset": "car-side-87-2026",
+      "source": "/tmp/wec-assets/raw/car-87.png",
+      "sha256": "79c03f051493399bed2c1d002f99562e0cf49cc922bba10f87badb14d466e24e"
+    },
+    {
+      "kind": "carSide",
+      "id": "88",
+      "asset": "car-side-88-2026",
+      "source": "/tmp/wec-assets/raw/car-88.png",
+      "sha256": "9a1e720033a35157fe85a780c704ba6c6a0861725f89552e16376771b8d3bf89"
+    },
+    {
+      "kind": "carSide",
+      "id": "91",
+      "asset": "car-side-91-2026",
+      "source": "/tmp/wec-assets/raw/car-91.png",
+      "sha256": "31006e1206b7c3f9257421c0e2b75dfa1469781d53d6167d706fa42d7326a52f"
+    },
+    {
+      "kind": "carSide",
+      "id": "92",
+      "asset": "car-side-92-2026",
+      "source": "/tmp/wec-assets/raw/car-92.png",
+      "sha256": "67a5463160ea715a32321a97d3c00428b83c3d4cb0c16446968dc8b01e9e2ae8"
+    },
+    {
+      "kind": "carSide",
+      "id": "93",
+      "asset": "car-side-93-2026",
+      "source": "/tmp/wec-assets/raw/car-93.png",
+      "sha256": "d69f60a240744c0021411e8600214d424f74805ce2fe6a26a1a6c532548fa67f"
+    },
+    {
+      "kind": "carSide",
+      "id": "94",
+      "asset": "car-side-94-2026",
+      "source": "/tmp/wec-assets/raw/car-94.png",
+      "sha256": "0dfc60cb1e0f0cfc4a07351c28ceba818e8d5b25c76d9a55d5190cf0e78e23de"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "alessandro-pier-guidi",
+      "asset": "driver-photo-alessandro-pier-guidi-2026",
+      "source": "/tmp/wec-assets/raw/driver-alessandro-pier-guidi.png",
+      "sha256": "6567c5708fb8c04a4e00293c85764f43f110c26001a9452aa3c9c128d04b2575"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "alessio-rovera",
+      "asset": "driver-photo-alessio-rovera-2026",
+      "source": "/tmp/wec-assets/raw/driver-alessio-rovera.png",
+      "sha256": "d0a101649aa495ed17dfbcc314e32b541d920474acaad22696d779971950d2d1"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "alex-lynn",
+      "asset": "driver-photo-alex-lynn-2026",
+      "source": "/tmp/wec-assets/raw/driver-alex-lynn.png",
+      "sha256": "c8afd3f9a293b36b29930cc8d866c910648a626440aed2a1d5d79a1b60e62479"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "alex-riberas",
+      "asset": "driver-photo-alex-riberas-2026",
+      "source": "/tmp/wec-assets/raw/driver-alex-riberas.png",
+      "sha256": "4f9dc338ff3a631aec2b92a249ad65b35a69a5523cdec3b15dea35dc776936df"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "alexander-west",
+      "asset": "driver-photo-alexander-west-2026",
+      "source": "/tmp/wec-assets/raw/driver-alexander-west.png",
+      "sha256": "4b339ca6bd7f6aa5942c2312391ff4a200fad50069caee31581250eadc8b03c9"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "andre-lotterer",
+      "asset": "driver-photo-andre-lotterer-2026",
+      "source": "/tmp/wec-assets/raw/driver-andre-lotterer.png",
+      "sha256": "4c123f702ba4cafe6c8a2d9c250a23eb0887c4cf98a84e5f4272b32ad5cfab8e"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "antares-au",
+      "asset": "driver-photo-antares-au-2026",
+      "source": "/tmp/wec-assets/raw/driver-antares-au.png",
+      "sha256": "bf37dc8c61bf684707b0b0ca88c553b4d166416c81a34402ee99f389b6327b23"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "anthony-mcintosh",
+      "asset": "driver-photo-anthony-mcintosh-2026",
+      "source": "/tmp/wec-assets/raw/driver-anthony-mcintosh.png",
+      "sha256": "1649e5a4e89a35985a3d9472865341e7994c8336a419bca58f1d1f309b9495f6"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "antonio-felix-da-costa",
+      "asset": "driver-photo-antonio-felix-da-costa-2026",
+      "source": "/tmp/wec-assets/raw/driver-antonio-felix-da-costa.png",
+      "sha256": "04599dd270ee23c0f9f1d71a8a511856bf2887d3d4bdc5664d38f50178645759"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "antonio-fuoco",
+      "asset": "driver-photo-antonio-fuoco-2026",
+      "source": "/tmp/wec-assets/raw/driver-antonio-fuoco.png",
+      "sha256": "ac2a418c5908330f7f2787142faaf699cfb1dd4978aed232fe8d5ce7a5cce3a3"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "antonio-giovinazzi",
+      "asset": "driver-photo-antonio-giovinazzi-2026",
+      "source": "/tmp/wec-assets/raw/driver-antonio-giovinazzi.png",
+      "sha256": "3c5f8cfc6632e5c5ed1d0138728f77a24763421ac83a0ce108c08ad825660bfe"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "augusto-farfus",
+      "asset": "driver-photo-augusto-farfus-2026",
+      "source": "/tmp/wec-assets/raw/driver-augusto-farfus.png",
+      "sha256": "2bc116073d66754dfe6fa90515f63ff4b6906801e78d2fe54544f751b304f46d"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "ayhancan-guven",
+      "asset": "driver-photo-ayhancan-guven-2026",
+      "source": "/tmp/wec-assets/raw/driver-ayhancan-guven.png",
+      "sha256": "b2a803ff2951f4c93bd4b347929df7c7a33d2d64220f8a3b49f0db2f7def9b41"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "ben-tuck",
+      "asset": "driver-photo-ben-tuck-2026",
+      "source": "/tmp/wec-assets/raw/driver-ben-tuck.png",
+      "sha256": "3d63e11f0d93a270d5a9dafb5df029fbdc5e77dec20ab12d2b01b33523f6d9c8"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "benjamin-goethe",
+      "asset": "driver-photo-benjamin-goethe-2026",
+      "source": "/tmp/wec-assets/raw/driver-benjamin-goethe.png",
+      "sha256": "be562b19a209ce3af9c6aa8b01093ca94f11fec704cbab1f12d47b9a0f415bb5"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "brendon-hartley",
+      "asset": "driver-photo-brendon-hartley-2026",
+      "source": "/tmp/wec-assets/raw/driver-brendon-hartley.png",
+      "sha256": "a46ca7ab6989f6464d09f38601661a3ac45e461fd3227515bcd8a752828b5a8c"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "charles-milesi",
+      "asset": "driver-photo-charles-milesi-2026",
+      "source": "/tmp/wec-assets/raw/driver-charles-milesi.png",
+      "sha256": "c1d825fcc02c10b04064b6d19d1adcca7dc711c25177c40c5da948c99b55c132"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "charlie-eastwood",
+      "asset": "driver-photo-charlie-eastwood-2026",
+      "source": "/tmp/wec-assets/raw/driver-charlie-eastwood.png",
+      "sha256": "836c4a417c59b930ae882f30f0144354dc8663455a14587f3ea9f2b23a3a6e1d"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "clemens-schmid",
+      "asset": "driver-photo-clemens-schmid-2026",
+      "source": "/tmp/wec-assets/raw/driver-clemens-schmid.png",
+      "sha256": "c74c3393a52126c1cb1a7d42b715231444858732887a3691ba6a3f7e6b741327"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "daniel-harper",
+      "asset": "driver-photo-daniel-harper-2026",
+      "source": "/tmp/wec-assets/raw/driver-daniel-harper.png",
+      "sha256": "e9eb46f6bfa6c121a540d74a0f8f1247fa2aa61d8c90a1979f696d9691e53a07"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "daniel-juncadella",
+      "asset": "driver-photo-daniel-juncadella-2026",
+      "source": "/tmp/wec-assets/raw/driver-daniel-juncadella.png",
+      "sha256": "065ced32474d09d4144e5c97a5849d7e9517d816d05335bb6b1da712dee5fc68"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "darren-leung",
+      "asset": "driver-photo-darren-leung-2026",
+      "source": "/tmp/wec-assets/raw/driver-darren-leung.png",
+      "sha256": "57f3198f2d1d323dfd655f982429af023616753a85e95ad75d22cda012754af6"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "davide-rigon",
+      "asset": "driver-photo-davide-rigon-2026",
+      "source": "/tmp/wec-assets/raw/driver-davide-rigon.png",
+      "sha256": "1cc5ff0519418e04896b5a74279e1c9afe2110616a14d6556fce391a78ed6433"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "dries-vanthoor",
+      "asset": "driver-photo-dries-vanthoor-2026",
+      "source": "/tmp/wec-assets/raw/driver-dries-vanthoor.png",
+      "sha256": "bcd300b6bbd7d02dcb4da6bba3689acfeb8e2892c7bd9c16c985cf60672687e9"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "earl-bamber",
+      "asset": "driver-photo-earl-bamber-2026",
+      "source": "/tmp/wec-assets/raw/driver-earl-bamber.png",
+      "sha256": "e76c4d909b515f0c0638380c853c716975e6db5482e049d16bb36589fb825434"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "eduardo-barrichello",
+      "asset": "driver-photo-eduardo-barrichello-2026",
+      "source": "/tmp/wec-assets/raw/driver-eduardo-barrichello.png",
+      "sha256": "b74c21602f618e33524c1392c07002385c472d577febcc52507d40e47c06019d"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "eric-powell",
+      "asset": "driver-photo-eric-powell-2026",
+      "source": "/tmp/wec-assets/raw/driver-eric-powell.png",
+      "sha256": "7fab6dda9a94e045adf6714f3e42ae6e77d5666cc4f8976964461e70285abaa1"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "esteban-masson",
+      "asset": "driver-photo-esteban-masson-2026",
+      "source": "/tmp/wec-assets/raw/driver-esteban-masson.png",
+      "sha256": "76c855a37731b0160d25a6e8cc2d84881ab8f474941931592ca284f86061c8de"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "ferdinand-habsburg",
+      "asset": "driver-photo-ferdinand-habsburg-2026",
+      "source": "/tmp/wec-assets/raw/driver-ferdinand-habsburg.png",
+      "sha256": "38b2342284b3fbc25793b3757e2b9d31093140099de6bd114ae7145d56bb0519"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "finn-gehrsitz",
+      "asset": "driver-photo-finn-gehrsitz-2026",
+      "source": "/tmp/wec-assets/raw/driver-finn-gehrsitz.png",
+      "sha256": "e05336d7b35e56b9d1d0eed91c623b7c08e76764590ee846a4c37f0756b99d74"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "francesco-castellacci",
+      "asset": "driver-photo-francesco-castellacci-2026",
+      "source": "/tmp/wec-assets/raw/driver-francesco-castellacci.png",
+      "sha256": "7f6c0c40ba2d90a69954446a0425875e2d424896ae4696826aedd79d0e8c6afd"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "francois-heriau",
+      "asset": "driver-photo-francois-heriau-2026",
+      "source": "/tmp/wec-assets/raw/driver-francois-heriau.png",
+      "sha256": "0af0784816e93707a06aee70a6e5ddcefdfbbaa6be79efa3cbc135c2bb852c93"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "frederic-makowiecki",
+      "asset": "driver-photo-frederic-makowiecki-2026",
+      "source": "/tmp/wec-assets/raw/driver-frederic-makowiecki.png",
+      "sha256": "d8c31f7d5ccfc815848ced09e94f77aee837bc2c826503a374616b4461070ebb"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "giammarco-levorato",
+      "asset": "driver-photo-giammarco-levorato-2026",
+      "source": "/tmp/wec-assets/raw/driver-giammarco-levorato.png",
+      "sha256": "468ee3731c794f987efb8e2c1428f5191fc2df1cc561877db2cf8c4f57839e9e"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "gray-newell",
+      "asset": "driver-photo-gray-newell-2026",
+      "source": "/tmp/wec-assets/raw/driver-gray-newell.png",
+      "sha256": "c3e351dc05f676828cdc2759219aa115df344362f4454c58bb791870b36651b3"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "hadrien-david",
+      "asset": "driver-photo-hadrien-david-2026",
+      "source": "/tmp/wec-assets/raw/driver-hadrien-david.png",
+      "sha256": "74a7ee76378b7634cf6b245d7bd293ae1612e5a58f6d079c95e822db11fa908c"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "harry-tincknell",
+      "asset": "driver-photo-harry-tincknell-2026",
+      "source": "/tmp/wec-assets/raw/driver-harry-tincknell.png",
+      "sha256": "0edecf230ae04db15425df89e86f1909133ca00d4156714caaa6ff1df849c368"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "ian-james",
+      "asset": "driver-photo-ian-james-2026",
+      "source": "/tmp/wec-assets/raw/driver-ian-james.png",
+      "sha256": "e949dc4868b6397d77aeea25214a91a5a23f7814c05e26b0f497fc867e2d0fc7"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "jack-aitken",
+      "asset": "driver-photo-jack-aitken-2026",
+      "source": "/tmp/wec-assets/raw/driver-jack-aitken.png",
+      "sha256": "1bbd547b3eb3b139f2aae7348da40c38b3d9648085515842ef1c4d0b4105c4af"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "james-calado",
+      "asset": "driver-photo-james-calado-2026",
+      "source": "/tmp/wec-assets/raw/driver-james-calado.png",
+      "sha256": "64b22b2e72a7b8fa69813fa8dfee9b79d7bd7eac7d7cefaf019649c007eb8342"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "james-cottingham",
+      "asset": "driver-photo-james-cottingham-2026",
+      "source": "/tmp/wec-assets/raw/driver-james-cottingham.png",
+      "sha256": "4aa4a3096365046ce781b66c0b814684cd9407b644b294d1bc4598f77c3c9611"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "johannes-zelger",
+      "asset": "driver-photo-johannes-zelger-2026",
+      "source": "/tmp/wec-assets/raw/driver-johannes-zelger.png",
+      "sha256": "a104af4bd724e35691fc606858f926130cbb0a34a4ee96d77ddcdda0df8f7d67"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "jonny-adam",
+      "asset": "driver-photo-jonny-adam-2026",
+      "source": "/tmp/wec-assets/raw/driver-jonny-adam.png",
+      "sha256": "fdfae8ce1633288245e230e0ff28c5f67b17b885d00d802d25853aaea59dc427"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "jonny-edgar",
+      "asset": "driver-photo-jonny-edgar-2026",
+      "source": "/tmp/wec-assets/raw/driver-jonny-edgar.png",
+      "sha256": "6acf39f074f120cb283405c31ecd41678cdae16e3aed274e795d5c4f142c0295"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "jose-maria-lopez",
+      "asset": "driver-photo-jose-maria-lopez-2026",
+      "source": "/tmp/wec-assets/raw/driver-jose-maria-lopez.png",
+      "sha256": "c334c81b5e4783e8eac17b0da28b9214fbe831f077cac5110dfcbbf8b64197ce"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "jules-gounon",
+      "asset": "driver-photo-jules-gounon-2026",
+      "source": "/tmp/wec-assets/raw/driver-jules-gounon.png",
+      "sha256": "e64d173ab9f5b3227915e82c4d7784e77b5839f357fbc2a0ae0cbaf2791df83c"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "kamui-kobayashi",
+      "asset": "driver-photo-kamui-kobayashi-2026",
+      "source": "/tmp/wec-assets/raw/driver-kamui-kobayashi.png",
+      "sha256": "ded6a11ba77db4ceb1f9b570a405f9f3ee2d958537c261144a30ba772f4377ba"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "kevin-magnussen",
+      "asset": "driver-photo-kevin-magnussen-2026",
+      "source": "/tmp/wec-assets/raw/driver-kevin-magnussen.png",
+      "sha256": "fc88485e36451d71548bb92834509c447a9f720abd0168103e8a715d8c707173"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "lin-hodenius",
+      "asset": "driver-photo-lin-hodenius-2026",
+      "source": "/tmp/wec-assets/raw/driver-lin-hodenius.png",
+      "sha256": "21c52122c3d59b571283d52bb633b8e87b60390a91e6ccdeea3ff81474dd3f02"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "logan-sargeant",
+      "asset": "driver-photo-logan-sargeant-2026",
+      "source": "/tmp/wec-assets/raw/driver-logan-sargeant.png",
+      "sha256": "5cb97b4f4fef72bc8c98386bd947640575d4de06e9c0e41dd174b45a93ce819b"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "loic-duval",
+      "asset": "driver-photo-loic-duval-2026",
+      "source": "/tmp/wec-assets/raw/driver-loic-duval.png",
+      "sha256": "5d7c914d23d14bf178dd3743b82bdd3e3d36b2b5f2b8fbc6199355cdf23f0e40"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "luis-felipe-derani",
+      "asset": "driver-photo-luis-felipe-derani-2026",
+      "source": "/tmp/wec-assets/raw/driver-luis-felipe-derani.png",
+      "sha256": "2336a543b8c2771975adcce8f6c61d08c120b56aeca5ae49ecd9cc3b0af2b8e7"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "malthe-jakobsen",
+      "asset": "driver-photo-malthe-jakobsen-2026",
+      "source": "/tmp/wec-assets/raw/driver-malthe-jakobsen.png",
+      "sha256": "8d45c5900f24f9bddea7606487e684646d014dfe77055df3c6d866f1b5f297bc"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "marco-sorensen",
+      "asset": "driver-photo-marco-sorensen-2026",
+      "source": "/tmp/wec-assets/raw/driver-marco-sorensen.png",
+      "sha256": "9a52ec3e60fb6d19a1c9dc3c89589a538793f8fc74718f94a1420dde1aa5131f"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "martin-berry",
+      "asset": "driver-photo-martin-berry-2026",
+      "source": "/tmp/wec-assets/raw/driver-martin-berry.png",
+      "sha256": "f319c73060c4aba926aa0971c23b4865b55ae6e1d2526acfebc2c8bb866c7332"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "marvin-kirchhofer",
+      "asset": "driver-photo-marvin-kirchhofer-2026",
+      "source": "/tmp/wec-assets/raw/driver-marvin-kirchhofer.png",
+      "sha256": "22185f1b73299d41741b01622c35c6882fc7fb4ee8568ee34a12e292c70adf64"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "mathieu-jaminet",
+      "asset": "driver-photo-mathieu-jaminet-2026",
+      "source": "/tmp/wec-assets/raw/driver-mathieu-jaminet.png",
+      "sha256": "38db4ae26b5acc97c7dfc0991d119496d03c428d12b33ee6101aec9c4834cd20"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "mathys-jaubert",
+      "asset": "driver-photo-mathys-jaubert-2026",
+      "source": "/tmp/wec-assets/raw/driver-mathys-jaubert.png",
+      "sha256": "07d1d5a9a472b4e310d101fa4d63b517d2b009e8697d70d3cbfa690452cc1291"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "matteo-cressoni",
+      "asset": "driver-photo-matteo-cressoni-2026",
+      "source": "/tmp/wec-assets/raw/driver-matteo-cressoni.png",
+      "sha256": "37577d8e3ad99707cdcaf2a3481d0a48cd4873e4db9ac2afc14e3a9ad58a43e4"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "mattia-drudi",
+      "asset": "driver-photo-mattia-drudi-2026",
+      "source": "/tmp/wec-assets/raw/driver-mattia-drudi.png",
+      "sha256": "1ddd95e9c45632fd65de420a2a046313c3b176f0041ce0a88a8b198fc3bd669a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "maxime-martin",
+      "asset": "driver-photo-maxime-martin-2026",
+      "source": "/tmp/wec-assets/raw/driver-maxime-martin.png",
+      "sha256": "66933b6590ea745363c6e6dce9e5785b0fa96c5f287a179a1277e1e0dacd58e5"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "miguel-molina",
+      "asset": "driver-photo-miguel-molina-2026",
+      "source": "/tmp/wec-assets/raw/driver-miguel-molina.png",
+      "sha256": "4ab0fece140856d01db5d2cfbc41cfbc0fecc92592a49ee0c9899d0206538007"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "mike-conway",
+      "asset": "driver-photo-mike-conway-2026",
+      "source": "/tmp/wec-assets/raw/driver-mike-conway.png",
+      "sha256": "ac4041ffd04a86a7f5d5a453917ddf56ba61be78360c3efbeefdf8ef721c750a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "nick-cassidy",
+      "asset": "driver-photo-nick-cassidy-2026",
+      "source": "/tmp/wec-assets/raw/driver-nick-cassidy.png",
+      "sha256": "dbd5f809218a8455d048196ca09f0f5f8a42df6d4f1a2a7829c9c7caa7249668"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "nicklas-nielsen",
+      "asset": "driver-photo-nicklas-nielsen-2026",
+      "source": "/tmp/wec-assets/raw/driver-nicklas-nielsen.png",
+      "sha256": "3a3cd8c261ec8635dda2d1893aacf9110a0d9bc2d54aba5ead89fa841c152eb9"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "nicky-catsburg",
+      "asset": "driver-photo-nicky-catsburg-2026",
+      "source": "/tmp/wec-assets/raw/driver-nicky-catsburg.png",
+      "sha256": "5e3941562ffbba4bbf45dc4478adf9ab2f07839818ece1567dc76099f48b241a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "norman-nato",
+      "asset": "driver-photo-norman-nato-2026",
+      "source": "/tmp/wec-assets/raw/driver-norman-nato.png",
+      "sha256": "037a04b27856eabe7956de9a67d596aa72dc24d8c95c0a953a94c0f7d23951ea"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "nyck-de-vries",
+      "asset": "driver-photo-nyck-de-vries-2026",
+      "source": "/tmp/wec-assets/raw/driver-nyck-de-vries.png",
+      "sha256": "1a3b5b587068ac191385fe1f531cc74aede54f300d9cd020d7e4fcfa9b02f6e7"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "parker-thompson",
+      "asset": "driver-photo-parker-thompson-2026",
+      "source": "/tmp/wec-assets/raw/driver-parker-thompson.png",
+      "sha256": "c99c5884c61aeb63cc6aea3452844d21a375635700395ddffe2c7f18f8970b45"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "paul-di-resta",
+      "asset": "driver-photo-paul-di-resta-2026",
+      "source": "/tmp/wec-assets/raw/driver-paul-di-resta.png",
+      "sha256": "62ff6a38af9bd9f54d523957bdfd985ad7248b37efd530bf1380c5a71bcdd4ad"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "paul-loup-chatin",
+      "asset": "driver-photo-paul-loup-chatin-2026",
+      "source": "/tmp/wec-assets/raw/driver-paul-loup-chatin.png",
+      "sha256": "2cf27f5b185e60f742b751c046c1261bccce740be87414cbe3094d799121607b"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "peter-dempsey",
+      "asset": "driver-photo-peter-dempsey-2026",
+      "source": "/tmp/wec-assets/raw/driver-peter-dempsey.png",
+      "sha256": "bb7e222ee162c38da475b18a7d209d7a0635fd861c83fc80bea4af0163eb8c1c"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "petru-umbrarescu",
+      "asset": "driver-photo-petru-umbrarescu-2026",
+      "source": "/tmp/wec-assets/raw/driver-petru-umbrarescu.png",
+      "sha256": "48e77bfa2920a6abbe6ce08e716a11d13c6edcdbd9379e9b9ff952ac3de2095a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "philip-hanson",
+      "asset": "driver-photo-philip-hanson-2026",
+      "source": "/tmp/wec-assets/raw/driver-philip-hanson.png",
+      "sha256": "122167ebfc4f7f85d86dfcb998b1ba929ac8a869f1bd8e3f6e3f30dd360b19cc"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "raffaele-marciello",
+      "asset": "driver-photo-raffaele-marciello-2026",
+      "source": "/tmp/wec-assets/raw/driver-raffaele-marciello.png",
+      "sha256": "d58100fa479fa55443631f54ad20db0c88c78fbaa9085f4264cc4f19d9fc39ba"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "rene-rast",
+      "asset": "driver-photo-rene-rast-2026",
+      "source": "/tmp/wec-assets/raw/driver-rene-rast.png",
+      "sha256": "aab2d76fecbb742fc5ad2143ddf54db3d954ceed679ae85fcd45c49e492c44a9"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "riccardo-pera",
+      "asset": "driver-photo-riccardo-pera-2026",
+      "source": "/tmp/wec-assets/raw/driver-riccardo-pera.png",
+      "sha256": "2526822998fd0fbaf79164ca644ca09003faeed232d7ebd12b5cfb6d839f51c9"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "richard-lietz",
+      "asset": "driver-photo-richard-lietz-2026",
+      "source": "/tmp/wec-assets/raw/driver-richard-lietz.png",
+      "sha256": "57656fc3b439c595154ba0170dbaea1b26754a6e8f751769c69eb486c6825806"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "robert-kubica",
+      "asset": "driver-photo-robert-kubica-2026",
+      "source": "/tmp/wec-assets/raw/driver-robert-kubica.png",
+      "sha256": "df2575227b90ce02daa7200f4712c79665292b7a6b887611802deab81c84f10f"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "robin-frijns",
+      "asset": "driver-photo-robin-frijns-2026",
+      "source": "/tmp/wec-assets/raw/driver-robin-frijns.png",
+      "sha256": "79594d2f24d703f5e666cf57a26f28d38993d43fc6ac640164de9f7fbbf629f1"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "rui-andrade",
+      "asset": "driver-photo-rui-andrade-2026",
+      "source": "/tmp/wec-assets/raw/driver-rui-andrade.png",
+      "sha256": "a69cb24678423540806a8be097e4925225099248e49b316edbf5caf716e0e7db"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "ryo-hirakawa",
+      "asset": "driver-photo-ryo-hirakawa-2026",
+      "source": "/tmp/wec-assets/raw/driver-ryo-hirakawa.png",
+      "sha256": "bdfa152267dd0c64dbb65168b372671212041eb0f2c940c6412a18a444a2ff82"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "salih-yoluc",
+      "asset": "driver-photo-salih-yoluc-2026",
+      "source": "/tmp/wec-assets/raw/driver-salih-yoluc.png",
+      "sha256": "3cd70ef938ac665cbee6fc672425a5205011910f394a6a483f691211e3f6868a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "sean-gelael",
+      "asset": "driver-photo-sean-gelael-2026",
+      "source": "/tmp/wec-assets/raw/driver-sean-gelael.png",
+      "sha256": "d2f8381c554fdfff887ee1b8d8ec8a18cfcec94301de4c12b434622354b6dd55"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "sebastian-priaulx",
+      "asset": "driver-photo-sebastian-priaulx-2026",
+      "source": "/tmp/wec-assets/raw/driver-sebastian-priaulx.png",
+      "sha256": "540dafd81dd433abcbea5d65349d2806ba169dd79ea656c6033eef29af8654b4"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "sebastien-bourdais",
+      "asset": "driver-photo-sebastien-bourdais-2026",
+      "source": "/tmp/wec-assets/raw/driver-sebastien-bourdais.png",
+      "sha256": "d0354dc524a893a0203e296ba7f633ff84bcc0a07488609022f4fc34e9e05ac1"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "sebastien-buemi",
+      "asset": "driver-photo-sebastien-buemi-2026",
+      "source": "/tmp/wec-assets/raw/driver-sebastien-buemi.png",
+      "sha256": "2f9ad2826c8f221e6669982ae79de73688841a12d5bcb49b664e6b5ded458e23"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "sheldon-van-der-linde",
+      "asset": "driver-photo-sheldon-van-der-linde-2026",
+      "source": "/tmp/wec-assets/raw/driver-sheldon-van-der-linde.png",
+      "sha256": "8894cdbb6cd5ef9f7bb1fc96a83b48b8e5633691e6882d3191963dc3a1a869d3"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "simon-mann",
+      "asset": "driver-photo-simon-mann-2026",
+      "source": "/tmp/wec-assets/raw/driver-simon-mann.png",
+      "sha256": "1bb8310639b0a734a9348c968d02958e7d5268e993c93d0296dacd1e5faa5e5e"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "stefano-gattuso",
+      "asset": "driver-photo-stefano-gattuso-2026",
+      "source": "/tmp/wec-assets/raw/driver-stefano-gattuso.png",
+      "sha256": "12ec6d70d6f9e6ac5135b608fc3b4b47d78a2d922d5c9debf516a4c2379d3907"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "stoffel-vandoorne",
+      "asset": "driver-photo-stoffel-vandoorne-2026",
+      "source": "/tmp/wec-assets/raw/driver-stoffel-vandoorne.png",
+      "sha256": "76dd4dd364b147470a81b6addd8bdd7917a13d7119af41c9e973bb0b287e732f"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "theo-pourchaire",
+      "asset": "driver-photo-theo-pourchaire-2026",
+      "source": "/tmp/wec-assets/raw/driver-theo-pourchaire.png",
+      "sha256": "f04e662bc612197db703fef0a2a7521a40deede9af844a4c7df923e5df93482d"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "thomas-fleming",
+      "asset": "driver-photo-thomas-fleming-2026",
+      "source": "/tmp/wec-assets/raw/driver-thomas-fleming.png",
+      "sha256": "d17d479e70d4e7aaf87f73d5e93cf60218439d8b8e3ccbe244b16824079d17b3"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "thomas-flohr",
+      "asset": "driver-photo-thomas-flohr-2026",
+      "source": "/tmp/wec-assets/raw/driver-thomas-flohr.png",
+      "sha256": "724d27c0ea0000742eedb7ade78bee20225ab36f46b0fee8f41949ba51a5f98e"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "timur-boguslavskiy",
+      "asset": "driver-photo-timur-boguslavskiy-2026",
+      "source": "/tmp/wec-assets/raw/driver-timur-boguslavskiy.png",
+      "sha256": "727fd2df4100cb85e04b4f7ea7a59fb8dbb8cca82d6575005e10090f6f61d651"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "tom-gamble",
+      "asset": "driver-photo-tom-gamble-2026",
+      "source": "/tmp/wec-assets/raw/driver-tom-gamble.png",
+      "sha256": "67263efcba9f26769a7716a64e2d8069fb0903b6a616e7cc4a077212bb836e4c"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "tom-van-rompuy",
+      "asset": "driver-photo-tom-van-rompuy-2026",
+      "source": "/tmp/wec-assets/raw/driver-tom-van-rompuy.png",
+      "sha256": "82c76f863136b77e5550d523fa90e018ba41f32740ef70cb87285b00147b6063"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "victor-martins",
+      "asset": "driver-photo-victor-martins-2026",
+      "source": "/tmp/wec-assets/raw/driver-victor-martins.png",
+      "sha256": "3e1f44bec7fd56cd3f34f3e7603b67f95a8ce819a71e083e2168cb3ef0eead4a"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "will-stevens",
+      "asset": "driver-photo-will-stevens-2026",
+      "source": "/tmp/wec-assets/raw/driver-will-stevens.png",
+      "sha256": "6d64d6b2b50e07d67dfc639659b8602d2e5062a296e2d1f9e431b008385ee1cb"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "yasser-shahin",
+      "asset": "driver-photo-yasser-shahin-2026",
+      "source": "/tmp/wec-assets/raw/driver-yasser-shahin.png",
+      "sha256": "a983e9db5c1569ecda3aa177f8c433dc5019bc98369ba2c94aacabeb4ef2be6b"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "yifei-ye",
+      "asset": "driver-photo-yifei-ye-2026",
+      "source": "/tmp/wec-assets/raw/driver-yifei-ye.png",
+      "sha256": "24ecac2b877597b5e8080ef22f6503903443596278df35808bfb917fd833c2bc"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "zacharie-robichon",
+      "asset": "driver-photo-zacharie-robichon-2026",
+      "source": "/tmp/wec-assets/raw/driver-zacharie-robichon.png",
+      "sha256": "864d830b25abca23baf9a4147916296a6086bb9052c75591b6e7e2df862b6dbf"
+    },
+    {
+      "kind": "seriesLogo",
+      "id": "wec",
+      "asset": "series-wec",
+      "source": "https://www.fiawec.com/uploads/wec-logo-69d50a53ddfee895249122.png",
+      "sha256": "c8acbb01eded4ca5086b31a2871275841a892f9aba390ef7c60c7dba68e40afb"
+    }
+  ]
+}

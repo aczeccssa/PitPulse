@@ -4,13 +4,17 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
 use crate::{
+    api::refresh::{DataRefreshEvent, RefreshRequest, RefreshStatus, RefreshTarget},
     app_state::AppState,
     domain::calendar::{Meeting, Session, SessionType},
     domain::live::{LiveSourceMode, LiveStatus},
     error::ProviderError,
-    providers::f1_live::{
-        client::{F1LiveClient, F1LiveError, F1LiveUpdate},
-        reducer::LiveTopicReducer,
+    providers::{
+        f1_live::{
+            client::{F1LiveClient, F1LiveError, F1LiveUpdate},
+            reducer::LiveTopicReducer,
+        },
+        wec_live::{WEC_SERIES_ID, WecLiveClient, snapshot_from_bootstrap},
     },
     services::{
         results_sync::{ResultsSync, SyncOutcome},
@@ -55,15 +59,482 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
         let mut interval = tokio::time::interval(TICK);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
-            interval.tick().await;
-            if let Err(error) = sync_cycle(&scheduler_state, &sync, &mut identities).await {
-                tracing::warn!(%error, "scheduled sync cycle failed");
+            tokio::select! {
+                biased;
+                job = scheduler_state.refresh_queue.next() => {
+                    let request = job.request.clone();
+                    let in_progress = refresh_event(&scheduler_state, &request, RefreshStatus::InProgress, None).await;
+                    let _ = scheduler_state.refresh_events.send(in_progress);
+                    let event = refresh_target(&scheduler_state, &sync, &mut identities, &request).await;
+                    let _ = scheduler_state.refresh_events.send(event.clone());
+                    let manual = scheduler_state.refresh_queue.finish(job, event).await;
+                    if manual {
+                        enqueue_background_refreshes(&scheduler_state, &request).await;
+                    }
+                }
+                _ = interval.tick() => {
+                    if let Err(error) = sync_cycle(&scheduler_state, &sync, &mut identities).await {
+                        tracing::warn!(%error, "scheduled sync cycle failed");
+                    }
+                }
             }
         }
     });
     let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
+    let wec_live = tokio::spawn(run_wec_live_supervisor(state.clone()));
     let live = tokio::spawn(run_live_supervisor(state));
-    SchedulerTasks(vec![scheduler, live, analysis])
+    SchedulerTasks(vec![scheduler, live, wec_live, analysis])
+}
+
+async fn refresh_target(
+    state: &AppState,
+    sync: &ResultsSync,
+    identities: &mut Option<crate::providers::results::IdentityMaps>,
+    request: &RefreshRequest,
+) -> DataRefreshEvent {
+    let provider = PROVIDER;
+    let endpoint = match request.target {
+        RefreshTarget::Calendar => format!("calendar-{}", request.season),
+        RefreshTarget::Results => format!(
+            "results-{}",
+            request.session_id.as_deref().unwrap_or_default()
+        ),
+        RefreshTarget::Standings => format!("standings-drivers-{}", request.season),
+    };
+    let now = match state.database.utc_now().await {
+        Ok(now) => now,
+        Err(error) => {
+            tracing::warn!(%error, "manual refresh timestamp unavailable");
+            return refresh_event(state, request, RefreshStatus::Failed, None).await;
+        }
+    };
+    if !state.jolpica.enabled {
+        return refresh_event(state, request, RefreshStatus::Failed, None).await;
+    }
+    if request.target != RefreshTarget::Standings
+        && let Ok(Some(status)) = state.database.sync_status(provider, &endpoint).await
+        && (status.last_error.is_some() || status.retry_count > 0)
+        && status
+            .next_retry_at
+            .as_deref()
+            .is_some_and(|next| next > now.as_str())
+    {
+        return refresh_event(
+            state,
+            request,
+            RefreshStatus::RateLimited,
+            status.next_retry_at,
+        )
+        .await;
+    }
+
+    let outcome = match request.target {
+        RefreshTarget::Calendar => {
+            let attempt = match begin_job(&state.database, provider, &endpoint, &now).await {
+                Ok(attempt) => attempt,
+                Err(error) => {
+                    tracing::warn!(%error, "manual calendar refresh could not start");
+                    return refresh_event(state, request, RefreshStatus::Failed, None).await;
+                }
+            };
+            let calendar = CalendarSync {
+                jolpica: state.jolpica.clone(),
+                openf1: state.openf1.clone(),
+                timeout: Duration::from_secs(8),
+            };
+            match calendar
+                .sync_season_once(&state.database, request.season)
+                .await
+            {
+                Ok(meetings) => {
+                    let now = state.database.utc_now().await.unwrap_or_default();
+                    let delay =
+                        if has_session_within(&meetings, &now, Duration::from_secs(24 * 60 * 60)) {
+                            Duration::from_secs(30 * 60)
+                        } else {
+                            SIX_HOURS
+                        };
+                    if let Err(error) =
+                        record_success(&state.database, provider, &endpoint, delay, None).await
+                    {
+                        tracing::warn!(%error, "manual calendar refresh state could not be saved");
+                        RefreshStatus::Failed
+                    } else if state.openf1.enabled {
+                        let openf1_key = format!("calendar-{}", request.season);
+                        let retry = state
+                            .database
+                            .sync_status(OPENF1_PROVIDER, &openf1_key)
+                            .await
+                            .ok()
+                            .flatten();
+                        if retry.as_ref().is_some_and(|s| {
+                            (s.last_error.is_some() || s.retry_count > 0)
+                                && s.next_retry_at.as_deref().is_some_and(|n| n > now.as_str())
+                        }) {
+                            RefreshStatus::Partial
+                        } else if let Ok(attempt) =
+                            begin_job(&state.database, OPENF1_PROVIDER, &openf1_key, &now).await
+                        {
+                            match calendar
+                                .supplement_openf1_once(&state.database, request.season)
+                                .await
+                            {
+                                Ok(_) => {
+                                    let _ = record_success(
+                                        &state.database,
+                                        OPENF1_PROVIDER,
+                                        &openf1_key,
+                                        delay,
+                                        None,
+                                    )
+                                    .await;
+                                    RefreshStatus::Completed
+                                }
+                                Err(error) => {
+                                    let _ = record_failure(
+                                        &state.database,
+                                        OPENF1_PROVIDER,
+                                        &openf1_key,
+                                        attempt,
+                                        error,
+                                        None,
+                                    )
+                                    .await;
+                                    RefreshStatus::Partial
+                                }
+                            }
+                        } else {
+                            RefreshStatus::Completed
+                        }
+                    } else {
+                        RefreshStatus::Completed
+                    }
+                }
+                Err(error) => {
+                    let limited = is_rate_limited(&error);
+                    let _ =
+                        record_failure(&state.database, provider, &endpoint, attempt, error, None)
+                            .await;
+                    if limited {
+                        RefreshStatus::RateLimited
+                    } else {
+                        RefreshStatus::Failed
+                    }
+                }
+            }
+        }
+        RefreshTarget::Standings => {
+            let maps = match manual_identity_maps(state, sync, request.season).await {
+                Ok(maps) => maps,
+                Err((status, retry)) => return refresh_event(state, request, status, retry).await,
+            };
+            if current_season(state).await == Some(request.season) {
+                *identities = Some(maps.clone());
+            }
+            let mut partial = false;
+            for constructor in [false, true] {
+                let key = if constructor {
+                    format!("standings-constructors-{}", request.season)
+                } else {
+                    endpoint.clone()
+                };
+                let now = state.database.utc_now().await.unwrap_or_default();
+                if let Ok(Some(status)) = state.database.sync_status(provider, &key).await
+                    && (status.last_error.is_some() || status.retry_count > 0)
+                    && status
+                        .next_retry_at
+                        .as_deref()
+                        .is_some_and(|next| next > now.as_str())
+                {
+                    partial = true;
+                    continue;
+                }
+                let attempt = match begin_job(&state.database, provider, &key, &now).await {
+                    Ok(attempt) => attempt,
+                    Err(_) => {
+                        partial = true;
+                        continue;
+                    }
+                };
+                let fetch = if constructor {
+                    sync.sync_constructor_standings_once(&state.database, request.season, &maps)
+                        .await
+                } else {
+                    sync.sync_driver_standings_once(&state.database, request.season, &maps)
+                        .await
+                };
+                match fetch {
+                    Ok(true) => {
+                        let _ =
+                            record_success(&state.database, provider, &key, SIX_HOURS, None).await;
+                    }
+                    Ok(false) => {
+                        let _ = record_empty(&state.database, provider, &key, attempt, None).await;
+                    }
+                    Err(error) => {
+                        partial = true;
+                        let _ =
+                            record_failure(&state.database, provider, &key, attempt, error, None)
+                                .await;
+                    }
+                }
+            }
+            if partial {
+                RefreshStatus::Partial
+            } else {
+                RefreshStatus::Completed
+            }
+        }
+        RefreshTarget::Results => {
+            let Some(session_id) = request.session_id.as_deref() else {
+                return refresh_event(state, request, RefreshStatus::Failed, None).await;
+            };
+            let meetings = match state.database.calendar(Some(request.season)).await {
+                Ok((meetings, _)) => meetings,
+                Err(_) => return refresh_event(state, request, RefreshStatus::Failed, None).await,
+            };
+            let Some((meeting, session)) = meetings.iter().find_map(|meeting| {
+                meeting
+                    .sessions
+                    .iter()
+                    .find(|session| session.id == session_id)
+                    .map(|session| (meeting, session))
+            }) else {
+                return refresh_event(state, request, RefreshStatus::Failed, None).await;
+            };
+            let maps = match sync
+                .cached_identity_maps(&state.database, request.season)
+                .await
+                .ok()
+                .flatten()
+                .or_else(|| identities.clone())
+            {
+                Some(maps) => maps,
+                None => match manual_identity_maps(state, sync, request.season).await {
+                    Ok(maps) => maps,
+                    Err((status, retry)) => {
+                        return refresh_event(state, request, status, retry).await;
+                    }
+                },
+            };
+            let previous = state
+                .database
+                .sync_status(provider, &endpoint)
+                .await
+                .ok()
+                .flatten()
+                .map(|status| status.retry_count)
+                .unwrap_or(0);
+            if state
+                .database
+                .sync_begin(provider, &endpoint, &now)
+                .await
+                .is_err()
+            {
+                return refresh_event(state, request, RefreshStatus::Failed, None).await;
+            }
+            match sync
+                .sync_session_once(&state.database, meeting, session, &maps)
+                .await
+            {
+                Ok(SyncOutcome::Stored { retry_after }) => {
+                    let (end_at, note) = estimated_end(session);
+                    let age = parse_utc_seconds(&now)
+                        .unwrap_or_default()
+                        .saturating_sub(parse_utc_seconds(&end_at).unwrap_or_default());
+                    let _ = record_success(
+                        &state.database,
+                        provider,
+                        &endpoint,
+                        result_refresh_delay(age).max(retry_after.unwrap_or_default()),
+                        note.as_deref(),
+                    )
+                    .await;
+                    RefreshStatus::Completed
+                }
+                Ok(SyncOutcome::NoResult) => {
+                    let (_, note) = estimated_end(session);
+                    let _ = record_empty(
+                        &state.database,
+                        provider,
+                        &endpoint,
+                        previous,
+                        note.as_deref(),
+                    )
+                    .await;
+                    RefreshStatus::Completed
+                }
+                Err(error) => {
+                    let limited = is_rate_limited(&error);
+                    let _ =
+                        record_failure(&state.database, provider, &endpoint, previous, error, None)
+                            .await;
+                    if limited {
+                        RefreshStatus::RateLimited
+                    } else {
+                        RefreshStatus::Failed
+                    }
+                }
+            }
+        }
+    };
+    let retry_after = if outcome == RefreshStatus::RateLimited || outcome == RefreshStatus::Partial
+    {
+        refresh_retry_after(state, request).await
+    } else {
+        None
+    };
+    refresh_event(state, request, outcome, retry_after).await
+}
+
+async fn manual_identity_maps(
+    state: &AppState,
+    sync: &ResultsSync,
+    season: i64,
+) -> Result<crate::providers::results::IdentityMaps, (RefreshStatus, Option<String>)> {
+    if let Some(maps) = sync
+        .cached_identity_maps(&state.database, season)
+        .await
+        .ok()
+        .flatten()
+    {
+        return Ok(maps);
+    }
+    let endpoint = format!("identity-{season}");
+    let now = state.database.utc_now().await.unwrap_or_default();
+    if let Ok(Some(status)) = state.database.sync_status(PROVIDER, &endpoint).await
+        && (status.last_error.is_some() || status.retry_count > 0)
+        && status
+            .next_retry_at
+            .as_deref()
+            .is_some_and(|next| next > now.as_str())
+    {
+        return Err((RefreshStatus::RateLimited, status.next_retry_at));
+    }
+    let attempt = begin_job(&state.database, PROVIDER, &endpoint, &now)
+        .await
+        .map_err(|_| (RefreshStatus::Failed, None))?;
+    match sync.load_identity_maps_once(&state.database, season).await {
+        Ok(maps) => {
+            let _ = record_success(&state.database, PROVIDER, &endpoint, SIX_HOURS, None).await;
+            Ok(maps)
+        }
+        Err(error) => {
+            let limited = is_rate_limited(&error);
+            let _ =
+                record_failure(&state.database, PROVIDER, &endpoint, attempt, error, None).await;
+            let retry = state
+                .database
+                .sync_status(PROVIDER, &endpoint)
+                .await
+                .ok()
+                .flatten()
+                .and_then(|status| status.next_retry_at);
+            Err((
+                if limited {
+                    RefreshStatus::RateLimited
+                } else {
+                    RefreshStatus::Failed
+                },
+                retry,
+            ))
+        }
+    }
+}
+
+async fn refresh_retry_after(state: &AppState, request: &RefreshRequest) -> Option<String> {
+    let endpoint = match request.target {
+        RefreshTarget::Calendar => vec![
+            (PROVIDER, format!("calendar-{}", request.season)),
+            (OPENF1_PROVIDER, format!("calendar-{}", request.season)),
+        ],
+        RefreshTarget::Results => vec![(
+            PROVIDER,
+            format!(
+                "results-{}",
+                request.session_id.as_deref().unwrap_or_default()
+            ),
+        )],
+        RefreshTarget::Standings => vec![
+            (PROVIDER, format!("standings-drivers-{}", request.season)),
+            (
+                PROVIDER,
+                format!("standings-constructors-{}", request.season),
+            ),
+            (PROVIDER, format!("identity-{}", request.season)),
+        ],
+    };
+    let mut retries = Vec::new();
+    for (provider, key) in endpoint {
+        if let Ok(Some(status)) = state.database.sync_status(provider, &key).await
+            && (status.last_error.is_some() || status.retry_count > 0)
+        {
+            retries.extend(status.next_retry_at);
+        }
+    }
+    retries.into_iter().max()
+}
+
+async fn refresh_event(
+    state: &AppState,
+    request: &RefreshRequest,
+    status: RefreshStatus,
+    retry_after: Option<String>,
+) -> DataRefreshEvent {
+    let updated_at = state
+        .database
+        .utc_now()
+        .await
+        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
+    DataRefreshEvent {
+        target: request.target,
+        season: request.season,
+        session_id: request.session_id.clone(),
+        status,
+        updated_at,
+        retry_after,
+    }
+}
+
+fn is_rate_limited(error: &ProviderError) -> bool {
+    matches!(error, ProviderError::Http { status: 429, .. })
+}
+
+async fn enqueue_background_refreshes(state: &AppState, current: &RefreshRequest) {
+    let mut requests = Vec::new();
+    for target in [RefreshTarget::Calendar, RefreshTarget::Standings] {
+        if target != current.target {
+            requests.push(RefreshRequest {
+                season: current.season,
+                target,
+                session_id: None,
+            });
+        }
+    }
+    let now = state.database.utc_now().await.unwrap_or_default();
+    let now_seconds = parse_utc_seconds(&now).unwrap_or_default();
+    if current.target != RefreshTarget::Results
+        && let Ok((meetings, _)) = state.database.calendar(Some(current.season)).await
+        && let Some(session_id) = meetings
+            .iter()
+            .flat_map(|meeting| meeting.sessions.iter())
+            .filter(|session| session.status.as_str() != "cancelled")
+            .filter(|session| {
+                parse_utc_seconds(session.end_time.as_deref().unwrap_or(&session.start_time))
+                    .is_some_and(|end| end <= now_seconds)
+            })
+            .max_by_key(|session| session.end_time.as_deref().unwrap_or(&session.start_time))
+            .map(|session| session.id.clone())
+    {
+        requests.push(RefreshRequest {
+            season: current.season,
+            target: RefreshTarget::Results,
+            session_id: Some(session_id),
+        });
+    }
+    for request in requests {
+        state.refresh_queue.enqueue_background(request).await;
+    }
 }
 
 async fn run_live_supervisor(state: AppState) {
@@ -77,7 +548,8 @@ async fn run_live_supervisor(state: AppState) {
     let client = F1LiveClient::new(
         true,
         "https://livetiming.formula1.com/signalrcore".to_string(),
-    );
+    )
+    .with_interface(state.config.providers.f1_live_interface.clone());
     let mut failures = 0usize;
     loop {
         state
@@ -142,13 +614,135 @@ async fn run_live_supervisor(state: AppState) {
     }
 }
 
+async fn run_wec_live_supervisor(state: AppState) {
+    if !state.config.providers.wec_live_enabled {
+        state
+            .live_wec
+            .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "disabled");
+        return;
+    }
+    let client = match WecLiveClient::new(&state.config.providers.user_agent) {
+        Ok(client) => client,
+        Err(error) => {
+            tracing::warn!(%error, "WEC Live client is unavailable");
+            state
+                .live_wec
+                .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "disabled");
+            return;
+        }
+    };
+    let poll_seconds = state.config.providers.wec_live_poll_seconds.clamp(2, 60);
+    let mut failures = 0usize;
+    let mut session_id = state.config.providers.wec_live_session_id;
+    loop {
+        if session_id.is_none() {
+            state.live_wec.reset(
+                LiveStatus::Disconnected,
+                LiveSourceMode::Live,
+                "discovering_session",
+            );
+            let now = match state.database.utc_now().await {
+                Ok(now) => now,
+                Err(error) => {
+                    tracing::warn!(%error, "WEC Live discovery timestamp unavailable");
+                    tokio::time::sleep(Duration::from_secs(15)).await;
+                    continue;
+                }
+            };
+            match client.discover_session(WEC_SERIES_ID, &now).await {
+                Ok(Some(id)) => {
+                    tracing::info!(session_id = id, "WEC Live session discovered");
+                    session_id = Some(id);
+                    failures = 0;
+                }
+                Ok(None) => {
+                    tracing::debug!("no live WEC session");
+                    tokio::time::sleep(Duration::from_secs(30)).await;
+                    continue;
+                }
+                Err(error) => {
+                    tracing::warn!(%error, "WEC Live discovery failed");
+                    tokio::time::sleep(Duration::from_secs(15)).await;
+                    continue;
+                }
+            }
+        }
+        let sid = session_id.expect("session id is set");
+        state
+            .live_wec
+            .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "connecting");
+        let mut poll = tokio::time::interval(Duration::from_secs(poll_seconds));
+        poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        let mut freshness = tokio::time::interval(Duration::from_secs(1));
+        freshness.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        freshness.tick().await;
+        let mut ended = false;
+        loop {
+            tokio::select! {
+                _ = poll.tick() => {
+                    let received_at = match state.database.utc_now().await {
+                        Ok(now) => now,
+                        Err(error) => {
+                            tracing::warn!(%error, "WEC Live timestamp unavailable");
+                            continue;
+                        }
+                    };
+                    match client.bootstrap(sid).await {
+                        Ok(value) => match snapshot_from_bootstrap(&value, &received_at) {
+                            Ok(snapshot) => {
+                                state.live_wec.publish(snapshot, true);
+                                failures = 0;
+                            }
+                            Err(error) => {
+                                tracing::warn!(%error, "WEC Live snapshot mapping failed");
+                                failures = failures.saturating_add(1);
+                            }
+                        },
+                        Err(error) if error.is_gone() => {
+                            tracing::info!(session_id = sid, "WEC Live session is no longer available");
+                            ended = true;
+                            break;
+                        }
+                        Err(error) => {
+                            tracing::warn!(%error, "WEC Live poll failed");
+                            failures = failures.saturating_add(1);
+                        }
+                    }
+                }
+                _ = freshness.tick() => {
+                    let stale_after =
+                        Duration::from_secs(state.config.live.stale_after_seconds.max(1));
+                    let disconnect_after = Duration::from_secs(
+                        state.config.live.disconnect_after_seconds.max(
+                            state.config.live.stale_after_seconds.saturating_add(1),
+                        ),
+                    );
+                    if state.live_wec.check_freshness(stale_after, disconnect_after) {
+                        break;
+                    }
+                }
+            }
+        }
+        if ended {
+            session_id = None;
+        }
+        let delay = [5, 15, 30, 60, 300][failures.min(4)];
+        failures = failures.saturating_add(1);
+        tracing::warn!(retry_after_seconds = delay, "WEC Live reconnecting");
+        tokio::time::sleep(Duration::from_secs(delay)).await;
+    }
+}
+
 async fn apply_live_update(state: &AppState, reducer: &mut LiveTopicReducer, update: F1LiveUpdate) {
     let Ok(received_at) = state.database.utc_now().await else {
         tracing::warn!("failed to timestamp F1 Live update");
         return;
     };
-    let value = match update {
-        F1LiveUpdate::InitialSnapshot(value) | F1LiveUpdate::Feed(value) => value,
+    let reduced = match update {
+        F1LiveUpdate::InitialSnapshot(value) => {
+            reducer.apply_initial_snapshot(&value, &received_at)
+        }
+        F1LiveUpdate::Feed(value) => reducer.apply_batch(&value, &received_at),
         F1LiveUpdate::TransportHeartbeat => {
             let mut snapshot = state.live.current().clone();
             snapshot.last_transport_at = Some(received_at);
@@ -156,7 +750,7 @@ async fn apply_live_update(state: &AppState, reducer: &mut LiveTopicReducer, upd
             return;
         }
     };
-    let Some(reduced) = reducer.apply_batch(&value, &received_at) else {
+    let Some(reduced) = reduced else {
         return;
     };
     let data_updated = reduced.data_updated;

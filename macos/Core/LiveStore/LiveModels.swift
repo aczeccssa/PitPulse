@@ -11,14 +11,36 @@ enum LiveSourceMode: String, Codable, Sendable {
     case replay
 }
 
+enum LiveSeries: String, CaseIterable, Hashable, Identifiable, Sendable {
+    case f1
+    case wec
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .f1: return "Formula 1"
+        case .wec: return "FIA WEC"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .f1: return "F1"
+        case .wec: return "WEC"
+        }
+    }
+}
+
 enum LiveTrackCondition: Equatable, Sendable {
-    case clear, yellow, safetyCar, safetyCarEnding, red, virtualSafetyCar, virtualSafetyCarEnding, unknown
+    case clear, yellow, fullCourseYellow, safetyCar, safetyCarEnding, red, virtualSafetyCar, virtualSafetyCarEnding, unknown
 
     init(_ value: String?) {
         let token = (value ?? "").lowercased().filter { $0.isLetter || $0.isNumber }
         switch token {
-        case "1", "allclear", "clear", "green", "greenflag": self = .clear
-        case "2", "yellow", "yellowflag", "yellowflags": self = .yellow
+        case "1", "allclear", "clear", "green", "greenflag", "chequered", "checkered": self = .clear
+        case "2", "yellow", "yellowflag", "yellowflags", "slowzone": self = .yellow
+        case "fcy", "fullcourseyellow", "code60": self = .fullCourseYellow
         case "4", "sc", "scdeployed", "safetycar", "safetycardeployed": self = .safetyCar
         case "scinthislap", "scending", "safetycarinthislap", "safetycarending": self = .safetyCarEnding
         case "5", "red", "redflag": self = .red
@@ -32,6 +54,7 @@ enum LiveTrackCondition: Equatable, Sendable {
         switch self {
         case .clear: return "绿旗 · 赛道畅通"
         case .yellow: return "黄旗 · 注意"
+        case .fullCourseYellow: return "FCY · 全场黄旗"
         case .safetyCar: return "SC · 安全车"
         case .safetyCarEnding: return "SC · 本圈退出"
         case .red: return "红旗 · 暂停"
@@ -44,9 +67,19 @@ enum LiveTrackCondition: Equatable, Sendable {
     var systemName: String {
         switch self {
         case .clear, .yellow, .red: return "flag.fill"
-        case .safetyCar, .safetyCarEnding: return "car.side.fill"
-        case .virtualSafetyCar, .virtualSafetyCarEnding: return "car.side"
+        case .fullCourseYellow, .safetyCar, .safetyCarEnding: return "flag.fill"
+        case .virtualSafetyCar, .virtualSafetyCarEnding: return "flag.fill"
         case .unknown: return "questionmark.circle"
+        }
+    }
+
+    /// Short code shown instead of the generic car icon during neutralisations.
+    var code: String? {
+        switch self {
+        case .safetyCar, .safetyCarEnding: return "SC"
+        case .fullCourseYellow: return "FCY"
+        case .virtualSafetyCar, .virtualSafetyCarEnding: return "VSC"
+        default: return nil
         }
     }
 }
@@ -114,6 +147,7 @@ struct LiveLocation: Codable, Equatable, Sendable {
     let x: Double
     let y: Double
     let utc: String
+    let receivedAt: String?
     let status: String?
     let longitude: Double?
     let latitude: Double?
@@ -121,12 +155,19 @@ struct LiveLocation: Codable, Equatable, Sendable {
 
 struct LiveTelemetry: Codable, Equatable, Sendable {
     let utc: String
+    let receivedAt: String?
     let rpm: Double?
     let speed: Double?
     let gear: Double?
     let throttle: Double?
     let brake: Double?
     let drs: Double?
+}
+
+struct LivePositionDiagnostics: Codable, Equatable, Sendable {
+    let received: Int
+    let decoded: Int
+    let calibrated: Int
 }
 
 struct LiveWeather: Codable, Equatable, Sendable {
@@ -147,9 +188,13 @@ struct LiveRadio: Codable, Equatable, Identifiable, Sendable {
 }
 
 enum LiveFreshness {
+    static func age(_ utc: String?, now: Date = Date()) -> TimeInterval? {
+        guard let utc, let date = RFC3339.parse(utc) else { return nil }
+        return now.timeIntervalSince(date)
+    }
+
     static func isFresh(_ utc: String?, now: Date = Date(), maximumAge: TimeInterval = 10) -> Bool {
-        guard let utc, let date = RFC3339.parse(utc) else { return false }
-        let age = now.timeIntervalSince(date)
+        guard let age = age(utc, now: now) else { return false }
         return age >= -5 && age <= maximumAge
     }
 }
@@ -185,9 +230,44 @@ struct LiveDriver: Codable, Equatable, Sendable {
     var sectors: [LiveSector]? = nil
     var inPit: Bool? = nil
     var retired: Bool? = nil
+    var classId: String? = nil
+    var className: String? = nil
+    var classPosition: Int? = nil
+    var manufacturer: String? = nil
+    var tireCompound: String? = nil
+    var tireAgeLaps: Int? = nil
+    var energyPercent: Double? = nil
+
+    var classLabel: String? {
+        guard let classId, !classId.isEmpty else { return nil }
+        let name = (className ?? classId).uppercased()
+        return classPosition.map { "\(name) P\($0)" } ?? name
+    }
+
+    var tireShortLabel: String? {
+        guard let compound = tireCompound?.uppercased(), !compound.isEmpty else { return nil }
+        return switch compound {
+        case "SOFT": "S"
+        case "MEDIUM": "M"
+        case "HARD": "H"
+        case "INTERMEDIATE", "INTER": "I"
+        case "WET": "W"
+        default: String(compound.prefix(1))
+        }
+    }
+
+    var tireLabel: String? {
+        guard let tireShortLabel else { return nil }
+        return tireAgeLaps.map { "\(tireShortLabel) \($0)" } ?? tireShortLabel
+    }
+
+    var energyLabel: String? {
+        energyPercent.map { "\(Int($0.rounded()))%" }
+    }
 }
 
 struct LiveSnapshot: Codable, Equatable, Sendable {
+    var series: String? = nil
     var circuitKey: String? = nil
     var circuitName: String? = nil
     var weather: LiveWeather? = nil
@@ -210,6 +290,11 @@ struct LiveSnapshot: Codable, Equatable, Sendable {
     let lastTransportAt: String?
     let drivers: [LiveDriver]
     let raceControl: [LiveRaceControlMessage]?
+    var positionStatus: String? = nil
+    var positionDiagnostics: LivePositionDiagnostics? = nil
+    var timeRemainingSeconds: Int? = nil
+    var elapsedSeconds: Int? = nil
+    var isTimeBased: Bool? = nil
 
     static func disconnected(reason: String = "not_connected") -> LiveSnapshot {
         LiveSnapshot(
@@ -263,6 +348,18 @@ struct LiveSnapshot: Codable, Equatable, Sendable {
     var lapLabel: String {
         guard let lapCount else { return "— 圈" }
         return totalLaps.map { "L\(lapCount)/\($0)" } ?? "L\(lapCount)"
+    }
+
+    var isWec: Bool { series == "wec" }
+
+    var remainingLabel: String? {
+        guard let timeRemainingSeconds, timeRemainingSeconds > 0 else { return nil }
+        let hours = timeRemainingSeconds / 3600
+        let minutes = (timeRemainingSeconds % 3600) / 60
+        let seconds = timeRemainingSeconds % 60
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            : String(format: "%d:%02d", minutes, seconds)
     }
 
     var lastUpdatedLabel: String? {

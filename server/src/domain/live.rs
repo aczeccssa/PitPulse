@@ -25,7 +25,7 @@ pub struct LiveSector {
     pub segments: Vec<Option<i64>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveDriver {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -55,6 +55,20 @@ pub struct LiveDriver {
     pub in_pit: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retired: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class_position: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manufacturer: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tire_compound: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tire_age_laps: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub energy_percent: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -63,6 +77,8 @@ pub struct LiveLocation {
     pub x: f64,
     pub y: f64,
     pub utc: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub received_at: Option<String>,
     pub status: Option<String>,
     pub longitude: Option<f64>,
     pub latitude: Option<f64>,
@@ -72,12 +88,22 @@ pub struct LiveLocation {
 #[serde(rename_all = "camelCase")]
 pub struct LiveTelemetry {
     pub utc: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub received_at: Option<String>,
     pub rpm: Option<f64>,
     pub speed: Option<f64>,
     pub gear: Option<f64>,
     pub throttle: Option<f64>,
     pub brake: Option<f64>,
     pub drs: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LivePositionDiagnostics {
+    pub received: usize,
+    pub decoded: usize,
+    pub calibrated: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -106,6 +132,8 @@ pub struct LiveRadio {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub series: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub circuit_key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -147,12 +175,23 @@ pub struct LiveSnapshot {
     pub drivers: Vec<LiveDriver>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub race_control: Option<Vec<serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_diagnostics: Option<LivePositionDiagnostics>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_remaining_seconds: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elapsed_seconds: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_time_based: Option<bool>,
 }
 
 impl Default for LiveSnapshot {
     fn default() -> Self {
         Self {
             schema_version: 1,
+            series: None,
             circuit_key: None,
             circuit_name: None,
             weather: None,
@@ -175,6 +214,11 @@ impl Default for LiveSnapshot {
             last_transport_at: None,
             drivers: Vec::new(),
             race_control: None,
+            position_status: None,
+            position_diagnostics: None,
+            time_remaining_seconds: None,
+            elapsed_seconds: None,
+            is_time_based: None,
         }
     }
 }

@@ -6,8 +6,12 @@ import SwiftUI
 
 @MainActor
 final class LiveIslandActions: ObservableObject {
+    private enum Keys {
+        static let tire = "liveIslandShowTire"
+        static let energy = "liveIslandShowEnergy"
+    }
+
     @Published var snapshot = LiveSnapshot.disconnected()
-    @Published var flag = ""
     @Published var presentation = "hidden"
     @Published var mode = "Telemetry"
     @Published var selectedNumber: String?
@@ -15,11 +19,26 @@ final class LiveIslandActions: ObservableObject {
     @Published var messagePage = "Race Control"
     @Published var messageFilter = "all"
     @Published var messagesExpanded = false
+    @Published var wecClass: String?
+    @Published var showTire: Bool {
+        didSet { defaults.set(showTire, forKey: Keys.tire) }
+    }
+    @Published var showEnergy: Bool {
+        didSet { defaults.set(showEnergy, forKey: Keys.energy) }
+    }
     let map = MapStore()
     let radio = RadioPlayer()
     var expand: (() -> Void)?
     var collapse: (() -> Void)?
     var hide: (() -> Void)?
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        showTire = defaults.object(forKey: Keys.tire) as? Bool ?? true
+        showEnergy = defaults.object(forKey: Keys.energy) as? Bool ?? true
+    }
 }
 
 @MainActor
@@ -107,7 +126,7 @@ final class LiveIslandController: ObservableObject {
             self.stopClickMonitoring()
             self.actions.presentation = "hidden"
             self.actions.radio.stop()
-            self.actions.map.release(preserveCamera: true)
+            self.actions.map.pause()
             if self.automaticallyShown { self.dismissedSessionKey = self.activeSessionKey }
             self.automaticallyShown = false
             self.diagnose("hidden")
@@ -134,6 +153,20 @@ final class LiveIslandController: ObservableObject {
         model.$notchCollapseOnMouseExit
             .sink { [weak self] automatic in self?.updateCollapseBehavior(automatic: automatic) }
             .store(in: &cancellables)
+        model.$liveSeries
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                // Never carry the previous series' snapshot across a source switch.
+                self.lastKnownSnapshot = nil
+                self.activeSessionKey = nil
+                self.actions.selectedNumber = nil
+                self.actions.wecClass = nil
+                self.actions.showRadar = false
+                self.actions.radio.stop()
+                self.actions.map.pause()
+            }
+            .store(in: &cancellables)
         liveStore.$snapshot
             .sink { [weak self] snapshot in self?.reconcile(snapshot: snapshot) }
             .store(in: &cancellables)
@@ -144,6 +177,7 @@ final class LiveIslandController: ObservableObject {
             .sink { [weak self] enabled in self?.autoShowPreferenceChanged(enabled) }
             .store(in: &cancellables)
         model.$favoriteDriverId
+            .merge(with: model.$favoriteWecDriverId)
             .sink { [weak self] id in
                 guard let self else { return }
                 let matched = LiveIslandLogic.matchedDriver(favoriteId: id, favorites: self.model.favoriteDrivers, drivers: self.snapshot.sourceStatus == .connected ? self.snapshot.drivers : []) != nil
@@ -214,12 +248,6 @@ final class LiveIslandController: ObservableObject {
         LiveIslandLogic.currentScheduledSession(in: model.meetings, now: Date())
     }
 
-    var flag: String {
-        let meeting = LiveIslandLogic.meeting(for: snapshot, in: model.meetings, now: Date())
-            ?? currentPlannedSession?.meeting
-        return CountryFlag.emoji(for: meeting?.countryCode) ?? ""
-    }
-
     func toggleManually() {
         diagnose("manualToggle")
         if isVisible {
@@ -274,18 +302,12 @@ final class LiveIslandController: ObservableObject {
             actions.showRadar = false
             actions.messageFilter = "all"
             actions.radio.stop()
-            actions.map.release()
+            actions.map.pause()
         }
         actions.snapshot = displayed
         if incomingSnapshot != nil {
             logger.info("contentUpdated version=\(displayed.stateVersion) status=\(displayed.sourceStatus.rawValue, privacy: .public) drivers=\(displayed.drivers.count) track=\(String(describing: displayed.trackCondition), privacy: .public) panelKey=\(self.nook.window?.isKeyWindow ?? false) appActive=\(NSApp.isActive)")
         }
-        let meeting = LiveIslandLogic.meeting(for: displayed, in: meetings, now: Date())
-            ?? planned?.meeting
-            ?? (displayed.sessionId == nil && displayed.sessionName == nil
-                ? CalendarLogic.nextSession(in: meetings, now: Date())?.meeting : nil)
-        actions.flag = CountryFlag.emoji(for: meeting?.countryCode) ?? ""
-
         let key = displayed.sessionId ?? displayed.sessionName
         if displayed.sourceStatus == .connected, LiveIslandLogic.isStarted(displayed.sessionStatus) {
             plannedSessionKey = nil
@@ -402,28 +424,88 @@ struct LiveIslandCompactLeading: View {
     @ObservedObject var model: AppModel
     @ObservedObject var actions: LiveIslandActions
 
+    private var snapshot: LiveSnapshot { actions.snapshot }
+    private var hasTiming: Bool { snapshot.sourceStatus == .connected }
+    private var favorite: LiveDriver? {
+        LiveIslandLogic.matchedDriver(
+            favoriteId: model.favoriteDriverId(for: snapshot.isWec ? .wec : .f1),
+            favorites: model.favoriteDrivers,
+            drivers: hasTiming ? snapshot.drivers : []
+        )
+    }
+    private var lapText: String {
+        if snapshot.isWec, let laps = favorite?.lapCount { return "L\(laps)" }
+        return snapshot.lapLabel
+    }
+    private var alertCode: String? {
+        guard hasTiming else { return nil }
+        return switch snapshot.trackCondition {
+        case .clear, .unknown: nil
+        case .yellow: "YF"
+        case .fullCourseYellow: "FCY"
+        case .safetyCar, .safetyCarEnding: "SC"
+        case .virtualSafetyCar, .virtualSafetyCarEnding: "VSC"
+        case .red: "RF"
+        }
+    }
+    private var alertColor: Color {
+        switch snapshot.trackCondition {
+        case .yellow, .fullCourseYellow, .safetyCar: .yellow
+        case .safetyCarEnding, .virtualSafetyCar, .virtualSafetyCarEnding: .orange
+        case .red: .red
+        default: .clear
+        }
+    }
+    private var alertTextColor: Color {
+        switch snapshot.trackCondition {
+        case .yellow, .fullCourseYellow, .safetyCar: .black.opacity(0.8)
+        default: .white
+        }
+    }
+
     var body: some View {
         Button { actions.expand?() } label: {
             HStack(spacing: 5) {
-                if actions.flag.isEmpty {
-                    Image(systemName: AppSymbol.menuBar.resolvedSystemName())
+                if let logo = MotorsportAsset.seriesLogo(isWec: snapshot.isWec) {
+                    Image(nsImage: logo)
+                        .resizable().scaledToFit()
+                        .frame(height: 11)
+                        .accessibilityHidden(true)
                 } else {
-                    Text(actions.flag)
+                    Image(systemName: AppSymbol.menuBar.resolvedSystemName())
                 }
-                Text(actions.snapshot.sessionType
-                    ?? actions.snapshot.sessionName
+                Text(LiveIslandLogic.sessionLabel(snapshot.sessionType
+                    ?? snapshot.sessionName
                     ?? model.currentIslandSession.map { $0.session.sessionType.displayName }
                     ?? model.nextSession.map { $0.session.sessionType.displayName }
-                    ?? "PitPulse")
+                    ?? "PitPulse"))
                     .lineLimit(1)
-                if actions.snapshot.sourceStatus == .connected {
-                    LiveTrackStatusBadge(snapshot: actions.snapshot, compact: true)
+                if hasTiming {
+                    Text(lapText).monospacedDigit()
+                }
+                if let alertCode {
+                    Text(alertCode)
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(alertTextColor)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(alertColor, in: Capsule())
+                        .accessibilityLabel(snapshot.trackCondition.label)
                 }
             }
+            .padding(.horizontal, alertCode == nil ? 0 : 8)
+            .padding(.vertical, alertCode == nil ? 0 : 4)
+            .background(alertCode == nil ? Color.clear : alertColor.opacity(0.18), in: Capsule())
+            .overlay {
+                if alertCode != nil {
+                    Capsule().strokeBorder(alertColor.opacity(0.5), lineWidth: 0.5)
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.white)
-        .accessibilityLabel("\(actions.flag)，\(actions.snapshot.sessionType ?? actions.snapshot.sessionName ?? "F1 Session")，\(actions.snapshot.sessionStateLabel)，\(actions.snapshot.sourceStatus == .connected ? actions.snapshot.trackCondition.label : actions.snapshot.statusLabel)")
+        .accessibilityLabel("\(snapshot.isWec ? "WEC" : "F1")，\(snapshot.sessionType ?? snapshot.sessionName ?? "F1 Session")，\(snapshot.sessionStateLabel)，\(hasTiming ? "\(lapText)，\(snapshot.trackCondition.label)" : snapshot.statusLabel)")
         .accessibilityIdentifier("liveIsland.expand")
         .accessibilityHint("展开 Live Island")
         .environment(\.colorScheme, .dark)
@@ -434,9 +516,13 @@ struct LiveIslandCompactTrailing: View {
     @ObservedObject var model: AppModel
     @ObservedObject var actions: LiveIslandActions
 
+    private var favoriteID: String? {
+        model.favoriteDriverId(for: actions.snapshot.isWec ? .wec : .f1)
+    }
+
     private var favorite: LiveDriver? {
         LiveIslandLogic.matchedDriver(
-            favoriteId: model.favoriteDriverId,
+            favoriteId: favoriteID,
             favorites: model.favoriteDrivers,
             drivers: actions.snapshot.sourceStatus == .connected ? actions.snapshot.drivers : []
         )
@@ -459,18 +545,19 @@ struct LiveIslandCompactTrailing: View {
                         Text("回放")
                             .font(.system(size: 9))
                     }
-                    Text(actions.snapshot.lapLabel)
                     if let favorite {
-                        LiveHelmetView(model: model, driver: favorite, size: 18)
-                        Text("\(MotorsportAsset.abbreviation(favorite.name ?? favorite.number)) P\(favorite.position.map(String.init) ?? "—") \(favorite.gap ?? "—")")
+                        LiveHelmetView(model: model, driver: favorite, size: 18, isWec: actions.snapshot.isWec)
+                        Text("\(actions.snapshot.isWec ? "#\(favorite.number)" : MotorsportAsset.abbreviation(favorite.name ?? favorite.number)) P\(favorite.position.map(String.init) ?? "—")")
                             .monospacedDigit()
-                    } else if model.favoriteDriverId == nil {
+                    } else if favoriteID == nil {
                         Image(systemName: "star")
                             .help("选择关注车手")
                     } else {
-                        Image(systemName: "person.crop.circle.badge.questionmark")
-                            .help("关注车手暂无数据")
-                            .accessibilityLabel("关注车手暂无数据")
+                        Text("No selected")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .help("关注的车手不在本次会话中")
+                            .accessibilityLabel("未选择，关注的车手不在本次会话中")
                     }
                 } else {
                     if actions.snapshot.sourceMode == .replay {
@@ -493,7 +580,7 @@ struct LiveIslandCompactTrailing: View {
         .foregroundStyle(Color.white)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(hasTiming
-            ? "\(actions.snapshot.statusLabel)，第 \(actions.snapshot.lapCount.map(String.init) ?? "—") 圈，关注车手 \(favorite?.name ?? "未选择")，名次 P\(favorite?.position.map(String.init) ?? "—")，间隔 \(favorite?.gap ?? "—")"
+            ? "\(actions.snapshot.statusLabel)，第 \((favorite?.lapCount ?? actions.snapshot.lapCount).map(String.init) ?? "—") 圈，关注车手 \(favorite?.name ?? "未选择")，名次 P\(favorite?.position.map(String.init) ?? "—")"
             : statusText)
         .environment(\.colorScheme, .dark)
     }
@@ -514,21 +601,81 @@ struct LiveIslandExpandedView: View {
     }
     private var mode: String { actions.mode }
     private var showRadar: Bool { actions.showRadar }
-    private var selectedDriver: LiveDriver? { snapshot.drivers.first { $0.number == actions.selectedNumber } ?? favorite ?? snapshot.drivers.first }
+    /// The detail strip follows the clicked row, not the favourite: liking a
+    /// car must never replace what is currently selected. When nothing is
+    /// selected it falls back to a favourite that is actually in this session,
+    /// otherwise it stays empty ("No selected").
+    private var selectedDriver: LiveDriver? {
+        if let number = actions.selectedNumber,
+           let driver = snapshot.drivers.first(where: { $0.number == number }) {
+            return driver
+        }
+        return favorite
+    }
     private var meeting: Meeting? { LiveIslandLogic.meeting(for: snapshot, in: model.meetings, now: Date()) }
 
     private var snapshot: LiveSnapshot { actions.snapshot }
     private var hasTiming: Bool { snapshot.sourceStatus == .connected }
+    // WEC publishes no mini-sector segments, so the sector columns stay compact
+    // and the freed width carries a larger tire/energy readout.
+    private var sectorWidth: CGFloat { snapshot.isWec ? 50 : 88 }
+    private var wecTelemetryWidth: CGFloat { 106 }
     private var title: String {
         let components = [snapshot.meetingName, snapshot.sessionName ?? snapshot.sessionType].compactMap { $0 }
-        return components.isEmpty ? model.nextMeeting?.name ?? "PitPulse" : components.joined(separator: " · ")
+        if !components.isEmpty { return components.joined(separator: " · ") }
+        return model.liveSeries == .wec ? "FIA WEC" : model.nextMeeting?.name ?? "PitPulse"
     }
+    private var favoriteID: String? {
+        model.favoriteDriverId(for: snapshot.isWec ? .wec : .f1)
+    }
+
     private var favorite: LiveDriver? {
         LiveIslandLogic.matchedDriver(
-            favoriteId: model.favoriteDriverId,
+            favoriteId: favoriteID,
             favorites: model.favoriteDrivers,
             drivers: hasTiming ? snapshot.drivers : []
         )
+    }
+
+    private var wecClasses: [(id: String, label: String, count: Int)] {
+        var labels: [String: String] = [:]
+        var counts: [String: Int] = [:]
+        var order: [String] = []
+        for driver in snapshot.drivers {
+            guard let id = driver.classId, !id.isEmpty else { continue }
+            if counts[id] == nil {
+                order.append(id)
+                labels[id] = (driver.className ?? id).uppercased()
+            }
+            counts[id, default: 0] += 1
+        }
+        let priority = ["HYPERCAR": 0, "LMP1": 1, "LMP2": 1, "LMGT3": 2]
+        return order.sorted { (priority[$0] ?? 9, $0) < (priority[$1] ?? 9, $1) }
+            .map { (id: $0, label: labels[$0] ?? $0, count: counts[$0] ?? 0) }
+    }
+
+    /// Best sector time per class, used to colour WEC's compact sector bars
+    /// when the upstream feed provides no per-segment statuses.
+    private var wecSectorBests: [String: [Double?]] {
+        guard snapshot.isWec else { return [:] }
+        var bests: [String: [Double?]] = [:]
+        for driver in snapshot.drivers {
+            let key = driver.classId ?? "ALL"
+            var values = bests[key] ?? [nil, nil, nil]
+            for index in 0..<min(3, driver.sectors?.count ?? 0) {
+                guard let raw = driver.sectors?[index].value,
+                      let seconds = LiveIslandLogic.sectorSeconds(raw) else { continue }
+                values[index] = values[index].map { min($0, seconds) } ?? seconds
+            }
+            bests[key] = values
+        }
+        return bests
+    }
+
+    private var visibleDrivers: [LiveDriver] {
+        guard snapshot.isWec, let selected = actions.wecClass,
+              wecClasses.contains(where: { $0.id == selected }) else { return snapshot.drivers }
+        return snapshot.drivers.filter { $0.classId == selected }
     }
 
     private func timingHeader(_ text: String, width: CGFloat) -> some View {
@@ -542,14 +689,90 @@ struct LiveIslandExpandedView: View {
             .accessibilityLabel("\(label)，\(text.flatMap { $0.isEmpty ? nil : $0 } ?? "未提供")")
     }
 
+    private var titleMenu: some View {
+        Menu {
+            ForEach(LiveSeries.allCases) { series in
+                Button { model.setLiveSeries(series) } label: {
+                    if model.liveSeries == series {
+                        Label(series.title, systemImage: "checkmark")
+                    } else {
+                        Text(series.title)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(title).font(.headline).lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("切换 F1 / WEC 实时数据")
+        .accessibilityLabel("\(title)，切换实时数据源")
+        .accessibilityIdentifier("liveIsland.seriesMenu")
+    }
+
+    private var displayMenu: some View {
+        Menu {
+            Toggle("显示轮胎", isOn: $actions.showTire)
+            if snapshot.isWec {
+                Toggle("显示虚拟能量", isOn: $actions.showEnergy)
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("选择显示的数据")
+        .accessibilityLabel("选择显示的数据")
+        .accessibilityIdentifier("liveIsland.columns")
+    }
+
+    private var classTabs: some View {
+        HStack(spacing: 2) {
+            classTab(id: nil, label: "全部", count: snapshot.drivers.count)
+            ForEach(wecClasses, id: \.id) { item in
+                classTab(id: item.id, label: item.label, count: item.count)
+            }
+        }
+        .padding(2)
+        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+    }
+
+    private func classTab(id: String?, label: String, count: Int) -> some View {
+        let selected = actions.wecClass == id
+        return Button { actions.wecClass = id } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                Text("\(count)").foregroundStyle(.secondary)
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(selected ? Color.white.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .help("显示 \(label) 组别")
+        .accessibilityLabel("\(label)，\(count) 辆")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("liveIsland.class.\(id ?? "all")")
+    }
+
     private var followControls: some View {
         HStack(spacing: 10) {
-            if let selectedDriver { LiveHelmetView(model: model, driver: selectedDriver, size: 28) }
+            if let favorite {
+                LiveHelmetView(model: model, driver: favorite, size: 28, isWec: snapshot.isWec)
+            }
             Menu {
-                Button("不关注") { model.setFavoriteDriver(nil) }
-                ForEach(model.favoriteDrivers) { driver in
-                    Button { model.setFavoriteDriver(driver.id) } label: {
-                        if model.favoriteDriverId == driver.id {
+                Button("不关注") { model.setFavoriteDriver(nil, series: snapshot.isWec ? .wec : .f1) }
+                ForEach(LiveIslandLogic.favorites(for: snapshot.isWec ? .wec : .f1, in: model.favoriteDrivers)) { driver in
+                    Button { model.setFavoriteDriver(driver.id, name: driver.name, series: snapshot.isWec ? .wec : .f1) } label: {
+                        if favoriteID == driver.id {
                             Label(driver.name, systemImage: "checkmark")
                         } else {
                             Text(driver.name)
@@ -557,8 +780,8 @@ struct LiveIslandExpandedView: View {
                     }
                 }
             } label: {
-                Image(systemName: model.favoriteDriverId == nil ? "star" : "star.fill")
-                    .foregroundStyle(model.favoriteDriverId == nil ? Color.secondary : .yellow)
+                Image(systemName: favoriteID == nil ? "star" : "star.fill")
+                    .foregroundStyle(favoriteID == nil ? Color.secondary : .yellow)
                     .frame(width: 24, height: 24)
             }
             .menuStyle(.borderlessButton)
@@ -568,14 +791,16 @@ struct LiveIslandExpandedView: View {
             .help("选择或切换关注车手")
             .accessibilityLabel("选择关注车手")
             .accessibilityIdentifier("liveIsland.favoriteDriver")
-            if let driver = selectedDriver {
+            if let driver = favorite {
                 Text("#\(driver.number) \(driver.name ?? "车手")")
                     .font(.caption.weight(.semibold)).lineLimit(1)
                 Text("P\(driver.position.map(String.init) ?? "—") · \(driver.gap ?? "—")")
                     .font(.caption2).monospacedDigit().foregroundStyle(.secondary)
+            } else {
+                Text("No selected")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
-
         }
     }
 
@@ -592,8 +817,13 @@ struct LiveIslandExpandedView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text(actions.flag).font(.headline)
-                Text(title).font(.headline).lineLimit(1)
+                if let logo = MotorsportAsset.seriesLogo(isWec: snapshot.isWec) {
+                    Image(nsImage: logo)
+                        .resizable().scaledToFit()
+                        .frame(height: 15)
+                        .accessibilityLabel(snapshot.isWec ? "WEC" : "F1")
+                }
+                titleMenu
                 if snapshot.sourceMode == .replay { Text("回放").font(.caption2).foregroundStyle(.orange) }
                 Spacer(minLength: 8)
                 HStack(spacing: 2) {
@@ -610,7 +840,9 @@ struct LiveIslandExpandedView: View {
                 followControls
                 LiveWeatherView(snapshot: snapshot)
                 if hasTiming {
-                    Text(snapshot.lapLabel).font(.caption.weight(.semibold)).monospacedDigit()
+                    Text([snapshot.lapLabel, snapshot.remainingLabel].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption.weight(.semibold)).monospacedDigit()
+                        .help(snapshot.remainingLabel.map { "剩余 \($0)" } ?? "已完成圈数")
                     LiveTrackStatusBadge(snapshot: snapshot, compact: true)
                 } else { LiveWaitingIndicator(detail: snapshot.statusLabel) }
                 if mode == "Live Map" {
@@ -619,14 +851,30 @@ struct LiveIslandExpandedView: View {
                     }.buttonStyle(.borderless).help("历史降雨雷达")
                         .accessibilityLabel("历史降雨雷达").accessibilityValue(showRadar ? "开启" : "关闭")
                 }
+                displayMenu
             }
-            if mode == "Telemetry" { LiveTelemetryView(driver: selectedDriver, snapshot: snapshot) }
+            if mode == "Telemetry" {
+                if snapshot.isWec {
+                    LiveWecCarView(
+                        model: model,
+                        driver: selectedDriver,
+                        showTire: actions.showTire,
+                        showEnergy: actions.showEnergy
+                    )
+                } else {
+                    LiveF1CarView(model: model, driver: selectedDriver, snapshot: snapshot)
+                }
+            }
+            if mode == "Telemetry", snapshot.isWec, hasTiming, !wecClasses.isEmpty {
+                classTabs
+            }
             ScrollView {
 
                 VStack(alignment: .leading, spacing: 10) {
 
                     if mode == "Telemetry" {
                         if hasTiming {
+                            let sectorBests = wecSectorBests
                             HStack(spacing: 8) {
                                 HStack(spacing: 7) {
                                     Image(systemName: "star").frame(width: 17)
@@ -636,17 +884,26 @@ struct LiveIslandExpandedView: View {
                                 timingHeader("Interval", width: 58)
                                 timingHeader("上一圈", width: 76)
                                 timingHeader("最佳圈", width: 76)
-                                ForEach(0..<3) { index in timingHeader("S\(index + 1)", width: 88) }
+                                ForEach(0..<3) { index in timingHeader("S\(index + 1)", width: sectorWidth) }
+                                if snapshot.isWec {
+                                    Text("轮胎 / 能量").frame(width: wecTelemetryWidth, alignment: .leading)
+                                }
                             }
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                             LazyVStack(spacing: 6) {
-                                ForEach(snapshot.drivers, id: \.number) { driver in
-                                    let driverID = LiveIslandLogic.followableDriverID(for: driver, favorites: model.favoriteDrivers, drivers: snapshot.drivers)
-                                    let followed = driverID != nil && driverID == model.favoriteDriverId
+                                ForEach(visibleDrivers, id: \.number) { driver in
+                                    let driverID = LiveIslandLogic.followableID(for: driver, favorites: model.favoriteDrivers, drivers: snapshot.drivers, isWec: snapshot.isWec)
+                                    // Follow state is driver identity, not just a car number:
+                                    // a liked driver who has left the car is not "followed" anymore.
+                                    let followed = LiveIslandLogic.isFavoriteDriver(
+                                        driver,
+                                        favoriteId: favoriteID,
+                                        favorites: model.favoriteDrivers
+                                    )
                                     HStack(spacing: 0) {
                                             Button {
-                                                if let driverID { model.setFavoriteDriver(followed ? nil : driverID) }
+                                                if let driverID { model.setFavoriteDriver(followed ? nil : driverID, name: followed ? nil : driver.name, series: snapshot.isWec ? .wec : .f1) }
                                             } label: {
                                                 Image(systemName: followed ? "star.fill" : "star").font(.caption).foregroundStyle(followed ? Color.yellow : Color.gray).frame(width: 25)
                                             }.buttonStyle(.plain).disabled(driverID == nil)
@@ -661,11 +918,25 @@ struct LiveIslandExpandedView: View {
                                                         .font(.system(.body, design: .rounded).weight(.bold))
                                                         .frame(width: 24)
                                                         .accessibilityLabel("名次 P\(driver.position.map(String.init) ?? "未知")")
-                                                    LiveHelmetView(model: model, driver: driver, size: 32)
+                                                    if snapshot.isWec {
+                                                        LiveManufacturerLogo(driver: driver, season: model.selectedSeason)
+                                                    } else {
+                                                        LiveHelmetView(model: model, driver: driver, size: 32, isWec: false)
+                                                    }
                                                     VStack(alignment: .leading, spacing: 3) {
                                                         Text(driver.name ?? "#\(driver.number)").font(.caption.weight(.semibold)).lineLimit(1)
-                                                        Text(driver.retired == true ? "已退赛" : driver.inPit == true ? "进站中" : driver.team ?? "—")
-                                                            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                                        HStack(spacing: 5) {
+                                                            if !snapshot.isWec {
+                                                                if actions.showTire, driver.tireLabel != nil {
+                                                                    LiveTireInline(driver: driver)
+                                                                }
+                                                                if actions.showEnergy, driver.energyPercent != nil {
+                                                                    LiveEnergyInline(percent: driver.energyPercent)
+                                                                }
+                                                            }
+                                                            Text(driver.retired == true ? "已退赛" : driver.inPit == true ? "进站中" : driver.team ?? "—")
+                                                                .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                                        }
                                                     }
                                                 }.frame(width: 199, alignment: .leading)
                                                 timingValue(driver.gap, label: "距领先车手", width: 58)
@@ -673,8 +944,24 @@ struct LiveIslandExpandedView: View {
                                                 timingValue(driver.lastLap, label: "上一圈", width: 76)
                                                 timingValue(driver.bestLap, label: "最佳圈", width: 76)
                                                 ForEach(0..<3) { index in
-                                                    LiveSectorView(sector: driver.sectors.flatMap { index < $0.count ? $0[index] : nil }, index: index)
-                                                        .frame(width: 88)
+                                                    let classBest = snapshot.isWec
+                                                        ? (sectorBests[driver.classId ?? "ALL"]?[index] ?? nil)
+                                                        : nil
+                                                    LiveSectorView(
+                                                        sector: driver.sectors.flatMap { index < $0.count ? $0[index] : nil },
+                                                        index: index,
+                                                        showsSegments: !snapshot.isWec,
+                                                        referenceSeconds: classBest
+                                                    )
+                                                    .frame(width: sectorWidth)
+                                                }
+                                                if snapshot.isWec {
+                                                    LiveWecTireEnergyCell(
+                                                        driver: driver,
+                                                        showTire: actions.showTire,
+                                                        showEnergy: actions.showEnergy
+                                                    )
+                                                    .frame(width: wecTelemetryWidth)
                                                 }
                                             }
                                             .padding(.vertical, 8)
@@ -683,7 +970,7 @@ struct LiveIslandExpandedView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .contextMenu {
-                                            if let driverID { Button(followed ? "取消关注" : "关注车手") { model.setFavoriteDriver(followed ? nil : driverID) } }
+                                            if let driverID { Button(followed ? "取消关注" : "关注车手") { model.setFavoriteDriver(followed ? nil : driverID, name: followed ? nil : driver.name, series: snapshot.isWec ? .wec : .f1) } }
                                         }
                                         .help("点击查看车辆遥测，右键可关注车手")
                                         .accessibilityHint("激活后选择这名车手查看遥测")
@@ -694,6 +981,19 @@ struct LiveIslandExpandedView: View {
                                 }
                             }
 
+                        } else if model.liveSeries == .wec {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(snapshot.statusReason == "disabled"
+                                    ? "WEC Live 未在服务端启用"
+                                    : "当前没有正在进行的 WEC 会话")
+                                    .font(.subheadline)
+                                Text(snapshot.statusReason == "disabled"
+                                    ? "在本地 environment.json 中设置 F1_COMPANION_WEC_LIVE_ENABLED=1 后重启服务端。"
+                                    : "顶部可随时切回 F1。")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 6)
                         } else {
                             TimelineView(.periodic(from: .now, by: 1)) { context in
                                 VStack(alignment: .leading, spacing: 12) {
@@ -718,11 +1018,13 @@ struct LiveIslandExpandedView: View {
                         }
 
                     }
-                    MapView(store: map, meeting: meeting, snapshot: snapshot, selected: selectedDriver?.number, radar: showRadar, active: mode == "Live Map" && actions.presentation == "expanded")
-                        .frame(height: mode == "Live Map" ? (showRadar ? 210 : 250) : 0)
-                        .opacity(mode == "Live Map" ? 1 : 0)
-                        .allowsHitTesting(mode == "Live Map")
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        MapView(store: map, meeting: meeting, snapshot: snapshot, selected: selectedDriver?.number, radar: showRadar, active: mode == "Live Map" && actions.presentation == "expanded", now: context.date)
+                            .frame(height: mode == "Live Map" ? (showRadar ? 210 : 250) : 0)
+                            .opacity(mode == "Live Map" ? 1 : 0)
+                            .allowsHitTesting(mode == "Live Map")
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                     if mode == "Live Map" {
                         if let error = map.error {
                             HStack(spacing: 8) {
@@ -747,17 +1049,18 @@ struct LiveIslandExpandedView: View {
         .foregroundStyle(Color.white)
         .accessibilityElement(children: .contain)
         .onAppear(perform: model.ensureDriverStandingsLoaded)
-        .task(id: "\(model.serverAddress)-\(meeting?.id ?? "none")-\(actions.presentation)") {
-            guard actions.presentation == "expanded" else { return }
+        .task(id: "\(mode)-\(model.serverAddress)-\(meeting?.id ?? "none")-\(actions.presentation)") {
+            guard mode == "Live Map", actions.presentation == "expanded" else {
+                map.pause()
+                return
+            }
             await map.load(model: model, meeting: meeting)
             map.onDriver = { actions.selectedNumber = $0 }
         }
         .onChange(of: actions.presentation) { _, value in
             if value != "expanded" { radio.stop(); map.pause() }
-            if value == "hidden" { map.release(preserveCamera: true) }
+            if value == "hidden" { map.pause() }
         }
-        .onChange(of: model.favoriteDriverId) { _, _ in actions.selectedNumber = nil }
-
         .onChange(of: model.serverAddress) { _, _ in radio.stop() }
         .onDisappear { radio.stop(); map.pause() }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: hasTiming)
@@ -769,11 +1072,20 @@ private struct LiveHelmetView: View {
     @ObservedObject var model: AppModel
     let driver: LiveDriver
     let size: CGFloat
+    var isWec = false
+
+    private var image: NSImage? {
+        if isWec {
+            guard let id = LiveIslandLogic.driverAssetID(for: driver) else { return nil }
+            return MotorsportAsset.image(kind: .driverPhoto, id: id, season: model.selectedSeason)
+        }
+        guard let id = LiveIslandLogic.rosterID(for: driver, favorites: model.favoriteDrivers) else { return nil }
+        return MotorsportAsset.image(kind: .helmet, id: id, season: model.selectedSeason)
+    }
 
     var body: some View {
         Group {
-            if let id = LiveIslandLogic.rosterID(for: driver, favorites: model.favoriteDrivers),
-               let image = MotorsportAsset.image(kind: .helmet, id: id, season: model.selectedSeason) {
+            if let image {
                 Image(nsImage: image).resizable().scaledToFit()
             } else {
                 Text(MotorsportAsset.abbreviation(driver.name ?? driver.number))
@@ -787,12 +1099,311 @@ private struct LiveHelmetView: View {
     }
 }
 
+private struct LiveTeamLogo: View {
+    let driver: LiveDriver
+    let season: Int
+    var isWec = false
+    var size: CGFloat = 22
+
+    var body: some View {
+        Group {
+            if let id = LiveIslandLogic.teamAssetID(for: driver, isWec: isWec),
+               let image = MotorsportAsset.image(kind: .teamLogo, id: id, season: season) {
+                Image(nsImage: image).resizable().scaledToFit()
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct LiveManufacturerLogo: View {
+    let driver: LiveDriver
+    let season: Int
+    var size: CGFloat = 32
+
+    var body: some View {
+        Group {
+            if let id = LiveIslandLogic.wecManufacturerAssetID(for: driver),
+               let image = MotorsportAsset.image(kind: .teamLogo, id: id, season: season) {
+                // Keep the 32pt row slot but draw the mark at 80% so it does
+                // not crowd the driver name.
+                Image(nsImage: image).resizable().scaledToFit().padding(size * 0.1)
+            } else {
+                Text(MotorsportAsset.abbreviation(driver.manufacturer ?? driver.team ?? driver.number))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct LiveF1CarView: View {
+    @ObservedObject var model: AppModel
+    let driver: LiveDriver?
+    let snapshot: LiveSnapshot
+
+    private var followed: Bool {
+        guard let driver else { return false }
+        return LiveIslandLogic.isFavoriteDriver(
+            driver,
+            favoriteId: model.favoriteDriverId(for: .f1),
+            favorites: model.favoriteDrivers
+        )
+    }
+
+    private var followID: String? {
+        guard let driver else { return nil }
+        return LiveIslandLogic.followableDriverID(
+            for: driver,
+            favorites: model.favoriteDrivers,
+            drivers: snapshot.drivers
+        )
+    }
+
+    private var detail: String {
+        guard let driver else { return "" }
+        return [driver.team, driver.tireLabel].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(spacing: 8) {
+                if let driver {
+                    LiveHelmetView(model: model, driver: driver, size: 30, isWec: false)
+                    if let teamID = LiveIslandLogic.carSideAssetID(for: driver, isWec: false),
+                       let image = MotorsportAsset.image(kind: .carSide, id: teamID, season: model.selectedSeason) {
+                        Image(nsImage: image)
+                            .resizable().scaledToFit()
+                            .frame(width: 132, height: 32)
+                    }
+                    LiveTeamLogo(driver: driver, season: model.selectedSeason, isWec: false, size: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("#\(driver.number) \(driver.name ?? "车手")")
+                                .font(.caption.weight(.semibold)).lineLimit(1)
+                            if let position = driver.position {
+                                Text("P\(position)")
+                                    .font(.caption2.weight(.bold)).monospacedDigit()
+                            }
+                            if let gap = driver.gap, !gap.isEmpty {
+                                Text(gap)
+                                    .font(.caption2).monospacedDigit()
+                                    .foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            Button {
+                                guard let followID else { return }
+                                model.setFavoriteDriver(
+                                    followed ? nil : followID,
+                                    name: followed ? nil : driver.name,
+                                    series: .f1
+                                )
+                            } label: {
+                                Image(systemName: followed ? "star.fill" : "star")
+                                    .font(.caption2)
+                                    .foregroundStyle(followed ? Color.yellow : Color.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(followID == nil)
+                            .help(followed ? "取消关注该车手" : "关注该车手")
+                            .accessibilityLabel(followed ? "取消关注该车手" : "关注该车手")
+                        }
+                        Text(detail)
+                            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 6)
+                    if let data = driver.telemetry,
+                       snapshot.sourceMode == .replay || LiveFreshness.isFresh(data.receivedAt ?? data.utc, now: context.date) {
+                        HStack(spacing: 10) {
+                            metric("速度", data.speed, "km/h")
+                            metric("RPM", data.rpm, "")
+                            metric("挡位", data.gear, "")
+                        }
+                    }
+                } else {
+                    Text("No selected").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(8)
+        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func metric(_ label: String, _ value: Double?, _ unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).foregroundStyle(.secondary)
+            Text(value.map { String(format: "%.0f", $0) + unit } ?? "—").monospacedDigit()
+        }
+        .font(.caption2)
+    }
+}
+
+private struct LiveWecCarView: View {
+    @ObservedObject var model: AppModel
+    let driver: LiveDriver?
+    let showTire: Bool
+    let showEnergy: Bool
+
+    private var detail: String {
+        guard let driver else { return "" }
+        return [driver.classLabel, driver.team].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private var followed: Bool {
+        guard let driver else { return false }
+        return LiveIslandLogic.isFavoriteDriver(
+            driver,
+            favoriteId: model.favoriteDriverId(for: .wec),
+            favorites: model.favoriteDrivers
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let driver {
+                LiveHelmetView(model: model, driver: driver, size: 30, isWec: true)
+                if let carID = LiveIslandLogic.carSideAssetID(for: driver, isWec: true),
+                   let image = MotorsportAsset.image(kind: .carSide, id: carID, season: model.selectedSeason) {
+                    Image(nsImage: image)
+                        .resizable().scaledToFit()
+                        .frame(width: 120, height: 35)
+                }
+                LiveTeamLogo(driver: driver, season: model.selectedSeason, isWec: true, size: 18)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("#\(driver.number) \(driver.name ?? "车手")")
+                            .font(.caption.weight(.semibold)).lineLimit(1)
+                        if let position = driver.position {
+                            Text("P\(position)")
+                                .font(.caption2.weight(.bold)).monospacedDigit()
+                        }
+                        if let gap = driver.gap, !gap.isEmpty {
+                            Text(gap)
+                                .font(.caption2).monospacedDigit()
+                                .foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Button {
+                            model.setFavoriteDriver(
+                                followed ? nil : "wec:\(driver.number)",
+                                name: followed ? nil : driver.name,
+                                series: .wec
+                            )
+                        } label: {
+                            Image(systemName: followed ? "star.fill" : "star")
+                                .font(.caption2)
+                                .foregroundStyle(followed ? Color.yellow : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(followed ? "取消关注该车手" : "关注该车手")
+                        .accessibilityLabel(followed ? "取消关注该车手" : "关注该车手")
+                    }
+                    Text(detail)
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 6)
+                if showTire, driver.tireLabel != nil {
+                    HStack(spacing: 4) {
+                        Text("轮胎").foregroundStyle(.secondary)
+                        LiveTireInline(driver: driver, fontSize: 11)
+                    }
+                    .font(.caption2)
+                }
+                if showEnergy, driver.energyPercent != nil {
+                    HStack(spacing: 4) {
+                        Text("能量").foregroundStyle(.secondary)
+                        LiveEnergyInline(percent: driver.energyPercent)
+                    }
+                    .font(.caption2)
+                }
+            } else {
+                Text("No selected").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(8)
+        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct LiveTireInline: View {
+    let driver: LiveDriver
+    var fontSize: CGFloat = 9
+
+    private var color: Color {
+        switch driver.tireCompound?.uppercased() {
+        case "SOFT": .red
+        case "MEDIUM": .yellow
+        case "HARD": .white
+        case "INTERMEDIATE", "INTER": .green
+        case "WET": .blue
+        default: .gray
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text(driver.tireShortLabel ?? "—")
+                .font(.system(size: fontSize, weight: .heavy))
+                .foregroundStyle(color)
+            if let age = driver.tireAgeLaps {
+                Text("\(age)")
+                    .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .help(driver.tireLabel.map { "轮胎 \($0)" } ?? "轮胎未提供")
+        .accessibilityLabel(driver.tireLabel.map { "轮胎 \($0)" } ?? "轮胎未提供")
+    }
+}
+
+private struct LiveEnergyInline: View {
+    let percent: Double?
+
+    private var color: Color {
+        guard let percent else { return .gray }
+        if percent < 25 { return .red }
+        if percent < 50 { return .orange }
+        return .green
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.12))
+                Capsule().fill(color).frame(width: max(1, 16 * min(max((percent ?? 0) / 100, 0), 1)))
+            }
+            .frame(width: 16, height: 3)
+            Text(percent.map { "\(Int($0.rounded()))%" } ?? "—")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .help(percent.map { "虚拟能量剩余 \(Int($0.rounded()))%" } ?? "虚拟能量未提供")
+        .accessibilityLabel(percent.map { "虚拟能量 \(Int($0.rounded()))%" } ?? "虚拟能量未提供")
+    }
+}
+
 private struct LiveSectorView: View {
     let sector: LiveSector?
     let index: Int
+    var showsSegments = true
+    var referenceSeconds: Double? = nil
 
     private var color: Color {
         sector?.overallFastest == true ? .purple : sector?.personalFastest == true ? .green : .white
+    }
+
+    /// WEC has no mini-segment statuses, so its bar compares the sector time
+    /// with the best time of the same class instead of per-segment colours.
+    private var paceColor: Color {
+        guard let referenceSeconds,
+              let raw = sector?.value,
+              let seconds = LiveIslandLogic.sectorSeconds(raw) else { return .gray.opacity(0.3) }
+        let delta = seconds - referenceSeconds
+        if delta <= 0.001 { return .purple }
+        if delta <= 0.35 { return .green }
+        if delta <= 1.0 { return .yellow }
+        return .gray.opacity(0.55)
     }
 
     private func segmentColor(_ status: Int?) -> Color {
@@ -809,18 +1420,76 @@ private struct LiveSectorView: View {
         VStack(alignment: .trailing, spacing: 5) {
             Text(sector?.value.flatMap { $0.isEmpty ? nil : $0 } ?? "—")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .lineLimit(1)
+                .minimumScaleFactor(showsSegments ? 1 : 0.78)
                 .foregroundStyle(color)
-            if let segments = sector?.segments, !segments.isEmpty {
-                HStack(spacing: 2) {
-                    ForEach(segments.indices, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 1).fill(segmentColor(segments[index]))
-                    }
-                }.frame(height: 4)
+            if showsSegments {
+                if let segments = sector?.segments, !segments.isEmpty {
+                    HStack(spacing: 2) {
+                        ForEach(segments.indices, id: \.self) { index in
+                            RoundedRectangle(cornerRadius: 1).fill(segmentColor(segments[index]))
+                        }
+                    }.frame(height: 4)
+                } else {
+                    Rectangle().fill(Color.gray.opacity(0.15)).frame(height: 4)
+                }
             } else {
-                Rectangle().fill(Color.gray.opacity(0.15)).frame(height: 4)
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(paceColor)
+                    .frame(height: 3)
             }
         }
         .accessibilityLabel("S\(index + 1)，\(sector?.value ?? "未提供")\(sector?.overallFastest == true ? "，全场最快" : sector?.personalFastest == true ? "，个人最快" : "")")
+    }
+}
+
+private struct LiveWecTireEnergyCell: View {
+    let driver: LiveDriver
+    var showTire = true
+    var showEnergy = true
+
+    private var energyColor: Color {
+        guard let percent = driver.energyPercent else { return .gray }
+        if percent < 25 { return .red }
+        if percent < 50 { return .orange }
+        return .green
+    }
+
+    private var hasTire: Bool { showTire && driver.tireLabel != nil }
+    private var hasEnergy: Bool { showEnergy && driver.energyPercent != nil }
+
+    private var abilityLabel: String {
+        let tire = hasTire ? driver.tireLabel.map { "轮胎 \($0)" } : nil
+        let energy = hasEnergy ? driver.energyPercent.map { "虚拟能量 \(Int($0.rounded()))%" } : nil
+        return [tire, energy].compactMap { $0 }.joined(separator: "，")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if hasTire {
+                HStack(spacing: 5) {
+                    LiveTireInline(driver: driver, fontSize: 11)
+                }
+            }
+            if hasEnergy, let percent = driver.energyPercent {
+                HStack(spacing: 4) {
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.12))
+                        Capsule().fill(energyColor)
+                            .frame(width: max(1, 50 * min(max(percent / 100, 0), 1)))
+                    }
+                    .frame(width: 50, height: 5)
+                    Text("\(Int(percent.rounded()))%")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(energyColor)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .help(abilityLabel.isEmpty ? "轮胎与能量未提供" : abilityLabel)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(abilityLabel.isEmpty ? "轮胎与能量未提供" : abilityLabel)
     }
 }
 
@@ -831,7 +1500,7 @@ private struct LiveTrackStatusBadge: View {
     private var color: Color {
         switch snapshot.trackCondition {
         case .clear: return .green
-        case .yellow, .safetyCar: return .yellow
+        case .yellow, .fullCourseYellow, .safetyCar: return .yellow
         case .virtualSafetyCar, .virtualSafetyCarEnding, .safetyCarEnding: return .orange
         case .red: return .red
         case .unknown: return .gray
@@ -847,10 +1516,25 @@ private struct LiveTrackStatusBadge: View {
     }
 
     var body: some View {
-        Image(systemName: snapshot.trackCondition.systemName)
-            .font(.system(size: compact ? 13 : 20, weight: .semibold))
-            .foregroundStyle(color)
-            .frame(width: compact ? 22 : 32, height: compact ? 18 : 28)
+        Group {
+            if let code = snapshot.trackCondition.code {
+                HStack(spacing: compact ? 2 : 3) {
+                    Image(systemName: snapshot.trackCondition.systemName)
+                        .font(.system(size: compact ? 9 : 11, weight: .semibold))
+                    Text(code)
+                        .font(.system(size: compact ? 9 : 10, weight: .heavy, design: .rounded))
+                }
+                .foregroundStyle(color)
+                .padding(.horizontal, compact ? 5 : 7)
+                .frame(height: compact ? 18 : 22)
+                .background(color.opacity(0.16), in: Capsule())
+            } else {
+                Image(systemName: snapshot.trackCondition.systemName)
+                    .font(.system(size: compact ? 13 : 20, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(width: compact ? 22 : 32, height: compact ? 18 : 28)
+            }
+        }
             .overlay(alignment: .bottomTrailing) {
                 if snapshot.trackCondition == .safetyCarEnding || snapshot.trackCondition == .virtualSafetyCarEnding {
                     Image(systemName: "clock.fill")

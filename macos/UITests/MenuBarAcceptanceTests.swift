@@ -188,7 +188,7 @@ final class MenuBarAcceptanceTests: XCTestCase {
 
         island.buttons.matching(identifier: "liveIsland.expand").firstMatch.click()
         XCTAssertTrue(staticText(containing: "Other", in: island).waitForExistence(timeout: 10), island.debugDescription)
-        XCTAssertTrue(staticText(containing: "关注车手暂无数据", in: island).exists, island.debugDescription)
+        XCTAssertTrue(staticText(containing: "No selected", in: island).exists, island.debugDescription)
         XCTAssertFalse(staticText(containing: "Replay fixture only", in: island).exists, island.debugDescription)
         attachScreenshot("T14 missing fields and unknown Race Control fields", from: island)
     }

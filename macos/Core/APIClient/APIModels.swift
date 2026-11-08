@@ -5,6 +5,29 @@ struct APIEnvelope<Value: Codable & Sendable>: Codable, Sendable {
     let meta: ResponseMeta
 }
 
+enum ManualRefreshTarget: String, Codable, Sendable {
+    case calendar, results, standings
+}
+
+struct RefreshRequest: Codable, Sendable {
+    let season: Int
+    let target: ManualRefreshTarget
+    let sessionId: String?
+}
+
+enum DataRefreshStatus: String, Codable, Sendable {
+    case inProgress, completed, partial, failed, rateLimited
+}
+
+struct DataRefreshEvent: Codable, Equatable, Sendable {
+    let target: ManualRefreshTarget
+    let season: Int
+    let sessionId: String?
+    let status: DataRefreshStatus
+    let updatedAt: String
+    let retryAfter: String?
+}
+
 struct ResponseMeta: Codable, Equatable, Sendable {
     let schemaVersion: Int
     let revision: Int

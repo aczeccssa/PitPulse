@@ -64,6 +64,18 @@ actor APIClient {
         )
     }
 
+    func refresh(target: ManualRefreshTarget, season: Int, sessionId: String?, token: String?) async throws -> DataRefreshEvent {
+        var request = try makeRequest(path: "/api/v1/refresh", queryItems: [])
+        request.httpMethod = "POST"
+        request.timeoutInterval = 90
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(RefreshRequest(season: season, target: target, sessionId: sessionId))
+        applyToken(token, to: &request)
+        let (data, response) = try await data(for: request)
+        try validate(response: response, data: data)
+        return try Self.decode(DataRefreshEvent.self, from: data)
+    }
+
 
     func sessionAnalysis(sessionId: String, driverId: String, lap: Int?, token: String?) async throws -> APIEnvelope<SessionAnalysis> {
         try await envelope(SessionAnalysis.self, path: "/api/v1/sessions/\(sessionId)/drivers/\(driverId)/analysis",
@@ -88,9 +100,15 @@ actor APIClient {
 
     func liveStream(
         token: String?,
-        onSnapshot: @escaping @MainActor @Sendable (LiveSnapshot) async -> Void
+        series: String = "f1",
+        onConnected: @escaping @MainActor @Sendable () async -> Void = {},
+        onSnapshot: @escaping @MainActor @Sendable (LiveSnapshot) async -> Void,
+        onDataRefresh: @escaping @MainActor @Sendable (DataRefreshEvent) async -> Void = { _ in }
     ) async throws {
-        var request = try makeRequest(path: "/api/v1/live/stream", queryItems: [])
+        var request = try makeRequest(
+            path: "/api/v1/live/stream",
+            queryItems: [URLQueryItem(name: "series", value: series)]
+        )
         request.timeoutInterval = 60
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         applyToken(token, to: &request)
@@ -106,19 +124,26 @@ actor APIClient {
             throw APIClientError.transport(error.localizedDescription)
         }
         try validate(response: response, data: Data())
+        await onConnected()
 
         var parser = SSEParser()
         do {
             for try await byte in bytes {
                 try Task.checkCancellation()
-                for event in parser.append(byte) where event.name == "snapshot" {
-                    let snapshot = try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8))
-                    await onSnapshot(snapshot)
+                for event in parser.append(byte) {
+                    if event.name == "snapshot" {
+                        await onSnapshot(try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8)))
+                    } else if event.name == "dataRefresh" {
+                        await onDataRefresh(try Self.decode(DataRefreshEvent.self, from: Data(event.data.utf8)))
+                    }
                 }
             }
-            for event in parser.finish() where event.name == "snapshot" {
-                let snapshot = try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8))
-                await onSnapshot(snapshot)
+            for event in parser.finish() {
+                if event.name == "snapshot" {
+                    await onSnapshot(try Self.decode(LiveSnapshot.self, from: Data(event.data.utf8)))
+                } else if event.name == "dataRefresh" {
+                    await onDataRefresh(try Self.decode(DataRefreshEvent.self, from: Data(event.data.utf8)))
+                }
             }
         } catch is CancellationError {
             throw CancellationError()

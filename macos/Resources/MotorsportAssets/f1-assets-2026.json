@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "season": 2026,
+  "collectedAt": "2026-11-08T14:30:00Z",
+  "rightsBasis": "localAuthorizationProvidedByOwner",
+  "redistribution": "localUseOnly",
+  "sourcePages": [
+    "https://www.formula1.com/en/teams",
+    "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/{team}/2026{team}carright.webp",
+    "https://www.formula1.com/assets/liveTiming/static/images/f1_logo.svg"
+  ],
+  "notes": [
+    "Formula 1 2026 car side views are the team renders published on formula1.com, kept only in the local self-hosted bundle and never fetched at runtime.",
+    "The Formula 1 series mark replaces the country flag in the compact and expanded Live Island headers."
+  ],
+  "records": [
+    {
+      "kind": "carSide",
+      "id": "mercedes",
+      "asset": "car-side-mercedes-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/mercedes/2026mercedescarright.webp",
+      "sha256": "79f7052e689dc5cc99707a22ccee1df4851de1811c5a8f6c671836397f203bc4"
+    },
+    {
+      "kind": "carSide",
+      "id": "ferrari",
+      "asset": "car-side-ferrari-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/ferrari/2026ferraricarright.webp",
+      "sha256": "290d204c28a55d0693b2a8787d8cd78c4462516267eae1ded170efdf0661f2b6"
+    },
+    {
+      "kind": "carSide",
+      "id": "red_bull",
+      "asset": "car-side-red_bull-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/redbullracing/2026redbullracingcarright.webp",
+      "sha256": "88f7c8fcfffc872ad452df530f4510188b9b81cd381105d297737e50bd013fac"
+    },
+    {
+      "kind": "carSide",
+      "id": "mclaren",
+      "asset": "car-side-mclaren-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/mclaren/2026mclarencarright.webp",
+      "sha256": "04586fd09b6f4a4120568da19ad55ec2ca7893c98f0218cbbea2096a4e87c20e"
+    },
+    {
+      "kind": "carSide",
+      "id": "rb",
+      "asset": "car-side-rb-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/racingbulls/2026racingbullscarright.webp",
+      "sha256": "ca513af6104ec87aace97335a414c7edd525d0125d3c64a3e0109f31a52da058"
+    },
+    {
+      "kind": "carSide",
+      "id": "alpine",
+      "asset": "car-side-alpine-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/alpine/2026alpinecarright.webp",
+      "sha256": "69fb571dfec89a537f8852ff15d88e2b8ab5e7c50cb9974cb00c49baecbff010"
+    },
+    {
+      "kind": "carSide",
+      "id": "haas",
+      "asset": "car-side-haas-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/haas/2026haascarright.webp",
+      "sha256": "8075eaddad876232ab9a5d25e11db902d3eb1ed98e75c49df8b702f20ad46d82"
+    },
+    {
+      "kind": "carSide",
+      "id": "audi",
+      "asset": "car-side-audi-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/audi/2026audicarright.webp",
+      "sha256": "60be5298a4f6a9411a6befa8f78e792fc1d4fee854a938713f3dda104866f301"
+    },
+    {
+      "kind": "carSide",
+      "id": "williams",
+      "asset": "car-side-williams-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/williams/2026williamscarright.webp",
+      "sha256": "b721d0773538a90babf7263742cbc068bf79e180a671c7e34a5b3d9d4b7456a9"
+    },
+    {
+      "kind": "carSide",
+      "id": "aston_martin",
+      "asset": "car-side-aston_martin-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/astonmartin/2026astonmartincarright.webp",
+      "sha256": "af811e475de6120ed732a82d4cd7184f06acc0bce7640f24bf05890d9be0f12f"
+    },
+    {
+      "kind": "carSide",
+      "id": "cadillac",
+      "asset": "car-side-cadillac-2026",
+      "source": "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/cadillac/2026cadillaccarright.webp",
+      "sha256": "79b46a774faccd6b716379f3cfd5d5ca0757783d29e2bb428f3b4874af1df62e"
+    },
+    {
+      "kind": "seriesLogo",
+      "id": "f1",
+      "asset": "series-f1",
+      "source": "https://www.formula1.com/assets/liveTiming/static/images/f1_logo.svg",
+      "sha256": "f2a7d96eb916e011b48c24765672833c8382c1328215294505020f74b30f75d8"
+    }
+  ]
+}

@@ -1,117 +1,29 @@
 version: 1
 session: PitPulse
 task_order:
-  - Run Server
-  - Run App
-  - Build Server
-  - Build Server Release
-  - Test Server
-  - Check Server Format
-  - Lint Server
-  - Build App
-  - Build App Release
-  - Build App Tests
-  - Test App
-  - Check Map Page
-  - Check Live Models
-  - Check Task Report
-
+- Run Server
+- Run App
 tasks:
-  Run Server:
-    command: /bin/zsh
-    args: [-lc, "exec python3 scripts/run-server.py"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
   Run App:
     command: /bin/zsh
-    args: [-lc, "exec scripts/run-app.sh"]
+    args:
+    - -lc
+    - exec scripts/run-app.sh
     cwd: .
+    env: {}
     shell: false
     auto_start: false
     stop_timeout_ms: 5000
-  Build Server:
+    clear_logs_on_restart: true
+  Run Server:
     command: /bin/zsh
-    args: [-lc, "exec cargo build --locked --manifest-path server/Cargo.toml"]
+    args:
+    - -lc
+    - exec python3 scripts/run-server.py
     cwd: .
+    env:
+      F1_COMPANION_LIVE_INTERFACE: en0
     shell: false
     auto_start: false
     stop_timeout_ms: 10000
-  Build Server Release:
-    command: /bin/zsh
-    args: [-lc, "exec cargo build --release --locked --manifest-path server/Cargo.toml"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Test Server:
-    command: /bin/zsh
-    args: [-lc, "exec cargo test --locked --manifest-path server/Cargo.toml"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Check Server Format:
-    command: /bin/zsh
-    args: [-lc, "exec cargo fmt --manifest-path server/Cargo.toml -- --check"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Lint Server:
-    command: /bin/zsh
-    args: [-lc, "exec cargo clippy --locked --all-targets --manifest-path server/Cargo.toml -- -D warnings"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Build App:
-    command: /bin/zsh
-    args: [-lc, "exec scripts/xcode-task.sh build Debug"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Build App Release:
-    command: /bin/zsh
-    args: [-lc, "exec scripts/xcode-task.sh build Release"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Build App Tests:
-    command: /bin/zsh
-    args: [-lc, "exec scripts/xcode-task.sh build-for-testing Debug"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Test App:
-    command: /bin/zsh
-    args: [-lc, "exec scripts/xcode-task.sh test Debug"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Check Map Page:
-    command: /bin/zsh
-    args: [-lc, "exec node --test macos/Tests/map-page.test.mjs"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Check Live Models:
-    command: /bin/zsh
-    args: [-lc, "exec sh macos/Tests/run-live-map-check.sh"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
-  Check Task Report:
-    command: /bin/zsh
-    args: [-lc, "node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js"]
-    cwd: .
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 10000
+    clear_logs_on_restart: false

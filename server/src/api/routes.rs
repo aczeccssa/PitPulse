@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
     extract::{Path, Query, State},
     response::Html,
-    routing::get,
+    routing::{get, post},
 };
 use serde_json::json;
 
@@ -44,6 +44,7 @@ pub fn build_router(state: AppState) -> Router<AppState> {
         .route("/api/v1/live/radio/{session}/{id}", get(super::maps::radio))
         .route("/api/v1/live/snapshot", get(live_snapshot))
         .route("/api/v1/live/stream", get(crate::api::sse::live_stream))
+        .route("/api/v1/refresh", post(crate::api::refresh::refresh))
         .with_state(state)
 }
 
@@ -162,8 +163,18 @@ async fn constructor_standings(
     Ok(Json(json!({"data": standings, "meta": meta})))
 }
 
-async fn live_snapshot(State(state): State<AppState>) -> Json<serde_json::Value> {
-    Json(json!({"data": state.live.current().clone()}))
+async fn live_snapshot(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let series = params.get("series").map(String::as_str).unwrap_or("f1");
+    let live = state
+        .live_for(series)
+        .ok_or_else(|| ApiError::InvalidQuery {
+            field: "series".to_string(),
+            error: "expected f1 or wec".to_string(),
+        })?;
+    Ok(Json(json!({"data": live.current().clone()})))
 }
 
 fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiError> {

@@ -29,11 +29,23 @@ pub struct ProvidersConfig {
     pub jolpica_enabled: bool,
     pub openf1_enabled: bool,
     pub f1_live_enabled: bool,
+    #[serde(default)]
+    pub wec_live_enabled: bool,
+    #[serde(default = "default_wec_live_poll_seconds")]
+    pub wec_live_poll_seconds: u64,
     pub user_agent: String,
     #[serde(skip)]
     pub mapbox_public_token: Option<String>,
     #[serde(skip)]
     pub f1_live_access_token: Option<String>,
+    #[serde(skip)]
+    pub f1_live_interface: Option<String>,
+    #[serde(skip)]
+    pub wec_live_session_id: Option<i64>,
+}
+
+const fn default_wec_live_poll_seconds() -> u64 {
+    5
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -76,8 +88,12 @@ impl Default for AppConfig {
                 jolpica_enabled: true,
                 openf1_enabled: true,
                 f1_live_enabled: true,
+                wec_live_enabled: false,
+                wec_live_poll_seconds: default_wec_live_poll_seconds(),
                 user_agent: "PitPulse/0.1 (+https://github.com/)".to_string(),
                 f1_live_access_token: None,
+                f1_live_interface: None,
+                wec_live_session_id: None,
                 mapbox_public_token: None,
             },
             live: LiveConfig {
@@ -156,6 +172,45 @@ impl AppConfig {
                 return Err(ConfigError::EmptyToken);
             }
             config.providers.f1_live_access_token = Some(value);
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_LIVE_INTERFACE") {
+            let value = value.trim().to_string();
+            if !value.is_empty() {
+                config.providers.f1_live_interface = Some(value);
+            }
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_WEC_LIVE_ENABLED") {
+            config.providers.wec_live_enabled = matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            );
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_WEC_LIVE_SESSION_ID") {
+            if value.trim().is_empty() {
+                config.providers.wec_live_session_id = None;
+            } else {
+                config.providers.wec_live_session_id =
+                    Some(value.trim().parse::<i64>().map_err(|error| {
+                        ConfigError::InvalidValue {
+                            field: "providers.wec_live_session_id".into(),
+                            error: error.to_string(),
+                        }
+                    })?);
+            }
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_WEC_LIVE_POLL_SECONDS") {
+            config.providers.wec_live_poll_seconds = value
+                .trim()
+                .parse::<u64>()
+                .map_err(|error| ConfigError::InvalidValue {
+                    field: "providers.wec_live_poll_seconds".into(),
+                    error: error.to_string(),
+                })?
+                .clamp(2, 60);
         }
 
         if config.security.require_token && config.security.token.is_none() {

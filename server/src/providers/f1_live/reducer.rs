@@ -7,7 +7,7 @@ use crate::{
     providers::f1_live::{models::TopicPatch, patches::deep_merge},
 };
 
-pub const LIVE_TOPICS: [&str; 12] = [
+pub const LIVE_TOPICS: [&str; 13] = [
     "Heartbeat",
     "SessionInfo",
     "SessionStatus",
@@ -20,6 +20,7 @@ pub const LIVE_TOPICS: [&str; 12] = [
     "CarData.z",
     "WeatherData",
     "TeamRadio",
+    "Stints",
 ];
 
 #[derive(Debug, Default, Clone)]
@@ -31,6 +32,10 @@ pub struct LiveTopicReducer {
     telemetry: BTreeMap<String, crate::domain::live::LiveTelemetry>,
     weather_updated_at: Option<String>,
     position_times: BTreeMap<String, String>,
+    telemetry_times: BTreeMap<String, String>,
+    position_received: usize,
+    position_decoded: usize,
+    position_decode_error: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -48,9 +53,30 @@ impl LiveTopicReducer {
         self.telemetry.clear();
         self.weather_updated_at = None;
         self.position_times.clear();
+        self.telemetry_times.clear();
+        self.position_received = 0;
+        self.position_decoded = 0;
+        self.position_decode_error = false;
     }
 
     pub fn apply_batch(&mut self, value: &Value, received_at: &str) -> Option<ReducedLiveUpdate> {
+        self.apply_batch_with_freshness(value, received_at, true)
+    }
+
+    pub fn apply_initial_snapshot(
+        &mut self,
+        value: &Value,
+        received_at: &str,
+    ) -> Option<ReducedLiveUpdate> {
+        self.apply_batch_with_freshness(value, received_at, false)
+    }
+
+    fn apply_batch_with_freshness(
+        &mut self,
+        value: &Value,
+        received_at: &str,
+        feed_sample: bool,
+    ) -> Option<ReducedLiveUpdate> {
         let mut patches = Vec::new();
         collect_patches(value, &mut patches);
         if patches.is_empty() {
@@ -63,8 +89,13 @@ impl LiveTopicReducer {
             if patch.topic == "Heartbeat" {
                 accepted = true;
             }
-            if self.apply_patch(&patch, received_at) && patch.topic != "Heartbeat" {
+            let previous_position_status = self.position_status();
+            let changed = self.apply_patch(&patch, received_at, feed_sample);
+            if changed && patch.topic != "Heartbeat" {
                 data_updated = true;
+                accepted = true;
+            }
+            if patch.topic == "Position.z" && previous_position_status != self.position_status() {
                 accepted = true;
             }
         }
@@ -87,12 +118,14 @@ impl LiveTopicReducer {
             .and_then(|topic| topic.get("Lines"))
             .and_then(Value::as_object);
         let driver_list = self.topic("DriverList").and_then(Value::as_object);
+        let stints = self.topic("Stints");
         let mut drivers = timing_lines
             .into_iter()
             .flat_map(|lines| lines.iter())
             .filter(|(_, line)| line.is_object())
             .map(|(number, line)| {
                 let metadata = driver_list.and_then(|list| list.get(number));
+                let (tire_compound, tire_age_laps) = stint_summary(stints, number, line);
                 LiveDriver {
                     location: self.locations.get(number).cloned(),
                     telemetry: self.telemetry.get(number).cloned(),
@@ -120,6 +153,9 @@ impl LiveTopicReducer {
                     best_lap: line
                         .get("BestLapTime")
                         .and_then(|value| value_string(value.get("Value").unwrap_or(value))),
+                    tire_compound,
+                    tire_age_laps,
+                    ..LiveDriver::default()
                 }
             })
             .collect::<Vec<_>>();
@@ -128,24 +164,31 @@ impl LiveTopicReducer {
                 .into_iter()
                 .flat_map(|list| list.iter())
                 .filter(|(_, driver)| driver.is_object())
-                .map(|(number, driver)| LiveDriver {
-                    location: self.locations.get(number).cloned(),
-                    telemetry: self.telemetry.get(number).cloned(),
-                    number: driver
-                        .get("RacingNumber")
-                        .and_then(value_string)
-                        .unwrap_or_else(|| number.clone()),
-                    name: first_string(driver, &["FullName", "BroadcastName", "Tla"]),
-                    team: first_string(driver, &["TeamName"]),
-                    position: None,
-                    gap: None,
-                    interval: None,
-                    lap_count: None,
-                    last_lap: None,
-                    best_lap: None,
-                    sectors: None,
-                    in_pit: None,
-                    retired: None,
+                .map(|(number, driver)| {
+                    let (tire_compound, tire_age_laps) =
+                        stint_summary(stints, number, &Value::Null);
+                    LiveDriver {
+                        location: self.locations.get(number).cloned(),
+                        telemetry: self.telemetry.get(number).cloned(),
+                        number: driver
+                            .get("RacingNumber")
+                            .and_then(value_string)
+                            .unwrap_or_else(|| number.clone()),
+                        name: first_string(driver, &["FullName", "BroadcastName", "Tla"]),
+                        team: first_string(driver, &["TeamName"]),
+                        position: None,
+                        gap: None,
+                        interval: None,
+                        lap_count: None,
+                        last_lap: None,
+                        best_lap: None,
+                        sectors: None,
+                        in_pit: None,
+                        retired: None,
+                        tire_compound,
+                        tire_age_laps,
+                        ..LiveDriver::default()
+                    }
                 })
                 .collect();
         }
@@ -185,8 +228,17 @@ impl LiveTopicReducer {
             .and_then(|topic| topic.get("Messages"))
             .map(recent_messages);
 
+        let calibrated = drivers
+            .iter()
+            .filter(|driver| {
+                driver.location.as_ref().is_some_and(|location| {
+                    location.longitude.is_some() && location.latitude.is_some()
+                })
+            })
+            .count();
         LiveSnapshot {
             schema_version: 1,
+            series: Some("f1".to_string()),
             circuit_key: session_info
                 .and_then(|t| t.pointer("/Meeting/Circuit/Key"))
                 .and_then(value_string),
@@ -230,12 +282,39 @@ impl LiveTopicReducer {
             last_transport_at: Some(received_at.to_string()),
             drivers,
             race_control,
+            position_status: Some(self.position_status_with_calibration(calibrated)),
+            position_diagnostics: Some(crate::domain::live::LivePositionDiagnostics {
+                received: self.position_received,
+                decoded: self.position_decoded,
+                calibrated,
+            }),
+            time_remaining_seconds: None,
+            elapsed_seconds: None,
+            is_time_based: None,
         }
     }
 
-    fn apply_patch(&mut self, patch: &TopicPatch, received_at: &str) -> bool {
+    fn position_status(&self) -> String {
+        self.position_status_with_calibration(0)
+    }
+
+    fn position_status_with_calibration(&self, calibrated: usize) -> String {
+        if self.position_decode_error || (self.position_received > 0 && self.position_decoded == 0)
+        {
+            "decode_error"
+        } else if calibrated > 0 {
+            "available"
+        } else if self.position_decoded > 0 || !self.locations.is_empty() {
+            "uncalibrated"
+        } else {
+            "waiting"
+        }
+        .to_string()
+    }
+
+    fn apply_patch(&mut self, patch: &TopicPatch, received_at: &str, feed_sample: bool) -> bool {
         if patch.topic.ends_with(".z") {
-            return self.apply_compressed(patch);
+            return self.apply_compressed(patch, received_at, feed_sample);
         }
         if patch.topic == "WeatherData" {
             if !patch.patch.is_object() {
@@ -291,8 +370,18 @@ impl LiveTopicReducer {
         true
     }
 
-    fn apply_compressed(&mut self, patch: &TopicPatch) -> bool {
+    fn apply_compressed(
+        &mut self,
+        patch: &TopicPatch,
+        received_at: &str,
+        feed_sample: bool,
+    ) -> bool {
         let Some(value) = super::compressed::decode(&patch.patch) else {
+            if patch.topic == "Position.z" {
+                self.position_received = 0;
+                self.position_decoded = 0;
+                self.position_decode_error = true;
+            }
             return false;
         };
         let (key, time_key) = if patch.topic == "Position.z" {
@@ -301,8 +390,16 @@ impl LiveTopicReducer {
             ("Entries", "Utc")
         };
         let Some(frames) = value.get(key).and_then(Value::as_array) else {
+            if patch.topic == "Position.z" {
+                self.position_received = 0;
+                self.position_decoded = 0;
+                self.position_decode_error = true;
+            }
             return false;
         };
+        if patch.topic == "Position.z" {
+            self.position_decode_error = false;
+        }
         let mut changed = false;
         for frame in frames {
             let Some(utc) = frame
@@ -315,6 +412,8 @@ impl LiveTopicReducer {
             let cars = frame
                 .get(if key == "Position" { "Entries" } else { "Cars" })
                 .and_then(Value::as_object);
+            let mut frame_received = 0;
+            let mut frame_decoded = 0;
             for (number, car) in cars.into_iter().flatten() {
                 if number.parse::<u16>().is_err() {
                     continue;
@@ -323,43 +422,47 @@ impl LiveTopicReducer {
                     if self
                         .position_times
                         .get(number)
-                        .is_some_and(|old| old > &utc)
+                        .is_some_and(|old| old >= &utc)
                     {
                         continue;
                     }
+                    frame_received += 1;
                     self.position_times.insert(number.clone(), utc.clone());
                     let old = self.locations.get(number);
-                    let x = match car.get("X") {
-                        Some(v) => numeric(Some(v)),
-                        None => old.map(|o| o.x),
-                    };
-                    let y = match car.get("Y") {
-                        Some(v) => numeric(Some(v)),
-                        None => old.map(|o| o.y),
-                    };
-                    if x.is_none() || y.is_none() {
-                        changed |= self.locations.remove(number).is_some();
+                    let sample_x = numeric(car.get("X"));
+                    let sample_y = numeric(car.get("Y"));
+                    if sample_x.is_none() && sample_y.is_none() {
                         continue;
                     }
-                    if let (Some(x), Some(y)) = (x, y) {
-                        self.locations.insert(
-                            number.clone(),
-                            crate::domain::live::LiveLocation {
-                                x,
-                                y,
-                                utc: utc.clone(),
-                                status: car
-                                    .get("Status")
-                                    .and_then(value_string)
-                                    .or_else(|| old.and_then(|o| o.status.clone())),
-                                longitude: None,
-                                latitude: None,
-                            },
-                        );
-                        changed = true;
-                    }
+                    let (Some(x), Some(y)) = (
+                        sample_x.or_else(|| old.map(|location| location.x)),
+                        sample_y.or_else(|| old.map(|location| location.y)),
+                    ) else {
+                        continue;
+                    };
+                    frame_decoded += 1;
+                    self.locations.insert(
+                        number.clone(),
+                        crate::domain::live::LiveLocation {
+                            x,
+                            y,
+                            utc: utc.clone(),
+                            received_at: feed_sample.then(|| received_at.to_string()),
+                            status: car
+                                .get("Status")
+                                .and_then(value_string)
+                                .or_else(|| old.and_then(|o| o.status.clone())),
+                            longitude: None,
+                            latitude: None,
+                        },
+                    );
+                    changed = true;
                 } else {
-                    if self.telemetry.get(number).is_some_and(|old| old.utc > utc) {
+                    if self
+                        .telemetry_times
+                        .get(number)
+                        .is_some_and(|old| old >= &utc)
+                    {
                         continue;
                     }
                     let Some(channels) = car.get("Channels") else {
@@ -368,6 +471,8 @@ impl LiveTopicReducer {
                     let previous = self.telemetry.get(number).cloned();
                     let entry = self.telemetry.entry(number.clone()).or_default();
                     entry.utc = utc.clone();
+                    entry.received_at = feed_sample.then(|| received_at.to_string());
+                    self.telemetry_times.insert(number.clone(), utc.clone());
                     for (field, channel) in [
                         (&mut entry.rpm, "0"),
                         (&mut entry.speed, "2"),
@@ -382,6 +487,11 @@ impl LiveTopicReducer {
                     }
                     changed |= previous.as_ref() != Some(entry);
                 }
+            }
+            if key == "Position" && frame_received > 0 {
+                self.position_received = frame_received;
+                self.position_decoded = frame_decoded;
+                self.position_decode_error = frame_decoded == 0;
             }
         }
         changed
@@ -561,6 +671,30 @@ fn value_string(value: &Value) -> Option<String> {
     }
 }
 
+/// Current tyre from the `Stints` topic, with `TimingData` fields as fallback.
+fn stint_summary(
+    stints: Option<&Value>,
+    number: &str,
+    line: &Value,
+) -> (Option<String>, Option<i64>) {
+    let stints = stints.and_then(|value| value.get("Stints").or(Some(value)));
+    let last = stints
+        .and_then(|stints| stints.get(number))
+        .and_then(Value::as_array)
+        .and_then(|entries| entries.iter().rev().find(|entry| entry.is_object()));
+    let compound = last
+        .and_then(|entry| first_string(entry, &["Compound"]))
+        .or_else(|| first_string(line, &["TyreCompound", "Tyre"]))
+        .map(|compound| compound.to_ascii_uppercase());
+    let age = last
+        .map(|entry| {
+            value_i64(entry.get("TotalLaps")).unwrap_or(0)
+                + value_i64(entry.get("StartLaps")).unwrap_or(0)
+        })
+        .filter(|age| *age > 0);
+    (compound, age)
+}
+
 fn value_i64(value: Option<&Value>) -> Option<i64> {
     value.and_then(|value| {
         value
@@ -669,8 +803,16 @@ mod tests {
             ),
             (12., 20.)
         );
+        assert_eq!(
+            d.location.as_ref().unwrap().received_at.as_deref(),
+            Some("2026-10-10T10:00:01Z")
+        );
         assert!(d.location.as_ref().unwrap().longitude.is_none());
         assert_eq!(d.telemetry.as_ref().unwrap().speed, Some(300.));
+        assert_eq!(
+            d.telemetry.as_ref().unwrap().received_at.as_deref(),
+            Some("2026-10-10T10:00:01Z")
+        );
         assert_eq!(d.telemetry.as_ref().unwrap().rpm, Some(11000.));
         assert_eq!(s.weather.as_ref().unwrap().rainfall, Some(true));
         let before = s.weather.unwrap().utc;
@@ -793,6 +935,34 @@ mod tests {
     }
 
     #[test]
+    fn test_stints_topic_maps_current_compound_and_age() {
+        let mut reducer = LiveTopicReducer::default();
+        let initial = json!({
+            "DriverList": {"44": {"FullName": "Driver One"}},
+            "TimingData": {"Lines": {"44": {"Line": 1}}},
+            "Stints": {"Stints": {"44": [
+                {"Compound": "SOFT", "TotalLaps": 12, "StartLaps": 0},
+                {"Compound": "hard", "TotalLaps": 7, "StartLaps": 2}
+            ]}}
+        });
+        let snapshot = reducer.apply_batch(&initial, "now").unwrap().snapshot;
+        assert_eq!(snapshot.drivers[0].tire_compound.as_deref(), Some("HARD"));
+        assert_eq!(snapshot.drivers[0].tire_age_laps, Some(9));
+
+        let delta = json!(["Stints", {"Stints": {"44": [
+            {"Compound": "SOFT", "TotalLaps": 12, "StartLaps": 0},
+            {"Compound": "HARD", "TotalLaps": 7, "StartLaps": 2},
+            {"Compound": "INTERMEDIATE", "TotalLaps": 3, "StartLaps": 0}
+        ]}}]);
+        let snapshot = reducer.apply_batch(&delta, "later").unwrap().snapshot;
+        assert_eq!(
+            snapshot.drivers[0].tire_compound.as_deref(),
+            Some("INTERMEDIATE")
+        );
+        assert_eq!(snapshot.drivers[0].tire_age_laps, Some(3));
+    }
+
+    #[test]
     fn test_session_change_clears_previous_session_topics() {
         let mut reducer = LiveTopicReducer::default();
         reducer.apply_batch(
@@ -842,6 +1012,131 @@ mod tests {
             Some("2026-10-10T01:01:00Z")
         );
         assert!(!heartbeat.data_updated);
+    }
+
+    #[test]
+    fn test_position_freshness_requires_new_valid_feed_samples() {
+        let mut reducer = LiveTopicReducer::default();
+        let initial = zipped(
+            json!({"Position":[{"Timestamp":"2026-10-10T10:00:00Z","Entries":{"44":{"X":10,"Y":20}}}]}),
+        );
+        let snapshot = reducer
+            .apply_initial_snapshot(
+                &json!({"DriverList":{"44":{"RacingNumber":"44"}},"Position.z": initial}),
+                "2026-10-10T10:00:01Z",
+            )
+            .unwrap()
+            .snapshot;
+        assert_eq!(
+            snapshot.drivers[0].location.as_ref().unwrap().received_at,
+            None
+        );
+
+        let feed = zipped(
+            json!({"Position":[{"Timestamp":"2026-10-10T10:00:00.1Z","Entries":{"44":{"X":11,"Y":21}}}]}),
+        );
+        let snapshot = reducer
+            .apply_batch(&json!({"Position.z": feed}), "2026-10-10T10:00:02Z")
+            .unwrap()
+            .snapshot;
+        assert_eq!(
+            snapshot.drivers[0]
+                .location
+                .as_ref()
+                .unwrap()
+                .received_at
+                .as_deref(),
+            Some("2026-10-10T10:00:02Z")
+        );
+        assert_eq!(snapshot.position_diagnostics.as_ref().unwrap().decoded, 1);
+
+        let duplicate = zipped(
+            json!({"Position":[{"Timestamp":"2026-10-10T10:00:00.1Z","Entries":{"44":{"X":12,"Y":22}}}]}),
+        );
+        assert!(
+            reducer
+                .apply_batch(&json!({"Position.z": duplicate}), "2026-10-10T10:00:03Z")
+                .is_none()
+        );
+        assert_eq!(
+            reducer.snapshot("2026-10-10T10:00:03Z").drivers[0]
+                .location
+                .as_ref()
+                .unwrap()
+                .x,
+            11.
+        );
+
+        let telemetry = zipped(
+            json!({"Entries":[{"Utc":"2026-10-10T10:00:01Z","Cars":{"44":{"Channels":{"2":300}}}}]}),
+        );
+        let snapshot = reducer
+            .apply_batch(&json!({"CarData.z": telemetry}), "2026-10-10T10:00:12Z")
+            .unwrap()
+            .snapshot;
+        assert_eq!(
+            snapshot.drivers[0]
+                .location
+                .as_ref()
+                .unwrap()
+                .received_at
+                .as_deref(),
+            Some("2026-10-10T10:00:02Z")
+        );
+        assert_eq!(
+            snapshot.drivers[0]
+                .telemetry
+                .as_ref()
+                .unwrap()
+                .received_at
+                .as_deref(),
+            Some("2026-10-10T10:00:12Z")
+        );
+
+        let broken = json!({"Position.z": "not-valid-compressed-data"});
+        let snapshot = reducer
+            .apply_batch(&broken, "2026-10-10T10:00:05Z")
+            .unwrap()
+            .snapshot;
+        assert_eq!(snapshot.position_status.as_deref(), Some("decode_error"));
+        assert_eq!(
+            snapshot.drivers[0]
+                .location
+                .as_ref()
+                .unwrap()
+                .received_at
+                .as_deref(),
+            Some("2026-10-10T10:00:02Z")
+        );
+    }
+
+    #[test]
+    fn test_uncalibrated_positions_are_reported_without_fabricating_geography() {
+        let mut reducer = LiveTopicReducer::default();
+        let positions = zipped(
+            json!({"Position":[{"Timestamp":"2026-10-10T10:00:00Z","Entries":{"44":{"X":10,"Y":20}}}]}),
+        );
+        let snapshot = reducer
+            .apply_batch(
+                &json!({"SessionInfo":{"Key":1,"Meeting":{"Circuit":{"Key":9}}},"DriverList":{"44":{"RacingNumber":"44"}},"Position.z":positions}),
+                "2026-10-10T10:00:01Z",
+            )
+            .unwrap()
+            .snapshot;
+        assert_eq!(snapshot.position_status.as_deref(), Some("uncalibrated"));
+        assert_eq!(snapshot.position_diagnostics.as_ref().unwrap().received, 1);
+        assert_eq!(
+            snapshot.position_diagnostics.as_ref().unwrap().calibrated,
+            0
+        );
+        assert!(
+            snapshot.drivers[0]
+                .location
+                .as_ref()
+                .unwrap()
+                .longitude
+                .is_none()
+        );
     }
 
     #[test]

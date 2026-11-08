@@ -250,6 +250,115 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testManualResultsRefreshReadsCacheFirstWaitsForSyncThenReloads() async throws {
+        let (model, root, suite) = makeModel()
+        defer { cleanup(root, suite) }
+        let requests = RequestLog()
+        let results = RequestCounter()
+        URLProtocolStub.handler = { request in
+            let path = request.url!.path
+            requests.append("\(request.httpMethod ?? "GET") \(path)")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let responseData: Data
+            if path == "/api/v1/refresh" {
+                let body = try JSONDecoder().decode(RefreshRequest.self, from: XCTUnwrap(request.httpBody))
+                XCTAssertEqual(body.target, .results)
+                XCTAssertEqual(body.sessionId, "2026:1:race")
+                Thread.sleep(forTimeInterval: 0.05)
+                responseData = Data(#"{"target":"results","season":2026,"sessionId":"2026:1:race","status":"completed","updatedAt":"2026-10-12T00:00:00Z"}"#.utf8)
+            } else if path.hasSuffix("/results") {
+                results.increment()
+                let resultRevision = results.value
+                let row = SessionResult(
+                    sessionId: "2026:1:race", position: 1, classification: "classified", driverId: "norris",
+                    driverName: "Lando Norris", constructorId: "mclaren", team: "McLaren", time: nil,
+                    bestLap: nil, q1: nil, q2: nil, q3: nil, raceTime: nil, gap: nil, laps: 58, points: 25,
+                    source: "fixture", sourceUpdatedAt: nil, fetchedAt: TestData.date("2026-03-08T00:00:00Z"),
+                    revision: resultRevision, quality: "provisional"
+                )
+                responseData = try encoder.encode(APIEnvelope(data: [row], meta: TestData.meta(revision: resultRevision)))
+            } else {
+                throw URLError(.badServerResponse)
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                    headerFields: ["Content-Type": "application/json"])!, responseData)
+        }
+
+        model.selectResultSession("2026:1:race")
+        for _ in 0..<100 where model.resultMeta?.revision != 1 {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(model.resultMeta?.revision, 1)
+        requests.reset()
+
+        model.refreshCurrentPage(target: .results)
+        for _ in 0..<100 where model.isRefreshing {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertFalse(model.isRefreshing)
+        XCTAssertEqual(model.resultMeta?.revision, 2)
+        XCTAssertEqual(requests.values, [
+            "GET /api/v1/sessions/2026:1:race/results",
+            "POST /api/v1/refresh",
+            "GET /api/v1/sessions/2026:1:race/results",
+        ])
+    }
+
+    @MainActor
+    func testLateManualRefreshFailureDoesNotAffectSelectedSession() async throws {
+        let (model, root, suite) = makeModel()
+        defer { cleanup(root, suite) }
+        let postStarted = RequestCounter()
+        let resultRequests = RequestCounter()
+        URLProtocolStub.handler = { request in
+            let response: HTTPURLResponse
+            let data: Data
+            if request.url!.path == "/api/v1/refresh" {
+                postStarted.increment()
+                Thread.sleep(forTimeInterval: 0.1)
+                response = HTTPURLResponse(url: request.url!, statusCode: 429, httpVersion: nil,
+                                           headerFields: ["Content-Type": "application/json", "Retry-After": "120"])!
+                data = Data("{}".utf8)
+            } else {
+                resultRequests.increment()
+                let envelope = APIEnvelope<[SessionResult]>(
+                    data: [], meta: TestData.meta(revision: resultRequests.value)
+                )
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil,
+                                           headerFields: ["Content-Type": "application/json"])!
+                data = try encoder.encode(envelope)
+            }
+            return (response, data)
+        }
+
+        model.selectResultSession("2026:1:race")
+        for _ in 0..<100 where model.resultMeta == nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(model.resultMeta?.revision, 1)
+
+        model.refreshCurrentPage(target: .results)
+        for _ in 0..<100 where postStarted.value == 0 {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(postStarted.value, 1)
+        model.selectResultSession("2026:2:race")
+        for _ in 0..<100 where model.resultMeta?.revision != 3 {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        for _ in 0..<100 where model.isRefreshing {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertEqual(model.selectedResultSessionID, "2026:2:race")
+        XCTAssertEqual(model.resultMeta?.revision, 3)
+        XCTAssertNil(model.resultError)
+    }
+
+    @MainActor
     func testLateOldSeasonResultCannotOverwriteNewSeason() async throws {
         let (model, root, suite) = makeModel()
         defer { cleanup(root, suite) }
@@ -769,6 +878,29 @@ private final class RequestCounter: @unchecked Sendable {
         lock.lock()
         count += 1
         requestTimes.append(DispatchTime.now().uptimeNanoseconds)
+        lock.unlock()
+    }
+}
+
+private final class RequestLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requests: [String] = []
+
+    var values: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return requests
+    }
+
+    func append(_ value: String) {
+        lock.lock()
+        requests.append(value)
+        lock.unlock()
+    }
+
+    func reset() {
+        lock.lock()
+        requests.removeAll()
         lock.unlock()
     }
 }

@@ -23,7 +23,9 @@ final class LiveStoreTests: XCTestCase {
 
     func testTrackConditionsRecognizeCodesAndMessagesWithoutUsingStaleFlags() throws {
         let cases: [(String, LiveTrackCondition)] = [
-            ("1", .clear), ("AllClear", .clear), ("Yellow flag", .yellow), ("2", .yellow),
+            ("1", .clear), ("AllClear", .clear), ("Chequered", .clear),
+            ("Yellow flag", .yellow), ("2", .yellow), ("Slow zone", .yellow),
+            ("FCY", .fullCourseYellow), ("Full course yellow", .fullCourseYellow),
             ("4", .safetyCar), ("SCDeployed", .safetyCar), ("SCInThisLap", .safetyCarEnding),
             ("5", .red), ("Red flag", .red), ("6", .virtualSafetyCar), ("VSCDeployed", .virtualSafetyCar),
             ("7", .virtualSafetyCarEnding), ("Virtual safety car ending", .virtualSafetyCarEnding)
@@ -39,14 +41,34 @@ final class LiveStoreTests: XCTestCase {
         }
     }
 
+    func testWecSnapshotDecodesSeriesClassAndRemainingTime() throws {
+        let data = Data(#"{"schemaVersion":1,"stateVersion":3,"series":"wec","sessionId":"wec:18162","sessionName":"Race","meetingName":"FIA WEC - 6 Hours of Monza","sourceStatus":"connected","sourceMode":"live","sessionStatus":"started","trackStatus":"FCY","lapCount":14,"timeRemainingSeconds":20112,"elapsedSeconds":1488,"isTimeBased":true,"drivers":[{"number":"38","name":"Jack Aitken","team":"CADILLAC HERTZ TEAM JOTA","position":1,"gap":"LEADER","classId":"HYPERCAR","className":"Hypercar","classPosition":1,"manufacturer":"Cadillac V-Series.R","inPit":false,"retired":false,"tireCompound":"MEDIUM","tireAgeLaps":8,"energyPercent":82.4}]}"#.utf8)
+        let snapshot = try JSONDecoder().decode(LiveSnapshot.self, from: data)
+        XCTAssertEqual(snapshot.series, "wec")
+        XCTAssertTrue(snapshot.isWec)
+        XCTAssertEqual(snapshot.remainingLabel, "5:35:12")
+        XCTAssertEqual(snapshot.trackCondition, .fullCourseYellow)
+        XCTAssertEqual(snapshot.drivers.first?.classLabel, "HYPERCAR P1")
+        XCTAssertEqual(snapshot.drivers.first?.className, "Hypercar")
+        XCTAssertEqual(snapshot.drivers.first?.tireLabel, "M 8")
+        XCTAssertEqual(snapshot.drivers.first?.energyLabel, "82%")
+        XCTAssertEqual(snapshot.drivers.first?.tireShortLabel, "M")
+    }
+
     func testTrackIconsDistinguishFlagsSafetyCarAndVirtualSafetyCar() {
         let cases: [(LiveTrackCondition, String)] = [
             (.clear, "flag.fill"), (.yellow, "flag.fill"), (.red, "flag.fill"),
-            (.safetyCar, "car.side.fill"), (.safetyCarEnding, "car.side.fill"),
-            (.virtualSafetyCar, "car.side"), (.virtualSafetyCarEnding, "car.side"),
+            (.fullCourseYellow, "flag.fill"),
+            (.safetyCar, "flag.fill"), (.safetyCarEnding, "flag.fill"),
+            (.virtualSafetyCar, "flag.fill"), (.virtualSafetyCarEnding, "flag.fill"),
             (.unknown, "questionmark.circle")
         ]
         for (condition, symbol) in cases { XCTAssertEqual(condition.systemName, symbol) }
+        XCTAssertEqual(LiveTrackCondition.fullCourseYellow.code, "FCY")
+        XCTAssertEqual(LiveTrackCondition.safetyCar.code, "SC")
+        XCTAssertEqual(LiveTrackCondition.safetyCarEnding.code, "SC")
+        XCTAssertEqual(LiveTrackCondition.virtualSafetyCar.code, "VSC")
+        XCTAssertNil(LiveTrackCondition.clear.code)
     }
 
     func testParserHandlesSplitUTF8CRLFCommentsAndMultipleDataLines() {
@@ -58,6 +80,15 @@ final class LiveStoreTests: XCTestCase {
         }
 
         XCTAssertEqual(events, [SSEEvent(name: "snapshot", data: "{\"name\":\"赛\"\n\"line\":2}")])
+    }
+
+    func testParserPreservesIndependentDataRefreshEvent() {
+        var parser = SSEParser()
+        var events: [SSEEvent] = []
+        for byte in "event: dataRefresh\ndata: {\"target\":\"standings\"}\n\n".utf8 {
+            events += parser.append(byte)
+        }
+        XCTAssertEqual(events, [SSEEvent(name: "dataRefresh", data: #"{"target":"standings"}"#)])
     }
 
     func testParserDropsMalformedUTF8LineAndRecovers() {
@@ -95,10 +126,21 @@ final class LiveStoreTests: XCTestCase {
         let driver = try JSONDecoder().decode(LiveDriver.self, from: Data(#"{"number":"44","telemetry":{"utc":"2026-10-10T10:00:00Z","speed":300,"rpm":12000,"gear":8,"throttle":100,"brake":0,"drs":12},"location":{"x":100,"y":200,"utc":"2026-10-10T10:00:05Z"}}"#.utf8))
         XCTAssertEqual(driver.telemetry?.speed, 300)
         let now = RFC3339.parse("2026-10-10T10:00:12Z")!
-        XCTAssertFalse(LiveFreshness.isFresh(driver.telemetry?.utc, now: now))
-        XCTAssertTrue(LiveFreshness.isFresh(driver.location?.utc, now: now))
+        XCTAssertFalse(LiveFreshness.isFresh(driver.telemetry?.receivedAt ?? driver.telemetry?.utc, now: now))
+        XCTAssertTrue(LiveFreshness.isFresh(driver.location?.receivedAt ?? driver.location?.utc, now: now))
         XCTAssertFalse(LiveFreshness.isFresh(nil, now: now))
         XCTAssertFalse(LiveFreshness.isFresh("2026-10-10T10:00:30Z", now: now))
+    }
+
+    func testReceivedAtControlsFreshnessWithoutReplacingUpstreamUTC() throws {
+        let driver = try JSONDecoder().decode(LiveDriver.self, from: Data(#"{"number":"44","location":{"x":100,"y":200,"utc":"2026-10-10T10:00:00Z","receivedAt":"2026-10-10T10:00:11Z"},"telemetry":{"utc":"2026-10-10T10:00:01Z","receivedAt":"2026-10-10T10:00:11Z","speed":300}}"#.utf8))
+        let now = RFC3339.parse("2026-10-10T10:00:18Z")!
+        XCTAssertTrue(LiveFreshness.isFresh(driver.location?.receivedAt ?? driver.location?.utc, now: now))
+        XCTAssertTrue(LiveFreshness.isFresh(driver.telemetry?.receivedAt ?? driver.telemetry?.utc, now: now))
+        XCTAssertEqual(driver.location?.utc, "2026-10-10T10:00:00Z")
+        XCTAssertEqual(driver.location?.receivedAt, "2026-10-10T10:00:11Z")
+        XCTAssertEqual(LiveFreshness.age(driver.location?.utc, now: now), 18)
+        XCTAssertFalse(LiveFreshness.isFresh(driver.location?.receivedAt, now: now.addingTimeInterval(11)))
     }
 
     @MainActor

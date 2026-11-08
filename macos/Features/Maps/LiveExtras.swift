@@ -73,7 +73,7 @@ struct LiveTelemetryView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             if let driver, let data = driver.telemetry,
                snapshot.sourceStatus == .connected,
-               snapshot.sourceMode == .replay || LiveFreshness.isFresh(data.utc, now: context.date) {
+               snapshot.sourceMode == .replay || LiveFreshness.isFresh(data.receivedAt ?? data.utc, now: context.date) {
                 HStack(spacing: 16) {
                     metric("速度", data.speed, "km/h")
                     metric("RPM", data.rpm, "")
@@ -84,7 +84,7 @@ struct LiveTelemetryView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(8).background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-            } else { Text(driver == nil ? "选择一名车手查看车辆遥测" : "车辆遥测未提供或已过期").font(.caption).foregroundStyle(.secondary) }
+            } else { Text(driver == nil ? "No selected" : "车辆遥测未提供或已过期").font(.caption).foregroundStyle(.secondary) }
         }
     }
     private func metric(_ label: String, _ value: Double?, _ unit: String) -> some View {
