@@ -46,8 +46,8 @@ cargo test --locked --offline --manifest-path server/Cargo.toml
 cargo fmt --manifest-path server/Cargo.toml -- --check
 cargo clippy --locked --offline --manifest-path server/Cargo.toml --all-targets -- -D warnings
 cargo build --release --locked --offline --manifest-path server/Cargo.toml
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build-for-testing -parallel-testing-enabled NO
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing -parallel-testing-enabled NO
 swiftc macos/Core/APIClient/APIModels.swift macos/Tests/Headless/AnalysisChecks.swift -o /tmp/pitpulse-analysis-checks
 /tmp/pitpulse-analysis-checks
 node docs/tasks/validate.mjs

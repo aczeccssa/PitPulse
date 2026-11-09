@@ -4,8 +4,8 @@ Observed on macOS 26.5 with the T12 OpenNook revision pinned to `2b50b5c3a99df89
 
 ## Automated and visible evidence
 
-- `xcodebuild -resolvePackageDependencies -project macos/F1Companion.xcodeproj -scheme F1Companion` resolved the pinned OpenNook revision.
-- `xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS,arch=arm64' ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES build` passed on macOS 26.5.
+- `xcodebuild -resolvePackageDependencies -project PitPulse.xcodeproj -scheme PitPulseDesktop` resolved the pinned OpenNook revision.
+- `xcodebuild -quiet -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS,arch=arm64' ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES build` passed on macOS 26.5.
 - The serial `F1Companion` Xcode test run passed 69 tests, with 0 failures and 0 skips. This includes auto-show preference persistence, Session transitions and delayed-hide cancellation, unique full-name driver matching, stable favorite IDs without a roster, schedule association, and LiveStore/API decoding coverage.
 - The `F1CompanionLiveAcceptance` UI scheme passed each of these real-app loopback tests individually, 1/1 with no skips: `testLiveIslandAutoShowsReplayAndExpands`, `testLiveIslandMissingFieldsUsePlaceholdersAndIgnoreUnknownRaceControlFields`, `testLiveIslandStaleRemovesTimingValues`, and `testLiveIslandDisconnectedRetainsSessionWithoutTimingValues`.
 - Rust gates passed: `cargo fmt --manifest-path server/Cargo.toml -- --check`; `cargo test --locked --manifest-path server/Cargo.toml` (61 passed); and `cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings`.
@@ -108,7 +108,7 @@ VoiceOver was initially off. The requested accessibility test enabled it through
 
 The status-item AX coordinate and manual menu proof remain unresolved. Stop repeating unsupported status-item clicks. Actual no-notch, hot-plug, scaling/resolution checks remain unverified under the user's prohibition on changing system displays. These limitations prevent T14 from being marked done.
 
-Repeatable native UI commands use `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1CompanionLiveAcceptance -destination 'platform=macOS,arch=arm64' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO -only-testing:F1CompanionUITests/MenuBarAcceptanceTests/<method> test`, with one fresh loopback replay example for each one-shot failure scenario. Main-App launches and XCTest hosts must never overlap.
+Repeatable native UI commands use `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseLiveAcceptance -destination 'platform=macOS,arch=arm64' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO -only-testing:PitPulseDesktopUITests/MenuBarAcceptanceTests/<method> test`, with one fresh loopback replay example for each one-shot failure scenario. Main-App launches and XCTest hosts must never overlap.
 
 ### Cleanup
 
@@ -128,7 +128,7 @@ The lower `.floating` window-level experiment failed actual expansion and status
 
 ### Latest explicit expansion and desktop automation stop
 
-The latest `testLiveIslandAutoShowsReplayAndExpands` passed 1/1, zero skips, exit 0 after the explicit-user-action focus change. The command was `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1CompanionLiveAcceptance -destination 'platform=macOS' -parallel-testing-enabled NO -only-testing:F1CompanionUITests/MenuBarAcceptanceTests/testLiveIslandAutoShowsReplayAndExpands test`; Debug's active-architecture setting resolved the previous generic-destination import failure. This pass does not close full menu coexistence or VoiceOver navigation.
+The latest `testLiveIslandAutoShowsReplayAndExpands` passed 1/1, zero skips, exit 0 after the explicit-user-action focus change. The command was `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseLiveAcceptance -destination 'platform=macOS' -parallel-testing-enabled NO -only-testing:PitPulseDesktopUITests/MenuBarAcceptanceTests/testLiveIslandAutoShowsReplayAndExpands test`; Debug's active-architecture setting resolved the previous generic-destination import failure. This pass does not close full menu coexistence or VoiceOver navigation.
 
 The user reported that the acceptance automation was taking their mouse. This is interference caused by the agent's desktop automation, not evidence of a system display fault. All desktop interaction, UI tests, App launches and system-setting operations have stopped. The manually launched App and loopback replay were terminated; read-only process checks found no F1Companion, xcodebuild, live_replay or VoiceOver engine running. No further CUA or settings operation was used to finish cleanup.
 
@@ -136,7 +136,7 @@ The latest VoiceOver attempt temporarily enabled the preference but did not esta
 
 ### Terminal-only current build
 
-After stopping desktop automation, `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build` exited 0 with `BUILD SUCCEEDED`. This compiled the current App and pinned dependency without launching the App or a test host. Current source review confirms activation is confined to the explicit compact button and manual menu expansion; automatic presentation, hover callbacks and refresh contain no activation call. This source check is not new runtime focus or menu acceptance. The README now explicitly distinguishes compilation from tests that drive the user's mouse and keyboard. No further desktop interaction occurred.
+After stopping desktop automation, `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' build` exited 0 with `BUILD SUCCEEDED`. This compiled the current App and pinned dependency without launching the App or a test host. Current source review confirms activation is confined to the explicit compact button and manual menu expansion; automatic presentation, hover callbacks and refresh contain no activation call. This source check is not new runtime focus or menu acceptance. The README now explicitly distinguishes compilation from tests that drive the user's mouse and keyboard. No further desktop interaction occurred.
 
 ### Acceptance blocked under current desktop constraint
 
@@ -194,7 +194,7 @@ The user confirmed that Kimi's helmet was present in Menu Bar but absent in Live
 
 The shared Live identity matcher now canonicalizes only this verified complete alias pair. Both helmet lookup and favorite timing selection retain unique matching and the saved `antonelli` ID. Surnames, partial names, car number, position and team do not become identity guesses; duplicate canonical names still return no match. Calendar and Session-name normalization are unchanged. A regression test covers helmet and favorite matching, ambiguity on both sides and partial-name rejection. The actual Swift logic passed 20 terminal assertions (six new); desktop XCTest/UI automation was not launched. Build results and actual launch are recorded below when observed.
 
-Kimi correction verification: `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build-for-testing` and `build` both succeeded. The corrected sole main App was relaunched in the background; at 09:45:59 UTC it logged `automaticStarted` and `compact`, automatic=true, panelKey=false and appActive=false. The same existing server remained healthy with live=true. Task validation passed 8/8 and `git diff --check` passed. These observations confirm the new App is running and receives Started; Kimi's rendered helmet and favorite interaction still await user-operated visual confirmation.
+Kimi correction verification: `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing` and `build` both succeeded. The corrected sole main App was relaunched in the background; at 09:45:59 UTC it logged `automaticStarted` and `compact`, automatic=true, panelKey=false and appActive=false. The same existing server remained healthy with live=true. Task validation passed 8/8 and `git diff --check` passed. These observations confirm the new App is running and receives Started; Kimi's rendered helmet and favorite interaction still await user-operated visual confirmation.
 
 ### Track condition colors and direct follow controls
 
@@ -206,7 +206,7 @@ The favorite menu is visible at the top, with current helmet/name, position/gap 
 
 Regression checks cover flag codes/messages, unknown/missing flags, stale/disconnected suppression, red pause and direct-row identity uniqueness. Existing preference persistence is reused; an additional AppModel test checks switch and clear but will only be compiled, as App-host/UI testing is prohibited. Actual menu tracking, click behavior, colored presentation and VoiceOver still require user-operated confirmation. No server code, connection, system setting, mouse or keyboard automation was changed for this update.
 
-Track/follow verification: the terminal executable compiled the actual APIModels, CalendarLogic, LiveModels and LiveIslandLogic and passed 42 assertions (22 new checks beyond Kimi correction). `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build-for-testing` and `build` both succeeded; no XCTest host or UI automation ran. The added AppModel switch/clear test compiled but was not executed. Task data tests passed 8/8 and `git diff --check` passed. Only the existing main App was restarted with LaunchServices in the background; the server was kept running throughout. Content diagnostics now include a fixed semantic track condition, and preference changes log only selected/matched booleans, without driver names, credentials or payloads. Actual colored rendering, direct-row follow, cancel/switch and native-menu behavior remain user-operated acceptance items.
+Track/follow verification: the terminal executable compiled the actual APIModels, CalendarLogic, LiveModels and LiveIslandLogic and passed 42 assertions (22 new checks beyond Kimi correction). `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing` and `build` both succeeded; no XCTest host or UI automation ran. The added AppModel switch/clear test compiled but was not executed. Task data tests passed 8/8 and `git diff --check` passed. Only the existing main App was restarted with LaunchServices in the background; the server was kept running throughout. Content diagnostics now include a fixed semantic track condition, and preference changes log only selected/matched booleans, without driver names, credentials or payloads. Actual colored rendering, direct-row follow, cancel/switch and native-menu behavior remain user-operated acceptance items.
 
 Actual track/follow build launch: at 09:59:25 UTC the sole rebuilt main App accepted connected/live snapshot version 9420 with 22 drivers, logged `track=clear`, panelKey=false/appActive=false, and automatically presented for Started. The existing server remained health=ok/live=true. This verifies the updated status mapping is receiving real input; it is not a screenshot or proof of mouse/VoiceOver behavior.
 
@@ -218,7 +218,7 @@ Favorite selection uses a star menu, cancellation uses a crossed-out star, and c
 
 Verification: the terminal executable compiled the actual API models, CalendarLogic, LiveModels and LiveIslandLogic and passed 50 assertions, including all eight track icon mappings. A separate AppKit check resolved all ten SF Symbols used by these controls on the installed macOS, without launching an App or manipulating the desktop. The new XCTest icon case is compiled only; no App-host/UI test is launched. Visual readability, icon recognition, actual clicks and VoiceOver remain manual acceptance items.
 
-Both sequential compile commands passed: `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' -parallel-testing-enabled NO build-for-testing` returned `TEST BUILD SUCCEEDED`; the same project/scheme/destination with `build` returned `BUILD SUCCEEDED`. Compilation does not constitute XCTest execution or UI acceptance.
+Both sequential compile commands passed: `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' -parallel-testing-enabled NO build-for-testing` returned `TEST BUILD SUCCEEDED`; the same project/scheme/destination with `build` returned `BUILD SUCCEEDED`. Compilation does not constitute XCTest execution or UI acceptance.
 
 Only the existing main App was terminated. The first immediate background reopen returned LaunchServices error `-600` while the old process was exiting; retry after confirming its exit succeeded. Exactly one main App and the unchanged server remained. At 2026-10-10T10:57:43Z, the rebuilt App accepted real live snapshot version 12493, 22 drivers, track=yellow, with panelKey=false and appActive=false. The upstream Sprint was already Ends at 20/20 laps, so the Island followed its end-session hide path rather than presenting a fabricated running race. At 10:58:22Z, version 12494 became stale and the App removed the old track color (track=unknown). Its loopback connection remained established. Use the Menu Bar manual Live Island entry to inspect the icon presentation; no automatic click, screenshot or visual acceptance was performed.
 
@@ -247,7 +247,7 @@ cargo test --locked --offline --manifest-path server/Cargo.toml test_transport_h
 cargo clippy --locked --offline --manifest-path server/Cargo.toml --all-targets -- -D warnings
 cargo build --locked --offline --manifest-path server/Cargo.toml
 cargo fmt --manifest-path server/Cargo.toml -- --check
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build
 ```
 
 只替换现有正常服务器 job，旧 App 退出后后台启动唯一新版。没有操作鼠标/键盘/系统显示，也未运行 App-host/UI 测试；截图只来自用户修正前反馈。T14 实际交互与真实排位赛 Live 仍未计为通过。
@@ -264,7 +264,7 @@ Island 的赛历会话标题去掉“预计”，显示会话名。无新鲜 Liv
 验证命令实际成功：
 
 ```sh
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build
 swiftc macos/Core/APIClient/APIModels.swift macos/Core/Models/CalendarLogic.swift macos/Core/LiveStore/LiveModels.swift macos/Features/LiveIsland/LiveIslandLogic.swift macos/Tests/Headless/IslandSessionChecks.swift -o /tmp/pitpulse-island-session-checks
 /tmp/pitpulse-island-session-checks
 ```

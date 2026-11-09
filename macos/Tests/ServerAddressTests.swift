@@ -1,6 +1,6 @@
 import XCTest
 @testable import PitPulseData
-@testable import F1Companion
+@testable import PitPulseDesktop
 
 final class ServerAddressTests: XCTestCase {
     func testLocalHTTPIsAllowed() throws {

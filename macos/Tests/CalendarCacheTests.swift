@@ -1,7 +1,7 @@
 import XCTest
 @testable import PitPulseData
 @testable import PitPulseShared
-@testable import F1Companion
+@testable import PitPulseDesktop
 
 final class CalendarCacheTests: XCTestCase {
     func testRoundTripAndCacheRevision() async throws {

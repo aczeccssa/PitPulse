@@ -16,10 +16,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "61F7FC3ADEBD8E52307F424A"
+               BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
                BuildableName = "PitPulseLiveActivity.appex"
                BlueprintName = "PitPulseLiveActivity"
-               ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+               ReferencedContainer = "container:PitPulse.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -30,10 +30,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B8BAB5A69642B06EA12DFA26"
+               BlueprintIdentifier = "0548DB77D5E7660EC818742A"
                BuildableName = "PitPulseMobile.app"
                BlueprintName = "PitPulseMobile"
-               ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+               ReferencedContainer = "container:PitPulse.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -47,10 +47,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "61F7FC3ADEBD8E52307F424A"
+            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
             BuildableName = "PitPulseLiveActivity.appex"
             BlueprintName = "PitPulseLiveActivity"
-            ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+            ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -59,10 +59,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0899B149EED176EBC00E7306"
+               BlueprintIdentifier = "6B0A1D88B7B1E9AD123EEF2C"
                BuildableName = "PitPulseMobileTests.xctest"
                BlueprintName = "PitPulseMobileTests"
-               ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+               ReferencedContainer = "container:PitPulse.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -84,10 +84,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "61F7FC3ADEBD8E52307F424A"
+            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
             BuildableName = "PitPulseLiveActivity.appex"
             BlueprintName = "PitPulseLiveActivity"
-            ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+            ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -103,10 +103,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "61F7FC3ADEBD8E52307F424A"
+            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
             BuildableName = "PitPulseLiveActivity.appex"
             BlueprintName = "PitPulseLiveActivity"
-            ReferencedContainer = "container:PitPulseMobile.xcodeproj">
+            ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

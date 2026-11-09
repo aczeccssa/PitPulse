@@ -17,7 +17,7 @@ cd "$project"
 destination="${PITPULSE_IOS_DESTINATION:-platform=iOS Simulator,name=iPhone 16 Pro}"
 
 exec /usr/bin/xcodebuild \
-    -project ios/PitPulseMobile.xcodeproj \
+    -project PitPulse.xcodeproj \
     -scheme PitPulseMobile \
     -destination "$destination" \
     -configuration "$configuration" \

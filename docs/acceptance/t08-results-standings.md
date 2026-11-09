@@ -19,7 +19,7 @@
 
 | 检查 | 结果 |
 |---|---|
-| `xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 47 passed，0 failed；MacBook Pro arm64 / macOS 26.5。 |
+| `xcodebuild -quiet -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 47 passed，0 failed；MacBook Pro arm64 / macOS 26.5。 |
 | `APIClientTests` | 成绩、WDC、WCC envelope，空阶段字段、鉴权、限流与错误解码通过。 |
 | `CalendarCacheTests` / `AppModelTests` | 服务器 / 赛季 / Session 缓存隔离；服务器及赛季切换的晚到响应丢弃；刷新失败保留最后成功成绩；REST revision 从 1 更新至 2，同 revision 再抓取不改变当前成绩。 |
 | `MotorsportAssetTests` | 稳定 ID / season 命名及车手缩写 fallback 通过。 |
@@ -58,7 +58,7 @@ UI 测试通过了成绩／积分导航和赛季选择器的 Accessibility 查�
 
 用户的[实际空榜截图](assets/t08-user-feedback/results-empty-before.png)显示赛事选择和日期被纵向居中、大空态进一步撑高页面。这是布局缺陷，不是系统显示问题。成绩页现在始终使用同一个弹性 ScrollView，空榜显示左对齐的小卡片，外层 topLeading 对齐，赛事选择/日期固定在导航下方；有数据时仍使用原来的原生滚动、行详情及本地头盔。
 
-Sprint 无数据的后端根因和真实 22 行入库见 [T07 实际修正](t07-results.md)。这次主 App `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。已退出旧主 App 后 `open -g` 启动唯一新版，未运行 App-host/UI 测试、鼠标/键盘自动化或更改系统设置。用户截图是修正前的证据；顶部位置、空态视觉及新的 OpenF1 行显示仍由用户手动确认，T08-A1 继续 false。
+Sprint 无数据的后端根因和真实 22 行入库见 [T07 实际修正](t07-results.md)。这次主 App `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。已退出旧主 App 后 `open -g` 启动唯一新版，未运行 App-host/UI 测试、鼠标/键盘自动化或更改系统设置。用户截图是修正前的证据；顶部位置、空态视觉及新的 OpenF1 行显示仍由用户手动确认，T08-A1 继续 false。
 
 新版 App 的成绩缓存在 2026-10-10T11:15:16Z 实际保存了此 Sprint 的 22 行、source=openf1、quality=partial、revision=1。这证明 App 已读取并保存结果，仍不是渲染/点击验收。只读进程检查保持一个主 App 和一个服务器；没有运行 UI 自动化。
 
@@ -68,7 +68,7 @@ Sprint 无数据的后端根因和真实 22 行入库见 [T07 实际修正](t07-
 
 赛事选择、赛季、服务器或积分榜类型改变时清理旧详情，原数据模型/缓存/Provider 未改变。仅更新两个结果/积分视图与任务规范，赛历已有同页详情无须替换。实际源码检查确认这两个视图均无 sheet/dismiss、明确返回回调及 Escape；该检查不能替代实际点击。
 
-`xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。确认旧 App 退出后后台启动唯一新版，服务器保持原进程运行、Sprint REST 仍为 22 行。未启动 App-host/UI 测试或操作桌面，没有额外截图；用户提供的是修改前证据。新版进入/返回、主导航切换与可读性待用户手动确认，T08-A1 继续 false。本轮未改 Rust，已有检查不重复运行。
+`xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' build` 返回 BUILD SUCCEEDED。确认旧 App 退出后后台启动唯一新版，服务器保持原进程运行、Sprint REST 仍为 22 行。未启动 App-host/UI 测试或操作桌面，没有额外截图；用户提供的是修改前证据。新版进入/返回、主导航切换与可读性待用户手动确认，T08-A1 继续 false。本轮未改 Rust，已有检查不重复运行。
 
 ## 2026-10-10 详细分析扩展
 

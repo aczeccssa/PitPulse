@@ -20,7 +20,7 @@
 ## Checks and boundaries
 
 - `cargo build --locked --manifest-path server/Cargo.toml`: passed.
-- `xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' -derivedDataPath <user-cache> build`: passed; the expected multiple-architecture destination warning was non-fatal.
+- `xcodebuild -quiet -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' -derivedDataPath <user-cache> build`: passed; the expected multiple-architecture destination warning was non-fatal.
 - Python launcher AST parse and `bash -n scripts/run-app.sh`: passed.
 - Task data validation and eight task-data tests: passed; `git diff --check`: passed.
 - Process ownership, listener uniqueness, actual Taskdeck stop/restart and App `snapshotAccepted` logs were checked. No native UI automation or full XCTest suite was run for this operational switch. Existing real-race, external-display, VoiceOver, radar and audio acceptance gaps stay open. No commit or push was made.

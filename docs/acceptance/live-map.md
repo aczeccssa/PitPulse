@@ -18,7 +18,7 @@
 | `cargo test --manifest-path server/Cargo.toml` | 95 passed，0 failed，0 ignored | 压缩损坏/截断/尾部垃圾/超限、多帧/稀疏/乱序/null、UTC、跨 Session、旧契约、4 Hz 合并/慢消费者、SQLite 迁移、校准门槛、预报缺失/窗口、缓存/stale/429/重定向、鉴权/音频路径 |
 | `cargo fmt --manifest-path server/Cargo.toml -- --check` | 通过 | Rust 格式 |
 | `cargo clippy --manifest-path server/Cargo.toml --all-targets -- -D warnings` | 通过 | 严格静态检查 |
-| `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' -parallel-testing-enabled NO build-for-testing` | TEST BUILD SUCCEEDED | 主 App、XCTest 与 UI test target 编译；没有执行测试宿主 |
+| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' -parallel-testing-enabled NO build-for-testing` | TEST BUILD SUCCEEDED | 主 App、XCTest 与 UI test target 编译；没有执行测试宿主 |
 | `sh macos/Tests/run-live-map-check.sh` | 通过 | 实际 Swift 模型旧字段解码、独立过期、RC 元数据/过滤；实际 RadioPlayer 下载切换/取消没有复活旧请求；实际 MapStore 的旧比赛响应不能覆盖新状态，释放后晚到的配置不能恢复 token |
 | `node --test macos/Tests/map-page.test.mjs` | 2 passed | Mapbox stub：缺失 token、镜头复用、待加载雷达、暂停/释放、失败状态保持 |
 | `node docs/tasks/validate.mjs` / `node --test docs/tasks/tests/task-data.test.mjs` | 通过，8 passed | 任务来源、依赖、证据路径及历史 |

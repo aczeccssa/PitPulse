@@ -139,7 +139,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 ### T04 — macOS 原生工程与壳
 
-**实现范围**：`macos/F1Companion.xcodeproj`、共享 scheme、`macos/App/`、`Features/MenuBar/`、`Core/Models/AppSymbol.swift`、测试 target、macOS CI job。
+**实现范围**：`PitPulse.xcodeproj`、共享 scheme、`macos/App/`、`Features/MenuBar/`、`Core/Models/AppSymbol.swift`、测试 target、macOS CI job。
 
 - Swift 6；一个 `@main App`；`MenuBarExtra(.window)` + Settings；无第二 App 入口、无主窗口抢焦点。
 - 先完成连接状态、loading / empty / error、页签导航；预览样本与真实运行明确隔离，禁止正式版默认展示编造赛事。
@@ -296,9 +296,9 @@ cargo test --locked --manifest-path server/Cargo.toml
 cargo build --release --locked --manifest-path server/Cargo.toml
 
 # macOS（T04 建好项目、共享 scheme 与 test target 后执行）
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion \
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
   -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion \
+xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
   -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 ```
 

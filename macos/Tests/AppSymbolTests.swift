@@ -1,7 +1,7 @@
 import AppKit
 import XCTest
 @testable import PitPulseData
-@testable import F1Companion
+@testable import PitPulseDesktop
 
 @MainActor
 final class AppSymbolTests: XCTestCase {

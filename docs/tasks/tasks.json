@@ -580,7 +580,7 @@
       ],
       "deliverables": [
         {
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "label": "共享 App/Test scheme、macOS 26.0 壳与单入口 MenuBarExtra"
         },
         {
@@ -675,7 +675,7 @@
         },
         {
           "label": "最低 macOS 26.0 部署目标核验",
-          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "path": "PitPulse.xcodeproj/project.pbxproj",
           "detail": "各 App/Test 配置的 MACOSX_DEPLOYMENT_TARGET 均为 26.0；Info.plist 的 LSMinimumSystemVersion 引用该设置。macOS 26.5 主机上主 App 构建成功，目标 triple 为 macos26.0；无需再改部署配置。"
         }
       ],
@@ -817,7 +817,7 @@
       ],
       "deliverables": [
         {
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "label": "共享 App/Test scheme、macOS 26.0 壳与单入口 MenuBarExtra"
         },
         {
@@ -1201,7 +1201,7 @@
       ],
       "deliverables": [
         {
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "label": "共享 App/Test scheme、macOS 14 壳与单入口 MenuBarExtra"
         },
         {
@@ -1739,7 +1739,7 @@
         },
         {
           "label": "独立 MenuBar UI 验收 scheme",
-          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme"
+          "path": "PitPulse.xcodeproj/xcshareddata/xcschemes/PitPulseLiveAcceptance.xcscheme"
         },
         {
           "label": "详细分析与验收边界",
@@ -1754,7 +1754,7 @@
         },
         {
           "label": "Xcode build/test",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 0。"
         },
         {
@@ -1783,12 +1783,12 @@
         },
         {
           "label": "本轮独立验收重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
         },
         {
           "label": "Xcode 全套单独重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
         },
         {
@@ -1803,7 +1803,7 @@
         },
         {
           "label": "当前 macOS 全套回归",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
         },
         {
@@ -1828,12 +1828,12 @@
         },
         {
           "label": "完整单元回归与 UI scheme 分离",
-          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1Companion.xcscheme",
+          "path": "PitPulse.xcodeproj/xcshareddata/xcschemes/PitPulseDesktop.xcscheme",
           "detail": "默认 F1Companion scheme 全量 56 passed、0 failed；状态栏几何依赖的 UI acceptance 保留在独立 F1CompanionUITests scheme。"
         },
         {
           "label": "独立 UI scheme 可构建",
-          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionUITests.xcscheme",
+          "path": "PitPulse.xcodeproj/xcshareddata/xcschemes/PitPulseLiveAcceptance.xcscheme",
           "detail": "xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1CompanionUITests -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build-for-testing 退出码 0；该 scheme 专用于真实状态栏 Popup UI acceptance。"
         },
         {
@@ -2326,17 +2326,17 @@
         },
         {
           "label": "隔离 Developer ID 签名构建",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "独立 bundle 的 Developer ID Application build 退出码 0 且 codesign --verify --deep --strict 通过；未取得可操作 Popup，因此不作为通知／生命周期运行验收。"
         },
         {
           "label": "本轮独立验收重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
         },
         {
           "label": "Xcode 全套单独重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
         },
         {
@@ -2351,7 +2351,7 @@
         },
         {
           "label": "当前 macOS 全套回归",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
         },
         {
@@ -2366,7 +2366,7 @@
         },
         {
           "label": "默认 scheme 最终 56 项回归",
-          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1Companion.xcscheme",
+          "path": "PitPulse.xcodeproj/xcshareddata/xcschemes/PitPulseDesktop.xcscheme",
           "detail": "2026-10-09 完整 xcodebuild test 56 passed、0 failed（MacBook Pro arm64 / macOS 26.5）；真实 UNUserNotificationCenter 投递和物理睡眠仍单独保留为运行级边界。"
         }
       ],
@@ -2522,12 +2522,12 @@
         },
         {
           "label": "本轮独立验收重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮重新运行 xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO test 退出码 65；Xcode 汇总 AppModelTests.testTransientFailureBackoffAdvancesBeforeRecovering 重复失败。Rust cargo test --locked 通过 50 项，cargo fmt 检查通过。"
         },
         {
           "label": "Xcode 全套单独重跑",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "本轮单独运行完整 Xcode suite：55/56 passed，退出码 65；AppModelTests.testKeychainReadFailureIsVisibleWithoutNetwork 触发了预期禁止请求的 URLProtocolStub 断言。与前一轮 backoff 测试失败不同，当前 macOS 全套验收仍未通过。"
         },
         {
@@ -2542,7 +2542,7 @@
         },
         {
           "label": "当前 macOS 全套回归",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "独立运行完整 Xcode suite 后 56 passed、0 failed（macOS arm64）。修正 Keychain 失败测试将请求断言限定到唯一主机，避免前一测试迟到请求调用全局 URLProtocolStub handler；失败用例与 backoff 用例随后全套通过。"
         },
         {
@@ -2567,7 +2567,7 @@
         },
         {
           "label": "全量 macOS 回归",
-          "path": "macos/F1Companion.xcodeproj",
+          "path": "PitPulse.xcodeproj",
           "detail": "默认 scheme 完整测试 56 passed、0 failed（MacBook Pro arm64 / macOS 26.5）；UI 自动化当前负坐标限制单独记录。"
         },
         {
@@ -2818,7 +2818,7 @@
         },
         {
           "label": "Live 菜单栏专用 UI 验收 scheme",
-          "path": "macos/F1Companion.xcodeproj/xcshareddata/xcschemes/F1CompanionLiveAcceptance.xcscheme"
+          "path": "PitPulse.xcodeproj/xcshareddata/xcschemes/PitPulseLiveAcceptance.xcscheme"
         }
       ],
       "evidence": [
@@ -3082,7 +3082,7 @@
       "evidence": [
         {
           "label": "固定 revision OpenNook 解析与主 App 构建",
-          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "path": "PitPulse.xcodeproj/project.pbxproj",
           "detail": "Xcode package resolution resolved OpenNook 2b50b5c3a99df8914e25e199d29bf7aa505f7a59; macOS 26.5 host build passed with ONLY_ACTIVE_ARCH=YES."
         },
         {
@@ -3092,7 +3092,7 @@
         },
         {
           "label": "macOS 26.5 主 App 构建与 Runner 签名核验",
-          "path": "macos/F1Companion.xcodeproj/project.pbxproj",
+          "path": "PitPulse.xcodeproj/project.pbxproj",
           "detail": "固定 OpenNook revision 2b50b5c3a99df8914e25e199d29bf7aa505f7a59；最终主 App build 退出码 0。Xcode UI Runner ad-hoc signature 经 codesign --verify --deep --strict 验证通过，UI 测试由 xcodebuild 启动。"
         },
         {
@@ -5361,7 +5361,7 @@
       "milestone": "M7",
       "area": "Swift / 模块化",
       "status": "done",
-      "summary": "把 macos/Core 的纯 Foundation 能力抽为本地 SPM 包 PitPulseKit：Shared（值契约）、Data（网络/缓存/Keychain/提醒/日历逻辑）、Components（只吃值的 SwiftUI 原语）。macOS App 改为依赖三个 product；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
+      "summary": "把 macos/Core 的纯 Foundation 能力抽为本地 SPM 包 PitPulseKit：Shared（值契约）、Data（网络/缓存/Keychain/提醒/日历逻辑）、Components（只吃值的 SwiftUI 原语）。统一到单个 PitPulse.xcodeproj（Desktop/Mobile 两个 App 产物 + 共享包）；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
       "dependencies": [],
       "relatedTasks": [
         "T04",
@@ -5421,7 +5421,7 @@
         },
         {
           "label": "macOS 工程接入",
-          "path": "macos/F1Companion.xcodeproj/project.pbxproj"
+          "path": "PitPulse.xcodeproj/project.pbxproj"
         },
         {
           "label": "验收记录",
@@ -5429,7 +5429,7 @@
         },
         {
           "label": "根工作区",
-          "path": "PitPulse.xcworkspace/contents.xcworkspacedata"
+          "path": "PitPulse.xcodeproj/project.pbxproj"
         }
       ],
       "evidence": [
@@ -5448,13 +5448,13 @@
           "detail": "用户在运行中的 macOS App 上确认分包后行为正常（2026-11-09）。"
         },
         {
-          "label": "工作区构建",
-          "detail": "PitPulse.xcworkspace 同时引用 macOS/iOS 工程与 PitPulseKit；-workspace 构建 F1Companion 与 PitPulseMobile 均 exit 0（2026-11-09）。"
+          "label": "统一工程构建",
+          "detail": "PitPulse.xcodeproj 内含 PitPulseDesktop / PitPulseMobile / PitPulseLiveActivity 与共享包；Desktop build、build-for-testing、Mobile build、Test iOS 均 exit 0（2026-11-09）。"
         }
       ],
       "blockers": [],
       "nextAction": "无；macOS 运行行为已由用户确认正常。",
-      "updatedAt": "2026-11-09T06:23:20Z",
+      "updatedAt": "2026-11-09T06:32:59Z",
       "history": [
         {
           "at": "2026-11-09T06:05:44Z",
@@ -5470,6 +5470,11 @@
           "at": "2026-11-09T06:23:20Z",
           "status": "done",
           "note": "新增根工作区 PitPulse.xcworkspace（macOS + iOS + 本地包），两个 scheme 经 -workspace 构建均 exit 0。"
+        },
+        {
+          "at": "2026-11-09T06:32:59Z",
+          "status": "done",
+          "note": "按用户要求合并为单一 PitPulse.xcodeproj（含 Desktop / Mobile / Widget target，共享模块仍为 PitPulseKit 包），并统一两端显示名与 AppIcon.icon；macOS/iOS 构建与 iOS 测试通过。"
         }
       ]
     },
@@ -5531,7 +5536,7 @@
       "deliverables": [
         {
           "label": "iOS 工程描述",
-          "path": "ios/project.yml"
+          "path": "project.yml"
         },
         {
           "label": "iOS App 入口",

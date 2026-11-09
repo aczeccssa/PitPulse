@@ -1,0 +1,1282 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04307C99FC38A1022E6AF0E1 /* PitPulseComponents in Frameworks */ = {isa = PBXBuildFile; productRef = D34848AAEB77EF8686E1DE44 /* PitPulseComponents */; };
+		045230E61F00AD2F1B653A83 /* CountryFlagTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EE57CCE4B4A717D3124E84 /* CountryFlagTests.swift */; };
+		10DBDD06493322C110508268 /* CalendarCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3839057BE1B40B175FC712 /* CalendarCacheTests.swift */; };
+		11531BDD79E0F312D63CCF0D /* MotorsportAssetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1C820BB139979941201A4B /* MotorsportAssetTests.swift */; };
+		11D06BE7C7422B6B7DBEC10D /* PitPulseShared in Frameworks */ = {isa = PBXBuildFile; productRef = BD3685421D6DBE53E273C4AF /* PitPulseShared */; };
+		1886D438ADEDA9D138D88850 /* PitPulseComponents in Frameworks */ = {isa = PBXBuildFile; productRef = EECD82845EE28BD666E1C359 /* PitPulseComponents */; };
+		1B135691C093AE3533BC9D60 /* PitPulseLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5271EDC99039CA37948C293 /* PitPulseLiveActivityWidget.swift */; };
+		20338AE5EF1364F6D54990FA /* LiveActivityContentStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4078C70B0D4F4D90B78017F3 /* LiveActivityContentStateTests.swift */; };
+		29879D426C11533FCFE5B585 /* SettingsWindowPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1531EA7D92B0C69DE52F4A25 /* SettingsWindowPresentation.swift */; };
+		29A2CC2C0982A01A6D59A2BC /* PitPulseComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 3E616CB9523488C7B71F49B4 /* PitPulseComponents */; };
+		2A160269D082A75A810C1BC5 /* AppSymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8207C1ACE6F8B0632FAAE2F3 /* AppSymbolTests.swift */; };
+		2DC96F3C87D32458B4BE9347 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B810FDA06E0AF5AB541727D /* TestSupport.swift */; };
+		318D18F4242BA66DCC213E26 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78264236CA8A119CC4D709E2 /* APIClientTests.swift */; };
+		328E5865D3583FD7B357A30A /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = F3F5E375158292EA61D412F2 /* PitPulseData */; };
+		387236A078FAF38AD6356C9B /* LiveStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F98AAC8DE6ACFE84D714397 /* LiveStoreTests.swift */; };
+		40D1F92003B3F7226D47C5E9 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFE8C4551334A03165255041 /* AppModel.swift */; };
+		41AD69EC62FCC824723A6ABC /* PitPulseLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		468FCADEEB4C73302C19DEA4 /* AppSymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E2B51C505E8AD301C9EA2E /* AppSymbol.swift */; };
+		4758821F064E167835372165 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A29939D0C792D910BE028E6 /* CalendarScreen.swift */; };
+		4C1482FFA82DA2F1D2832F19 /* PitPulseShared in Frameworks */ = {isa = PBXBuildFile; productRef = BDA0896DC78AA4163C50E3E3 /* PitPulseShared */; };
+		4E736BDD7055539DFB40B869 /* StandingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADCAA30820F5B8AD72D1642 /* StandingsView.swift */; };
+		5599C05CBF6F1244AB52E1D7 /* MeetingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74D3840296A36670FBD030F /* MeetingDetailView.swift */; };
+		6D4E2BB93269AA25850B2D99 /* ServerAddressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */; };
+		6FB37750869EC2F6A187F33C /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DC16B624A771864AD5F724 /* MapView.swift */; };
+		89BA86524A9166A59FFA7186 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 73F94C61E273101269934889 /* AppIcon.icon */; };
+		8B85DAEE26A5ADE5470B583E /* PitPulseLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7920B11EF6882FB847989192 /* PitPulseLiveActivityBundle.swift */; };
+		8C1F720C133CE55685ABF49A /* LiveExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC0EA2929BC6BC96528E579 /* LiveExtras.swift */; };
+		8CC6E697079B9D90AD181760 /* PitPulseShared in Frameworks */ = {isa = PBXBuildFile; productRef = EA1EFBB8DE3AE371A4AF7CBE /* PitPulseShared */; };
+		8E5C1749031807892462D0F3 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 73F94C61E273101269934889 /* AppIcon.icon */; };
+		97FE021326A7C537BD147621 /* MotorsportAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24CBFD9964E8959C35769657 /* MotorsportAsset.swift */; };
+		9A8F77C08B9DC37D8B50611B /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCB2AE5C5BAA37A6FBBA2426 /* PreferencesView.swift */; };
+		A4941638B32AE071C866D5C3 /* LiveIslandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EC58695195A5EE991F71D6B /* LiveIslandTests.swift */; };
+		A4E6FB0631DE4BB68F630DAE /* PitPulseMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED67EA87B6F0F65B4F34B2A /* PitPulseMobileApp.swift */; };
+		A672333F7D7D60B6027BBB37 /* run-live-map-check.sh in Resources */ = {isa = PBXBuildFile; fileRef = 472A8020BEE870DA0E682834 /* run-live-map-check.sh */; };
+		A7AF1A662E81C8811726EE3B /* PitPulseAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D4939018160EDA5DF8DE2949 /* PitPulseAssets.xcassets */; };
+		A888EB3325E8DC72CEC2B218 /* MobileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3A0C5F41CD1D2D982B6738 /* MobileModel.swift */; };
+		AD2190498E32EE109FCDBE42 /* SessionResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06AF65FF05EE4004AAFDD27 /* SessionResultsView.swift */; };
+		AFF8D7AD5F668E25A6BE6D62 /* MenuBarRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23215CA3360E3C3B6D332C3E /* MenuBarRootView.swift */; };
+		B09777FE44844A9573FD17C6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4908F677524E8B3B6147C163 /* AppDelegate.swift */; };
+		B266560E4BF9036EAF43177F /* F1CompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDEE17B106E0ADE0CED5EEE6 /* F1CompanionApp.swift */; };
+		B991392DA0713CA5EE1C8A08 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */; };
+		BE58058ED600C2EA064FE8D2 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ABBF09D08B559B256B9CCCE /* CalendarView.swift */; };
+		BF59167123439F579A89599F /* NextMeetingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E084EC67AAA9E91558AFFA0E /* NextMeetingCard.swift */; };
+		BF89FEA9152408CAFE830B0A /* PitPulseShared in Frameworks */ = {isa = PBXBuildFile; productRef = E6CAB4A8909157700F4BD870 /* PitPulseShared */; };
+		D04B49005526D8015BFC981F /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0820EB4CFC7383B8DFE54AEC /* AnalysisView.swift */; };
+		D0C7CF907B88EA6BA3232214 /* StatusMenuLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67C92CB87323C943A2AD51F /* StatusMenuLabel.swift */; };
+		D1DC4A56DA3276E9291C6A14 /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870D43CB0A62A49E4282FC73 /* CredentialStoreTests.swift */; };
+		D3EAF81CD590D190EA574D75 /* NookApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0127A1868E5E97DD6CA61C13 /* NookApp */; };
+		D6793F1E882E142F164EFFD4 /* CalendarLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137590598E07BBB9055F5093 /* CalendarLogicTests.swift */; };
+		DD7CE2B959FD2994A85F948D /* PitPulseShared in Frameworks */ = {isa = PBXBuildFile; productRef = 561DBE0FA4231E72BDBD54F8 /* PitPulseShared */; };
+		E09108226AD9FE58F1D54CA8 /* map.html in Resources */ = {isa = PBXBuildFile; fileRef = 89BC4B5D61D1E8C3C8FFB9DF /* map.html */; };
+		EF2D4A4E7182D1EDBE472357 /* map-page.test.mjs in Resources */ = {isa = PBXBuildFile; fileRef = C554800C80D3D13C872DB8D2 /* map-page.test.mjs */; };
+		F1B7C7823D9C4D8D9338F9B0 /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = 2AAE289F6D8869218F148EA0 /* PitPulseData */; };
+		F1FD0600103878608A70343C /* PitPulseComponents in Frameworks */ = {isa = PBXBuildFile; productRef = DDF9A5C3D359560BA1FC1FFD /* PitPulseComponents */; };
+		F46E575670B03F153DA0209F /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12DF1A40881D53081811532C /* SettingsScreen.swift */; };
+		F6968695C72F2913BAA2C5E7 /* LiveIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4607D96DE7BFEF826820373B /* LiveIsland.swift */; };
+		F8AC442FEDB27DEF0E5FFC6F /* MenuBarAcceptanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 088B7B30CFCBDB0FAFB844F0 /* MenuBarAcceptanceTests.swift */; };
+		FA99B1559D221E962BFEC13C /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = 1716685A82E59887653AFFE4 /* PitPulseData */; };
+		FBBF496EFF2A41F18445ABF2 /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = 755A1CD3E2949B283F56BAFA /* PitPulseData */; };
+		FE0F138B4B2B1DB80B468E53 /* LiveScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469415DA6E03C9FF15F879D2 /* LiveScreen.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		354CE068FD7D71EB9C0D44C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3220868BF575D60A65DE956B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF62D6E2FFB761C0F8FCA7BA;
+			remoteInfo = PitPulseDesktop;
+		};
+		35711A8CF88D1D2FC6A86382 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3220868BF575D60A65DE956B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EFF15784EA1DC4D4E6E3D9BA;
+			remoteInfo = PitPulseLiveActivity;
+		};
+		52451F406F07C5D5ED0E79F2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3220868BF575D60A65DE956B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF62D6E2FFB761C0F8FCA7BA;
+			remoteInfo = PitPulseDesktop;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E5D788C91EA78F67F5A26A23 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				41AD69EC62FCC824723A6ABC /* PitPulseLiveActivity.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		04C5A50AB2C6AC3B35A7710A /* PitPulseKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseKit; path = Packages/PitPulseKit; sourceTree = SOURCE_ROOT; };
+		0820EB4CFC7383B8DFE54AEC /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
+		088B7B30CFCBDB0FAFB844F0 /* MenuBarAcceptanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarAcceptanceTests.swift; sourceTree = "<group>"; };
+		09DC16B624A771864AD5F724 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		0DC0EA2929BC6BC96528E579 /* LiveExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveExtras.swift; sourceTree = "<group>"; };
+		0F98AAC8DE6ACFE84D714397 /* LiveStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStoreTests.swift; sourceTree = "<group>"; };
+		12DF1A40881D53081811532C /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		137590598E07BBB9055F5093 /* CalendarLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLogicTests.swift; sourceTree = "<group>"; };
+		14EE57CCE4B4A717D3124E84 /* CountryFlagTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryFlagTests.swift; sourceTree = "<group>"; };
+		1531EA7D92B0C69DE52F4A25 /* SettingsWindowPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowPresentation.swift; sourceTree = "<group>"; };
+		1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseDesktopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B810FDA06E0AF5AB541727D /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		23215CA3360E3C3B6D332C3E /* MenuBarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRootView.swift; sourceTree = "<group>"; };
+		24CBFD9964E8959C35769657 /* MotorsportAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorsportAsset.swift; sourceTree = "<group>"; };
+		2A28D81D173E8E8E165CF50F /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		2B3B782D7F1FC69178DB2201 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		3ABBF09D08B559B256B9CCCE /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
+		4078C70B0D4F4D90B78017F3 /* LiveActivityContentStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityContentStateTests.swift; sourceTree = "<group>"; };
+		4607D96DE7BFEF826820373B /* LiveIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIsland.swift; sourceTree = "<group>"; };
+		469415DA6E03C9FF15F879D2 /* LiveScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScreen.swift; sourceTree = "<group>"; };
+		472A8020BEE870DA0E682834 /* run-live-map-check.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "run-live-map-check.sh"; sourceTree = "<group>"; };
+		4908F677524E8B3B6147C163 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		4A29939D0C792D910BE028E6 /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
+		595AE17CD82A669F7CCA2AC1 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		5FD756E18A8B354ECB4B34E4 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		6B3A0C5F41CD1D2D982B6738 /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
+		6E837695763305ACF873B6AA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		71DF5FB53B18A9F59859B1DD /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		73F94C61E273101269934889 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		75A5111ABD8EE48998F686EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		78264236CA8A119CC4D709E2 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+		7920B11EF6882FB847989192 /* PitPulseLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityBundle.swift; sourceTree = "<group>"; };
+		7ADCAA30820F5B8AD72D1642 /* StandingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandingsView.swift; sourceTree = "<group>"; };
+		7EC58695195A5EE991F71D6B /* LiveIslandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandTests.swift; sourceTree = "<group>"; };
+		7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PitPulseLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F1C820BB139979941201A4B /* MotorsportAssetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorsportAssetTests.swift; sourceTree = "<group>"; };
+		8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseDesktopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8207C1ACE6F8B0632FAAE2F3 /* AppSymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbolTests.swift; sourceTree = "<group>"; };
+		870D43CB0A62A49E4282FC73 /* CredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStoreTests.swift; sourceTree = "<group>"; };
+		897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		89BC4B5D61D1E8C3C8FFB9DF /* map.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = map.html; sourceTree = "<group>"; };
+		9B79BC56586F0B566E40B73D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		AE3839057BE1B40B175FC712 /* CalendarCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarCacheTests.swift; sourceTree = "<group>"; };
+		AED67EA87B6F0F65B4F34B2A /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
+		AFE8C4551334A03165255041 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		B5271EDC99039CA37948C293 /* PitPulseLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityWidget.swift; sourceTree = "<group>"; };
+		B67C92CB87323C943A2AD51F /* StatusMenuLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuLabel.swift; sourceTree = "<group>"; };
+		C1E2B51C505E8AD301C9EA2E /* AppSymbol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbol.swift; sourceTree = "<group>"; };
+		C554800C80D3D13C872DB8D2 /* map-page.test.mjs */ = {isa = PBXFileReference; path = "map-page.test.mjs"; sourceTree = "<group>"; };
+		CCB2AE5C5BAA37A6FBBA2426 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+		CDEE17B106E0ADE0CED5EEE6 /* F1CompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = F1CompanionApp.swift; sourceTree = "<group>"; };
+		D06AF65FF05EE4004AAFDD27 /* SessionResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionResultsView.swift; sourceTree = "<group>"; };
+		D4939018160EDA5DF8DE2949 /* PitPulseAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PitPulseAssets.xcassets; sourceTree = "<group>"; };
+		D74D3840296A36670FBD030F /* MeetingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailView.swift; sourceTree = "<group>"; };
+		E084EC67AAA9E91558AFFA0E /* NextMeetingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextMeetingCard.swift; sourceTree = "<group>"; };
+		E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PitPulseDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PitPulseMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
+		F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerAddressTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5347D87713DEB0957B4B8202 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD7CE2B959FD2994A85F948D /* PitPulseShared in Frameworks */,
+				328E5865D3583FD7B357A30A /* PitPulseData in Frameworks */,
+				29A2CC2C0982A01A6D59A2BC /* PitPulseComponents in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6FFE1A7A36CB64BFCC8941FC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CC6E697079B9D90AD181760 /* PitPulseShared in Frameworks */,
+				FA99B1559D221E962BFEC13C /* PitPulseData in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		981F5CAFFA9F816A9DB13B65 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF89FEA9152408CAFE830B0A /* PitPulseShared in Frameworks */,
+				FBBF496EFF2A41F18445ABF2 /* PitPulseData in Frameworks */,
+				1886D438ADEDA9D138D88850 /* PitPulseComponents in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4154A3F6D202CDF60BC51CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				11D06BE7C7422B6B7DBEC10D /* PitPulseShared in Frameworks */,
+				F1FD0600103878608A70343C /* PitPulseComponents in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5117DD4353B2F969BB7701F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3EAF81CD590D190EA574D75 /* NookApp in Frameworks */,
+				4C1482FFA82DA2F1D2832F19 /* PitPulseShared in Frameworks */,
+				F1B7C7823D9C4D8D9338F9B0 /* PitPulseData in Frameworks */,
+				04307C99FC38A1022E6AF0E1 /* PitPulseComponents in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		09D4D2A59A62EC77AB9FE16C /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				3897077E52F44A5284F39380 /* App */,
+				F75C122AFC39FC9C717FF563 /* Core */,
+				6ABA6EA3BD130D13F114C0C5 /* Features */,
+				36A464B8632731A5C5D79C51 /* Resources */,
+				6BCFB63FFEC4E686EEA914C0 /* Tests */,
+				5AAB83E9BB66B72B4FCFD01B /* UITests */,
+			);
+			path = macos;
+			sourceTree = "<group>";
+		};
+		1672521CF1FCA9DEB047BB53 /* Maps */ = {
+			isa = PBXGroup;
+			children = (
+				0DC0EA2929BC6BC96528E579 /* LiveExtras.swift */,
+				89BC4B5D61D1E8C3C8FFB9DF /* map.html */,
+				09DC16B624A771864AD5F724 /* MapView.swift */,
+			);
+			path = Maps;
+			sourceTree = "<group>";
+		};
+		2A456157C188F8F621878F88 /* PitPulseLiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				7920B11EF6882FB847989192 /* PitPulseLiveActivityBundle.swift */,
+				B5271EDC99039CA37948C293 /* PitPulseLiveActivityWidget.swift */,
+			);
+			path = PitPulseLiveActivity;
+			sourceTree = "<group>";
+		};
+		318B3E9E9290527B9262BFF9 /* LiveIsland */ = {
+			isa = PBXGroup;
+			children = (
+				2B3B782D7F1FC69178DB2201 /* .gitkeep */,
+				4607D96DE7BFEF826820373B /* LiveIsland.swift */,
+			);
+			path = LiveIsland;
+			sourceTree = "<group>";
+		};
+		36A464B8632731A5C5D79C51 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				73F94C61E273101269934889 /* AppIcon.icon */,
+				D4939018160EDA5DF8DE2949 /* PitPulseAssets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		3897077E52F44A5284F39380 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				75A5111ABD8EE48998F686EA /* .gitkeep */,
+				4908F677524E8B3B6147C163 /* AppDelegate.swift */,
+				AFE8C4551334A03165255041 /* AppModel.swift */,
+				CDEE17B106E0ADE0CED5EEE6 /* F1CompanionApp.swift */,
+				1531EA7D92B0C69DE52F4A25 /* SettingsWindowPresentation.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		4398461D9679F045C990805D /* SessionResults */ = {
+			isa = PBXGroup;
+			children = (
+				71DF5FB53B18A9F59859B1DD /* .gitkeep */,
+				0820EB4CFC7383B8DFE54AEC /* AnalysisView.swift */,
+				D06AF65FF05EE4004AAFDD27 /* SessionResultsView.swift */,
+			);
+			path = SessionResults;
+			sourceTree = "<group>";
+		};
+		55AF924167501E6979BFE7D0 /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				6E837695763305ACF873B6AA /* .gitkeep */,
+				3ABBF09D08B559B256B9CCCE /* CalendarView.swift */,
+				D74D3840296A36670FBD030F /* MeetingDetailView.swift */,
+				E084EC67AAA9E91558AFFA0E /* NextMeetingCard.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
+		5AAB83E9BB66B72B4FCFD01B /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				088B7B30CFCBDB0FAFB844F0 /* MenuBarAcceptanceTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		6ABA6EA3BD130D13F114C0C5 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				55AF924167501E6979BFE7D0 /* Calendar */,
+				318B3E9E9290527B9262BFF9 /* LiveIsland */,
+				1672521CF1FCA9DEB047BB53 /* Maps */,
+				7E9347D5A44A0F93DD353967 /* MenuBar */,
+				FEE3B64F8ABF7C2BAEFFCD2D /* Preferences */,
+				4398461D9679F045C990805D /* SessionResults */,
+				B884C5983D57B4CE25131159 /* Standings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		6BCFB63FFEC4E686EEA914C0 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				78264236CA8A119CC4D709E2 /* APIClientTests.swift */,
+				8207C1ACE6F8B0632FAAE2F3 /* AppSymbolTests.swift */,
+				AE3839057BE1B40B175FC712 /* CalendarCacheTests.swift */,
+				137590598E07BBB9055F5093 /* CalendarLogicTests.swift */,
+				14EE57CCE4B4A717D3124E84 /* CountryFlagTests.swift */,
+				870D43CB0A62A49E4282FC73 /* CredentialStoreTests.swift */,
+				7EC58695195A5EE991F71D6B /* LiveIslandTests.swift */,
+				0F98AAC8DE6ACFE84D714397 /* LiveStoreTests.swift */,
+				C554800C80D3D13C872DB8D2 /* map-page.test.mjs */,
+				7F1C820BB139979941201A4B /* MotorsportAssetTests.swift */,
+				472A8020BEE870DA0E682834 /* run-live-map-check.sh */,
+				F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */,
+				1B810FDA06E0AF5AB541727D /* TestSupport.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		7E9347D5A44A0F93DD353967 /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				595AE17CD82A669F7CCA2AC1 /* .gitkeep */,
+				23215CA3360E3C3B6D332C3E /* MenuBarRootView.swift */,
+				B67C92CB87323C943A2AD51F /* StatusMenuLabel.swift */,
+			);
+			path = MenuBar;
+			sourceTree = "<group>";
+		};
+		987974C71972AF943077D7B2 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				04C5A50AB2C6AC3B35A7710A /* PitPulseKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		9BB1546C8FA7860C6D84C02D /* PitPulseMobile */ = {
+			isa = PBXGroup;
+			children = (
+				4A29939D0C792D910BE028E6 /* CalendarScreen.swift */,
+				EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */,
+				469415DA6E03C9FF15F879D2 /* LiveScreen.swift */,
+				6B3A0C5F41CD1D2D982B6738 /* MobileModel.swift */,
+				AED67EA87B6F0F65B4F34B2A /* PitPulseMobileApp.swift */,
+				12DF1A40881D53081811532C /* SettingsScreen.swift */,
+			);
+			path = PitPulseMobile;
+			sourceTree = "<group>";
+		};
+		B884C5983D57B4CE25131159 /* Standings */ = {
+			isa = PBXGroup;
+			children = (
+				5FD756E18A8B354ECB4B34E4 /* .gitkeep */,
+				7ADCAA30820F5B8AD72D1642 /* StandingsView.swift */,
+			);
+			path = Standings;
+			sourceTree = "<group>";
+		};
+		CFFF3B8F6E20190A61FBB07E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2A28D81D173E8E8E165CF50F /* .gitkeep */,
+				C1E2B51C505E8AD301C9EA2E /* AppSymbol.swift */,
+				24CBFD9964E8959C35769657 /* MotorsportAsset.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		E130768DF37F5F72C1B90420 = {
+			isa = PBXGroup;
+			children = (
+				ED376626563BF92E448B23A9 /* ios */,
+				09D4D2A59A62EC77AB9FE16C /* macos */,
+				987974C71972AF943077D7B2 /* Packages */,
+				F028EC422759F32C82A31BAC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ED376626563BF92E448B23A9 /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				2A456157C188F8F621878F88 /* PitPulseLiveActivity */,
+				9BB1546C8FA7860C6D84C02D /* PitPulseMobile */,
+				F4806ADBD03FD7BB63C5D7C4 /* PitPulseMobileTests */,
+			);
+			path = ios;
+			sourceTree = "<group>";
+		};
+		F028EC422759F32C82A31BAC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */,
+				1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */,
+				8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */,
+				7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */,
+				E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */,
+				897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F4806ADBD03FD7BB63C5D7C4 /* PitPulseMobileTests */ = {
+			isa = PBXGroup;
+			children = (
+				4078C70B0D4F4D90B78017F3 /* LiveActivityContentStateTests.swift */,
+			);
+			path = PitPulseMobileTests;
+			sourceTree = "<group>";
+		};
+		F75C122AFC39FC9C717FF563 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				CFFF3B8F6E20190A61FBB07E /* Models */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		FEE3B64F8ABF7C2BAEFFCD2D /* Preferences */ = {
+			isa = PBXGroup;
+			children = (
+				9B79BC56586F0B566E40B73D /* .gitkeep */,
+				CCB2AE5C5BAA37A6FBBA2426 /* PreferencesView.swift */,
+			);
+			path = Preferences;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0548DB77D5E7660EC818742A /* PitPulseMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DC74D43A01D0082238BFECE9 /* Build configuration list for PBXNativeTarget "PitPulseMobile" */;
+			buildPhases = (
+				656F331B80B0841F33D0FFA4 /* Sources */,
+				4D3456E99E6298F20D794D9F /* Resources */,
+				5347D87713DEB0957B4B8202 /* Frameworks */,
+				E5D788C91EA78F67F5A26A23 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E28C9E461F9A0B9E4A795A0B /* PBXTargetDependency */,
+			);
+			name = PitPulseMobile;
+			packageProductDependencies = (
+				561DBE0FA4231E72BDBD54F8 /* PitPulseShared */,
+				F3F5E375158292EA61D412F2 /* PitPulseData */,
+				3E616CB9523488C7B71F49B4 /* PitPulseComponents */,
+			);
+			productName = PitPulseMobile;
+			productReference = E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6B0A1D88B7B1E9AD123EEF2C /* PitPulseMobileTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 08FE4DD0E73D38DD04E76694 /* Build configuration list for PBXNativeTarget "PitPulseMobileTests" */;
+			buildPhases = (
+				5863423FCFD9E1200ED0BCCD /* Sources */,
+				6FFE1A7A36CB64BFCC8941FC /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PitPulseMobileTests;
+			packageProductDependencies = (
+				EA1EFBB8DE3AE371A4AF7CBE /* PitPulseShared */,
+				1716685A82E59887653AFFE4 /* PitPulseData */,
+			);
+			productName = PitPulseMobileTests;
+			productReference = 897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B2415D5F4AA170562698E9EA /* PitPulseDesktopTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0467EB6B8310283F0171436 /* Build configuration list for PBXNativeTarget "PitPulseDesktopTests" */;
+			buildPhases = (
+				A65730DFB6E09232F90624AD /* Sources */,
+				23225BE564C4F1D26B6BAA1D /* Resources */,
+				981F5CAFFA9F816A9DB13B65 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				07F8AC31559915674CED4463 /* PBXTargetDependency */,
+			);
+			name = PitPulseDesktopTests;
+			packageProductDependencies = (
+				E6CAB4A8909157700F4BD870 /* PitPulseShared */,
+				755A1CD3E2949B283F56BAFA /* PitPulseData */,
+				EECD82845EE28BD666E1C359 /* PitPulseComponents */,
+			);
+			productName = PitPulseDesktopTests;
+			productReference = 1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DC00A15457D61F874F6CB74E /* PitPulseDesktopUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8006D4348A3ABF7EB7C7F235 /* Build configuration list for PBXNativeTarget "PitPulseDesktopUITests" */;
+			buildPhases = (
+				CC5651041E4EB59876F44C68 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E3A98AE3F1A18A82785372C0 /* PBXTargetDependency */,
+			);
+			name = PitPulseDesktopUITests;
+			packageProductDependencies = (
+			);
+			productName = PitPulseDesktopUITests;
+			productReference = 8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5742185234A6C3838BFE061E /* Build configuration list for PBXNativeTarget "PitPulseDesktop" */;
+			buildPhases = (
+				9AC54725BA3FCC65E5C93099 /* Sources */,
+				1EA9ED9642E85E86C6F0542C /* Resources */,
+				F5117DD4353B2F969BB7701F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PitPulseDesktop;
+			packageProductDependencies = (
+				0127A1868E5E97DD6CA61C13 /* NookApp */,
+				BDA0896DC78AA4163C50E3E3 /* PitPulseShared */,
+				2AAE289F6D8869218F148EA0 /* PitPulseData */,
+				D34848AAEB77EF8686E1DE44 /* PitPulseComponents */,
+			);
+			productName = PitPulseDesktop;
+			productReference = E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EFF15784EA1DC4D4E6E3D9BA /* PitPulseLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94B2388B39C29F9B70385E96 /* Build configuration list for PBXNativeTarget "PitPulseLiveActivity" */;
+			buildPhases = (
+				A447524D5CECF2BB9399CCE2 /* Sources */,
+				D4154A3F6D202CDF60BC51CB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PitPulseLiveActivity;
+			packageProductDependencies = (
+				BD3685421D6DBE53E273C4AF /* PitPulseShared */,
+				DDF9A5C3D359560BA1FC1FFD /* PitPulseComponents */,
+			);
+			productName = PitPulseLiveActivity;
+			productReference = 7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3220868BF575D60A65DE956B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0548DB77D5E7660EC818742A = {
+						ProvisioningStyle = Automatic;
+					};
+					B2415D5F4AA170562698E9EA = {
+						ProvisioningStyle = Automatic;
+					};
+					DC00A15457D61F874F6CB74E = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = DF62D6E2FFB761C0F8FCA7BA;
+					};
+					DF62D6E2FFB761C0F8FCA7BA = {
+						ProvisioningStyle = Automatic;
+					};
+					EFF15784EA1DC4D4E6E3D9BA = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 55AA5294C5330BA32B7151E3 /* Build configuration list for PBXProject "PitPulse" */;
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = E130768DF37F5F72C1B90420;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8432A50A8E06D24A16C0BD6F /* XCRemoteSwiftPackageReference "opennook" */,
+				037454EC1CBAB9075D21AC32 /* XCLocalSwiftPackageReference "Packages/PitPulseKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F028EC422759F32C82A31BAC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */,
+				B2415D5F4AA170562698E9EA /* PitPulseDesktopTests */,
+				DC00A15457D61F874F6CB74E /* PitPulseDesktopUITests */,
+				0548DB77D5E7660EC818742A /* PitPulseMobile */,
+				EFF15784EA1DC4D4E6E3D9BA /* PitPulseLiveActivity */,
+				6B0A1D88B7B1E9AD123EEF2C /* PitPulseMobileTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1EA9ED9642E85E86C6F0542C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8E5C1749031807892462D0F3 /* AppIcon.icon in Resources */,
+				A7AF1A662E81C8811726EE3B /* PitPulseAssets.xcassets in Resources */,
+				E09108226AD9FE58F1D54CA8 /* map.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23225BE564C4F1D26B6BAA1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF2D4A4E7182D1EDBE472357 /* map-page.test.mjs in Resources */,
+				A672333F7D7D60B6027BBB37 /* run-live-map-check.sh in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D3456E99E6298F20D794D9F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				89BA86524A9166A59FFA7186 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5863423FCFD9E1200ED0BCCD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				20338AE5EF1364F6D54990FA /* LiveActivityContentStateTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		656F331B80B0841F33D0FFA4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4758821F064E167835372165 /* CalendarScreen.swift in Sources */,
+				B991392DA0713CA5EE1C8A08 /* LiveActivityController.swift in Sources */,
+				FE0F138B4B2B1DB80B468E53 /* LiveScreen.swift in Sources */,
+				A888EB3325E8DC72CEC2B218 /* MobileModel.swift in Sources */,
+				A4E6FB0631DE4BB68F630DAE /* PitPulseMobileApp.swift in Sources */,
+				F46E575670B03F153DA0209F /* SettingsScreen.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9AC54725BA3FCC65E5C93099 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D04B49005526D8015BFC981F /* AnalysisView.swift in Sources */,
+				B09777FE44844A9573FD17C6 /* AppDelegate.swift in Sources */,
+				40D1F92003B3F7226D47C5E9 /* AppModel.swift in Sources */,
+				468FCADEEB4C73302C19DEA4 /* AppSymbol.swift in Sources */,
+				BE58058ED600C2EA064FE8D2 /* CalendarView.swift in Sources */,
+				B266560E4BF9036EAF43177F /* F1CompanionApp.swift in Sources */,
+				8C1F720C133CE55685ABF49A /* LiveExtras.swift in Sources */,
+				F6968695C72F2913BAA2C5E7 /* LiveIsland.swift in Sources */,
+				6FB37750869EC2F6A187F33C /* MapView.swift in Sources */,
+				5599C05CBF6F1244AB52E1D7 /* MeetingDetailView.swift in Sources */,
+				AFF8D7AD5F668E25A6BE6D62 /* MenuBarRootView.swift in Sources */,
+				97FE021326A7C537BD147621 /* MotorsportAsset.swift in Sources */,
+				BF59167123439F579A89599F /* NextMeetingCard.swift in Sources */,
+				9A8F77C08B9DC37D8B50611B /* PreferencesView.swift in Sources */,
+				AD2190498E32EE109FCDBE42 /* SessionResultsView.swift in Sources */,
+				29879D426C11533FCFE5B585 /* SettingsWindowPresentation.swift in Sources */,
+				4E736BDD7055539DFB40B869 /* StandingsView.swift in Sources */,
+				D0C7CF907B88EA6BA3232214 /* StatusMenuLabel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A447524D5CECF2BB9399CCE2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B85DAEE26A5ADE5470B583E /* PitPulseLiveActivityBundle.swift in Sources */,
+				1B135691C093AE3533BC9D60 /* PitPulseLiveActivityWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A65730DFB6E09232F90624AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				318D18F4242BA66DCC213E26 /* APIClientTests.swift in Sources */,
+				2A160269D082A75A810C1BC5 /* AppSymbolTests.swift in Sources */,
+				10DBDD06493322C110508268 /* CalendarCacheTests.swift in Sources */,
+				D6793F1E882E142F164EFFD4 /* CalendarLogicTests.swift in Sources */,
+				045230E61F00AD2F1B653A83 /* CountryFlagTests.swift in Sources */,
+				D1DC4A56DA3276E9291C6A14 /* CredentialStoreTests.swift in Sources */,
+				A4941638B32AE071C866D5C3 /* LiveIslandTests.swift in Sources */,
+				387236A078FAF38AD6356C9B /* LiveStoreTests.swift in Sources */,
+				11531BDD79E0F312D63CCF0D /* MotorsportAssetTests.swift in Sources */,
+				6D4E2BB93269AA25850B2D99 /* ServerAddressTests.swift in Sources */,
+				2DC96F3C87D32458B4BE9347 /* TestSupport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC5651041E4EB59876F44C68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8AC442FEDB27DEF0E5FFC6F /* MenuBarAcceptanceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		07F8AC31559915674CED4463 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */;
+			targetProxy = 354CE068FD7D71EB9C0D44C1 /* PBXContainerItemProxy */;
+		};
+		E28C9E461F9A0B9E4A795A0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EFF15784EA1DC4D4E6E3D9BA /* PitPulseLiveActivity */;
+			targetProxy = 35711A8CF88D1D2FC6A86382 /* PBXContainerItemProxy */;
+		};
+		E3A98AE3F1A18A82785372C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */;
+			targetProxy = 52451F406F07C5D5ED0E79F2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		20A599B16C1FF998502BEC13 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile.liveactivity;
+				PRODUCT_NAME = PitPulseLiveActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		3BD494224376BAD1AFD33C8C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile.liveactivity;
+				PRODUCT_NAME = PitPulseLiveActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		3C70E2691ABA94FAE3C0269E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionUITests;
+				PRODUCT_NAME = PitPulseUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = PitPulseDesktop;
+			};
+			name = Release;
+		};
+		40DAA1CF953E37232E0D14B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile;
+				PRODUCT_MODULE_NAME = PitPulseMobile;
+				PRODUCT_NAME = PitPulse;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		769165C04203E9F22B3F7E88 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		7EF45B822A1B1EA00DA4A9D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = macos/Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1Companion;
+				PRODUCT_MODULE_NAME = PitPulseDesktop;
+				PRODUCT_NAME = PitPulse;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+			};
+			name = Debug;
+		};
+		92A873184564B304207290BF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile;
+				PRODUCT_MODULE_NAME = PitPulseMobile;
+				PRODUCT_NAME = PitPulse;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		92ECF68B061CDA32E22572A4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		97E7589A7CC07237E63F93B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionTests;
+				PRODUCT_NAME = PitPulseTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PitPulse.app/Contents/MacOS/PitPulse";
+			};
+			name = Debug;
+		};
+		C8C2A3586E98727F17DDF34A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionTests;
+				PRODUCT_NAME = PitPulseTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PitPulse.app/Contents/MacOS/PitPulse";
+			};
+			name = Release;
+		};
+		D5598CE9E16939AA08F76007 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = macos/Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1Companion;
+				PRODUCT_MODULE_NAME = PitPulseDesktop;
+				PRODUCT_NAME = PitPulse;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DDC5CF4302C4A171A6214110 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EABFABC6FBEB70E9C90497E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1CompanionUITests;
+				PRODUCT_NAME = PitPulseUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = PitPulseDesktop;
+			};
+			name = Debug;
+		};
+		EBDEACDC19C925680981CFA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.mobile.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		08FE4DD0E73D38DD04E76694 /* Build configuration list for PBXNativeTarget "PitPulseMobileTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DDC5CF4302C4A171A6214110 /* Debug */,
+				EBDEACDC19C925680981CFA5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		55AA5294C5330BA32B7151E3 /* Build configuration list for PBXProject "PitPulse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				769165C04203E9F22B3F7E88 /* Debug */,
+				92ECF68B061CDA32E22572A4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5742185234A6C3838BFE061E /* Build configuration list for PBXNativeTarget "PitPulseDesktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7EF45B822A1B1EA00DA4A9D9 /* Debug */,
+				D5598CE9E16939AA08F76007 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8006D4348A3ABF7EB7C7F235 /* Build configuration list for PBXNativeTarget "PitPulseDesktopUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EABFABC6FBEB70E9C90497E5 /* Debug */,
+				3C70E2691ABA94FAE3C0269E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		94B2388B39C29F9B70385E96 /* Build configuration list for PBXNativeTarget "PitPulseLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				20A599B16C1FF998502BEC13 /* Debug */,
+				3BD494224376BAD1AFD33C8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C0467EB6B8310283F0171436 /* Build configuration list for PBXNativeTarget "PitPulseDesktopTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				97E7589A7CC07237E63F93B9 /* Debug */,
+				C8C2A3586E98727F17DDF34A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DC74D43A01D0082238BFECE9 /* Build configuration list for PBXNativeTarget "PitPulseMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				92A873184564B304207290BF /* Debug */,
+				40DAA1CF953E37232E0D14B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		037454EC1CBAB9075D21AC32 /* XCLocalSwiftPackageReference "Packages/PitPulseKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PitPulseKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8432A50A8E06D24A16C0BD6F /* XCRemoteSwiftPackageReference "opennook" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/twinkling-reality/opennook.git";
+			requirement = {
+				kind = revision;
+				revision = 2b50b5c3a99df8914e25e199d29bf7aa505f7a59;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0127A1868E5E97DD6CA61C13 /* NookApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8432A50A8E06D24A16C0BD6F /* XCRemoteSwiftPackageReference "opennook" */;
+			productName = NookApp;
+		};
+		1716685A82E59887653AFFE4 /* PitPulseData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseData;
+		};
+		2AAE289F6D8869218F148EA0 /* PitPulseData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseData;
+		};
+		3E616CB9523488C7B71F49B4 /* PitPulseComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseComponents;
+		};
+		561DBE0FA4231E72BDBD54F8 /* PitPulseShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseShared;
+		};
+		755A1CD3E2949B283F56BAFA /* PitPulseData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseData;
+		};
+		BD3685421D6DBE53E273C4AF /* PitPulseShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseShared;
+		};
+		BDA0896DC78AA4163C50E3E3 /* PitPulseShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseShared;
+		};
+		D34848AAEB77EF8686E1DE44 /* PitPulseComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseComponents;
+		};
+		DDF9A5C3D359560BA1FC1FFD /* PitPulseComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseComponents;
+		};
+		E6CAB4A8909157700F4BD870 /* PitPulseShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseShared;
+		};
+		EA1EFBB8DE3AE371A4AF7CBE /* PitPulseShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseShared;
+		};
+		EECD82845EE28BD666E1C359 /* PitPulseComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseComponents;
+		};
+		F3F5E375158292EA61D412F2 /* PitPulseData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PitPulseData;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 3220868BF575D60A65DE956B /* Project object */;
+}
