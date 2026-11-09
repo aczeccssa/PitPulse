@@ -5426,6 +5426,10 @@
         {
           "label": "验收记录",
           "path": "docs/acceptance/ios-live-activity.md"
+        },
+        {
+          "label": "根工作区",
+          "path": "PitPulse.xcworkspace/contents.xcworkspacedata"
         }
       ],
       "evidence": [
@@ -5442,11 +5446,15 @@
         {
           "label": "用户运行确认",
           "detail": "用户在运行中的 macOS App 上确认分包后行为正常（2026-11-09）。"
+        },
+        {
+          "label": "工作区构建",
+          "detail": "PitPulse.xcworkspace 同时引用 macOS/iOS 工程与 PitPulseKit；-workspace 构建 F1Companion 与 PitPulseMobile 均 exit 0（2026-11-09）。"
         }
       ],
       "blockers": [],
       "nextAction": "无；macOS 运行行为已由用户确认正常。",
-      "updatedAt": "2026-11-09T06:19:43Z",
+      "updatedAt": "2026-11-09T06:23:20Z",
       "history": [
         {
           "at": "2026-11-09T06:05:44Z",
@@ -5457,6 +5465,11 @@
           "at": "2026-11-09T06:19:43Z",
           "status": "done",
           "note": "用户确认 macOS 侧无问题；分包后 MenuBar / Notch / 地图行为正常，T25 关闭。"
+        },
+        {
+          "at": "2026-11-09T06:23:20Z",
+          "status": "done",
+          "note": "新增根工作区 PitPulse.xcworkspace（macOS + iOS + 本地包），两个 scheme 经 -workspace 构建均 exit 0。"
         }
       ]
     },

@@ -20,6 +20,8 @@ Packages/PitPulseKit/
     ├── Data/                      # APIClient、APIModels、LiveStore、SSE、Cache、Keychain、提醒、日历逻辑
     └── Components/                # 只吃值的 SwiftUI 原子视图（StatusPill、CountdownText、FlagBadge、LiveWidgetCard）
 
+PitPulse.xcworkspace/                # 根工作区：同时包含 macOS / iOS 工程与本地包
+
 ios/
 ├── project.yml                    # XcodeGen 工程描述（可再生成）
 ├── PitPulseMobile.xcodeproj       # 提交的生成结果
@@ -28,6 +30,7 @@ ios/
 └── PitPulseMobileTests/           # 数据契约与 Live Activity ContentState 单元测试
 ```
 
+- 根工作区 `PitPulse.xcworkspace` 同时引用 `macos/F1Companion.xcodeproj`、`ios/PitPulseMobile.xcodeproj` 与本地包 `Packages/PitPulseKit`，一个窗口内可切换全部 scheme。
 - macOS App target（`F1Companion`）改为依赖 `PitPulseShared` / `PitPulseData` / `PitPulseComponents`；原 `macos/Core` 的纯 Foundation 文件已移入包，AppKit 视图与 AppModel 平台编排留在 Desktop 壳。
 - `Components` 只依赖 `Shared`，不依赖 `Data`，避免 Widget / Watch 被拖入 URLSession / SSE / Keychain。
 - 灵动岛契约 `PitPulseActivityAttributes` 位于 `Shared`，用 `#if os(iOS)` 隔离 ActivityKit，macOS 包编译不受影响。
