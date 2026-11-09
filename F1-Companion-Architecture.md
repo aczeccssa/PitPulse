@@ -252,7 +252,7 @@ Menu Bar + Notch
 
 ## 6. API 契约
 
-所有 API 基于 `/api/v1`，私有部署通过 HTTPS + Bearer Token（或只绑定 Tailscale 私网）。
+所有 API 基于 `/api/v1`；私有部署可通过任意主机/IP 的 http(s) + Bearer Token 访问（或只绑定 Tailscale 私网），公网使用建议 HTTPS。
 
 ```http
 GET /api/v1/health
@@ -394,7 +394,7 @@ require_token = true
 ```
 
 - 构建：`cargo build --release`；服务以非 root 用户运行，`Restart=on-failure`。
-- 公网访问：HTTPS + Token，防止接口被任意访问；个人环境也可直接用 Tailscale 私网访问。
+- 公网访问：建议 HTTPS + Token 防止接口被任意访问；客户端允许任意主机/IP 与 http(s)，内网可直接用 LAN/Tailscale 地址。
 - 日志保留错误、连接状态、同步耗时和最新成功时间；避免记录完整 Token、敏感请求头与长篇原始 Feed。
 - 备份 SQLite（使用 SQLite 在线备份/一致性策略），无需备份 Live 内存状态。
 - 不设置硬性内存指标为事实；部署后用 `/usr/bin/time -v`、`systemd-cgtop`、`journalctl` 实测 CPU/RSS/错误率。

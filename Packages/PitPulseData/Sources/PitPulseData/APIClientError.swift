@@ -2,7 +2,6 @@ import Foundation
 
 public enum APIClientError: Error, Equatable, LocalizedError {
     case invalidServerAddress(String)
-    case insecureRemoteServer
     case invalidResponse
     case transport(String)
     case timeout
@@ -16,8 +15,6 @@ public enum APIClientError: Error, Equatable, LocalizedError {
         switch self {
         case .invalidServerAddress:
             "服务器地址无效。"
-        case .insecureRemoteServer:
-            "仅允许本机使用 HTTP；远程服务器必须使用 HTTPS。"
         case .invalidResponse:
             "服务器响应格式无效。"
         case .transport:

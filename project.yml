@@ -133,6 +133,7 @@ targets:
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
         NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
           NSExceptionDomains:
             localhost:

@@ -1024,7 +1024,7 @@
         "两次 XCTest 拖拽缩放均仍报告 800×640；760×560 与滚动未通过实际验收，未确定是工具限制还是窗口行为。"
       ],
       "nextAction": "完成两种收起方式的原生交互，保存截图与验收记录；保留真实音频、真实赛事和完整设备验收边界。",
-      "updatedAt": "2026-10-11T07:24:20Z",
+      "updatedAt": "2026-11-09T07:30:01Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -1160,6 +1160,11 @@
           "at": "2026-10-11T07:24:20Z",
           "status": "inProgress",
           "note": "相关 Swift XCTest 2/2、Rust live 3/3、地图 JS 5/5、Swift CLI 通过；replay 网络复测 62 帧约 10.02 Hz / 99.78ms。原生展开详情显示两条 MOCK 消息，继续收起方式验收。"
+        },
+        {
+          "at": "2026-11-09T07:30:01Z",
+          "status": "inProgress",
+          "note": "服务器地址放开为任意主机/IP 与 http(s)：去掉仅 loopback 允许 HTTP 的限制，无 scheme 默认 http；macOS/iOS ATS 允许任意加载；更新 ServerAddress 单测与文档。"
         }
       ]
     },

@@ -13,10 +13,30 @@ final class ServerAddressTests: XCTestCase {
         XCTAssertNoThrow(try ServerAddress(rawValue: "http://[::1]:38701"))
     }
 
-    func testRemoteHTTPIsRejected() {
-        XCTAssertThrowsError(try ServerAddress(rawValue: "http://pitpulse.example")) { error in
-            XCTAssertEqual(error as? APIClientError, .insecureRemoteServer)
-        }
+    func testAnyHostAndIPOverHTTPIsAllowed() throws {
+        XCTAssertEqual(
+            try ServerAddress(rawValue: "http://192.168.1.50:38701").url.absoluteString,
+            "http://192.168.1.50:38701"
+        )
+        XCTAssertEqual(
+            try ServerAddress(rawValue: "http://pitpulse.example").url.absoluteString,
+            "http://pitpulse.example"
+        )
+        XCTAssertEqual(
+            try ServerAddress(rawValue: "http://10.0.0.8:38701/api").url.absoluteString,
+            "http://10.0.0.8:38701/api"
+        )
+    }
+
+    func testBareAddressDefaultsToHTTP() throws {
+        XCTAssertEqual(
+            try ServerAddress(rawValue: "192.168.1.50:38701").url.absoluteString,
+            "http://192.168.1.50:38701"
+        )
+        XCTAssertEqual(
+            try ServerAddress(rawValue: "pitpulse.example").url.absoluteString,
+            "http://pitpulse.example"
+        )
     }
 
     func testHTTPSAndCredentialsAreValidated() throws {

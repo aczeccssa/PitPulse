@@ -82,5 +82,5 @@ taskdeck start --session PitPulse --task "Test iOS"
 
 - **真机验收未完成**：ActivityKit 在模拟器可运行，但签名、Always-On 与真机灵动岛布局需在设备复核（PP-34 的验收项）。
 - **实时更新边界**：无 APNs，App 被杀后不再更新；真·实时需服务端新增推送（独立服务端任务，本次未做）。
-- iOS 目标按端口直连本机服务（`http://localhost:38701`），远程服务器仍要求 HTTPS（沿用 `ServerAddress` 规则）。
+- iOS 目标默认直连本机服务（`http://localhost:38701`）；`ServerAddress` 与 ATS 允许任意主机/IP 与 http(s)，公网部署建议 HTTPS。
 - watchOS App 与 Watch Widget 未开始（PP-35）。

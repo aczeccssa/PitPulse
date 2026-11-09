@@ -80,6 +80,10 @@ xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseMobile -destination '
 xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseMobile -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO test
 ```
 
+## Server address
+
+The client accepts **any host / IP and both `http` and `https`**; a bare address defaults to `http` (self-hosted deployments are commonly reached by LAN IP). Use `https://…` explicitly when TLS terminates in front of the server. Public deployments should still prefer HTTPS + Bearer Token.
+
 ## Current scope
 
 Shipped locally: Rust service (calendar / results / standings / live F1 + opt-in WEC), macOS Menu Bar + Notch Live Island, and iOS 26+ app with calendar, live timing and Dynamic Island Live Activity. The iOS Live Activity is verified in the simulator; real-device Dynamic Island acceptance and watchOS / Watch Widget remain open.

@@ -3,7 +3,7 @@
 这是 PitPulse 的原生 macOS Menu Bar V1：
 
 - Swift 6 / SwiftUI，`MenuBarExtra(.window)` 单一入口。
-- 本机 Rust API：默认 `http://localhost:38701`；远程服务必须使用 HTTPS。
+- Rust API：默认 `http://localhost:38701`；允许任意主机/IP 与 http/https（无 scheme 时默认 http），公网部署建议 HTTPS。
 - Token 只存 Keychain；UserDefaults 保存服务器地址、赛季、关注车手稳定 ID 和自动展示偏好。
 - 赛历按服务器身份与赛季隔离缓存，支持离线读取、损坏缓存恢复和最新 revision 替换。
 - 赛历展示举办国 Emoji、本地 Session 时间、下一站和倒计时；预览／测试 fixture 不进入正式运行路径。
