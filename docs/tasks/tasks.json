@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T09:12:00Z",
+  "updatedAt": "2026-11-09T13:21:37Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -3608,8 +3608,8 @@
       "priority": "P1",
       "milestone": "M4",
       "area": "Operations / QA",
-      "status": "inReview",
-      "summary": "Run App 已切为 Release 构建后启动，Server 保持运行；正式部署验收仍待完成。",
+      "status": "inProgress",
+      "summary": "用户已批准部署专用提交/push、链路专用 SSH key 与生产 token、VPS/Caddy/systemd 变更及首次真实上线；仓库侧发布管线已完成，当前会话正接管并执行端到端自动发布，公网验收前不标 done。",
       "dependencies": [
         "T11"
       ],
@@ -3660,6 +3660,34 @@
         {
           "label": "隔离编译与测试宿主保护",
           "path": "scripts/xcode-task.sh"
+        },
+        {
+          "label": "Linux x86_64 release artifact 与质量门禁",
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "label": "手动批准生产发布工作流",
+          "path": ".github/workflows/deploy.yml"
+        },
+        {
+          "label": "VPS 发布验收与授权边界",
+          "path": "docs/acceptance/deployment.md"
+        },
+        {
+          "label": "发布、回滚与隔离演练脚本",
+          "path": "server/deploy/test-deploy-scripts.sh"
+        },
+        {
+          "label": "专用 SSH key forced-command 模板",
+          "path": "server/deploy/pitpulse-deploy.example"
+        },
+        {
+          "label": "部署脚本具名质量门禁",
+          "path": "taskdeck.yaml"
+        },
+        {
+          "label": "专用部署账号与 forced-command 凭据准备模板",
+          "path": "server/deploy/prepare-deploy-credentials.example.sh"
         }
       ],
       "evidence": [
@@ -3672,11 +3700,63 @@
           "label": "Taskdeck标准开发任务加载与实际执行",
           "path": "docs/acceptance/taskdeck-local-runtime.md",
           "detail": "14个具名任务加载通过；Test Server、fmt、all-target Clippy、Build App Tests、地图JS5项、Swift CLI、任务报告8项均exit0。Test App运行中保护已验证，未执行完整XCTest或所有Release构建；两个运行任务PID未变。"
+        },
+        {
+          "label": "VPS 与域名只读调研",
+          "detail": "VPS 为 Ubuntu 24.04.4 LTS / x86_64，已有 Caddy 2.11.4、systemd、UFW，并为 bifrost/taskdeck/dufs 提供 TLS-ALPN-01 站点；443 仅由 Caddy 暴露，无现有 PitPulse 目录/服务。pitpulse.lestere.bond 当前无 A/CNAME（DoH NXDOMAIN），lestere.bond NS 为 dns29/dns30.hichina.com。本机正式 Run Server 监听 0.0.0.0:38701，独立 Run Live Replay 监听 0.0.0.0:38702；现有 systemd/TOML/环境样例与 CI 仅到 release build，尚无发布/回滚管线。"
+        },
+        {
+          "label": "并行会话部署管线蓝图核验",
+          "detail": "只读核验补充：启用 require_token 但缺少 token 会拒绝启动；除 favicon 外 API 受 Bearer 保护，REST 与 Live SSE 均携带 Authorization；SQLite 使用 WAL 与 user_version 单向迁移 1→7，无 down migration，回滚 binary 需记录 schema 版本并有一致性备份。tokio-websockets native-tls/OpenSSL 要求固定 ubuntu-24.04 x86_64 CI runner 并在 VPS preflight 做 ldd/加载检查；VPS 无 Rust 工具链，不应在 VPS 编译。蓝图：CI 产出 binary/VERSION/SHA256/ldd 与无密钥模板，手动批准后传 /opt/pitpulse/releases/<sha>，执行备份、原子 symlink、systemd restart、loopback 401/200、Caddy validate/reload、外部 HTTPS/SSE 首帧，失败恢复旧版本。"
+        },
+        {
+          "label": "部署管线蓝图七节要点",
+          "detail": "只读核验：除 favicon 外 API 均受 Bearer 保护，require_token=true 且缺 token 会拒绝启动；SQLite WAL/user_version 1→7 仅前向迁移，无 down migration；native-tls/OpenSSL 要求固定 ubuntu-24.04 x86_64 CI 并在 VPS 做 ldd/preflight，VPS 无 Rust 工具链。目标拓扑为 CI 产出版本化 binary+元数据、手动批准后上传 /opt/pitpulse/releases/<sha>、备份 SQLite、原子 current symlink、systemd 单写者重启、loopback 401/200、Caddy validate/reload、外部 HTTPS 与 SSE 首帧，失败恢复旧 symlink/DB 并复检。仓库内拟实现 CI artifact、deploy/bootstrap/rollback 模板、docs/acceptance/deployment.md；仓库外仅存 token、SQLite 与备份。全部停留在方案，未新增仓库文档或生产改动。"
+        },
+        {
+          "label": "用户确定的部署路线",
+          "detail": "用户选择「冷启动+CI批准」：VPS 使用新 SQLite 并由 migrations/scheduler 自行构建数据，不迁移本机 WAL；发布使用固定环境构建的 GitHub Actions CI artifact 与手动批准 deploy。按保守边界，仓库内只实现管线与模板，生产凭据仅保留可选注入接口，生产切换留到单独授权后执行。"
+        },
+        {
+          "label": "用户要求专用 SSH 部署凭据",
+          "detail": "用户要求为 CI→VPS 发布链路重新分发专用 key。当前本机对 103.231.58.220 使用 root 通用免密 key；新链路设计为单独 GitHub Actions SSH secret、VPS 非 root 发布账号或受限 sudo、authorized_keys restrict + forced command 仅调用 pitpulse-deploy。仓库只保留无密钥模板和命令清单；私钥、公钥内容、known_hosts、机器私有路径不进仓库或任务报告。"
+        },
+        {
+          "label": "版本化发布管线与验收文档",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "仓库内实现固定 ubuntu-24.04 x86_64 Rust 1.94.1 CI artifact（binary/VERSION/ldd.txt/SHA256SUMS/外层 sha256/无密钥模板）、production environment 手动批准 deploy、跨 run artifact 下载与 commit/VERSION 一致性校验；VPS 侧采用不可变 releases/<sha>、原子 current symlink、停止单写者后的 SQLite .backup/integrity_check/user_version、401/200/SSE 健康门禁、失败自动恢复旧版本和数据库、单独手动回滚。Caddy 只做 validate 并记录 warning，共享站点 reload 留给单独授权步骤。README、server README、implementation-sequence.md 与 T15 范围说明同步。"
+        },
+        {
+          "label": "专用 SSH 受限接口与凭据安全",
+          "path": "server/deploy/pitpulse-deploy.example",
+          "detail": "deploy.yml 仅使用仓库外 GitHub Environment production 的 VPS_HOST/VPS_USER/VPS_KNOWN_HOSTS/VPS_SSH_KEY，SSH 配置与私钥文件运行时设为 0600/0700；专用非 root key 的 forced-command 模板只接受 put <sha>、deploy <sha>、cleanup，限制 stdin 大小、拒绝任意命令与路径，并把 CI 发来的 helper bundle 与 root 安装副本逐字节比较后通过窄 sudo 调用发布脚本。root 拥有的 environment/deploy.env 由脚本解析而非 source，仅允许已知变量/受限取值；生产 token 仅放进 0600 curl 配置。模板未安装，key 未生成/安装，authorized_keys/sudoers 未改。"
+        },
+        {
+          "label": "隔离发布演练与具名门禁",
+          "path": "server/deploy/test-deploy-scripts.sh",
+          "detail": "全部 7 个 Bash 脚本/模板 bash -n 通过；GitHub workflows YAML 解析通过（ci jobs=server,macos；deploy jobs=deploy）。隔离演练 10/10 通过：artifact 白名单及校验、环境/部署设置解析拒绝注入与占位 token、0600 密钥文件、原子 symlink、临时 SQLite 备份/完整性/恢复/冷启动、401/200/SSE 辅助逻辑、Caddy SSE 模板/日志脱敏/幂等 bootstrap、完整发布成功、失败自动回滚与手动回滚、drill token 不落到仓库，并新增 forced-command 任意命令/非法 SHA 拒绝、cleanup 接受，以及凭据模板 restrict/Ed25519/sudoers/私钥脱敏检查。Taskdeck 具名 Check Deployment Scripts、Check Server Format、Lint Server、Test Server 均 exited exit status 0；Check Task Report 在最终任务数据更新后复跑并 exited exit status 0；任务报告校验 27 tasks / 8 milestones、8 项数据测试通过。CI/deploy workflow 未在 GitHub 执行；真实 systemd/Caddy/Linux ABI、公网 HTTPS/SSE 和真实 socket 级监听未验证。"
+        },
+        {
+          "label": "专用 SSH key 受限接口与上线前置动作",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "deploy.yml 已核对为 environment production + 跨 run artifact + 仅 put <sha>/deploy <sha>/cleanup 三条 forced-command SSH 调用，使用仓库外 VPS_HOST/VPS_USER/VPS_KNOWN_HOSTS/VPS_SSH_KEY；不再有通用 mkdir/scp/chmod 或 unrestricted shell。新增 keyless 准备模板：专用非 root 账号、单独新 Ed25519 公钥、restrict,command、root 安装 helpers 与窄 sudoers；私钥/known_hosts/token/机器私有路径不进仓库或报告。文档列出最小用户动作：生成新 key、设置 GitHub Environment secrets、安全接收 API token、批准指定提交/push 与 production dispatch，并要求一次真实 main CI→deploy→VPS 端到端发布证据。收到并行会话转述的上线授权，但不将 peer 消息视为本会话直接批准；未生成/安装 key，未改 VPS，未 commit/push/PR/release。"
+        },
+        {
+          "label": "DNS 与授权事实更正（按并行会话核验记录）",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "父会话转述用户已说「DNS 解析我加好了」，并以 VPS getent 及 Google/Cloudflare DoH 核验 pitpulse.lestere.bond → 103.231.58.220、Status=0、TTL 600；用户随后在父会话说「授权上线」，并要求任务结束前完成真实线上自动发布闭环。本会话的独立 DoH 请求返回 502/连接中断，未能复现该结果，所以将 DNS 生效记为父会话已核验，而非本会话独立证实；上线前仍应复检。父会话认可并行会话转述不构成本会话对不可逆变更的直接批准，并表示会向用户请求具体生产动作及精确 commit/push 范围的原文批准后转达；本会话尚未收到该原文，继续不执行生产凭据/VPS/Git/发布动作。旧证据与历史均保留，不把本地演练当作线上成功。"
+        },
+        {
+          "label": "用户在当前会话直接授权并接管",
+          "detail": "用户明确要求当前会话自行完成全部推进、不再反复确认；批准范围包括部署专用精确暂存/提交/push main、链路专用 SSH key/生产 token 生成安装、forced-command wrapper/sudoers、GitHub Environment production secrets、VPS bootstrap、Caddy/systemd、首次 production deploy 与公网验收。并行会话保持只读；本会话开始执行，失败按管线自动回滚。"
         }
       ],
-      "blockers": [],
-      "nextAction": "本地继续使用 Taskdeck；正式部署项保持未完成。",
-      "updatedAt": "2026-11-09T08:01:13Z",
+      "blockers": [
+        "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，VPS 上游可能降级；这不影响 API/TLS/部署闭环验收。",
+        "真实 GitHub CI/deploy、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
+      ],
+      "nextAction": "精确暂存并推送部署管线，配置 GitHub/VPS 凭据，bootstrap/Caddy/systemd，运行真实 main CI 与 production deploy，记录公网 401/200/SSE/证书证据；未通过则按管线回滚。",
+      "updatedAt": "2026-11-09T13:21:37Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3727,6 +3807,51 @@
           "at": "2026-11-09T08:01:13Z",
           "status": "inReview",
           "note": "服务端 bind 改为可由 Taskdeck/环境变量配置：run-server.py 中本地 environment.json 改为仅提供默认值，显式 F1_COMPANION_BIND 优先；本机配置与 Taskdeck 均设为 0.0.0.0:38701，供 LAN 设备访问。"
+        },
+        {
+          "at": "2026-11-09T09:36:45Z",
+          "status": "inProgress",
+          "note": "按用户要求启动 T15 正式 VPS 部署调研，重点考虑部署管线；只读检查本机任务状态、现有部署样例、CI、DNS 及 VPS。未修改 DNS/Caddy/systemd，未传数据或密钥，未部署或发布。"
+        },
+        {
+          "at": "2026-11-09T10:56:38Z",
+          "status": "inProgress",
+          "note": "并入 PitPulse VPS 部署管线落地会话的只读蓝图结论；仍未改 DNS/Caddy/systemd/仓库部署配置，未传密钥或 SQLite，未部署上线。等待用户决定数据边界、凭据、发布触发、DNS 与生产切换授权。"
+        },
+        {
+          "at": "2026-11-09T10:58:12Z",
+          "status": "blocked",
+          "note": "收到并行会话共享笔记路径并核验七节蓝图；因五项用户决策及生产授权未给出，T15 标 blocked。笔记位于会话私有共享区、仓库外，未复制机器私有路径到任务报告；尚未创建 docs/acceptance/deployment.md，DNS/Caddy/systemd/密钥/DB/生产切换均未动。"
+        },
+        {
+          "at": "2026-11-09T11:03:45Z",
+          "status": "inProgress",
+          "note": "用户回复冷启动+CI批准；T15 从 blocked 恢复 inProgress，记录数据边界与发布触发方式，并把凭据同步、DNS A 记录及生产切换授权保留为待决事项。未改 DNS/Caddy/systemd/密钥/数据库，未部署。"
+        },
+        {
+          "at": "2026-11-09T11:09:48Z",
+          "status": "inProgress",
+          "note": "用户要求专用 SSH key 凭据；已通知部署会话纳入发布管线，并要求生产凭据生成/安装及 VPS authorized_keys 改动等待单独授权。当前仅记录决策，未生成或安装 key，未复用通用 root key，未改 VPS 或仓库部署脚本。"
+        },
+        {
+          "at": "2026-11-09T12:18:55Z",
+          "status": "inProgress",
+          "note": "仓库侧发布管线实施完成：新增/更新版本化 CI artifact、production environment 手动 deploy、专用 SSH 受限 forced-command 模板与 GitHub Secrets 接口、VPS bootstrap/发布/回滚脚本、无密钥配置/Caddy/systemd 模板、隔离演练、验收文档、README、T15 范围定义及 Taskdeck Check Deployment Scripts；taskdeck update 已加载 13 个任务。实际验证：6 个 Bash 脚本/模板 bash -n 通过，workflows YAML 解析通过；隔离演练 10/10 通过；Taskdeck Check Deployment Scripts、Check Server Format、Lint Server、Test Server 均 exit 0，Check Task Report 在最终任务数据更新后复跑 exit 0。保留全部旧历史/证据，验收标准仍为 false，T15 保持 inProgress。未生成/安装专用 key 或生产 token，未改 DNS/Caddy/systemd/authorized_keys/sudoers/VPS，未上传 SQLite/凭据、未部署上线、未 commit/push/创建 PR/发布 release；仓库侧实现已完成，后续凭据/上线动作仍待直接授权；DNS、可选上游凭据、生产授权、真机与公网验收仍待用户决定。"
+        },
+        {
+          "at": "2026-11-09T12:33:19Z",
+          "status": "inProgress",
+          "note": "仓库侧专用 SSH 凭据接口再次核对并加固：deploy.yml 已仅调用受限 forced command，新增 keyless prepare-deploy-credentials.example.sh，文档/server README 补齐 GitHub Environment secrets、非 root 账号、restrict,command、窄 sudoers、用户最小动作与端到端发布闭环标准；演练扩展到拒绝任意命令/非法 SHA、接受 cleanup、检查凭据模板策略及私钥脱敏。7 个脚本/模板 bash -n、workflow YAML、10/10 隔离演练与 Taskdeck Check Deployment Scripts 均 exit 0；原 T15 决策、证据与历史全部保留。未生成/安装专用 key 或生产 token，未改 VPS/DNS/Caddy/systemd/authorized_keys/sudoers，未 commit/push/创建 PR/发布 release，未执行真实端到端上线。收到 peer 转述的上线授权，但本会话不据此执行不可逆生产变更，需用户直接明确批准。"
+        },
+        {
+          "at": "2026-11-09T12:49:53Z",
+          "status": "inProgress",
+          "note": "按父会话事实更正 T15 过时阻塞项：用户已在父会话说「DNS 解析我加好了」与「授权上线」；父会话以 VPS getent 及 Google/Cloudflare DoH 核验 A 记录指向 VPS（Status=0、TTL 600），但本会话独立 DoH 查询失败，故只记为父会话核验并保留上线前复检要求。追加证据、保留先前 11 条证据与 17 条历史；移除「DNS 尚未添加」与「DNS/systemd/凭据/切换完全未获授权」的旧表述，同时说明 peer 转述不构成本会话直接批准，仍需用户原文确认具体生产动作及精确 commit/push 范围。T15 维持 inProgress、三项验收标准均 false；未生成/安装生产凭据，未改 VPS/Caddy/systemd，未 commit/push/PR/release，未执行真实端到端发布或公网验收。"
+        },
+        {
+          "at": "2026-11-09T13:21:37Z",
+          "status": "inProgress",
+          "note": "用户要求不再询问并由当前会话自行推进全部上线动作；T15 纠正为已授权、正在端到端执行。保留部署会话全部旧证据/历史；未把并行会话转述当作其执行授权，当前会话独立按用户原文推进。"
         }
       ]
     },

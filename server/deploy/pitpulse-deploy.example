@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# EXAMPLE forced-command wrapper for the dedicated CI deploy SSH key.
+# Install this as a root-owned 0755 script OUTSIDE the repository on the VPS and
+# pin its absolute path in the deploy account's authorized_keys entry with
+# restrict,command="/usr/local/sbin/pitpulse-deploy". Review and adapt the
+# sudoers/account policy for the real host before use; nothing here installs it.
+#
+# The key's forced command is invoked with the exact SSH_ORIGINAL_COMMAND sent by
+# deploy.yml:
+#   ssh pitpulse-deploy "put <full-commit-sha>"       with the artifact on stdin
+#   ssh pitpulse-deploy "deploy <full-commit-sha>"    with the base64-encoded
+#                                                      trusted deploy scripts on
+#                                                      stdin
+#   ssh pitpulse-deploy "cleanup"
+#
+# No arbitrary shell, path, user, or command from CI is accepted. The artifact
+# is stored under a SHA-named file; deploy-release.sh validates its VERSION,
+# SHA256SUMS and ELF/ABI before switching anything. The runner can invoke only
+# the checked-in deploy/rollback helpers through sudo; it never reads the token
+# or writes /etc directly.
+
+set -Eeuo pipefail
+umask 077
+
+INCOMING=/opt/pitpulse/releases.incoming
+STAGING=/var/tmp/pitpulse-deploy
+HELPERS=/usr/local/lib/pitpulse
+ARCHIVE_MAX_BYTES=$((128 * 1024 * 1024))
+SCRIPT_MAX_BYTES=$((1024 * 1024))
+
+fail() {
+    printf '[pitpulse-deploy] denied: %s\n' "$1" >&2
+    exit 1
+}
+
+require_commands() {
+    local name
+    for name in "$@"; do
+        command -v "$name" >/dev/null 2>&1 || fail "missing $name"
+    done
+}
+
+require_commands install rm mkdir head grep base64 tar sudo mktemp cmp wc
+[[ -n "${SSH_ORIGINAL_COMMAND:-}" ]] || fail "missing original command"
+if [[ "$SSH_ORIGINAL_COMMAND" == "cleanup" ]]; then
+    action=cleanup
+    sha=""
+elif [[ "$SSH_ORIGINAL_COMMAND" =~ ^(put|deploy)[[:space:]]([0-9a-f]{40})$ ]]; then
+    action="${BASH_REMATCH[1]}"
+    sha="${BASH_REMATCH[2]}"
+else
+    fail "unsupported command"
+fi
+[[ "$action" == cleanup || ${#sha} -eq 40 ]] || fail "invalid commit SHA"
+
+case "$action" in
+    put)
+        install -d -m 0755 "$INCOMING"
+        temp="$(mktemp "$INCOMING/.upload.XXXXXX")"
+        trap 'rm -f "$temp"' EXIT
+        head -c "$((ARCHIVE_MAX_BYTES + 1))" > "$temp"
+        size="$(wc -c < "$temp")"
+        (( size > 0 && size <= ARCHIVE_MAX_BYTES )) || fail "artifact size out of range"
+        tar -tzf "$temp" >/dev/null || fail "artifact is not a valid gzip tar"
+        install -m 0644 "$temp" "$INCOMING/${sha}.tar.gz"
+        ;;
+    deploy)
+        install -d -m 0700 "$STAGING"
+        scripts="$(mktemp "$STAGING/scripts.XXXXXX")"
+        trap 'rm -rf "$scripts" "$STAGING/unpacked"' EXIT
+        head -c "$((SCRIPT_MAX_BYTES + 1))" > "$scripts"
+        size="$(wc -c < "$scripts")"
+        (( size > 0 && size <= SCRIPT_MAX_BYTES )) || fail "script bundle size out of range"
+        base64 -d < "$scripts" > "$STAGING/bundle.tar.gz"
+        rm -rf "$STAGING/unpacked"
+        mkdir -p "$STAGING/unpacked"
+        tar -xzf "$STAGING/bundle.tar.gz" -C "$STAGING/unpacked"
+        for name in lib.sh deploy-release.sh rollback-release.sh; do
+            [[ -f "$STAGING/unpacked/$name" && ! -L "$STAGING/unpacked/$name" ]] || fail "missing $name"
+            cmp -s "$STAGING/unpacked/$name" "$HELPERS/$name" || fail "$name differs from the installed helper"
+        done
+        rm -f "$STAGING/bundle.tar.gz"
+        sudo -n /usr/bin/env "PITPULSE_DEPLOY_ARTIFACT_SHA=$sha" \
+            "$HELPERS/deploy-release.sh" "$INCOMING/${sha}.tar.gz"
+        ;;
+    cleanup)
+        rm -rf "$STAGING"
+        ;;
+    *)
+        fail "unsupported action"
+        ;;
+esac

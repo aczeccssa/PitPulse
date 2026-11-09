@@ -1,0 +1,112 @@
+name: Deploy PitPulse Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: CI workflow run ID that produced the release artifact
+        required: true
+        type: string
+      commit_sha:
+        description: Full commit SHA to deploy (must match the artifact VERSION)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: Manual production deployment
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Validate requested commit and forced-command inputs
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          CI_RUN_ID: ${{ inputs.artifact_run_id }}
+        run: |
+          set -euo pipefail
+          test "$REQUESTED_SHA" = "$(git rev-parse HEAD)"
+          git rev-parse --verify 'HEAD^{commit}' >/dev/null
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "commit_sha must be a full lowercase SHA" >&2; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "artifact_run_id must be numeric" >&2; exit 1; }
+
+      - name: Download approved release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pitpulse-server-linux-x86_64-${{ inputs.commit_sha }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          path: release
+
+      - name: Verify artifact identity and checksum
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          sha="$REQUESTED_SHA"
+          archive="release/pitpulse-server-linux-x86_64-${sha}.tar.gz"
+          test -f "$archive"
+          (cd release && sha256sum -c "$(basename "$archive").sha256")
+          mkdir -p release/extracted
+          tar -xzf "$archive" -C release/extracted
+          test "$(cat release/extracted/VERSION)" = "$sha"
+          (cd release/extracted && sha256sum -c SHA256SUMS)
+
+      - name: Configure dedicated SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          for name in VPS_HOST VPS_USER VPS_KNOWN_HOSTS VPS_SSH_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing deployment secret: $name" >&2
+              exit 1
+            fi
+          done
+          mkdir -p "$HOME/.ssh"
+          install -m 0700 /dev/null "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          install -m 0600 /dev/null "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          {
+            printf 'Host pitpulse-deploy\n'
+            printf '  HostName %s\n' "$VPS_HOST"
+            printf '  User %s\n' "$VPS_USER"
+            printf '  IdentityFile %s\n' "$HOME/.ssh/id_ed25519"
+            printf '  IdentitiesOnly yes\n'
+            printf '  BatchMode yes\n'
+          } >> "$HOME/.ssh/config"
+          chmod 0600 "$HOME/.ssh/config"
+
+      - name: Upload artifact through the forced command
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          sha="$REQUESTED_SHA"
+          archive="release/pitpulse-server-linux-x86_64-${sha}.tar.gz"
+          ssh pitpulse-deploy "put ${sha}" < "$archive"
+
+      - name: Send trusted helper bundle and deploy
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          sha="$REQUESTED_SHA"
+          bundle="$RUNNER_TEMP/pitpulse-deploy-scripts.tar.gz"
+          tar -czf "$bundle" -C server/deploy lib.sh deploy-release.sh rollback-release.sh
+          base64 -w 0 "$bundle" | ssh pitpulse-deploy "deploy ${sha}"
+
+      - name: Clean remote staging files
+        if: always()
+        run: ssh pitpulse-deploy cleanup || true

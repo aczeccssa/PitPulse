@@ -12,6 +12,7 @@ task_order:
 - Check Server Format
 - Lint Server
 - Check Task Report
+- Check Deployment Scripts
 tasks:
   Build App:
     command: /bin/bash
@@ -61,6 +62,16 @@ tasks:
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: true
+  Check Deployment Scripts:
+    command: /bin/bash
+    args:
+    - server/deploy/test-deploy-scripts.sh
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
   Check Server Format:
     command: cargo
     args:

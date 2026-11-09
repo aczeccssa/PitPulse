@@ -1,0 +1,60 @@
+# Deployment pipeline acceptance
+
+This document records the repository-side VPS release pipeline and its local drill. The user added the DNS A record and the parent session verified that it resolves to the VPS. The user subsequently approved the exact production credential, VPS, Caddy/systemd, commit/push and first-deploy scope in the parent session, which is now executing the end-to-end rollout. Public HTTPS/SSE acceptance results will be appended only after a real CI/deploy run.
+
+## Architecture
+
+| Boundary | Design |
+| --- | --- |
+| Build | `.github/workflows/ci.yml` builds on fixed `ubuntu-24.04` x86-64 with Rust `1.94.1`, runs fmt / locked strict Clippy / locked tests / locked release build, then publishes an immutable `pitpulse-server-linux-x86_64-<sha>.tar.gz` artifact for 14 days. |
+| Artifact | Binary, `VERSION` (full commit SHA), `ldd.txt`, `SHA256SUMS`, and keyless production templates. The workflow adds an outer `.sha256`. The artifact contains no token, SSH key, DNS secret, SQLite or upstream credential. |
+| Approval | `.github/workflows/deploy.yml` is `workflow_dispatch` only and uses GitHub Environment `production`. Supply `artifact_run_id` and full lowercase `commit_sha`; the checked-out commit, artifact `VERSION` and archive name must agree. The environment is the approval gate. |
+| VPS | Immutable `/opt/pitpulse/releases/<sha>` directories and an atomically replaced `current` symlink. systemd runs the binary as user `pitpulse`; the service binds `127.0.0.1:38701`. Caddy terminates TLS and reverse-proxies SSE with `flush_interval -1`. |
+| Data | Cold start: a new VPS SQLite database is built by migrations and the scheduler. The local WAL database is never copied. Deploy stops the single writer, makes a SQLite `.backup` with `integrity_check` and `user_version`, switches release, starts the service, and restores the database on failed deployment. Migrations are forward-only; a manual rollback that crosses a schema change requires an explicit matching backup restore. |
+| Authentication | `F1_COMPANION_REQUIRE_TOKEN=true` and a high-entropy `F1_COMPANION_TOKEN` live only in `/etc/pitpulse/environment` (mode `0600`). The root-owned file is parsed as `KEY=VALUE`, not sourced; only known PitPulse variable names and a constrained value alphabet are accepted. Health checks put the Bearer token in a temporary `0600` curl config, never a command line or log. Caddy's `access_log` snippet deletes `Authorization`, `X-Api-Key`, `Proxy-Authorization`, `Cookie` and `Set-Cookie`. |
+| SSH | The `production` environment holds a **dedicated** key for a non-root deploy account. The workflow sends only three fixed commands to a forced-command alias: `put <sha>` with the artifact on stdin, `deploy <sha>` with a base64 bundle of checked-in helpers on stdin, and `cleanup`. The example wrapper compares those helpers against root-installed copies and invokes `deploy-release.sh` through narrowly scoped sudo. No general-purpose root key, arbitrary shell command, or CI-provided executable path is accepted. |
+| Rollback | `deploy-release.sh` restores the previous symlink and database backup if loopback 401/200/SSE or optional public HTTPS 401/200/SSE checks fail. `rollback-release.sh` performs an explicit manual switch to `/opt/pitpulse/previous`; the marker must resolve inside the releases directory. Caddy validation is logged as a warning without reloading shared routes; a separate authorized step owns Caddy reload/start. |
+
+The macOS/iOS client supports `https://` and stores a per-server Bearer token in Keychain. Configure it with `https://pitpulse.lestere.bond` and the production token only after the site has been accepted. Local `Run Server` on port 38701 and `Run Live Replay` on port 38702 remain separate from the VPS service.
+
+## Repository files
+
+- `.github/workflows/ci.yml`: quality gates and versioned Linux artifact.
+- `.github/workflows/deploy.yml`: manual, environment-gated deploy; secrets are names only.
+- `server/deploy/lib.sh`: shared artifact, checksum, secret-safe curl, SQLite backup/restore, service and health helpers.
+- `server/deploy/bootstrap-vps.sh`: idempotent user/directory, systemd, config and Caddy template preparation. It does not reload Caddy, enable/start systemd, add DNS or inject secrets.
+- `server/deploy/deploy-release.sh`: preflight, backup, atomic switch, health checks and automatic rollback.
+- `server/deploy/rollback-release.sh`: previous-release switch and optional DB restore.
+- `server/deploy/test-deploy-scripts.sh`: isolated local drill with temporary SQLite and fake system services.
+- `server/deploy/pitpulse-deploy.example`: keyless forced-command wrapper template; install and review outside Git before any deploy.
+- `server/deploy/prepare-deploy-credentials.example.sh`: keyless preparation checklist for a dedicated non-root account, single `restrict,command=...` key, root-owned helpers and narrowly scoped sudo; it does not generate or install private keys.
+- `server/deploy/config.production.toml`, `environment.production.example`, `deploy.env.production.example`, `pitpulse-server.service`, `pitpulse.caddyfile`, `caddyfile.global.example`: keyless templates.
+
+## One-time VPS preparation (approved; execution in progress)
+
+1. The user reported adding the DNS A record for `pitpulse.lestere.bond`; the parent session verified it resolves to `103.231.58.220` via VPS `getent` and Google/Cloudflare DoH (`Status=0`, `TTL 600`). This session's independent DoH retry was inconclusive, so recheck resolution and the TLS certificate chain at go-live. No DNS record was edited in these repository changes.
+2. Generate a **new dedicated Ed25519 key pair** outside Git, using a distinct filename. Do not reuse an existing general-purpose root key. The private key belongs only in GitHub Environment `production` secret `VPS_SSH_KEY`; the public key is supplied to the VPS preparation command below. Give that environment only: `VPS_HOST`, `VPS_USER`, `VPS_KNOWN_HOSTS`, `VPS_SSH_KEY`. Keep private keys, key contents, `known_hosts` and tokens out of Git, artifacts, logs, messages and task reports. Derive `VPS_KNOWN_HOSTS` with `ssh-keyscan -t ed25519 <host>` and verify the fingerprint out of band.
+3. From a reviewed repository checkout on the VPS, set `PITPULSE_DEPLOY_PUBLIC_KEY_FILE` to the **new public key** and review/run `server/deploy/prepare-deploy-credentials.example.sh` as root. The template creates a dedicated non-root account, installs `server/deploy/pitpulse-deploy.example` as one root-owned forced command, writes a single `restrict,command="..."` `authorized_keys` line, validates a narrowly scoped sudoers rule, and installs byte-for-byte root helper copies. It does not read or install a private key. The wrapper accepts only `put <sha>`, `deploy <sha>` and `cleanup`, size-limits stdin, rejects arbitrary commands, compares CI-supplied helpers against installed copies, and invokes only `deploy-release.sh` through sudo. Before any deploy, verify that `ssh <alias> "uname -a"` is rejected and only the three fixed commands are accepted. This is a template/checklist, not a claim that the wrapper has been installed.
+4. Install `/etc/pitpulse/environment` mode `0600` with a newly generated high-entropy token. Use `server/deploy/environment.production.example` only as a field list; replace the placeholder and optionally inject approved upstream credentials. Install `/etc/pitpulse/deploy.env` mode `0644` from `deploy.env.production.example`, uncommenting the bare HTTPS origin only after external DNS/Caddy acceptance. The deploy helper parses this root-owned settings file, never sources it. Never copy local credentials into the repository, CI, logs or messages.
+5. Run `server/deploy/bootstrap-vps.sh` as root. Review the **existing** production `Caddyfile` before allowing any import; the existing VPS already has TLS-ALPN-01 sites and its own redacting `access_log` snippet. Bootstrap only appends an import and does not reload Caddy or start the service.
+6. With the production switch approved, validate Caddy, enable/start systemd, commit/push only the reviewed repository changes, let the `main` CI run publish the versioned artifact, and dispatch `deploy.yml` with the exact CI run ID and full commit SHA through the `production` environment. Do not treat a `workflow_dispatch` start or runner success as production acceptance; verify the public 401/200/SSE checks, certificate, client connection, logs and service status. A single successful end-to-end run from a real CI artifact is required to call the automatic release loop delivered.
+
+The workflow uses `VPS_*` secrets for a dedicated deploy account and only the three fixed forced-command calls. Before dispatch, the VPS-side forced-command wrapper, helper hashes and least-privilege sudo policy must be installed and verified. This document does not contain private keys, tokens, `known_hosts`, SQLite data, or machine-private paths.
+
+## Local verification (2026-11-09)
+
+| Command | Result |
+| --- | --- |
+| `for f in server/deploy/*.sh server/deploy/pitpulse-deploy.example; do bash -n "$f"; done` | Passed: all deployment scripts and the forced-command template parse as Bash. |
+| `bash server/deploy/test-deploy-scripts.sh` | Passed 10/10 after hardening: artifact checksum/VERSION and rejection of unexpected paths; private environment/curl configs and rejection of placeholder tokens / shell-injection lines; parsed deploy settings; atomic symlink switch; SQLite backup/integrity/restore and cold-start handling; 401/200/SSE helper logic; Caddy site adapt / authorization-header redaction / idempotent bootstrap; full deploy success, failed-deploy rollback and manual rollback; drill-token redaction. |
+| `ruby -ryaml -e ... .github/workflows/ci.yml .github/workflows/deploy.yml` | Passed: parsed jobs `server,macos` and `deploy`. Ruby was a focused YAML diagnostic because `actionlint` and Python `yaml` were unavailable. |
+| Taskdeck named gates | See the task report JSON history for this implementation; no running `Run Server`, `Run Live Replay` or `Run App` task was stopped. |
+
+The drill ran beneath a temporary `PITPULSE_DEPLOY_ROOT`; it used a temporary SQLite DB, a random drill-only token, fake systemctl/Caddy, and a curl-compatible responder. The direct Bash sandbox blocked socket binding; the Taskdeck run allowed a loopback bind but the drill does not implement a real HTTP/SSE host. Either way, **real socket-level HTTP/SSE and a real Linux systemd/Caddy service remain unverified**. Caddy routing was checked with `caddy adapt`; writing `/var/log/caddy` is unavailable in the sandbox.
+
+## Still pending before acceptance
+
+- Recheck the DNS A record that the user reported adding and the parent session verified (`pitpulse.lestere.bond → 103.231.58.220`, `Status=0`, `TTL 600`) at go-live; this session's independent DoH check was inconclusive. Decide whether to inject optional `F1_LIVE_ACCESS_TOKEN` / Mapbox public token / WEC settings; the conservative default remains no.
+- The approved end-to-end run is being carried out by the parent session: generate one new Ed25519 pair outside Git; deliver its public key to the VPS and its private key plus `VPS_HOST` / `VPS_USER` / `VPS_KNOWN_HOSTS` only into GitHub Environment `production` secrets; set the new API token in `/etc/pitpulse/environment` and deliver the same token to the App user through a private channel; push the reviewed commit so `main` CI can produce the artifact; dispatch the `production` workflow with the CI run ID and full commit SHA.
+- Real VPS checks: artifact ABI on Ubuntu 24.04, forced-command wrapper and `SSH_ORIGINAL_COMMAND` denials, Caddy certificate issuance, public HTTPS 401/200/SSE, cold-start migrations/scheduler, graceful shutdown/restart, backup restore, provider outage, real race timing, RSS/CPU and client UI.
+- App test address will be `https://pitpulse.lestere.bond` after acceptance; the production token must never appear in this document, chat, logs, Git or artifacts. Real CI/deploy results and public checks will be appended after the first production run.

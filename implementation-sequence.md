@@ -268,7 +268,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 **实现范围**：现有 `server/deploy/`、必要的可选 Docker 改进、README、`docs/acceptance/deployment.md` / `live.md`。
 
-- Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。
+- Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。固定 Ubuntu 24.04 x86-64 CI 产出带 VERSION/SHA256/ldd 的版本化 artifact，GitHub Actions production 环境手动批准后经专用 SSH key 与 forced-command 上传；VPS 使用不可变 release 目录、原子 current symlink、单写者 SQLite 备份、401/200/SSE 健康检查和失败自动回滚。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。
 - 本地开发使用 `taskdeck init` 注册 PitPulse，配置 `Run Server` / `Run App`：启动前分别构建 Rust/Swift，前台进程由 Taskdeck 管理；Server 读取仓库外配置与数据库，App 默认连接真实本机服务38701。停止和重启只操作本会话任务，回放始终独立。
 - 常用本地开发检查由Taskdeck具名任务统一入口：Rust debug/release、test/fmt/clippy，Swift debug/release、测试目标编译/单测，以及地图和任务报告检查；遵循AGENTS.md的Taskdeck优先、具名启动和桌面测试隔离规范。
 - 有 VPS 访问授权再部署；没有则本地先验收，不捏造远程上线结果。除非用户另行授权，不 commit / push / 创建 PR / 发布 release。

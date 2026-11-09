@@ -1,0 +1,24 @@
+# Minimal main Caddyfile for an isolated drill or a fresh host.
+# The existing production VPS already has a Caddyfile; bootstrap only appends
+# an import there and never replaces other site blocks.
+{
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+(access_log) {
+	log {
+		output file /var/log/caddy/access-{args[0]}.log {
+			roll_size 10MiB
+			roll_keep 3
+			roll_keep_for 336h
+		}
+		format filter {
+			request>headers>X-Api-Key delete
+			request>headers>Authorization delete
+			request>headers>Proxy-Authorization delete
+			request>headers>Cookie delete
+			request>headers>Set-Cookie delete
+		}
+	}
+}

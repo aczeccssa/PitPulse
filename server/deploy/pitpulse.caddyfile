@@ -1,0 +1,15 @@
+# Imported from the VPS Caddyfile by bootstrap-vps.sh.
+# The shared (access_log) snippet must already be defined in the main Caddyfile.
+https://pitpulse.lestere.bond {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+
+	import access_log pitpulse
+
+	reverse_proxy 127.0.0.1:38701 {
+		flush_interval -1
+	}
+}

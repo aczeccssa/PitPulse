@@ -104,4 +104,11 @@ taskdeck stop --session PitPulse
 
 `Run App` uses `scripts/run-app.sh`, builds the Release app into `~/Library/Caches/PitPulse/Xcode`, and connects to `http://127.0.0.1:38701`. Starting the App does not require the server to be ready; the existing retry path reconnects. Tasks start manually (`auto_start: false`). If the upstream has ended or stopped updating, the App continues to show its real stale/disconnected state.
 
-`Build App Tests` compiles macOS tests without launching a host. `Test Server` / `Test iOS` run their suites. Run Cargo tasks sequentially and serialize Xcode development tasks; routine agent work follows the Taskdeck-first rules in `AGENTS.md`.
+`Build App Tests` compiles macOS tests without launching a host.
+
+## VPS release pipeline
+
+[Deployment acceptance](docs/acceptance/deployment.md) documents the versioned CI artifact, manual production approval, dedicated SSH key boundary, immutable release directories, SQLite backup/atomic systemd switch, HTTPS/SSE health checks and rollback. CI builds the Linux x86-64 artifact; `.github/workflows/deploy.yml` is a manually dispatched `production` environment workflow that uses only repository-external GitHub Secrets. Cold start uses a new VPS SQLite DB, never the local WAL database. Configure the app with `https://pitpulse.lestere.bond` and its per-server Keychain Bearer token after the public site is accepted.
+
+The repository contains keyless templates only. The user has added the DNS A record and approved the production rollout; see [deployment acceptance](docs/acceptance/deployment.md) for verification details and go-live checks. Do not store real tokens, SSH keys, SQLite databases or captured live-feed logs in Git or CI artifacts.
+ `Test Server` / `Test iOS` run their suites. Run Cargo tasks sequentially and serialize Xcode development tasks; routine agent work follows the Taskdeck-first rules in `AGENTS.md`.

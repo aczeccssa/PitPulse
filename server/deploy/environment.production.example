@@ -1,0 +1,15 @@
+# Example only. Install as /etc/pitpulse/environment with mode 0600.
+# Do not put real values in Git, CI artifacts, task reports, or deployment logs.
+F1_COMPANION_CONFIG=/etc/pitpulse/config.toml
+F1_COMPANION_BIND=127.0.0.1:38701
+F1_COMPANION_DATABASE_PATH=/var/lib/pitpulse/pitpulse.sqlite
+F1_COMPANION_REQUIRE_TOKEN=true
+F1_COMPANION_TOKEN=REPLACE_WITH_A_NEW_HIGH_ENTROPY_RANDOM_TOKEN
+
+# Optional upstream credentials; inject only after the user explicitly decides.
+# F1_LIVE_ACCESS_TOKEN=
+# F1_COMPANION_MAPBOX_PUBLIC_TOKEN=
+# F1_COMPANION_LIVE_INTERFACE=
+# F1_COMPANION_WEC_LIVE_ENABLED=
+# F1_COMPANION_WEC_LIVE_SESSION_ID=
+# F1_COMPANION_WEC_LIVE_POLL_SECONDS=

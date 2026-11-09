@@ -9,7 +9,9 @@ on:
 jobs:
   server:
     name: Server fmt / clippy / test / build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -19,14 +21,49 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
+      - name: Install linker dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libssl-dev
       - name: Format
         run: cargo fmt --manifest-path server/Cargo.toml -- --check
       - name: Clippy
-        run: cargo clippy --manifest-path server/Cargo.toml -- -D warnings
+        run: cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings
       - name: Test
-        run: cargo test --manifest-path server/Cargo.toml
+        run: cargo test --locked --manifest-path server/Cargo.toml
       - name: Build release
-        run: cargo build --release --manifest-path server/Cargo.toml
+        run: cargo build --release --locked --manifest-path server/Cargo.toml
+      - name: Package Linux x86-64 release artifact
+        run: |
+          set -euo pipefail
+          sha="${GITHUB_SHA}"
+          stage="${RUNNER_TEMP}/pitpulse-release"
+          artifact="pitpulse-server-linux-x86_64-${sha}.tar.gz"
+          mkdir -p "$stage"
+          install -m 0755 server/target/release/pitpulse-server "$stage/pitpulse-server"
+          printf '%s\n' "$sha" > "$stage/VERSION"
+          ldd "$stage/pitpulse-server" > "$stage/ldd.txt"
+          ! grep -q 'not found' "$stage/ldd.txt"
+          install -m 0644 server/deploy/config.production.toml "$stage/config.production.toml"
+          install -m 0644 server/deploy/pitpulse-server.service "$stage/pitpulse-server.service"
+          install -m 0644 server/deploy/pitpulse.caddyfile "$stage/pitpulse.caddyfile"
+          (
+            cd "$stage"
+            sha256sum pitpulse-server VERSION ldd.txt config.production.toml \
+              pitpulse-server.service pitpulse.caddyfile > SHA256SUMS
+          )
+          tar -czf "$artifact" -C "$stage" \
+            pitpulse-server VERSION ldd.txt SHA256SUMS \
+            config.production.toml pitpulse-server.service pitpulse.caddyfile
+          sha256sum "$artifact" > "$artifact.sha256"
+          printf 'ARTIFACT=%s\n' "$artifact" >> "$GITHUB_ENV"
+      - name: Upload Linux x86-64 release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pitpulse-server-linux-x86_64-${{ github.sha }}
+          path: |
+            ${{ env.ARTIFACT }}
+            ${{ env.ARTIFACT }}.sha256
+          if-no-files-found: error
+          retention-days: 14
 
   macos:
     name: macOS build / test
