@@ -6,6 +6,10 @@ task_order:
 - Build App Release
 - Build iOS
 - Test iOS
+- Test Server
+- Check Server Format
+- Lint Server
+- Check Task Report
 - Run Server
 - Run App
 tasks:
@@ -72,3 +76,33 @@ tasks:
     shell: false
     auto_start: false
     clear_logs_on_restart: true
+  Test Server:
+    command: cargo
+    args: [test, --locked, --manifest-path, server/Cargo.toml]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+  Check Server Format:
+    command: cargo
+    args: [fmt, --manifest-path, server/Cargo.toml, --, --check]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+  Lint Server:
+    command: cargo
+    args: [clippy, --locked, --manifest-path, server/Cargo.toml, --all-targets, --, -D, warnings]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+  Check Task Report:
+    command: /bin/zsh
+    args:
+    - -lc
+    - node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false

@@ -78,7 +78,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 - **M1：第一条可用链路** — T01、T02、T04、T05、T06：真实赛历 → SQLite → REST → Menu Bar；可选赛季、显示国旗和本地时间、离线可读。
 - **M2：完整 V1** — T07～T11：各 Session 成绩、WDC/WCC、修订刷新、提醒、故障恢复；T03 的可用素材逐步接入。
 - **M3：尽力提供 Live V2** — T12～T14：协议事实明确后再接实时链路和 Notch；协议或授权受阻不影响 M2。
-- **M4：个人部署** — T15：本地部署演练先行；真实 VPS / 比赛时段验证独立记录，不用模拟验收代替。
+- **M4：个人部署与品牌素材** — T15、T24：本地部署演练先行；真实 VPS / 比赛时段验证独立记录，不用模拟验收代替。
 
 以可运行的纵向闭环推进，不先造完整设计系统、复杂主题、全量遥测存储、素材后台、账户系统或通用工作流平台。没有日期 / 工期承诺；外部 API 与真实赛期按证据推进。
 
@@ -368,6 +368,14 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 **范围**：`server/src/domain/live.rs`、`server/src/providers/f1_live/`、`server/src/providers/wec_live.rs`、`macos/Core/LiveStore/`、`macos/Core/Models/`、`macos/Features/LiveIsland/`、`macos/Features/MenuBar/`。
 
 **验收**：F1 从 `Stints` topic、WEC 从 bootstrap 映射轮胎；WEC 映射虚拟能量与制造商；计时表可切换 Gap、轮胎、虚拟能量列并持久化；关注车手焦点卡展示头盔、车队 logo（或首字母徽章）与本地车身剪影，不联网抓取第三方素材；Live Island 与菜单栏可在 F1/WEC 同时进行时随时切换；真实 WEC 数据、replay fixture、Rust 测试与 macOS 编译通过。
+
+### T24 — PitPulse 分层 Logo 与 App/server 图标接入
+
+**范围（M4）**：`design/brand/pitpulse-v1/`；为 PitPulse 设计简约、独立于赛事官方标识的 App Logo，交付透明主体、独立背景与实际图标合成预览。无硬依赖，关联 T04/T15；用户确认设计后接入 macOS 应用图标、server favicon 与首页引用，并通过已有 Taskdeck 具名服务更新本机运行实例；对外发布不在范围内。
+
+**验收**：原创几何主体与真实 alpha；背景单独保存、画布尺寸一致；预览为正视图标而非设备样机；记录提示词、图层用法与图片检查证据；macOS Release 构建产物包含并引用新图标；server favicon 实际 HTTP200、类型正确，启用 token 时静态图标可读且 API 鉴权保持；具名 App/server 更新成功；任务报告校验通过。
+
+**后续头像补充**：F1 新增车手没有本地头盔时，可回退到同一稳定车手 ID 的本地头像；补 2026 Haas Rafael Camara 官方肖像，已有 F1 头盔优先和 WEC 肖像展示不变。
 
 ## 多平台客户端（M7）
 

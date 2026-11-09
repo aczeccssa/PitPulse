@@ -1,0 +1,30 @@
+{
+  "logo-foreground.png": {
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "fullyTransparentPixels": 1344988,
+    "visibleBoundsAlphaOver128": [
+      253,
+      337,
+      991,
+      958
+    ]
+  },
+  "background.png": {
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGB",
+    "alphaRange": null
+  },
+  "app-icon-preview.png": {
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGB",
+    "alphaRange": null
+  }
+}

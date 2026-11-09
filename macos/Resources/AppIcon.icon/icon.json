@@ -1,0 +1,49 @@
+{
+  "fill": {
+    "solid": "srgb:0.07,0.075,0.09,1"
+  },
+  "groups": [
+    {
+      "name": "Logo",
+      "layers": [
+        {
+          "name": "Logo",
+          "image-name": "logo-foreground.png",
+          "is-glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "specular": false
+    },
+    {
+      "name": "Background",
+      "layers": [
+        {
+          "name": "Background",
+          "image-name": "background.png",
+          "is-glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "specular": false
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared",
+    "circles": []
+  }
+}

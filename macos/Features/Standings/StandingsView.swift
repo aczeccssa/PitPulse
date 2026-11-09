@@ -74,7 +74,7 @@ struct StandingsView: View {
                     Button { selectedDriver = row } label: {
                         HStack(spacing: 12) {
                             rank(row.position)
-                            if let image = MotorsportAsset.image(kind: .helmet, id: row.driverId, season: model.selectedSeason) {
+                            if let image = MotorsportAsset.f1DriverImage(id: row.driverId, season: model.selectedSeason) {
                                 Image(nsImage: image).resizable().scaledToFit().frame(width: 32, height: 32).accessibilityHidden(true)
                             } else {
                                 Text(MotorsportAsset.abbreviation(row.driverName)).font(.caption2.bold())

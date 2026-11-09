@@ -113,7 +113,7 @@ private struct SessionResultRow: View {
                 .frame(width: 24, alignment: .trailing)
                 .accessibilityLabel("名次 \(result.position.map(String.init) ?? "未分类")")
 
-            if let image = MotorsportAsset.image(kind: .helmet, id: result.driverId, season: season) {
+            if let image = MotorsportAsset.f1DriverImage(id: result.driverId, season: season) {
                 Image(nsImage: image).resizable().scaledToFit().frame(width: 30, height: 30)
                     .accessibilityHidden(true)
             } else {
@@ -183,7 +183,7 @@ struct SessionResultDetailView: View {
                 .accessibilityLabel("返回成绩")
                 .accessibilityIdentifier("results.back")
                 .keyboardShortcut(.cancelAction)
-                if let image = MotorsportAsset.image(kind: .helmet, id: result.driverId, season: meeting?.season ?? model.selectedSeason) {
+                if let image = MotorsportAsset.f1DriverImage(id: result.driverId, season: meeting?.season ?? model.selectedSeason) {
                     Image(nsImage: image).resizable().scaledToFit().frame(width: 36, height: 36).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 3) {

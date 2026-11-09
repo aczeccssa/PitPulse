@@ -1,0 +1,23 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "asset": "logo-foreground.png",
+      "mode": "generation",
+      "transparentBackground": true,
+      "prompt": "Use case: logo-brand.\nAsset type: production foreground layer for the macOS app icon of PitPulse, a private live motorsport timing companion covering F1 and endurance racing.\nPrimary request: Design ONE exceptionally simple, ownable, beautifully proportioned racing P monogram. A single broad vermilion ribbon makes a forward-leaning capital P, its upper loop suggesting a fast racetrack hairpin. One clean diagonal negative-space cut through the inner bend gives a subtle pulse/telemetry feeling. Strong single silhouette, bold filled geometry, controlled slightly softened corners, generous internal negative space, balanced optical weight. It should feel designed by a meticulous contemporary app identity studio. It must work at a tiny size.\nComposition: square 1024 x 1024 canvas. Center the mark precisely. All opaque foreground artwork fits approximately in x=250..774, y=222..802 (about 52% width and 57% height), leaving completely transparent generous margins. Face-on orthographic, no perspective.\nColor: single flat warm vermilion red near #FF493E. Crisp smooth edges. No gradients or shadows in the mark.\nBackground: genuinely transparent alpha everywhere except the mark, including the cutout. This is ONLY the foreground artwork, no app tile.\nConstraints: no lettering beyond the abstract P shape, no wordmark, no captions, no multiple options, no checkerboard baked into pixels, no border, no frame, no square or rounded-square base, no mockup, no objects, no flag, no car, no speedometer, no generic heartbeat line, no photographic texture, no gloss, no blur, no decorative small details, no resemblance to the official F1 logo. Return only the actual transparent production mark."
+    },
+    {
+      "asset": "background.png",
+      "mode": "generation",
+      "transparentBackground": false,
+      "prompt": "Use case: logo-brand.\nAsset type: standalone background layer for a minimal macOS application icon.\nPrimary request: one perfectly square edge-to-edge dark graphite background, with an extremely subtle smooth vertical tonal transition from charcoal #282A2F at the very top to almost black graphite #15161A at the very bottom. Very restrained, neutral, no blue or purple color cast. Nothing else anywhere on the image. Perfectly flat straight-on graphic, absolutely smooth clean surface. No objects, logo, letter, mark, text, pattern, texture, noise, vignette, border, bevel, highlight, shadow, perspective, rounded corners, checkerboard, transparency, tile inside another canvas, or margins. The full canvas IS the opaque background, all the way to the four corners. A single actual production asset, not a mockup. Square 1254 x 1254 pixels."
+    },
+    {
+      "asset": "app-icon-preview.png",
+      "mode": "compositing",
+      "transparentBackground": false,
+      "prompt": "Use case: compositing.\nAsset type: actual finished PitPulse application icon, square PNG, straight-on, not a mockup.\nInput image 1: the logo FOREGROUND to preserve, the vermilion forward-leaning P monogram on transparency.\nInput image 2: the exact separate BACKGROUND to use, the dark graphite square.\nPrimary request: put image 1 directly over image 2, aligned canvas edge to canvas edge at the same size, without changing the P's shape, scale, location, slanted stems, counter or diagonal cut. Keep the dark graphite smooth and restrained. The P must have a beautifully clean solid red fill, crisp smooth antialiased edges; remove any ghost speckling from the surrounding transparent regions so the background is clean. It is a minimal production app icon.\nComposition: entire square canvas is the background, no outer margins, no frame, no perspective, no separate rounded tile within a scene. The icon fills the output canvas. Square 1254 x 1254.\nConstraints: no text, no labels, no wordmark, no additional shapes, no new shadows, no shine, no 3D, no glossy effects, no noise, no display stand, no device, no grid of variants, no checkerboard, no watermark. Do not redesign the P. Return only the actual composed icon image."
+    }
+  ]
+}
