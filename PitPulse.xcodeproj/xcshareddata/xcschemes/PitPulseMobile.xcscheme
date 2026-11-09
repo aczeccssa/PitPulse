@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1430"
-   wasCreatedForAppExtension = "YES"
    version = "2.0">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -45,9 +44,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
-            BuildableName = "PitPulseLiveActivity.appex"
-            BlueprintName = "PitPulseLiveActivity"
+            BlueprintIdentifier = "0548DB77D5E7660EC818742A"
+            BuildableName = "PitPulse.app"
+            BlueprintName = "PitPulseMobile"
             ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -70,20 +69,18 @@
       selectedDebuggerIdentifier = ""
       selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
-      askForAppToLaunch = "Yes"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES"
-      launchAutomaticallySubstyle = "2">
+      allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
-            BuildableName = "PitPulseLiveActivity.appex"
-            BlueprintName = "PitPulseLiveActivity"
+            BlueprintIdentifier = "0548DB77D5E7660EC818742A"
+            BuildableName = "PitPulse.app"
+            BlueprintName = "PitPulseMobile"
             ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -98,9 +95,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "EFF15784EA1DC4D4E6E3D9BA"
-            BuildableName = "PitPulseLiveActivity.appex"
-            BlueprintName = "PitPulseLiveActivity"
+            BlueprintIdentifier = "0548DB77D5E7660EC818742A"
+            BuildableName = "PitPulse.app"
+            BlueprintName = "PitPulseMobile"
             ReferencedContainer = "container:PitPulse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

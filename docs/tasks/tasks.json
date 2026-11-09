@@ -5612,12 +5612,17 @@
       ],
       "blockers": [],
       "nextAction": "用签名设备安装 iOS App，在比赛进行时验证真机灵动岛与锁屏呈现；随后确认后台更新边界。",
-      "updatedAt": "2026-11-09T06:35:04Z",
+      "updatedAt": "2026-11-09T07:53:21Z",
       "history": [
         {
           "at": "2026-11-09T06:05:44Z",
           "status": "inReview",
           "note": "iOS App + Widget Extension 构建通过，3 项单元测试通过，模拟器完成赛程/Live/灵动岛运行验证；真机待验收。"
+        },
+        {
+          "at": "2026-11-09T07:53:21Z",
+          "status": "inReview",
+          "note": "修复 scheme 可运行目标：PitPulseMobile / PitPulseLiveActivity scheme 的 Run/Profile 指向 PitPulse.app（此前误指向 .appex，导致 Xcode 运行时报 SBAvocado/SpringBoard 错误）；iOS build 通过。"
         }
       ]
     }

@@ -58,6 +58,7 @@ Rules:
 - Both app targets share `macos/Resources/AppIcon.icon` (Icon Composer) via `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`.
 - macOS keeps bundle id `com.pitpulse.F1Companion` for Keychain / preferences compatibility; iOS uses `com.pitpulse.mobile`.
 - Scheme names: `PitPulseDesktop`, `PitPulseMobile`, `PitPulseLiveActivity`, `PitPulseLiveAcceptance`.
+- Run the **`PitPulseMobile` app scheme**; the widget extension is embedded and is not a standalone runnable app.
 
 ### Project files and signing
 
