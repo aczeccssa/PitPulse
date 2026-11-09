@@ -118,12 +118,12 @@
 		137590598E07BBB9055F5093 /* CalendarLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLogicTests.swift; sourceTree = "<group>"; };
 		14EE57CCE4B4A717D3124E84 /* CountryFlagTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryFlagTests.swift; sourceTree = "<group>"; };
 		1531EA7D92B0C69DE52F4A25 /* SettingsWindowPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowPresentation.swift; sourceTree = "<group>"; };
-		1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseDesktopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A7474D1395FD74E6C8F9DA3 /* PitPulseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1B810FDA06E0AF5AB541727D /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		23215CA3360E3C3B6D332C3E /* MenuBarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRootView.swift; sourceTree = "<group>"; };
 		24CBFD9964E8959C35769657 /* MotorsportAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorsportAsset.swift; sourceTree = "<group>"; };
-		2A28D81D173E8E8E165CF50F /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
-		2B3B782D7F1FC69178DB2201 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		2A28D81D173E8E8E165CF50F /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		2B3B782D7F1FC69178DB2201 /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		3ABBF09D08B559B256B9CCCE /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		4078C70B0D4F4D90B78017F3 /* LiveActivityContentStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityContentStateTests.swift; sourceTree = "<group>"; };
 		4607D96DE7BFEF826820373B /* LiveIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIsland.swift; sourceTree = "<group>"; };
@@ -131,26 +131,26 @@
 		472A8020BEE870DA0E682834 /* run-live-map-check.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "run-live-map-check.sh"; sourceTree = "<group>"; };
 		4908F677524E8B3B6147C163 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4A29939D0C792D910BE028E6 /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
-		595AE17CD82A669F7CCA2AC1 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
-		5FD756E18A8B354ECB4B34E4 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		595AE17CD82A669F7CCA2AC1 /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		5FD756E18A8B354ECB4B34E4 /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		621AED760B5A5FECF78215E2 /* PitPulseComponents */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseComponents; path = Packages/PitPulseComponents; sourceTree = SOURCE_ROOT; };
 		6B3A0C5F41CD1D2D982B6738 /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
-		6E837695763305ACF873B6AA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
-		71DF5FB53B18A9F59859B1DD /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		6E837695763305ACF873B6AA /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		71DF5FB53B18A9F59859B1DD /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		73F94C61E273101269934889 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		75A5111ABD8EE48998F686EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		75A5111ABD8EE48998F686EA /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		78264236CA8A119CC4D709E2 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
 		7920B11EF6882FB847989192 /* PitPulseLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityBundle.swift; sourceTree = "<group>"; };
 		7ADCAA30820F5B8AD72D1642 /* StandingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandingsView.swift; sourceTree = "<group>"; };
 		7EC58695195A5EE991F71D6B /* LiveIslandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandTests.swift; sourceTree = "<group>"; };
-		7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PitPulseLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PitPulseLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F1C820BB139979941201A4B /* MotorsportAssetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorsportAssetTests.swift; sourceTree = "<group>"; };
-		8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseDesktopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8045039CD86CB883EA2801D2 /* PitPulseUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8207C1ACE6F8B0632FAAE2F3 /* AppSymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbolTests.swift; sourceTree = "<group>"; };
 		870D43CB0A62A49E4282FC73 /* CredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStoreTests.swift; sourceTree = "<group>"; };
-		897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		89BC4B5D61D1E8C3C8FFB9DF /* map.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = map.html; sourceTree = "<group>"; };
-		9B79BC56586F0B566E40B73D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		9B79BC56586F0B566E40B73D /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
 		ABC56F5752CD8D2DF7FC8D60 /* PitPulseData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseData; path = Packages/PitPulseData; sourceTree = SOURCE_ROOT; };
 		AE3839057BE1B40B175FC712 /* CalendarCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarCacheTests.swift; sourceTree = "<group>"; };
 		AED67EA87B6F0F65B4F34B2A /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
@@ -158,15 +158,15 @@
 		B5271EDC99039CA37948C293 /* PitPulseLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityWidget.swift; sourceTree = "<group>"; };
 		B67C92CB87323C943A2AD51F /* StatusMenuLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuLabel.swift; sourceTree = "<group>"; };
 		C1E2B51C505E8AD301C9EA2E /* AppSymbol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbol.swift; sourceTree = "<group>"; };
-		C554800C80D3D13C872DB8D2 /* map-page.test.mjs */ = {isa = PBXFileReference; path = "map-page.test.mjs"; sourceTree = "<group>"; };
+		C554800C80D3D13C872DB8D2 /* map-page.test.mjs */ = {isa = PBXFileReference; lastKnownFileType = text; path = "map-page.test.mjs"; sourceTree = "<group>"; };
 		CCB2AE5C5BAA37A6FBBA2426 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		CDEE17B106E0ADE0CED5EEE6 /* F1CompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = F1CompanionApp.swift; sourceTree = "<group>"; };
 		D06AF65FF05EE4004AAFDD27 /* SessionResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionResultsView.swift; sourceTree = "<group>"; };
 		D4939018160EDA5DF8DE2949 /* PitPulseAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PitPulseAssets.xcassets; sourceTree = "<group>"; };
 		D74D3840296A36670FBD030F /* MeetingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailView.swift; sourceTree = "<group>"; };
 		E084EC67AAA9E91558AFFA0E /* NextMeetingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextMeetingCard.swift; sourceTree = "<group>"; };
-		E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PitPulseDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PitPulseMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E73DA89BDC47A03D282AA36D /* PitPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PitPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8181598D0C5E86A02523BA8 /* PitPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PitPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
 		F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerAddressTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -424,11 +424,11 @@
 		F028EC422759F32C82A31BAC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */,
-				1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */,
-				8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */,
+				E73DA89BDC47A03D282AA36D /* PitPulse.app */,
+				1A7474D1395FD74E6C8F9DA3 /* PitPulseTests.xctest */,
+				8045039CD86CB883EA2801D2 /* PitPulseUITests.xctest */,
 				7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */,
-				E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */,
+				E8181598D0C5E86A02523BA8 /* PitPulse.app */,
 				897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */,
 			);
 			name = Products;
@@ -483,7 +483,7 @@
 				3E616CB9523488C7B71F49B4 /* PitPulseComponents */,
 			);
 			productName = PitPulseMobile;
-			productReference = E8181598D0C5E86A02523BA8 /* PitPulseMobile.app */;
+			productReference = E8181598D0C5E86A02523BA8 /* PitPulse.app */;
 			productType = "com.apple.product-type.application";
 		};
 		6B0A1D88B7B1E9AD123EEF2C /* PitPulseMobileTests */ = {
@@ -526,7 +526,7 @@
 				EECD82845EE28BD666E1C359 /* PitPulseComponents */,
 			);
 			productName = PitPulseDesktopTests;
-			productReference = 1A7474D1395FD74E6C8F9DA3 /* PitPulseDesktopTests.xctest */;
+			productReference = 1A7474D1395FD74E6C8F9DA3 /* PitPulseTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		DC00A15457D61F874F6CB74E /* PitPulseDesktopUITests */ = {
@@ -544,7 +544,7 @@
 			packageProductDependencies = (
 			);
 			productName = PitPulseDesktopUITests;
-			productReference = 8045039CD86CB883EA2801D2 /* PitPulseDesktopUITests.xctest */;
+			productReference = 8045039CD86CB883EA2801D2 /* PitPulseUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */ = {
@@ -567,7 +567,7 @@
 				D34848AAEB77EF8686E1DE44 /* PitPulseComponents */,
 			);
 			productName = PitPulseDesktop;
-			productReference = E73DA89BDC47A03D282AA36D /* PitPulseDesktop.app */;
+			productReference = E73DA89BDC47A03D282AA36D /* PitPulse.app */;
 			productType = "com.apple.product-type.application";
 		};
 		EFF15784EA1DC4D4E6E3D9BA /* PitPulseLiveActivity */ = {
@@ -784,6 +784,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -803,6 +804,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -824,6 +826,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -844,6 +847,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -932,6 +936,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = macos/Support/Info.plist;
@@ -954,6 +959,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1036,6 +1042,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1055,6 +1062,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1074,6 +1082,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = macos/Support/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1091,6 +1100,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1109,6 +1119,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1126,6 +1137,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

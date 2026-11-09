@@ -14,7 +14,7 @@
 
 ```
 PitPulse.xcworkspace                 # 工作区：管理一个 App 工程 + 三个本地 Package
-├── PitPulse.xcodeproj              # 单一 App 工程（XcodeGen 由根目录 project.yml 生成）
+├── PitPulse.xcodeproj              # 单一 App 工程（以工程文件为源，Signing 在 Xcode 中维护）
 │   ├── PitPulseDesktop             # macOS App：菜单栏 / Notch / 地图 / 设置
 │   ├── PitPulseDesktopTests / PitPulseDesktopUITests
 │   ├── PitPulseMobile              # iOS App：赛程 / Live / 设置
@@ -66,8 +66,7 @@ PitPulse.xcworkspace                 # 工作区：管理一个 App 工程 + 三
 ## 复现命令
 
 ```bash
-# 重新生成工程（修改根目录 project.yml 后）
-xcodegen generate
+# 工程文件即源文件，直接在 Xcode 中修改；不要重新生成覆盖 Signing
 
 # 构建 / 测试 iOS
 scripts/xcode-ios-task.sh build Debug

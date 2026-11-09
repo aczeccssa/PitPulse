@@ -5372,7 +5372,7 @@
         "T04",
         "T26"
       ],
-      "scope": "Packages/PitPulseShared、Packages/PitPulseData、Packages/PitPulseComponents；PitPulse.xcodeproj/project.yml；macos/App/AppModel.swift；macos/Features；macos/Tests。",
+      "scope": "Packages/PitPulseShared、Packages/PitPulseData、Packages/PitPulseComponents；PitPulse.xcodeproj；macos/App/AppModel.swift；macos/Features；macos/Tests。",
       "steps": [
         "拆为三个独立本地 Swift Package（PitPulseShared / PitPulseData / PitPulseComponents，包名=模块名）",
         "移动 Core 纯 Foundation 文件到 Data，值契约与常量放入 Shared",
@@ -5502,7 +5502,7 @@
         "T13",
         "T23"
       ],
-      "scope": "ios/project.yml、ios/PitPulseMobile、ios/PitPulseLiveActivity、ios/PitPulseMobileTests、Packages/PitPulseShared/Sources/PitPulseShared/LiveActivity.swift、scripts/xcode-ios-task.sh、taskdeck.yaml、docs/acceptance/ios-live-activity.md。",
+      "scope": "PitPulse.xcodeproj、ios/PitPulseMobile、ios/PitPulseLiveActivity、ios/PitPulseMobileTests、Packages/PitPulseShared/Sources/PitPulseShared/LiveActivity.swift、scripts/xcode-ios-task.sh、taskdeck.yaml、docs/acceptance/ios-live-activity.md。",
       "steps": [
         "用 XcodeGen 建立 iOS App + Widget Extension 工程并引用本地包",
         "实现赛程 / Live / 设置三屏，复用共享数据层",
@@ -5546,10 +5546,6 @@
         {
           "label": "统一工程",
           "path": "PitPulse.xcodeproj/project.pbxproj"
-        },
-        {
-          "label": "iOS 工程描述",
-          "path": "project.yml"
         },
         {
           "label": "iOS App 入口",
