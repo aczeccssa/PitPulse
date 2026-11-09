@@ -5426,10 +5426,6 @@
         {
           "label": "验收记录",
           "path": "docs/acceptance/ios-live-activity.md"
-        },
-        {
-          "label": "根工作区",
-          "path": "PitPulse.xcodeproj/project.pbxproj"
         }
       ],
       "evidence": [
@@ -5485,7 +5481,7 @@
       "milestone": "M7",
       "area": "iOS / SwiftUI / ActivityKit",
       "status": "inReview",
-      "summary": "新增 iOS 26+ App（赛程表 / Live / 设置）与独立 Widget Extension，复用 PitPulseData 的 APIClient、LiveStore、CalendarLogic 与缓存；App 内 LiveActivityController 驱动 ActivityKit 的灵动岛与锁屏 Live Activity，无需服务端推送。已在 iPhone 16 Pro / iOS 26.5 模拟器完成构建、3 项单元测试与真实数据运行验证；真机灵动岛验收待签名设备。",
+      "summary": "在统一工程 PitPulse.xcodeproj 内新增 iOS 26+ App（赛程表 / Live / 设置）与独立 Widget Extension，复用 PitPulseData 的 APIClient、LiveStore、CalendarLogic 与缓存；App 内 LiveActivityController 驱动 ActivityKit 的灵动岛与锁屏 Live Activity，无需服务端推送。已在 iPhone 16 Pro / iOS 26.5 模拟器完成构建、3 项单元测试与真实数据运行验证；真机灵动岛验收待签名设备。",
       "dependencies": [
         "T25"
       ],
@@ -5535,6 +5531,10 @@
       ],
       "deliverables": [
         {
+          "label": "统一工程",
+          "path": "PitPulse.xcodeproj/project.pbxproj"
+        },
+        {
           "label": "iOS 工程描述",
           "path": "project.yml"
         },
@@ -5583,7 +5583,7 @@
         {
           "label": "iOS 构建",
           "path": "docs/acceptance/ios-live-activity.md",
-          "detail": "xcodebuild ios/PitPulseMobile.xcodeproj Debug build exit 0（iPhone 16 Pro / iOS 26.5）。"
+          "detail": "xcodebuild -project PitPulse.xcodeproj -scheme PitPulseMobile Debug build exit 0（iPhone 16 Pro / iOS 26.5）。"
         },
         {
           "label": "iOS 测试",
@@ -5603,7 +5603,7 @@
       ],
       "blockers": [],
       "nextAction": "用签名设备安装 iOS App，在比赛进行时验证真机灵动岛与锁屏呈现；随后确认后台更新边界。",
-      "updatedAt": "2026-11-09T06:05:44Z",
+      "updatedAt": "2026-11-09T06:35:04Z",
       "history": [
         {
           "at": "2026-11-09T06:05:44Z",
