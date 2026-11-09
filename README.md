@@ -1,13 +1,16 @@
 # PitPulse — F1 Companion
 
-Self-hosted F1 companion consisting of a Rust API/data service and a native macOS Menu Bar + Notch app.
+Self-hosted F1 companion consisting of a Rust API/data service, a native macOS Menu Bar + Notch app, and an iOS 26+ companion with Live Activity.
 
 - Architecture: `F1-Companion-Architecture.md`
 - Task status board: [`docs/tasks/index.html`](docs/tasks/index.html) · [JSON data](docs/tasks/tasks.json) · [preview/update guide](docs/tasks/README.md)
 - Implementation plan: [`implementation-sequence.md`](implementation-sequence.md)
 - Independent helmet / team-logo collection task: [`docs/tasks/T03-motorsport-assets.md`](docs/tasks/T03-motorsport-assets.md)
 - Server: `server/`
-- macOS: `macos/`
+- macOS sources: `macos/`
+- iOS sources: `ios/`
+- Shared modules: `Packages/PitPulseShared`, `Packages/PitPulseData`, `Packages/PitPulseComponents`
+- Xcode: `PitPulse.xcworkspace` (manages `PitPulse.xcodeproj` + the three packages)
 
 ## Current scope
 

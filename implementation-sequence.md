@@ -383,7 +383,7 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 ### T25 — E1 客户端分包（Data / Components / Desktop 基座）
 
-把 `macos/Core` 的纯 Foundation 能力抽为本地 SPM 包 `PitPulseKit`（Shared / Data / Components），macOS App 改为依赖本地包；Components 只依赖 Shared，不把网络栈带进 Widget / Watch。验收以 `Build App` 与 `Build App Tests` 通过为准，并需在运行中的 App 上复核 MenuBar / Notch / 地图无回退。
+把 `macos/Core` 的纯 Foundation 能力拆为三个独立本地 Swift Package（`PitPulseShared` / `PitPulseData` / `PitPulseComponents`，包名=模块名），由 `PitPulse.xcworkspace` 与单一 `PitPulse.xcodeproj` 统一管理；Components 只依赖 Shared，不把网络栈带进 Widget / Watch。验收以 `Build App` 与 `Build App Tests` 通过为准，并需在运行中的 App 上复核 MenuBar / Notch / 地图无回退。
 
 ### T26 — iOS 26+ App 与灵动岛 Live Activity
 

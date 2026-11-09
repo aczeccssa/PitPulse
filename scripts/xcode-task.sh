@@ -20,7 +20,7 @@ fi
 cd "$project"
 # Build/test products stay separate from the running Taskdeck App bundle.
 exec /usr/bin/xcodebuild \
-    -project PitPulse.xcodeproj \
+    -workspace PitPulse.xcworkspace \
     -scheme PitPulseDesktop \
     -destination "platform=macOS,arch=$(uname -m)" \
     -configuration "$configuration" \

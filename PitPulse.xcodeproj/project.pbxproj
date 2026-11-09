@@ -108,10 +108,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		04C5A50AB2C6AC3B35A7710A /* PitPulseKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseKit; path = Packages/PitPulseKit; sourceTree = SOURCE_ROOT; };
 		0820EB4CFC7383B8DFE54AEC /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		088B7B30CFCBDB0FAFB844F0 /* MenuBarAcceptanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarAcceptanceTests.swift; sourceTree = "<group>"; };
 		09DC16B624A771864AD5F724 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		0A586926BB4097A1949DDF51 /* PitPulseShared */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseShared; path = Packages/PitPulseShared; sourceTree = SOURCE_ROOT; };
 		0DC0EA2929BC6BC96528E579 /* LiveExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveExtras.swift; sourceTree = "<group>"; };
 		0F98AAC8DE6ACFE84D714397 /* LiveStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStoreTests.swift; sourceTree = "<group>"; };
 		12DF1A40881D53081811532C /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
@@ -133,6 +133,7 @@
 		4A29939D0C792D910BE028E6 /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
 		595AE17CD82A669F7CCA2AC1 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		5FD756E18A8B354ECB4B34E4 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		621AED760B5A5FECF78215E2 /* PitPulseComponents */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseComponents; path = Packages/PitPulseComponents; sourceTree = SOURCE_ROOT; };
 		6B3A0C5F41CD1D2D982B6738 /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
 		6E837695763305ACF873B6AA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		71DF5FB53B18A9F59859B1DD /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
@@ -150,6 +151,7 @@
 		897880BF5AA689B2528C2656 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		89BC4B5D61D1E8C3C8FFB9DF /* map.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = map.html; sourceTree = "<group>"; };
 		9B79BC56586F0B566E40B73D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		ABC56F5752CD8D2DF7FC8D60 /* PitPulseData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PitPulseData; path = Packages/PitPulseData; sourceTree = SOURCE_ROOT; };
 		AE3839057BE1B40B175FC712 /* CalendarCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarCacheTests.swift; sourceTree = "<group>"; };
 		AED67EA87B6F0F65B4F34B2A /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
 		AFE8C4551334A03165255041 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -360,7 +362,9 @@
 		987974C71972AF943077D7B2 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				04C5A50AB2C6AC3B35A7710A /* PitPulseKit */,
+				621AED760B5A5FECF78215E2 /* PitPulseComponents */,
+				ABC56F5752CD8D2DF7FC8D60 /* PitPulseData */,
+				0A586926BB4097A1949DDF51 /* PitPulseShared */,
 			);
 			path = Packages;
 			sourceTree = "<group>";
@@ -624,7 +628,9 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				8432A50A8E06D24A16C0BD6F /* XCRemoteSwiftPackageReference "opennook" */,
-				037454EC1CBAB9075D21AC32 /* XCLocalSwiftPackageReference "Packages/PitPulseKit" */,
+				623514AC3666071D71A56331 /* XCLocalSwiftPackageReference "Packages/PitPulseComponents" */,
+				608F598E40BE171370694831 /* XCLocalSwiftPackageReference "Packages/PitPulseData" */,
+				47E3B3AA53048FABD6D3C5AF /* XCLocalSwiftPackageReference "Packages/PitPulseShared" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F028EC422759F32C82A31BAC /* Products */;
@@ -1201,9 +1207,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		037454EC1CBAB9075D21AC32 /* XCLocalSwiftPackageReference "Packages/PitPulseKit" */ = {
+		47E3B3AA53048FABD6D3C5AF /* XCLocalSwiftPackageReference "Packages/PitPulseShared" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/PitPulseKit;
+			relativePath = Packages/PitPulseShared;
+		};
+		608F598E40BE171370694831 /* XCLocalSwiftPackageReference "Packages/PitPulseData" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PitPulseData;
+		};
+		623514AC3666071D71A56331 /* XCLocalSwiftPackageReference "Packages/PitPulseComponents" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/PitPulseComponents;
 		};
 /* End XCLocalSwiftPackageReference section */
 

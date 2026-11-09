@@ -8,28 +8,25 @@
 
 - iOS 26+ App：赛程表、Live 计时、设置三屏；
 - 独立 Widget Extension，用 ActivityKit 提供灵动岛 / 锁屏 Live Activity；
-- 本地 Swift Package `PitPulseKit`，把 Data / Shared / Components 从 macOS App 中抽出，供 macOS、iOS 与后续 watchOS 共享。
+- 三个独立本地 Swift Package（`PitPulseShared` / `PitPulseData` / `PitPulseComponents`，包名=模块名），由 `PitPulse.xcworkspace` 统一管理，供 macOS、iOS 与后续 watchOS 共享。
 
 ## 工程结构
 
 ```
-PitPulse.xcodeproj                   # 单一工程（XcodeGen 由根目录 project.yml 生成）
-├── PitPulseDesktop (macOS app)          # 菜单栏 / Notch / 地图 / 设置
-├── PitPulseDesktopTests / PitPulseDesktopUITests
-├── PitPulseMobile (iOS app)             # 赛程 / Live / 设置
-├── PitPulseLiveActivity (iOS extension) # 灵动岛 / 锁屏 Live Activity
-└── PitPulseMobileTests
-project.yml                          # 工程生成描述（xcodegen generate）
-
-Packages/PitPulseKit/                # 共享模块（本地 SPM，两个 App 共同依赖）
-├── Package.swift                    # platforms: macOS 26 / iOS 26 / watchOS 11
-└── Sources/
-    ├── Shared/                      # 纯值层：FavoriteDriver、PreferenceKeys、WidgetContent、CountryFlag、LiveActivityAttributes
-    ├── Data/                        # APIClient、APIModels、LiveStore、SSE、Cache、Keychain、提醒、日历逻辑
-    └── Components/                  # 只吃值的 SwiftUI 原子视图（StatusPill、CountdownText、FlagBadge、LiveWidgetCard）
+PitPulse.xcworkspace                 # 工作区：管理一个 App 工程 + 三个本地 Package
+├── PitPulse.xcodeproj              # 单一 App 工程（XcodeGen 由根目录 project.yml 生成）
+│   ├── PitPulseDesktop             # macOS App：菜单栏 / Notch / 地图 / 设置
+│   ├── PitPulseDesktopTests / PitPulseDesktopUITests
+│   ├── PitPulseMobile              # iOS App：赛程 / Live / 设置
+│   ├── PitPulseLiveActivity        # iOS Widget Extension：灵动岛 / 锁屏 Live Activity
+│   └── PitPulseMobileTests
+└── Packages/                        # 三个独立 Swift Package，包名 = 模块名
+    ├── PitPulseShared/              # 纯值契约：FavoriteDriver、PreferenceKeys、WidgetContent、CountryFlag、LiveActivityAttributes
+    ├── PitPulseData/                # APIClient、APIModels、LiveStore、SSE、Cache、Keychain、提醒、日历逻辑
+    └── PitPulseComponents/          # 只吃值的 SwiftUI 原子视图（StatusPill、CountdownText、FlagBadge、LiveWidgetCard）
 ```
 
-- 根目录只有一个 `PitPulse.xcodeproj`，同时包含 Desktop（macOS）与 Mobile（iOS App + Widget）target；共享模块仍是 `PitPulseKit` 本地包，被两个 App 共同依赖。
+- 根目录 `PitPulse.xcworkspace` 管理单一 `PitPulse.xcodeproj` 与三个本地 Package；`PitPulseShared` / `PitPulseData` / `PitPulseComponents` 各自独立成包（包名即模块名）。
 - 两端 App 的显示名统一为 **PitPulse**，并共用 `macos/Resources/AppIcon.icon`（Icon Composer）；构建产物分别为 macOS `PitPulse.app` 与 iOS `PitPulse.app`。
 - `Components` 只依赖 `Shared`，不依赖 `Data`，避免 Widget 被拖入 URLSession / SSE / Keychain。
 - 灵动岛契约 `PitPulseActivityAttributes` 位于 `Shared`，用 `#if os(iOS)` 隔离 ActivityKit，macOS 包编译不受影响。
@@ -47,10 +44,10 @@ Packages/PitPulseKit/                # 共享模块（本地 SPM，两个 App �
 
 | 命令 | 结果 |
 | --- | --- |
-| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build` | exit 0 |
-| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing` | exit 0 |
-| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseMobile build` | exit 0 |
-| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseMobile test` | TEST SUCCEEDED，3 项通过 |
+| `xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseDesktop build` | exit 0 |
+| `xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseDesktop build-for-testing` | exit 0 |
+| `xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseMobile build` | exit 0 |
+| `xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseMobile test` | TEST SUCCEEDED，3 项通过 |
 
 运行验证（真实本地服务 `http://127.0.0.1:38701`，2026 赛季 24 站数据）：
 
