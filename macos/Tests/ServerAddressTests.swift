@@ -1,4 +1,5 @@
 import XCTest
+@testable import PitPulseData
 @testable import F1Companion
 
 final class ServerAddressTests: XCTestCase {

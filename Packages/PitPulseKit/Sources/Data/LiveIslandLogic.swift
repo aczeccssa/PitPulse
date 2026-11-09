@@ -1,7 +1,8 @@
 import Foundation
+import PitPulseShared
 
-enum LiveIslandLogic {
-    static func displayedSnapshot(current: LiveSnapshot, lastKnown: LiveSnapshot?, meetings: [Meeting], now: Date) -> LiveSnapshot {
+public enum LiveIslandLogic {
+    public static func displayedSnapshot(current: LiveSnapshot, lastKnown: LiveSnapshot?, meetings: [Meeting], now: Date) -> LiveSnapshot {
         let retained = current.sourceStatus == .disconnected ? lastKnown ?? current : current
         if current.sourceMode == .live,
            let planned = currentScheduledSession(in: meetings, now: now),
@@ -23,12 +24,12 @@ enum LiveIslandLogic {
             lastTransportAt: current.lastTransportAt, drivers: [], raceControl: nil)
     }
 
-    static func preferredScreen<Screen>(in screens: [Screen], main: Screen?, hasBuiltInNotch: (Screen) -> Bool) -> Screen? {
+    public static func preferredScreen<Screen>(in screens: [Screen], main: Screen?, hasBuiltInNotch: (Screen) -> Bool) -> Screen? {
         screens.first(where: hasBuiltInNotch) ?? main ?? screens.first
     }
 
     @MainActor
-    static func delayedHideTask(
+    public static func delayedHideTask(
         after duration: Duration,
         shouldHide: @escaping @MainActor () -> Bool,
         hide: @escaping @MainActor () async -> Void
@@ -40,7 +41,7 @@ enum LiveIslandLogic {
         }
     }
 
-    static func matchedDriver(
+    public static func matchedDriver(
         favoriteId: String?,
         favorites: [FavoriteDriver],
         drivers: [LiveDriver]
@@ -58,12 +59,12 @@ enum LiveIslandLogic {
 
     /// Follow state belongs to the driver, so a favourite car number driven by
     /// somebody else is not shown as followed.
-    static func isFavoriteDriver(_ driver: LiveDriver, favoriteId: String?, favorites: [FavoriteDriver]) -> Bool {
+    public static func isFavoriteDriver(_ driver: LiveDriver, favoriteId: String?, favorites: [FavoriteDriver]) -> Bool {
         guard favoriteId != nil else { return false }
         return matchedDriver(favoriteId: favoriteId, favorites: favorites, drivers: [driver]) != nil
     }
 
-    static func rosterID(for driver: LiveDriver, favorites: [FavoriteDriver]) -> String? {
+    public static func rosterID(for driver: LiveDriver, favorites: [FavoriteDriver]) -> String? {
         let name = normalizedDriverName(driver.name ?? "")
         guard !name.isEmpty else { return nil }
         let matches = favorites.filter { normalizedDriverName($0.name) == name }
@@ -71,12 +72,12 @@ enum LiveIslandLogic {
     }
 
     /// Constructor id for a bundled team-logo asset.
-    static func teamAssetID(for driver: LiveDriver, isWec: Bool) -> String? {
+    public static func teamAssetID(for driver: LiveDriver, isWec: Bool) -> String? {
         isWec ? wecTeamAssetID(for: driver) : f1TeamAssetID(for: driver)
     }
 
     /// WEC bundles one side view per car number; F1 publishes one per team.
-    static func carSideAssetID(for driver: LiveDriver, isWec: Bool) -> String? {
+    public static func carSideAssetID(for driver: LiveDriver, isWec: Bool) -> String? {
         isWec ? driver.number : f1TeamAssetID(for: driver)
     }
 
@@ -122,7 +123,7 @@ enum LiveIslandLogic {
 
     /// Manufacturer logo for the WEC timing list, which shows the marque
     /// rather than the current driver portrait.
-    static func wecManufacturerAssetID(for driver: LiveDriver) -> String? {
+    public static func wecManufacturerAssetID(for driver: LiveDriver) -> String? {
         let source = (driver.manufacturer ?? "").lowercased()
         guard !source.isEmpty else { return nil }
         return wecBrands.first(where: { source.contains($0.key) })?.id
@@ -151,12 +152,12 @@ enum LiveIslandLogic {
     }
 
     /// File-name id for the official WEC driver portrait bundled for a season.
-    static func driverAssetID(for driver: LiveDriver) -> String? {
+    public static func driverAssetID(for driver: LiveDriver) -> String? {
         guard let name = driver.name, !name.isEmpty else { return nil }
         return assetSlug(name)
     }
 
-    static func assetSlug(_ value: String) -> String {
+    public static func assetSlug(_ value: String) -> String {
         let replacements = ["ø": "o", "Ø": "O", "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "ß": "ss", "ł": "l", "Ł": "L", "đ": "d", "Đ": "D", "ð": "d", "Ð": "D", "þ": "th", "Þ": "TH"]
         var text = value
         for (from, to) in replacements { text = text.replacingOccurrences(of: from, with: to) }
@@ -169,7 +170,7 @@ enum LiveIslandLogic {
 
     /// Sector values arrive as "30.452" or "1:34.951"; WEC has no per-segment
     /// data, so this feeds the class-relative pace color of its sector bars.
-    static func sectorSeconds(_ value: String) -> Double? {
+    public static func sectorSeconds(_ value: String) -> Double? {
         let text = value.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return nil }
         let parts = text.split(separator: ":")
@@ -180,18 +181,18 @@ enum LiveIslandLogic {
         return Double(text)
     }
 
-    static func followableDriverID(for driver: LiveDriver, favorites: [FavoriteDriver], drivers: [LiveDriver]) -> String? {
+    public static func followableDriverID(for driver: LiveDriver, favorites: [FavoriteDriver], drivers: [LiveDriver]) -> String? {
         guard let id = rosterID(for: driver, favorites: favorites),
               matchedDriver(favoriteId: id, favorites: favorites, drivers: drivers)?.number == driver.number else { return nil }
         return id
     }
 
     /// WEC drivers are absent from the F1 roster, so follow them by car number.
-    static func followableID(for driver: LiveDriver, favorites: [FavoriteDriver], drivers: [LiveDriver], isWec: Bool) -> String? {
+    public static func followableID(for driver: LiveDriver, favorites: [FavoriteDriver], drivers: [LiveDriver], isWec: Bool) -> String? {
         isWec ? "wec:\(driver.number)" : followableDriverID(for: driver, favorites: favorites, drivers: drivers)
     }
 
-    static func favorites(for series: LiveSeries, in favorites: [FavoriteDriver]) -> [FavoriteDriver] {
+    public static func favorites(for series: LiveSeries, in favorites: [FavoriteDriver]) -> [FavoriteDriver] {
         favorites.filter { series == .wec ? $0.id.hasPrefix("wec:") : !$0.id.hasPrefix("wec:") }
     }
 
@@ -201,15 +202,15 @@ enum LiveIslandLogic {
         return normalized == "kimi antonelli" ? "andrea kimi antonelli" : normalized
     }
 
-    static func isStarted(_ status: String?) -> Bool {
+    public static func isStarted(_ status: String?) -> Bool {
         status.map { ["started", "green", "inprogress"].contains(normalizedToken($0)) } ?? false
     }
 
-    static func isFinished(_ status: String?) -> Bool {
+    public static func isFinished(_ status: String?) -> Bool {
         status.map { ["finished", "finalised", "finalized", "ends", "aborted", "cancelled"].contains(normalizedToken($0)) } ?? false
     }
 
-    static func shouldAutomaticallyShow(
+    public static func shouldAutomaticallyShow(
         enabled: Bool,
         dismissedSessionKey: String?,
         sessionKey: String?,
@@ -219,7 +220,7 @@ enum LiveIslandLogic {
         enabled && dismissedSessionKey != sessionKey && (sessionChanged || isHidden)
     }
 
-    static func currentScheduledSession(in meetings: [Meeting], now: Date) -> NextSession? {
+    public static func currentScheduledSession(in meetings: [Meeting], now: Date) -> NextSession? {
         let matches = meetings
             .filter { $0.status == .scheduled }
             .flatMap { meeting in
@@ -235,7 +236,7 @@ enum LiveIslandLogic {
         return matches.count == 1 ? matches[0] : nil
     }
 
-    static func meeting(for snapshot: LiveSnapshot, in meetings: [Meeting], now: Date) -> Meeting? {
+    public static func meeting(for snapshot: LiveSnapshot, in meetings: [Meeting], now: Date) -> Meeting? {
         if let name = snapshot.meetingName, let country = snapshot.countryCode {
             let matches = meetings.filter { normalizedName($0.name) == normalizedName(name) && $0.countryCode == country }
             if matches.count == 1 { return matches[0] }
@@ -256,7 +257,7 @@ enum LiveIslandLogic {
         return matches.count == 1 ? matches[0] : nil
     }
 
-    static func sessionLabel(_ value: String) -> String {
+    public static func sessionLabel(_ value: String) -> String {
         switch value.lowercased() {
         case "race": return "Race"
         case "sprint": return "Sprint"
@@ -270,7 +271,7 @@ enum LiveIslandLogic {
         }
     }
 
-    static func normalizedName(_ name: String) -> String {
+    public static func normalizedName(_ name: String) -> String {
         name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
             .joined(separator: " ")

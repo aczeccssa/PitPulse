@@ -1,4 +1,5 @@
 import SwiftUI
+import PitPulseData
 
 struct StatusMenuLabel: View {
     let symbol: AppSymbol

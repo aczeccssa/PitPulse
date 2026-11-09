@@ -1,7 +1,9 @@
 import Foundation
+@testable import PitPulseData
+@testable import PitPulseShared
 
 // Standalone compilation excludes AppModel and its AppKit lifecycle.
-struct FavoriteDriver { let id: String; let name: String }
+// FavoriteDriver now lives in PitPulseShared.
 
 @main
 struct IslandSessionChecks {

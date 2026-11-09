@@ -1,4 +1,6 @@
 import SwiftUI
+import PitPulseData
+import PitPulseShared
 
 struct NextMeetingCard: View {
     @EnvironmentObject private var model: AppModel

@@ -1,17 +1,17 @@
 import Foundation
 
-actor APIClient {
-    static let supportedSchemaVersion = 1
+public actor APIClient {
+    public static let supportedSchemaVersion = 1
 
     private let baseURL: URL
     private let session: URLSession
 
-    init(baseURL: URL, session: URLSession = .shared) {
+    public init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
     }
 
-    func health(token: String?) async throws -> HealthResponse {
+    public func health(token: String?) async throws -> HealthResponse {
         var request = try makeRequest(path: "/api/v1/health", queryItems: [])
         applyToken(token, to: &request)
         let (data, response) = try await data(for: request)
@@ -19,7 +19,7 @@ actor APIClient {
         return try Self.decode(HealthResponse.self, from: data)
     }
 
-    func calendar(season: Int, token: String?) async throws -> APIEnvelope<[Meeting]> {
+    public func calendar(season: Int, token: String?) async throws -> APIEnvelope<[Meeting]> {
         try await envelope(
             [Meeting].self,
             path: "/api/v1/calendar",
@@ -28,7 +28,7 @@ actor APIClient {
         )
     }
 
-    func nextMeeting(season: Int, token: String?) async throws -> APIEnvelope<Meeting?> {
+    public func nextMeeting(season: Int, token: String?) async throws -> APIEnvelope<Meeting?> {
         try await envelope(
             Meeting?.self,
             path: "/api/v1/meetings/next",
@@ -37,7 +37,7 @@ actor APIClient {
         )
     }
 
-    func sessionResults(sessionId: String, token: String?) async throws -> APIEnvelope<[SessionResult]> {
+    public func sessionResults(sessionId: String, token: String?) async throws -> APIEnvelope<[SessionResult]> {
         try await envelope(
             [SessionResult].self,
             path: "/api/v1/sessions/\(sessionId)/results",
@@ -46,7 +46,7 @@ actor APIClient {
         )
     }
 
-    func driverStandings(season: Int, token: String?) async throws -> APIEnvelope<[DriverStanding]> {
+    public func driverStandings(season: Int, token: String?) async throws -> APIEnvelope<[DriverStanding]> {
         try await envelope(
             [DriverStanding].self,
             path: "/api/v1/standings/drivers",
@@ -55,7 +55,7 @@ actor APIClient {
         )
     }
 
-    func constructorStandings(season: Int, token: String?) async throws -> APIEnvelope<[ConstructorStanding]> {
+    public func constructorStandings(season: Int, token: String?) async throws -> APIEnvelope<[ConstructorStanding]> {
         try await envelope(
             [ConstructorStanding].self,
             path: "/api/v1/standings/constructors",
@@ -64,7 +64,7 @@ actor APIClient {
         )
     }
 
-    func refresh(target: ManualRefreshTarget, season: Int, sessionId: String?, token: String?) async throws -> DataRefreshEvent {
+    public func refresh(target: ManualRefreshTarget, season: Int, sessionId: String?, token: String?) async throws -> DataRefreshEvent {
         var request = try makeRequest(path: "/api/v1/refresh", queryItems: [])
         request.httpMethod = "POST"
         request.timeoutInterval = 90
@@ -77,17 +77,17 @@ actor APIClient {
     }
 
 
-    func sessionAnalysis(sessionId: String, driverId: String, lap: Int?, token: String?) async throws -> APIEnvelope<SessionAnalysis> {
+    public func sessionAnalysis(sessionId: String, driverId: String, lap: Int?, token: String?) async throws -> APIEnvelope<SessionAnalysis> {
         try await envelope(SessionAnalysis.self, path: "/api/v1/sessions/\(sessionId)/drivers/\(driverId)/analysis",
             queryItems: lap.map { [URLQueryItem(name: "lap", value: String($0))] } ?? [], token: token)
     }
 
-    func seasonAnalysis(kind: String, id: String, season: Int, token: String?) async throws -> APIEnvelope<SeasonAnalysis> {
+    public func seasonAnalysis(kind: String, id: String, season: Int, token: String?) async throws -> APIEnvelope<SeasonAnalysis> {
         try await envelope(SeasonAnalysis.self, path: "/api/v1/standings/\(kind)/\(id)/analysis",
             queryItems: [URLQueryItem(name: "season", value: String(season))], token: token)
     }
 
-    func mapData(path: String, token: String?) async throws -> Data {
+    public func mapData(path: String, token: String?) async throws -> Data {
         var request = try makeRequest(path: path, queryItems: [])
         applyToken(token, to: &request)
         let (data, response) = try await data(for: request)
@@ -98,7 +98,7 @@ actor APIClient {
         return data
     }
 
-    func liveStream(
+    public func liveStream(
         token: String?,
         series: String = "f1",
         onConnected: @escaping @MainActor @Sendable () async -> Void = {},

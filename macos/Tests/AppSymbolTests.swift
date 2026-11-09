@@ -1,5 +1,6 @@
 import AppKit
 import XCTest
+@testable import PitPulseData
 @testable import F1Companion
 
 @MainActor

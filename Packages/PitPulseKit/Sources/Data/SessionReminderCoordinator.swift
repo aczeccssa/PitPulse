@@ -2,21 +2,21 @@ import CryptoKit
 import Foundation
 import UserNotifications
 
-struct SessionReminder: Equatable, Sendable {
-    let identifier: String
-    let title: String
-    let body: String
-    let fireDate: Date
+public struct SessionReminder: Equatable, Sendable {
+    public let identifier: String
+    public let title: String
+    public let body: String
+    public let fireDate: Date
 }
 
-enum ReminderAuthorization: Equatable, Sendable {
+public enum ReminderAuthorization: Equatable, Sendable {
     case notDetermined
     case authorized
     case denied
 }
 
 @MainActor
-protocol SessionReminderCenter: AnyObject {
+public protocol SessionReminderCenter: AnyObject {
     func authorization() async -> ReminderAuthorization
     func requestAuthorization() async throws -> Bool
     func pendingIdentifiers() async -> [String]
@@ -26,10 +26,12 @@ protocol SessionReminderCenter: AnyObject {
 }
 
 @MainActor
-final class UserNotificationReminderCenter: SessionReminderCenter {
+public final class UserNotificationReminderCenter: SessionReminderCenter {
     private let center = UNUserNotificationCenter.current()
 
-    func authorization() async -> ReminderAuthorization {
+    public init() {}
+
+    public func authorization() async -> ReminderAuthorization {
         switch await center.notificationSettings().authorizationStatus {
         case .notDetermined: .notDetermined
         case .authorized, .provisional: .authorized
@@ -37,15 +39,15 @@ final class UserNotificationReminderCenter: SessionReminderCenter {
         }
     }
 
-    func requestAuthorization() async throws -> Bool {
+    public func requestAuthorization() async throws -> Bool {
         try await center.requestAuthorization(options: [.alert, .sound])
     }
 
-    func pendingIdentifiers() async -> [String] {
+    public func pendingIdentifiers() async -> [String] {
         (await center.pendingNotificationRequests()).map(\.identifier)
     }
 
-    func schedule(_ reminder: SessionReminder) async throws {
+    public func schedule(_ reminder: SessionReminder) async throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         var components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: reminder.fireDate)
@@ -69,20 +71,20 @@ final class UserNotificationReminderCenter: SessionReminderCenter {
         }
     }
 
-    func removePending(identifiers: [String]) async {
+    public func removePending(identifiers: [String]) async {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    func removeAllPending() async {
+    public func removeAllPending() async {
         let identifiers = await pendingIdentifiers().filter { $0.hasPrefix("pitpulse.") }
         await removePending(identifiers: identifiers)
     }
 }
 
-enum SessionReminderPlanner {
-    static let allowedMinutes = [5, 15, 30, 60]
+public enum SessionReminderPlanner {
+    public static let allowedMinutes = [5, 15, 30, 60]
 
-    static func reminders(
+    public static func reminders(
         meetings: [Meeting],
         serverIdentity: String,
         season: Int,

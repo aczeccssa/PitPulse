@@ -1,11 +1,16 @@
 import Foundation
 
-struct SSEEvent: Equatable, Sendable {
-    let name: String
-    let data: String
+public struct SSEEvent: Equatable, Sendable {
+    public let name: String
+    public let data: String
+
+    public init(name: String, data: String) {
+        self.name = name
+        self.data = data
+    }
 }
 
-struct SSEParser {
+public struct SSEParser {
     private static let maximumLineBytes = 1024 * 1024
     private static let maximumEventBytes = 2 * 1024 * 1024
 
@@ -17,7 +22,9 @@ struct SSEParser {
     private var discardingEvent = false
     private var skipNextLineFeed = false
 
-    mutating func append(_ byte: UInt8) -> [SSEEvent] {
+    public init() {}
+
+    public mutating func append(_ byte: UInt8) -> [SSEEvent] {
         if skipNextLineFeed {
             skipNextLineFeed = false
             if byte == 0x0A { return [] }
@@ -36,7 +43,7 @@ struct SSEParser {
         return []
     }
 
-    mutating func finish() -> [SSEEvent] {
+    public mutating func finish() -> [SSEEvent] {
         var events = line.isEmpty ? [] : finishLine()
         if let event = dispatch() { events.append(event) }
         return events

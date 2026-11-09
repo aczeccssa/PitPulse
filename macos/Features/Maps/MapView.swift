@@ -1,6 +1,7 @@
 import AppKit
 import OSLog
 import SwiftUI
+import PitPulseData
 @preconcurrency import WebKit
 
 @MainActor

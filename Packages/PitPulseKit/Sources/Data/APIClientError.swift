@@ -1,6 +1,6 @@
 import Foundation
 
-enum APIClientError: Error, Equatable, LocalizedError {
+public enum APIClientError: Error, Equatable, LocalizedError {
     case invalidServerAddress(String)
     case insecureRemoteServer
     case invalidResponse
@@ -12,7 +12,7 @@ enum APIClientError: Error, Equatable, LocalizedError {
     case decoding(String)
     case incompatibleSchema(found: Int, expected: Int)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidServerAddress:
             "服务器地址无效。"

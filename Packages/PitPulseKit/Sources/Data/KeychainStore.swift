@@ -1,14 +1,14 @@
 import Foundation
 import Security
 
-struct KeychainStore: CredentialStore {
-    let service: String
+public struct KeychainStore: CredentialStore {
+    public let service: String
 
-    init(service: String = "com.pitpulse.F1Companion") {
+    public init(service: String = "com.pitpulse.F1Companion") {
         self.service = service
     }
 
-    func token(for server: URL) throws -> String? {
+    public func token(for server: URL) throws -> String? {
         guard !service.isEmpty else { throw CredentialError.invalidService }
         var query = baseQuery(for: server)
         query[kSecReturnData as String] = true
@@ -31,7 +31,7 @@ struct KeychainStore: CredentialStore {
         return token
     }
 
-    func save(token: String, for server: URL) throws {
+    public func save(token: String, for server: URL) throws {
         guard !service.isEmpty else { throw CredentialError.invalidService }
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw CredentialError.emptyToken }
@@ -58,7 +58,7 @@ struct KeychainStore: CredentialStore {
         }
     }
 
-    func deleteToken(for server: URL) throws {
+    public func deleteToken(for server: URL) throws {
         guard !service.isEmpty else { throw CredentialError.invalidService }
         let status = SecItemDelete(baseQuery(for: server) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {

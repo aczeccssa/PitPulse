@@ -1,12 +1,17 @@
 import Foundation
 
-struct NextSession: Equatable, Sendable {
-    let meeting: Meeting
-    let session: Session
+public struct NextSession: Equatable, Sendable {
+    public let meeting: Meeting
+    public let session: Session
+
+    public init(meeting: Meeting, session: Session) {
+        self.meeting = meeting
+        self.session = session
+    }
 }
 
-enum CalendarLogic {
-    static func featuredMeeting(in meetings: [Meeting], now: Date, calendar: Calendar = .current) -> Meeting? {
+public enum CalendarLogic {
+    public static func featuredMeeting(in meetings: [Meeting], now: Date, calendar: Calendar = .current) -> Meeting? {
         let available = meetings.filter { $0.status != .cancelled }
         let week = calendar.dateInterval(of: .weekOfYear, for: now)
         let thisWeek = available.filter {
@@ -23,7 +28,7 @@ enum CalendarLogic {
         }.first
     }
 
-    static func nextSession(
+    public static func nextSession(
         in meetings: [Meeting],
         now: Date,
         calendar: Calendar = .current
@@ -48,11 +53,11 @@ enum CalendarLogic {
             .first
     }
 
-    static func nextMeeting(in meetings: [Meeting], now: Date) -> Meeting? {
+    public static func nextMeeting(in meetings: [Meeting], now: Date) -> Meeting? {
         nextSession(in: meetings, now: now)?.meeting
     }
 
-    static func localDateTime(
+    public static func localDateTime(
         _ date: Date,
         timeZone: TimeZone,
         locale: Locale = .current
@@ -65,7 +70,7 @@ enum CalendarLogic {
         return formatter.string(from: date)
     }
 
-    static func localDateComponents(
+    public static func localDateComponents(
         _ date: Date,
         timeZone: TimeZone,
         calendar: Calendar = .current
@@ -75,7 +80,7 @@ enum CalendarLogic {
         return localized.dateComponents([.year, .month, .day, .hour, .minute], from: date)
     }
 
-    static func countdownText(until date: Date, now: Date) -> String {
+    public static func countdownText(until date: Date, now: Date) -> String {
         let remaining = max(0, date.timeIntervalSince(now))
         if remaining < 60 {
             return "不到 1 分钟"

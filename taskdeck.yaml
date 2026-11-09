@@ -1,6 +1,11 @@
 version: 1
 session: PitPulse
 task_order:
+- Build App
+- Build App Tests
+- Build App Release
+- Build iOS
+- Test iOS
 - Run Server
 - Run App
 tasks:
@@ -27,3 +32,43 @@ tasks:
     auto_start: false
     stop_timeout_ms: 10000
     clear_logs_on_restart: false
+  Build App:
+    command: /bin/bash
+    args: [scripts/xcode-task.sh, build, Debug]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true
+  Build App Tests:
+    command: /bin/bash
+    args: [scripts/xcode-task.sh, build-for-testing, Debug]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true
+  Build App Release:
+    command: /bin/bash
+    args: [scripts/xcode-task.sh, build, Release]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true
+  Build iOS:
+    command: /bin/bash
+    args: [scripts/xcode-ios-task.sh, build, Debug]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true
+  Test iOS:
+    command: /bin/bash
+    args: [scripts/xcode-ios-task.sh, test, Debug]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true

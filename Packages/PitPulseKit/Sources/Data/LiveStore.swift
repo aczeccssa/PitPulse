@@ -2,12 +2,13 @@ import Foundation
 import OSLog
 
 @MainActor
-final class LiveStore: ObservableObject {
-    @Published private(set) var snapshot = LiveSnapshot.disconnected()
-    @Published private(set) var isConnecting = false
-    @Published private(set) var requiresCredentials = false
-    var onDataRefresh: ((DataRefreshEvent) -> Void)?
-    var onStreamConnected: (() -> Void)?
+public final class LiveStore: ObservableObject {
+    @Published public private(set) var snapshot = LiveSnapshot.disconnected()
+    @Published public private(set) var isConnecting = false
+    @Published public private(set) var requiresCredentials = false
+    public var onDataRefresh: ((DataRefreshEvent) -> Void)?
+    public var onStreamConnected: (() -> Void)?
+    public var onSnapshot: (@MainActor (LiveSnapshot) -> Void)?
 
     private let logger = Logger(subsystem: "com.pitpulse.F1Companion", category: "LiveStore")
     private var generation = 0
@@ -17,12 +18,12 @@ final class LiveStore: ObservableObject {
     private let retryDelays: [TimeInterval]
     private let session: URLSession
 
-    init(session: URLSession = .shared, retryDelays: [TimeInterval] = [5, 15, 30, 60, 300]) {
+    public init(session: URLSession = .shared, retryDelays: [TimeInterval] = [5, 15, 30, 60, 300]) {
         self.session = session
         self.retryDelays = retryDelays.isEmpty ? [5, 15, 30, 60, 300] : retryDelays
     }
 
-    func start(serverURL: URL, token: String?, series: LiveSeries = .f1) {
+    public func start(serverURL: URL, token: String?, series: LiveSeries = .f1) {
         let current = beginConnection()
         streamTask = Task { [weak self] in
             await self?.run(
@@ -34,7 +35,7 @@ final class LiveStore: ObservableObject {
         }
     }
 
-    func stop(reason: String = "disconnected") {
+    public func stop(reason: String = "disconnected") {
         generation += 1
         logger.notice("connectionReset generation=\(self.generation)")
         streamTask?.cancel()
@@ -45,7 +46,7 @@ final class LiveStore: ObservableObject {
     }
 
     @discardableResult
-    func beginConnection() -> Int {
+    public func beginConnection() -> Int {
         generation += 1
         logger.notice("connectionReset generation=\(self.generation)")
         streamTask?.cancel()
@@ -59,7 +60,7 @@ final class LiveStore: ObservableObject {
     }
 
     @discardableResult
-    func accept(
+    public func accept(
         _ incoming: LiveSnapshot,
         generation incomingGeneration: Int,
         connection incomingConnection: Int = 0
@@ -74,13 +75,14 @@ final class LiveStore: ObservableObject {
         }
         logger.info("snapshotAccepted generation=\(incomingGeneration) connection=\(incomingConnection) version=\(incoming.stateVersion) status=\(incoming.sourceStatus.rawValue, privacy: .public) mode=\(incoming.sourceMode.rawValue, privacy: .public) drivers=\(incoming.drivers.count)")
         snapshot = incoming
+        onSnapshot?(incoming)
         baselineConnection = incomingConnection
         isConnecting = false
         requiresCredentials = false
         return true
     }
 
-    func beginStream(generation incomingGeneration: Int) -> Int? {
+    public func beginStream(generation incomingGeneration: Int) -> Int? {
         guard incomingGeneration == generation else { return nil }
         connectionGeneration += 1
         baselineConnection = nil
