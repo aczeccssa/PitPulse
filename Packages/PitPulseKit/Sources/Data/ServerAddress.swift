@@ -1,13 +1,13 @@
 import Foundation
 
-struct ServerAddress: Equatable, Sendable {
-    let url: URL
+public struct ServerAddress: Equatable, Sendable {
+    public let url: URL
 
-    var identity: String {
+    public var identity: String {
         url.absoluteString
     }
 
-    init(rawValue: String) throws {
+    public init(rawValue: String) throws {
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw APIClientError.invalidServerAddress(rawValue)

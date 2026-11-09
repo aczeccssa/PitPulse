@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-08T14:45:11Z",
+  "updatedAt": "2026-11-09T06:05:44Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -85,6 +85,15 @@
       "taskIds": [
         "T22",
         "T23"
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "多平台客户端（共享包 + iOS 灵动岛）",
+      "description": "抽出 Data / Components / Shared 供 macOS 与 iOS 复用；新增 iOS 26+ App 与 ActivityKit 灵动岛 Live Activity。",
+      "taskIds": [
+        "T25",
+        "T26"
       ]
     }
   ],
@@ -578,11 +587,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "macos/Core/APIClient/APIClient.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "macos/Core/Cache/CalendarCache.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -815,11 +824,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "macos/Core/APIClient/APIClient.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "macos/Core/Cache/CalendarCache.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -1199,11 +1208,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "macos/Core/APIClient/APIClient.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "macos/Core/Cache/CalendarCache.swift",
+          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -2282,11 +2291,11 @@
       "deliverables": [
         {
           "label": "Session 提醒与 UTC 计划器",
-          "path": "macos/Core/Notifications/SessionReminderCoordinator.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/SessionReminderCoordinator.swift"
         },
         {
           "label": "网络路径恢复监听",
-          "path": "macos/Core/Network/NetworkPathMonitor.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/NetworkPathMonitor.swift"
         },
         {
           "label": "T10 提醒与恢复验收记录",
@@ -2800,7 +2809,7 @@
         },
         {
           "label": "Swift SSE parser 与共享 LiveStore",
-          "path": "macos/Core/LiveStore/LiveStore.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/LiveStore.swift"
         },
         {
           "label": "Live replay 验收记录",
@@ -2950,7 +2959,7 @@
         },
         {
           "label": "Session / 车手匹配投影规则",
-          "path": "macos/Features/LiveIsland/LiveIslandLogic.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/LiveIslandLogic.swift"
         },
         {
           "label": "loopback Live 场景回放",
@@ -3767,7 +3776,7 @@
         },
         {
           "label": "Swift 可选扩展",
-          "path": "macos/Core/LiveStore/LiveModels.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/LiveModels.swift"
         }
       ],
       "evidence": [
@@ -4787,7 +4796,7 @@
         },
         {
           "label": "macOS 数据模型与数据源切换",
-          "path": "macos/Core/LiveStore/LiveModels.swift"
+          "path": "Packages/PitPulseKit/Sources/Data/LiveModels.swift"
         },
         {
           "label": "PoC 验收记录",
@@ -5104,6 +5113,237 @@
           "at": "2026-11-08T14:45:11Z",
           "status": "done",
           "note": "含 80% 制造商标志尺寸的 Release 已重建并重启，App 正在运行。"
+        }
+      ]
+    },
+    {
+      "id": "T25",
+      "title": "E1 客户端分包（Data / Components / Desktop 基座）",
+      "priority": "P1",
+      "milestone": "M7",
+      "area": "Swift / 模块化",
+      "status": "inReview",
+      "summary": "把 macos/Core 的纯 Foundation 能力抽为本地 SPM 包 PitPulseKit：Shared（值契约）、Data（网络/缓存/Keychain/提醒/日历逻辑）、Components（只吃值的 SwiftUI 原语）。macOS App 改为依赖三个 product；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
+      "dependencies": [],
+      "relatedTasks": [
+        "T04",
+        "T26"
+      ],
+      "scope": "Packages/PitPulseKit/Package.swift、Sources/Shared、Sources/Data、Sources/Components；macos/App/AppModel.swift；macos/Features；macos/F1Companion.xcodeproj；macos/Tests。",
+      "steps": [
+        "新建本地 SPM 包 PitPulseKit（Shared / Data / Components 三个 target）",
+        "移动 Core 纯 Foundation 文件到 Data，值契约与常量放入 Shared",
+        "FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared",
+        "Components 仅依赖 Shared，修正 CountryFlag 归属",
+        "pbxproj 改接本地包并移除已移动源文件，测试改为 @testable import 包"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T25-A1",
+          "text": "Package.swift + Sources 目录结构落地，macOS target 依赖本地包",
+          "done": true
+        },
+        {
+          "id": "T25-A2",
+          "text": "Build App（Debug）通过",
+          "done": true
+        },
+        {
+          "id": "T25-A3",
+          "text": "Build App Tests（build-for-testing）通过",
+          "done": true
+        },
+        {
+          "id": "T25-A4",
+          "text": "Components 不依赖 Data，包可被 macOS/iOS 编译",
+          "done": true
+        },
+        {
+          "id": "T25-A5",
+          "text": "macOS 运行时行为与拆分前一致（MenuBar / Notch / 地图，需用户运行验收）",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "SPM 包清单",
+          "path": "Packages/PitPulseKit/Package.swift"
+        },
+        {
+          "label": "共享值层",
+          "path": "Packages/PitPulseKit/Sources/Shared/Shared.swift"
+        },
+        {
+          "label": "数据层",
+          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift"
+        },
+        {
+          "label": "共享组件",
+          "path": "Packages/PitPulseKit/Sources/Components/Components.swift"
+        },
+        {
+          "label": "macOS 工程接入",
+          "path": "macos/F1Companion.xcodeproj/project.pbxproj"
+        },
+        {
+          "label": "验收记录",
+          "path": "docs/acceptance/ios-live-activity.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "macOS 构建",
+          "path": "docs/acceptance/ios-live-activity.md",
+          "detail": "xcodebuild F1Companion Debug build 与 build-for-testing 均 exit 0（Xcode 26.6）。"
+        },
+        {
+          "label": "包结构",
+          "path": "Packages/PitPulseKit/Package.swift",
+          "detail": "PitPulseShared / PitPulseData / PitPulseComponents 三个 target；Components 仅依赖 Shared。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "在运行中的 Release App 上确认 MenuBar / Notch / 地图行为无回退，随后关闭 T25。",
+      "updatedAt": "2026-11-09T06:05:44Z",
+      "history": [
+        {
+          "at": "2026-11-09T06:05:44Z",
+          "status": "inReview",
+          "note": "完成 Data/Shared/Components 分包，macOS App 与 build-for-testing 通过；等待运行时行为复核。"
+        }
+      ]
+    },
+    {
+      "id": "T26",
+      "title": "iOS 26+ App 与灵动岛 Live Activity",
+      "priority": "P1",
+      "milestone": "M7",
+      "area": "iOS / SwiftUI / ActivityKit",
+      "status": "inReview",
+      "summary": "新增 iOS 26+ App（赛程表 / Live / 设置）与独立 Widget Extension，复用 PitPulseData 的 APIClient、LiveStore、CalendarLogic 与缓存；App 内 LiveActivityController 驱动 ActivityKit 的灵动岛与锁屏 Live Activity，无需服务端推送。已在 iPhone 16 Pro / iOS 26.5 模拟器完成构建、3 项单元测试与真实数据运行验证；真机灵动岛验收待签名设备。",
+      "dependencies": [
+        "T25"
+      ],
+      "relatedTasks": [
+        "T13",
+        "T23"
+      ],
+      "scope": "ios/project.yml、ios/PitPulseMobile、ios/PitPulseLiveActivity、ios/PitPulseMobileTests、Packages/PitPulseKit/Sources/Shared/LiveActivity.swift、scripts/xcode-ios-task.sh、taskdeck.yaml、docs/acceptance/ios-live-activity.md。",
+      "steps": [
+        "用 XcodeGen 建立 iOS App + Widget Extension 工程并引用本地包",
+        "实现赛程 / Live / 设置三屏，复用共享数据层",
+        "定义 PitPulseActivityAttributes 与 ContentState（Shared，iOS-only）",
+        "LiveActivityController 按快照节流更新灵动岛与锁屏",
+        "新增 Build iOS / Test iOS Taskdeck 任务与单元测试"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T26-A1",
+          "text": "iOS 26+ App 与 Widget Extension 可构建（模拟器）",
+          "done": true
+        },
+        {
+          "id": "T26-A2",
+          "text": "Test iOS：数据契约与 ContentState 单元测试通过",
+          "done": true
+        },
+        {
+          "id": "T26-A3",
+          "text": "赛程表加载真实 API 数据并显示下一场倒计时",
+          "done": true
+        },
+        {
+          "id": "T26-A4",
+          "text": "Live 屏显示真实快照（22 位车手、差距、圈数）",
+          "done": true
+        },
+        {
+          "id": "T26-A5",
+          "text": "灵动岛 / 锁屏 Live Activity 在模拟器渲染（紧凑态截图）",
+          "done": true
+        },
+        {
+          "id": "T26-A6",
+          "text": "真机（签名设备）Dynamic Island 验收；后台持续更新策略确认",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "iOS 工程描述",
+          "path": "ios/project.yml"
+        },
+        {
+          "label": "iOS App 入口",
+          "path": "ios/PitPulseMobile/PitPulseMobileApp.swift"
+        },
+        {
+          "label": "Live 屏",
+          "path": "ios/PitPulseMobile/LiveScreen.swift"
+        },
+        {
+          "label": "灵动岛控制器",
+          "path": "ios/PitPulseMobile/LiveActivityController.swift"
+        },
+        {
+          "label": "Widget Extension",
+          "path": "ios/PitPulseLiveActivity/PitPulseLiveActivityWidget.swift"
+        },
+        {
+          "label": "共享 Live Activity 契约",
+          "path": "Packages/PitPulseKit/Sources/Shared/LiveActivity.swift"
+        },
+        {
+          "label": "iOS 任务脚本",
+          "path": "scripts/xcode-ios-task.sh"
+        },
+        {
+          "label": "验收记录",
+          "path": "docs/acceptance/ios-live-activity.md"
+        },
+        {
+          "label": "赛程截图",
+          "path": "docs/acceptance/assets/t26/t26-calendar.png"
+        },
+        {
+          "label": "Live 截图",
+          "path": "docs/acceptance/assets/t26/t26-live.png"
+        },
+        {
+          "label": "灵动岛截图",
+          "path": "docs/acceptance/assets/t26/t26-dynamic-island.png"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "iOS 构建",
+          "path": "docs/acceptance/ios-live-activity.md",
+          "detail": "xcodebuild ios/PitPulseMobile.xcodeproj Debug build exit 0（iPhone 16 Pro / iOS 26.5）。"
+        },
+        {
+          "label": "iOS 测试",
+          "path": "docs/acceptance/ios-live-activity.md",
+          "detail": "xcodebuild test：3 项通过、0 失败（ContentState JSON 往返、倒计时、LiveSnapshot 解码）。"
+        },
+        {
+          "label": "真实数据",
+          "path": "docs/acceptance/ios-live-activity.md",
+          "detail": "本地服务 2026 赛历 24 站；Live 快照 São Paulo GP 22 位车手、L71/71。"
+        },
+        {
+          "label": "灵动岛渲染",
+          "path": "docs/acceptance/assets/t26/t26-dynamic-island.png",
+          "detail": "桌面截图显示紧凑态 L32/71；由 DEBUG + PITPULSE_DEMO_ACTIVITY=1 QA 钩子生成，不编入 Release。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "用签名设备安装 iOS App，在比赛进行时验证真机灵动岛与锁屏呈现；随后确认后台更新边界。",
+      "updatedAt": "2026-11-09T06:05:44Z",
+      "history": [
+        {
+          "at": "2026-11-09T06:05:44Z",
+          "status": "inReview",
+          "note": "iOS App + Widget Extension 构建通过，3 项单元测试通过，模拟器完成赛程/Live/灵动岛运行验证；真机待验收。"
         }
       ]
     }

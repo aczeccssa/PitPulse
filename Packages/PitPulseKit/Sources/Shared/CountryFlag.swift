@@ -1,7 +1,7 @@
 import Foundation
 
-enum CountryFlag {
-    static func emoji(for code: String?) -> String? {
+public enum CountryFlag {
+    public static func emoji(for code: String?) -> String? {
         guard let normalized = normalizedCode(code), isKnownRegion(normalized) else {
             return nil
         }
@@ -13,14 +13,14 @@ enum CountryFlag {
         return String(String.UnicodeScalarView(scalars))
     }
 
-    static func display(country: String, code: String?) -> String {
+    public static func display(country: String, code: String?) -> String {
         if let emoji = emoji(for: code) {
             return "\(emoji) \(country)"
         }
         return "🌐 \(country)"
     }
 
-    static func normalizedCode(_ code: String?) -> String? {
+    public static func normalizedCode(_ code: String?) -> String? {
         guard let code else { return nil }
         let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard normalized.count == 2,

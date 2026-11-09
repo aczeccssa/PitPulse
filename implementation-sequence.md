@@ -368,3 +368,15 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 **范围**：`server/src/domain/live.rs`、`server/src/providers/f1_live/`、`server/src/providers/wec_live.rs`、`macos/Core/LiveStore/`、`macos/Core/Models/`、`macos/Features/LiveIsland/`、`macos/Features/MenuBar/`。
 
 **验收**：F1 从 `Stints` topic、WEC 从 bootstrap 映射轮胎；WEC 映射虚拟能量与制造商；计时表可切换 Gap、轮胎、虚拟能量列并持久化；关注车手焦点卡展示头盔、车队 logo（或首字母徽章）与本地车身剪影，不联网抓取第三方素材；Live Island 与菜单栏可在 F1/WEC 同时进行时随时切换；真实 WEC 数据、replay fixture、Rust 测试与 macOS 编译通过。
+
+## 多平台客户端（M7）
+
+在保持 macOS 行为不变的前提下，先抽出可共享的 Data / Components / Shared，再加入 iOS 26+ App 与 ActivityKit 灵动岛；watchOS 与 Watch Widget 留到后续。当前进度只记录在 `docs/tasks/tasks.json`，验收细节见 `docs/acceptance/ios-live-activity.md`。
+
+### T25 — E1 客户端分包（Data / Components / Desktop 基座）
+
+把 `macos/Core` 的纯 Foundation 能力抽为本地 SPM 包 `PitPulseKit`（Shared / Data / Components），macOS App 改为依赖本地包；Components 只依赖 Shared，不把网络栈带进 Widget / Watch。验收以 `Build App` 与 `Build App Tests` 通过为准，并需在运行中的 App 上复核 MenuBar / Notch / 地图无回退。
+
+### T26 — iOS 26+ App 与灵动岛 Live Activity
+
+新增 iOS 26+ App（赛程 / Live / 设置）与独立 Widget Extension，复用 `PitPulseData` 的数据层；`PitPulseActivityAttributes` 与 `ContentState` 定义在 Shared，App 内 `LiveActivityController` 驱动灵动岛与锁屏 Live Activity，无需服务端推送。验收以 iOS 构建、`Test iOS` 单元测试、模拟器真实数据运行与真机灵动岛复核为准。

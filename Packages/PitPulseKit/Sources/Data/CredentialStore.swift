@@ -1,18 +1,18 @@
 import Foundation
 
-protocol CredentialStore: Sendable {
+public protocol CredentialStore: Sendable {
     func token(for server: URL) throws -> String?
     func save(token: String, for server: URL) throws
     func deleteToken(for server: URL) throws
 }
 
-enum CredentialError: Error, Equatable, LocalizedError {
+public enum CredentialError: Error, Equatable, LocalizedError {
     case invalidService
     case emptyToken
     case unavailable(OSStatus)
     case invalidData
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidService:
             "Keychain 服务名称无效。"

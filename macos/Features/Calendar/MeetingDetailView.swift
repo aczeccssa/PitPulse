@@ -1,4 +1,6 @@
 import SwiftUI
+import PitPulseData
+import PitPulseShared
 
 struct MeetingDetailView: View {
     let meeting: Meeting

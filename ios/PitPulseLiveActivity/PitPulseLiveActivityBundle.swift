@@ -1,0 +1,9 @@
+import SwiftUI
+import WidgetKit
+
+@main
+struct PitPulseLiveActivityBundle: WidgetBundle {
+    var body: some Widget {
+        PitPulseLiveActivityWidget()
+    }
+}

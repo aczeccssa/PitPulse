@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import PitPulseData
 
 struct SessionResultsView: View {
     @ObservedObject var model: AppModel

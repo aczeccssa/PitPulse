@@ -1,34 +1,34 @@
 import CryptoKit
 import Foundation
 
-struct CachedCalendar: Codable, Sendable {
-    static let currentVersion = 1
+public struct CachedCalendar: Codable, Sendable {
+    public static let currentVersion = 1
 
-    let cacheVersion: Int
-    let serverIdentity: String
-    let season: Int
-    let savedAt: Date
-    let envelope: APIEnvelope<[Meeting]>
+    public let cacheVersion: Int
+    public let serverIdentity: String
+    public let season: Int
+    public let savedAt: Date
+    public let envelope: APIEnvelope<[Meeting]>
 }
 
 private struct CachedEndpoint<Value: Codable & Sendable>: Codable, Sendable {
-    let cacheVersion: Int
-    let serverIdentity: String
-    let season: Int
-    let savedAt: Date
-    let envelope: APIEnvelope<Value>
+    public let cacheVersion: Int
+    public let serverIdentity: String
+    public let season: Int
+    public let savedAt: Date
+    public let envelope: APIEnvelope<Value>
 }
 
-actor DiskCalendarCache {
+public actor DiskCalendarCache {
     private let rootURL: URL
     private let fileManager: FileManager
 
-    init(rootURL: URL = DiskCalendarCache.defaultRootURL(), fileManager: FileManager = .default) {
+    public init(rootURL: URL = DiskCalendarCache.defaultRootURL(), fileManager: FileManager = .default) {
         self.rootURL = rootURL
         self.fileManager = fileManager
     }
 
-    static func defaultRootURL() -> URL {
+    public static func defaultRootURL() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base
@@ -36,7 +36,7 @@ actor DiskCalendarCache {
             .appendingPathComponent("Cache", isDirectory: true)
     }
 
-    func load(server: URL, season: Int) throws -> CachedCalendar? {
+    public func load(server: URL, season: Int) throws -> CachedCalendar? {
         let url = fileURL(server: server, season: season)
         guard fileManager.fileExists(atPath: url.path) else { return nil }
         do {
@@ -59,7 +59,7 @@ actor DiskCalendarCache {
         }
     }
 
-    func save(
+    public func save(
         server: URL,
         season: Int,
         envelope: APIEnvelope<[Meeting]>,
@@ -81,7 +81,7 @@ actor DiskCalendarCache {
         try data.write(to: url, options: [.atomic])
     }
 
-    func load<Value: Codable & Sendable>(
+    public func load<Value: Codable & Sendable>(
         server: URL,
         season: Int,
         key: String,
@@ -108,7 +108,7 @@ actor DiskCalendarCache {
         }
     }
 
-    func save<Value: Codable & Sendable>(
+    public func save<Value: Codable & Sendable>(
         server: URL,
         season: Int,
         key: String,
@@ -130,13 +130,13 @@ actor DiskCalendarCache {
         try data.write(to: url, options: [.atomic])
     }
 
-    func clear(server: URL) throws {
+    public func clear(server: URL) throws {
         let directory = serverDirectory(server: server)
         guard fileManager.fileExists(atPath: directory.path) else { return }
         try fileManager.removeItem(at: directory)
     }
 
-    func fileURL(server: URL, season: Int) -> URL {
+    public func fileURL(server: URL, season: Int) -> URL {
         serverDirectory(server: server).appendingPathComponent("calendar-\(season).json")
     }
 

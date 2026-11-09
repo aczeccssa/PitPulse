@@ -1,4 +1,5 @@
 import AppKit
+import PitPulseShared
 
 enum AppSymbol: String, CaseIterable, Sendable {
     case menuBar

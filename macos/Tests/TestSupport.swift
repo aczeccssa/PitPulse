@@ -1,4 +1,5 @@
 import Foundation
+@testable import PitPulseData
 @testable import F1Companion
 
 @MainActor

@@ -1,20 +1,7 @@
 import AppKit
 import Foundation
-
-struct FavoriteDriver: Identifiable, Equatable, Sendable {
-    let id: String
-    let name: String
-}
-
-enum AppConnectionStatus: Equatable, Sendable {
-    case idle
-    case loading
-    case connected
-    case stale
-    case offline
-    case requiresToken
-    case failed
-}
+import PitPulseData
+import PitPulseShared
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -1023,15 +1010,3 @@ final class AppModel: ObservableObject {
 
 }
 
-enum PreferenceKeys {
-    static let serverAddress = "serverAddress"
-    static let selectedSeason = "selectedSeason"
-    static let liveSeries = "liveSeries"
-    static let remindersEnabled = "remindersEnabled"
-    static let reminderMinutes = "reminderMinutes"
-    static let favoriteDriverId = "favoriteDriverId"
-    static let favoriteWecDriverId = "favoriteWecDriverId"
-    static let favoriteWecDriverName = "favoriteWecDriverName"
-    static let notchAutoShowEnabled = "notchAutoShowEnabled"
-    static let notchCollapseOnMouseExit = "notchCollapseOnMouseExit"
-}

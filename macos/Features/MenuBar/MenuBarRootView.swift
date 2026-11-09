@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import PitPulseData
 
 struct MenuBarRootView: View {
     enum Section: String, CaseIterable, Identifiable {
