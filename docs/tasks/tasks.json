@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T14:04:33Z",
+  "updatedAt": "2026-11-09T15:32:56Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -3609,7 +3609,7 @@
       "milestone": "M4",
       "area": "Operations / QA",
       "status": "inProgress",
-      "summary": "用户已批准端到端生产上线；首个部署专用提交已推送并产生真实 CI artifact。发布脚本审计后完成安全加固，正在等待加固提交的新 CI 与 VPS SSH 通道恢复后继续首次 production deploy，公网验收前不标 done。",
+      "summary": "用户已批准端到端生产上线；加固提交 c8a5be7 已推送，真实 CI 的 server job 成功但 macOS App-host 测试出现 9 项计时失败，整体 run 为 failure。现改为不启动桌面的 build-for-testing，并修正 GitHub artifact ZIP 摘要信任链；待新的整体成功 main CI 后继续首次 production deploy，公网验收前不标 done。",
       "dependencies": [
         "T11"
       ],
@@ -3758,15 +3758,20 @@
         {
           "label": "VPS SSH 只读诊断",
           "detail": "公网 IPv4 SSH 到 22 与 40000 在主机密钥交换前被关闭；known_hosts、密钥、代理配置与 PermitRootLogin 均不是直接原因。经已授权的 VPS 私网管理地址配合既有 root key 登录成功，并核验 Ubuntu 24.04.4 LTS/x86_64、Caddy 2.11.4、sshd -t OK、ssh.socket/ssh.service active、UFW active、现有 PitPulse 文件数 0、DNS 指向公网 VPS。现有 HTTPS 站点仍在线；公网 IPv4 透明代理/SSH 路径异常不影响使用私网管理地址进行已授权部署。"
+        },
+        {
+          "label": "加固 CI 结果与 artifact ZIP 信任链修正",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "c8a5be7 已推送 main；CI run 42632042204 的 server job 成功并发布 artifact 13681361405（ZIP digest sha256:53edcafca0b58857374667cc93a42bbb8fbd9a03d458b7e18ee184227468304b），但 macOS App-host 测试有 9 项计时/宿主失败，整体 conclusion=failure，因此 whole-run 成功门禁未能放行。已确认 GitHub artifact digest 覆盖原始 ZIP 而非内层 .tar.gz；deploy.yml 改为下载并按原始 ZIP 字节上传，pitpulse-deploy.example 直接哈希原始 ZIP、校验两个精确成员、独立枚举该 commit 的整体成功 main CI 及其发布摘要与 server job。CI macOS 门改为 macos-26 上 PitPulse.xcodeproj/PitPulseDesktop 的 build-for-testing，不启动 XCTest App host。隔离部署演练扩为 12/12 通过，含有效 ZIP、请求摘要不匹配和发布摘要不存在三种路径；真实 VPS 与公网验收仍未执行。"
         }
       ],
       "blockers": [
         "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，VPS 上游可能降级；首发布已在无密钥模板中禁用 F1 Live，不影响 API/TLS/部署闭环验收。",
-        "公网 IPv4 路径的 SSH 在主机密钥交换前关闭连接；经已授权的 VPS 私网管理地址核验，Ubuntu/sshd 配置与 DNS 均正常，PitPulse 生产文件尚不存在。后续 CI 部署可改用该私网管理地址；公网 SSH 异常仍单独记录。尚未安装凭据、bootstrap、Caddy/systemd 或执行首次 deploy。",
-        "加固后的真实 CI 整体成功、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
+        "公网 IPv4 路径的 SSH 在主机密钥交换前关闭连接；经已授权的 VPS 私网管理地址核验，Ubuntu/sshd 配置与 DNS 均正常。GitHub Environment 的 VPS_HOST/VPS_KNOWN_HOSTS 尚需改为该私网管理地址及其经带外核验的主机公钥，VPS 凭据/bootstrap/Caddy/systemd 尚未安装。",
+        "整体成功的加固 CI、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
       ],
-      "nextAction": "推送审计加固提交，取得 server job 成功且含新 artifact 的 main CI run；恢复 VPS SSH 后安装专用凭据/bootstrap/Caddy/systemd，dispatch production deploy，记录公网 401/200/SSE/证书证据；失败按管线自动回滚。",
-      "updatedAt": "2026-11-09T14:04:33Z",
+      "nextAction": "推送 ZIP 信任链与 macOS CI 修正，取得整体成功的 main CI run 与新 artifact；更新 VPS_HOST/VPS_KNOWN_HOSTS 私网管理凭据，安装专用凭据/bootstrap/Caddy/systemd，dispatch production deploy 并记录公网 401/200/SSE/证书证据；失败按管线自动回滚。",
+      "updatedAt": "2026-11-09T15:32:56Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3867,6 +3872,11 @@
           "at": "2026-11-09T14:04:33Z",
           "status": "inProgress",
           "note": "首次部署专用提交与真实 server artifact 已完成；审计发现的发布阻断问题在仓库隔离演练中修复为 11/11 通过，尚未推送修复提交或重新触发 CI。production environment 增加 required reviewer；VPS SSH 预认证阶段关闭连接成为当前上线阻塞，HTTPS 现有站点仍在线。T15 保持 inProgress、三项验收标准 false，保留全部旧证据与历史；未把 CI artifact、本地演练或 reviewer 配置当作生产上线成功。"
+        },
+        {
+          "at": "2026-11-09T15:32:56Z",
+          "status": "inProgress",
+          "note": "c8a5be7 已推送并产生 server job 成功、整体失败的 CI run 42632042204；9 项 macOS XCTest App-host 计时失败改用 build-for-testing 门禁。发现并修正 GitHub artifact digest 与内层 tar.gz 摘要不一致：工作流保留原始 ZIP 上传，VPS forced command 直接校验原始 ZIP 摘要、精确成员、整体成功 main CI 与发布摘要。隔离演练 12/12 通过，T15 三项验收标准保持 false；修正提交、整体成功 CI、VPS 首次发布和公网验收尚未完成。"
         }
       ]
     },

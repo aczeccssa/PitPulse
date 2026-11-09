@@ -9,21 +9,21 @@
 # deploy.yml:
 #   ssh pitpulse-deploy "put <full-commit-sha>"       with one base64 line
 #                                                      containing the SHA and
-#                                                      artifact SHA-256, then
-#                                                      the archive bytes
+#                                                      the raw artifact ZIP
+#                                                      SHA-256, then ZIP bytes
 #   ssh pitpulse-deploy "deploy <full-commit-sha>"    with the base64-encoded
 #                                                      trusted deploy scripts on
 #                                                      stdin
 #   ssh pitpulse-deploy "cleanup <full-commit-sha>"  remove only that SHA's
 #                                                      staging files
 #
-# No arbitrary shell, path, user, or command from CI is accepted. The artifact
-# is stored under a SHA-named file and is checked against BOTH the immutable
-# release digest published by GitHub Actions and the root-installed manifest
-# for the approved commit. deploy-release.sh additionally validates VERSION,
-# SHA256SUMS and ELF/ABI before switching anything. The runner invokes only a
-# root-owned launcher through a fixed sudoers rule; it never reads the token,
-# supplies root environment variables, or writes /etc directly.
+# No arbitrary shell, path, user, or command from CI is accepted. The raw
+# GitHub Actions artifact ZIP is checked against the immutable ZIP digest
+# published for this exact commit and a successful main-branch CI run. Its own
+# VERSION, SHA256SUMS and ELF/ABI are checked again by deploy-release.sh. The
+# runner invokes only a root-owned launcher through a fixed sudoers rule; it
+# never reads the token, supplies root environment variables, or writes /etc
+# directly.
 
 set -Eeuo pipefail
 umask 077
@@ -47,7 +47,8 @@ require_commands() {
     done
 }
 
-require_commands install rm mkdir head grep base64 tar sudo mktemp cmp wc sha256sum cut curl jq
+require_commands install rm mkdir head tail grep base64 tar sudo mktemp cmp wc \
+    sha256sum cut curl jq unzip sort
 [[ -n "${SSH_ORIGINAL_COMMAND:-}" ]] || fail "missing original command"
 if [[ "$SSH_ORIGINAL_COMMAND" =~ ^(put|deploy|cleanup)[[:space:]]([0-9a-f]{40})$ ]]; then
     action="${BASH_REMATCH[1]}"
@@ -61,57 +62,99 @@ case "$action" in
     put)
         install -d -m 0755 "$INCOMING"
         temp="$(mktemp "$INCOMING/.upload.XXXXXX")"
-        trap 'rm -f "$temp" "$temp.payload"' EXIT
+        trap 'rm -rf "$temp" "$temp.payload" "$temp.zipdir"' EXIT
         head -c "$((ARCHIVE_MAX_BYTES + 1))" > "$temp"
         size="$(wc -c < "$temp")"
         (( size > 0 && size <= ARCHIVE_MAX_BYTES )) || fail "artifact size out of range"
         IFS= read -r request_line < "$temp" || fail "missing artifact request"
         request="$(printf '%s' "$request_line" | base64 -d)" || fail "artifact request is not base64"
-        read -r request_sha request_digest <<<"$request"
-        [[ "$request_sha" == "$sha" && "$request_digest" =~ ^[0-9a-f]{64}$ ]] ||
+        read -r request_sha request_digest extra <<<"$request"
+        [[ -z "$extra" && "$request_sha" == "$sha" && "$request_digest" =~ ^[0-9a-f]{64}$ ]] ||
             fail "artifact request does not match the forced-command SHA"
         tail -n +2 "$temp" > "$temp.payload"
-        [[ "$(sha256sum "$temp.payload" | cut -d' ' -f1)" == "$request_digest" ]] ||
-            fail "artifact digest does not match its request"
 
-        # The digest is independently published by the public GitHub Actions
-        # API for this exact commit. The forced command does not trust a digest
-        # supplied only by the CI runner, and no token is used here.
+        # GitHub's artifact digest covers the ZIP bytes, not the .tar.gz member.
+        # Hash the bytes exactly as received; never rebuild the ZIP locally.
+        actual_digest="$(sha256sum "$temp.payload" | cut -d' ' -f1)"
+        [[ "$actual_digest" == "$request_digest" ]] ||
+            fail "raw artifact ZIP digest does not match its request"
+
+        expected_archive="pitpulse-server-linux-x86_64-${sha}.tar.gz"
+        expected_checksum="${expected_archive}.sha256"
+        expected_members="$(printf '%s\n%s\n' "$expected_archive" "$expected_checksum" | LC_ALL=C sort)"
+        actual_members="$(unzip -Z1 "$temp.payload" | LC_ALL=C sort)" ||
+            fail "artifact payload is not a ZIP"
+        [[ "$actual_members" == "$expected_members" ]] ||
+            fail "artifact ZIP has unexpected members"
+        mkdir -p "$temp.zipdir"
+        unzip -q "$temp.payload" "$expected_archive" "$expected_checksum" \
+            -d "$temp.zipdir" || fail "cannot extract approved artifact ZIP members"
+        archive_member="$temp.zipdir/$expected_archive"
+        checksum_member="$temp.zipdir/$expected_checksum"
+        [[ -f "$archive_member" && ! -L "$archive_member" &&
+           -f "$checksum_member" && ! -L "$checksum_member" ]] ||
+            fail "artifact ZIP members are missing or linked"
+        checksum_digest="$(cut -d' ' -f1 "$checksum_member")"
+        [[ "$checksum_digest" =~ ^[0-9a-f]{64}$ ]] || fail "artifact checksum is malformed"
+        grep -Fqx "$checksum_digest  $expected_archive" "$checksum_member" ||
+            fail "artifact checksum does not reference the approved archive"
+        [[ "$(sha256sum "$archive_member" | cut -d' ' -f1)" == "$checksum_digest" ]] ||
+            fail "artifact archive checksum failed"
+        (
+            cd "$temp.zipdir"
+            sha256sum -c "$(basename "$checksum_member")"
+        ) >/dev/null || fail "artifact archive checksum file failed"
+
+        # Independently find a fully successful main CI run for this commit
+        # whose published raw ZIP digest is exactly the uploaded digest. The
+        # forced command does not trust a run ID or digest from the CI runner,
+        # uses only the public GitHub API, and needs no token.
         repo="aczeccssa/PitPulse"
         endpoint="https://api.github.com/repos/$repo"
         header=(-H 'Accept: application/vnd.github+json' -H 'User-Agent: pitpulse-vps-verify')
         runs_url="$endpoint/actions/workflows/ci.yml/runs?head_sha=$sha&event=push&branch=main&status=completed&per_page=100"
         runs="$(curl -fsSL "${header[@]}" "$runs_url")" ||
             fail "cannot query GitHub Actions runs for this commit"
-        run_id="$(jq -r --arg sha "$sha" '
+        run_ids="$(jq -r --arg sha "$sha" '
             [.workflow_runs[] | select(
                 .name == "CI" and .event == "push" and .head_branch == "main"
                 and .head_sha == $sha and .status == "completed"
-            )] | sort_by(.created_at) | last | .id // empty
+                and .conclusion == "success"
+            )] | sort_by(.created_at) | .[].id // empty
         ' <<<"$runs")"
-        [[ "$run_id" =~ ^[0-9]+$ ]] || fail "no completed main CI run for this commit"
-        server_job="$(curl -fsSL "${header[@]}" \
-            "$endpoint/actions/runs/$run_id/jobs?per_page=100")" ||
-            fail "cannot query the CI server job"
-        jq -e '.jobs[] | select(.name == "Server fmt / clippy / test / build") |
-            .status == "completed" and .conclusion == "success"' <<<"$server_job" >/dev/null ||
-            fail "the CI server job did not pass"
-        artifacts="$(curl -fsSL "${header[@]}" \
-            "$endpoint/actions/runs/$run_id/artifacts?per_page=100")" ||
-            fail "cannot query CI artifacts"
-        published_digest="$(jq -r --arg sha "$sha" '
-            [.artifacts[] | select(
-                .name == ("pitpulse-server-linux-x86_64-" + $sha) and .expired == false
-                and .workflow_run.head_branch == "main" and .workflow_run.head_sha == $sha
-            ) | .digest] | if length == 1 then .[0] else empty end
-        ' <<<"$artifacts")"
-        [[ "$published_digest" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-            fail "no unique published artifact digest for this commit"
-        [[ "$request_digest" == "${published_digest#sha256:}" ]] ||
-            fail "artifact digest does not match the GitHub-published digest"
-        unexpected="$(tar -tzf "$temp.payload" | grep -Ev '^(pitpulse-server|VERSION|SHA256SUMS|ldd\.txt|config\.production\.toml|pitpulse-server\.service|pitpulse\.caddyfile)$' || true)"
+        [[ -n "$run_ids" ]] || fail "no successful main CI run for this commit"
+        published_match=0
+        while IFS= read -r run_id; do
+            [[ "$run_id" =~ ^[0-9]+$ ]] || fail "invalid CI run ID"
+            artifacts="$(curl -fsSL "${header[@]}" \
+                "$endpoint/actions/runs/$run_id/artifacts?per_page=100")" ||
+                fail "cannot query CI artifacts"
+            count="$(jq -r --arg sha "$sha" --arg digest "sha256:$actual_digest" '
+                [.artifacts[] | select(
+                    .name == ("pitpulse-server-linux-x86_64-" + $sha)
+                    and .expired == false and .digest == $digest
+                    and .workflow_run.head_branch == "main"
+                    and .workflow_run.head_sha == $sha
+                )] | length
+            ' <<<"$artifacts")"
+            [[ "$count" =~ ^[0-9]+$ ]] || fail "invalid CI artifact response"
+            (( count <= 1 )) || fail "duplicate published artifacts for this CI run"
+            if (( count == 1 )); then
+                server_jobs="$(curl -fsSL "${header[@]}" \
+                    "$endpoint/actions/runs/$run_id/jobs?per_page=100")" ||
+                    fail "cannot query the CI server job"
+                jq -e '[.jobs[] | select(.name == "Server fmt / clippy / test / build")] |
+                    length == 1 and .[0].status == "completed" and .[0].conclusion == "success"
+                ' <<<"$server_jobs" >/dev/null || fail "the CI server job did not pass"
+                published_match=1
+                break
+            fi
+        done <<<"$run_ids"
+        (( published_match == 1 )) ||
+            fail "artifact ZIP digest does not match a published successful CI artifact"
+        unexpected="$(tar -tzf "$archive_member" | grep -Ev '^(pitpulse-server|VERSION|SHA256SUMS|ldd\.txt|config\.production\.toml|pitpulse-server\.service|pitpulse\.caddyfile)$' || true)"
         [[ -z "$unexpected" ]] || fail "artifact contains unexpected paths"
-        install -m 0644 "$temp.payload" "$INCOMING/${sha}.tar.gz"
+        install -m 0644 "$archive_member" "$INCOMING/${sha}.tar.gz"
         ;;
     deploy)
         install -d -m 0700 "$STAGING"

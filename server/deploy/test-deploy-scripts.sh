@@ -35,7 +35,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-require_commands python3 jq sqlite3 curl caddy sha256sum tar file head sleep openssl base64 ssh-keygen grep
+require_commands python3 jq sqlite3 curl caddy sha256sum tar file head sleep openssl base64 ssh-keygen grep zip unzip
 mkdir -p "$WORK_DIR/etc/pitpulse" "$WORK_DIR/etc/systemd/system" "$WORK_DIR/etc/caddy" \
     "$WORK_DIR/var/lib/pitpulse" "$WORK_DIR/var/backups/pitpulse" "$WORK_DIR/opt/pitpulse/releases"
 
@@ -185,7 +185,7 @@ tar -czf "$ARCHIVE" -C "$STAGE" \
     pitpulse-server VERSION SHA256SUMS ldd.txt \
     config.production.toml pitpulse-server.service pitpulse.caddyfile
 
-log "1/11 verifying artifact helper and rejecting untrusted archive paths"
+log "1/12 verifying artifact helper and rejecting untrusted archive paths"
 DRILL_VERSION="$(verify_artifact "$ARCHIVE" "$WORK_DIR/verify" 1)"
 [[ "$DRILL_VERSION" == "0123456789abcdef0123456789abcdef01234567" ]] || fail "artifact VERSION mismatch"
 EVIL_STAGE="$WORK_DIR/evil-stage"
@@ -206,7 +206,7 @@ if verify_artifact "$EVIL_ARCHIVE" "$WORK_DIR/evil-verify" 1 >/dev/null 2>&1; th
     fail "artifact verifier accepted an unexpected archive path"
 fi
 
-log "2/11 verifying environment parsing, token policy and secret-safe curl configs"
+log "2/12 verifying environment parsing, token policy and secret-safe curl configs"
 load_environment "$PITPULSE_ENV_FILE"
 export F1_COMPANION_TOKEN F1_COMPANION_DATABASE_PATH
 write_curl_config "$AUTH_CONFIG" "application/json"
@@ -240,7 +240,7 @@ if (load_environment "$PLACEHOLDER_ENV") >/dev/null 2>&1; then
     fail "environment parser accepted the example placeholder token"
 fi
 
-log "3/11 verifying deploy settings are parsed, not sourced"
+log "3/12 verifying deploy settings are parsed, not sourced"
 printf '# comments and blank lines are allowed\n\nPITPULSE_PUBLIC_BASE_URL=https://pitpulse.example.test/\n\n' > "$PITPULSE_DEPLOY_SETTINGS_FILE"
 chmod 0644 "$PITPULSE_DEPLOY_SETTINGS_FILE"
 unset PITPULSE_PUBLIC_BASE_URL
@@ -255,13 +255,13 @@ printf 'PITPULSE_PUBLIC_BASE_URL=https://pitpulse.lestere.bond\n' > "$PITPULSE_D
 chmod 0644 "$PITPULSE_DEPLOY_SETTINGS_FILE"
 unset PITPULSE_PUBLIC_BASE_URL
 
-log "4/11 verifying atomic symlink switching"
+log "4/12 verifying atomic symlink switching"
 atomic_set_symlink "$WORK_DIR/release-one" "$WORK_DIR/current"
 [[ "$(resolve_path "$WORK_DIR/current")" == "$(resolve_path "$WORK_DIR/release-one")" ]] || fail "first symlink switch failed"
 atomic_set_symlink "$WORK_DIR/release-two" "$WORK_DIR/current"
 [[ "$(resolve_path "$WORK_DIR/current")" == "$(resolve_path "$WORK_DIR/release-two")" ]] || fail "second symlink switch failed"
 
-log "5/11 verifying SQLite backup, integrity and cold-start handling"
+log "5/12 verifying SQLite backup, integrity and cold-start handling"
 sqlite3 "$PITPULSE_DB_PATH" 'CREATE TABLE IF NOT EXISTS predeploy (value TEXT); INSERT INTO predeploy VALUES ("before");'
 SNAPSHOT="$(sqlite_snapshot "$PITPULSE_DB_PATH" "$WORK_DIR/backup-existing")"
 [[ -f "$SNAPSHOT/backup-path" ]] || fail "SQLite backup manifest missing"
@@ -274,7 +274,7 @@ COLD_SNAPSHOT="$(sqlite_snapshot "$PITPULSE_DB_PATH" "$WORK_DIR/backup-cold")"
 restore_db_from_backup "$COLD_SNAPSHOT" "$PITPULSE_DB_PATH" || fail "cold-start restore failed"
 sqlite3 "$PITPULSE_DB_PATH" 'CREATE TABLE IF NOT EXISTS cold_start (value TEXT);'
 
-log "6/11 exercising deployment helpers through a curl-compatible responder"
+log "6/12 exercising deployment helpers through a curl-compatible responder"
 systemctl_cmd start "$PITPULSE_SERVICE_NAME"
 wait_for_health "http://$PITPULSE_BIND" "$AUTH_CONFIG" "$HEALTH_OUTPUT" || fail "health gate failed"
 unauth_status="$(http_status "http://$PITPULSE_BIND/api/v1/health" "")"
@@ -283,7 +283,7 @@ check_sse_first_event "http://$PITPULSE_BIND/api/v1/live/stream?series=f1" "$SSE
     fail "SSE first event check failed"
 systemctl_cmd stop "$PITPULSE_SERVICE_NAME"
 
-log "7/11 attempting a real loopback listener (may be blocked by the harness sandbox)"
+log "7/12 attempting a real loopback listener (may be blocked by the harness sandbox)"
 set +e
 python3 -c 'import socket, sys; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()' \
     > "$WORK_DIR/listener-port.txt" 2> "$WORK_DIR/listener-error.txt"
@@ -296,7 +296,7 @@ else
     log "loopback TCP bind is blocked by the sandbox; real socket-level HTTP/SSE remains unverified"
 fi
 
-log "8/11 checking Caddy SSE site template and bootstrap without binding a port"
+log "8/12 checking Caddy SSE site template and bootstrap without binding a port"
 caddy_cmd validate --config "$CADDYFILE" || fail "Caddy drill config is invalid"
 BOOTSTRAP_ROOT="$WORK_DIR/bootstrap-root"
 mkdir -p "$BOOTSTRAP_ROOT"
@@ -317,7 +317,7 @@ grep -q 'flush_interval -1' "$SCRIPT_DIR/pitpulse.caddyfile" || fail "Caddy SSE 
 grep -q 'request>headers>Authorization delete' "$SCRIPT_DIR/caddyfile.global.example" ||
     fail "Caddy access-log Authorization redaction is missing"
 
-log "9/11 checking full deploy success, failed-deploy rollback and manual rollback"
+log "9/12 checking full deploy success, failed-deploy rollback and manual rollback"
 PITPULSE_DEPLOY_ROOT="$WORK_DIR" PITPULSE_SYSTEMCTL=/usr/bin/true \
     PITPULSE_CADDY="$FAKE_CADDY" bash "$SCRIPT_DIR/bootstrap-vps.sh" >/dev/null
 export F1_COMPANION_DATABASE_PATH
@@ -376,7 +376,7 @@ fi
 env "${deploy_env[@]}" bash "$SCRIPT_DIR/rollback-release.sh" > "$WORK_DIR/rollback.log" 2>&1 ||
     { cat "$WORK_DIR/rollback.log"; fail "manual rollback drill failed"; }
 
-log "10/11 checking secret redaction, forced-command contract and credential template"
+log "10/12 checking secret redaction, forced-command contract and credential template"
 if grep -Rqs "$TOKEN" "$SCRIPT_DIR"; then
     fail "a drill token was found in tracked deployment scripts"
 fi
@@ -389,6 +389,12 @@ grep -Fq 'cmp -s "$STAGING/unpacked/$name" "$HELPERS/$name"' "$forced" ||
     fail "forced-command wrapper does not verify helper copies"
 grep -Fq 'actions/workflows/ci.yml/runs' "$forced" ||
     fail "forced-command wrapper lacks an independent CI run trust anchor"
+grep -Fq 'sha256sum "$temp.payload"' "$forced" ||
+    fail "forced-command wrapper does not hash the raw artifact ZIP"
+grep -Fq 'unzip -Z1 "$temp.payload"' "$forced" ||
+    fail "forced-command wrapper does not verify exact ZIP members"
+grep -Fq '.conclusion == "success"' "$forced" ||
+    fail "forced-command wrapper does not require a successful CI run"
 grep -Fq 'sudo -n "$DEPLOY_LAUNCHER" "$sha"' "$forced" ||
     fail "forced-command wrapper does not use the fixed root launcher"
 grep -Eq 'sudo[^|&;]*[[:space:]]+/usr/bin/env' "$forced" &&
@@ -417,14 +423,84 @@ cat > "$FORCED_ROOT/bin/sudo" <<'EOF'
 printf '%s\n' "$@" > "$WORK_DIR/forced-sudo-args"
 EOF
 chmod 0755 "$FORCED_ROOT/bin/sudo"
+
+# A curl-compatible public-API responder lets the drill exercise put without
+# reaching the network. Only the exact successful CI run/artifact digest below
+# is accepted; a failed run must be rejected.
+cat > "$WORK_DIR/fake-github-api.py" <<'PY'
+#!/usr/bin/env python3
+import json
+import os
+import sys
+
+url = sys.argv[-1]
+sha = os.environ["DRILL_SHA"]
+digest = os.environ["DRILL_ZIP_DIGEST"]
+run = "42632042204"
+failed_run = "42624865596"
+if "/actions/workflows/ci.yml/runs?" in url:
+    outcome = {"workflow_runs": [{
+        "id": int(run), "name": "CI", "event": "push", "head_branch": "main",
+        "head_sha": sha, "status": "completed", "conclusion": "success",
+        "created_at": "2026-11-09T15:00:00Z"
+    }, {
+        "id": int(failed_run), "name": "CI", "event": "push", "head_branch": "main",
+        "head_sha": sha, "status": "completed", "conclusion": "failure",
+        "created_at": "2026-11-09T14:00:00Z"
+    }]}
+elif f"/actions/runs/{run}/jobs" in url:
+    outcome = {"jobs": [{
+        "name": "Server fmt / clippy / test / build",
+        "status": "completed", "conclusion": "success"
+    }]}
+elif f"/actions/runs/{failed_run}/jobs" in url:
+    outcome = {"jobs": [{
+        "name": "Server fmt / clippy / test / build",
+        "status": "completed", "conclusion": "failure"
+    }]}
+elif f"/actions/runs/{run}/artifacts" in url:
+    outcome = {"artifacts": [{
+        "name": "pitpulse-server-linux-x86_64-" + sha,
+        "expired": False, "digest": "sha256:" + digest,
+        "workflow_run": {"head_branch": "main", "head_sha": sha}
+    }]}
+elif f"/actions/runs/{failed_run}/artifacts" in url:
+    outcome = {"artifacts": []}
+else:
+    sys.exit("unexpected fake GitHub API URL")
+print(json.dumps(outcome))
+PY
+chmod 0755 "$WORK_DIR/fake-github-api.py"
+cat > "$FORCED_ROOT/bin/curl" <<EOF
+#!/usr/bin/env bash
+exec python3 "$WORK_DIR/fake-github-api.py" "\$@"
+EOF
+chmod 0755 "$FORCED_ROOT/bin/curl"
 FORCED_WRAPPER="$WORK_DIR/pitpulse-deploy-drill"
-{
-    printf '#!/usr/bin/env bash\n'
-    printf 'set -Eeuo pipefail\n'
-    printf 'PATH=%s/bin:$PATH\n' "$FORCED_ROOT"
-    printf 'export WORK_DIR=%s\n' "$WORK_DIR"
-    printf '. %s\n' "$SCRIPT_DIR/pitpulse-deploy.example"
-} > "$FORCED_WRAPPER"
+python3 -I - "$SCRIPT_DIR/pitpulse-deploy.example" "$FORCED_WRAPPER" "$FORCED_ROOT" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text()
+root = sys.argv[3]
+replacements = {
+    "INCOMING=/opt/pitpulse/releases.incoming":
+        f"INCOMING={root}/opt/pitpulse/releases.incoming",
+    "STAGING=/var/tmp/pitpulse-deploy": f"STAGING={root}/var/tmp/pitpulse-deploy",
+    "HELPERS=/usr/local/lib/pitpulse": f"HELPERS={root}/usr/local/lib/pitpulse",
+    "DEPLOY_LAUNCHER=/usr/local/sbin/pitpulse-deploy-release":
+        f"DEPLOY_LAUNCHER={root}/bin/pitpulse-deploy-release",
+}
+for old, new in replacements.items():
+    assert source.count(old) == 1, old
+    source = source.replace(old, new)
+source = source.replace(
+    "set -Eeuo pipefail\n",
+    f"set -Eeuo pipefail\nPATH={root}/bin:$PATH\n",
+    1,
+)
+pathlib.Path(sys.argv[2]).write_text(source)
+PY
 chmod 0700 "$FORCED_WRAPPER"
 if SSH_ORIGINAL_COMMAND='uname -a' "$FORCED_WRAPPER" >/dev/null 2>&1; then
     fail "forced-command wrapper accepted an arbitrary shell command"
@@ -439,7 +515,52 @@ if SSH_ORIGINAL_COMMAND=cleanup "$FORCED_WRAPPER" >/dev/null 2>&1; then
     fail "forced-command wrapper accepted an unscoped cleanup"
 fi
 
-log "11/11 checking repeated same-SHA deploy and root-owned database restore"
+log "11/12 checking raw GitHub artifact ZIP trust chain and forced-command denial"
+ZIP_SHA=0123456789abcdef0123456789abcdef01234567
+ZIP_NAME="pitpulse-server-linux-x86_64-${ZIP_SHA}.tar.gz"
+ZIP_STAGE="$WORK_DIR/zip-stage"
+ZIP_TAR_STAGE="$WORK_DIR/zip-tar-stage"
+ZIP_FILE="$WORK_DIR/github-artifact.zip"
+INCOMING="$FORCED_ROOT/opt/pitpulse/releases.incoming"
+mkdir -p "$ZIP_STAGE" "$ZIP_TAR_STAGE"
+cp -R "$STAGE/." "$ZIP_TAR_STAGE/"
+printf '%s\n' "$ZIP_SHA" > "$ZIP_TAR_STAGE/VERSION"
+(
+    cd "$ZIP_TAR_STAGE"
+    sha256sum pitpulse-server VERSION ldd.txt config.production.toml \
+        pitpulse-server.service pitpulse.caddyfile > SHA256SUMS
+    tar -czf "$ZIP_STAGE/$ZIP_NAME" \
+        pitpulse-server VERSION SHA256SUMS ldd.txt \
+        config.production.toml pitpulse-server.service pitpulse.caddyfile
+)
+(
+    cd "$ZIP_STAGE"
+    sha256sum "$ZIP_NAME" > "$ZIP_NAME.sha256"
+    zip -q -X -D "$ZIP_FILE" "$ZIP_NAME" "$ZIP_NAME.sha256"
+)
+ZIP_DIGEST="$(sha256sum "$ZIP_FILE" | cut -d' ' -f1)"
+DRILL_SHA="$ZIP_SHA" DRILL_ZIP_DIGEST="$ZIP_DIGEST" \
+SSH_ORIGINAL_COMMAND="put $ZIP_SHA" "$FORCED_WRAPPER" \
+    < <(printf '%s %s\n' "$ZIP_SHA" "$ZIP_DIGEST" | openssl base64 -A; printf '\n'; cat "$ZIP_FILE") \
+    > "$WORK_DIR/forced-put.log" 2>&1 ||
+    { cat "$WORK_DIR/forced-put.log"; fail "valid raw artifact ZIP was rejected"; }
+[[ -f "$INCOMING/${ZIP_SHA}.tar.gz" ]] || fail "forced command did not install the approved archive"
+cmp -s "$INCOMING/${ZIP_SHA}.tar.gz" "$ZIP_STAGE/$ZIP_NAME" ||
+    fail "installed archive differs from the approved ZIP member"
+if DRILL_SHA="$ZIP_SHA" DRILL_ZIP_DIGEST="$ZIP_DIGEST" \
+    SSH_ORIGINAL_COMMAND="put $ZIP_SHA" "$FORCED_WRAPPER" \
+    < <(printf '%s %s\n' "$ZIP_SHA" "$(printf '%064d' 0)" | openssl base64 -A; printf '\n'; cat "$ZIP_FILE") \
+    >/dev/null 2>&1; then
+    fail "forced command accepted a mismatched ZIP digest request"
+fi
+if DRILL_SHA="$ZIP_SHA" DRILL_ZIP_DIGEST="$(printf '%064d' 1)" \
+    SSH_ORIGINAL_COMMAND="put $ZIP_SHA" "$FORCED_WRAPPER" \
+    < <(printf '%s %s\n' "$ZIP_SHA" "$ZIP_DIGEST" | openssl base64 -A; printf '\n'; cat "$ZIP_FILE") \
+    >/dev/null 2>&1; then
+    fail "forced command accepted a ZIP digest absent from published CI artifacts"
+fi
+
+log "12/12 checking repeated same-SHA deploy and root-owned database restore"
 env "${deploy_env[@]}" bash "$SCRIPT_DIR/deploy-release.sh" "$ARCHIVE" > "$WORK_DIR/deploy-repeat.log" 2>&1 ||
     { cat "$WORK_DIR/deploy-repeat.log"; fail "same-SHA re-deploy failed"; }
 [[ -f "$WORK_DIR/opt/pitpulse/releases/$DRILL_VERSION/ldd.txt" ]] ||
