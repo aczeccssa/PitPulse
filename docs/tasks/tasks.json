@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T15:47:15Z",
+  "updatedAt": "2026-11-09T15:56:05Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -3609,7 +3609,7 @@
       "milestone": "M4",
       "area": "Operations / QA",
       "status": "inProgress",
-      "summary": "用户已批准端到端生产上线；main CI run 42646072748 已整体成功并发布 Linux artifact 13688555226。VPS 凭据、bootstrap、Caddy/systemd 已安装；首次 production dispatch 在 CI-source 校验处因 gh api --jq 参数传错提前失败，未下载 artifact、未连 SSH、未改线上服务。已定位并修正该命令，准备复用同一绿色 CI 重新 dispatch，公网验收前不标 done。",
+      "summary": "用户批准的端到端生产上线闭环已跑通：整体成功 main CI 42646072748 产出 artifact 13688555226，production deploy 42648873760 经环境批准、原始 ZIP 摘要校验和受限 SSH forced command 后在 VPS 切换成功。公网 401/200/SSE、有效 Let's Encrypt 证书、systemd active、DB user_version=7、App Keychain/地址均已核验；真实赛事、完整 App UI 与资源指标仍为 pending，不标 done。",
       "dependencies": [
         "T11"
       ],
@@ -3767,15 +3767,19 @@
         {
           "label": "首次 production dispatch 失败诊断",
           "detail": "整体成功 CI 42646072748 的 server 与 macOS build-for-testing 均通过，artifact 13688555226 的发布 ZIP digest 为 sha256:69ccd90c47bb3370637e18ee68d04f2b284d820071708078fdb2e9579a0a918d。production dispatch 42647664276 已获环境批准，但 Validate requested commit and approved CI source 步骤把 jq 的 --arg 传给 gh api --jq，日志报 accepts 1 arg(s), received 4 并退出 1；后续下载、SSH、forced-command 上传和部署均未执行，线上服务未被改动。修正为 gh api 获取 JSON、独立 jq --arg 过滤，已对真实 API 响应验证可唯一选出该 artifact。"
+        },
+        {
+          "label": "首次真实 production deploy 与公网验收",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "CI 42646072748 整体成功，artifact 13688555226 的 ZIP digest sha256:69ccd90c47bb3370637e18ee68d04f2b284d820071708078fdb2e9579a0a918d；production deploy 42648873760 所有步骤 success。VPS current/VERSION 为 cb586afd9e626ed4734d47a731f840323553febf，systemd active，DB user_version=7，forced command 拒绝 uname -a 并接受 cleanup <sha>。loopback/public 未授权 401、授权 health 200 database=true live=false、public SSE text/event-stream 首帧 event: snapshot、Let's Encrypt CN=pitpulse.lestere.bond 证书链有效至 2027-02-07。App 地址与 Keychain token 已本地配置；App UI、真实赛事、Provider 断网、资源指标和回滚演练未验收。"
         }
       ],
       "blockers": [
-        "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，VPS 上游可能降级；首发布已在无密钥模板中禁用 F1 Live，不影响 API/TLS/部署闭环验收。",
-        "公网 IPv4 路径的 SSH 在主机密钥交换前关闭连接；经已授权的 VPS 私网管理地址核验，Ubuntu/sshd 配置与 DNS 均正常。GitHub Environment 的 VPS_HOST/VPS_KNOWN_HOSTS 尚需改为该私网管理地址及其经带外核验的主机公钥，VPS 凭据/bootstrap/Caddy/systemd 尚未安装。",
-        "整体成功的加固 CI、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
+        "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，生产 live=false 是显式降级；API/TLS/部署闭环已通过，真实 Live 赛事数据未验收。",
+        "真实赛事 5/15/30/45/60 分钟采样、Provider 断网、RSS/CPU、完整 App UI、生产回滚演练和长期证书续期尚未执行；三项 T15 验收标准保持 false。"
       ],
-      "nextAction": "推送 deploy.yml 的一行参数修正，复用整体成功 CI 42646072748 / commit cb586afd9e626ed4734d47a731f840323553febf 重新 dispatch；批准 production review，核验 put/deploy/自动健康门禁与公网 401/200/SSE/证书证据；失败按管线自动回滚。",
-      "updatedAt": "2026-11-09T15:47:15Z",
+      "nextAction": "由用户测试 https://pitpulse.lestere.bond 与 App；后续在真实赛事/上游凭据获批后补做 F1 Live、Provider 断网、5/15/30/45/60 分钟采样、RSS/CPU、完整 UI 和回滚演练，再决定是否勾完三项验收。",
+      "updatedAt": "2026-11-09T15:56:05Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3886,6 +3890,11 @@
           "at": "2026-11-09T15:47:15Z",
           "status": "inProgress",
           "note": "整体成功 main CI 42646072748 与新 artifact 已取得；VPS 专用凭据、bootstrap、Caddy/systemd 和 App Keychain 生产令牌已配置。首次 production dispatch 42647664276 的 CI-source 校验因 gh api --jq 误带 jq --arg 而失败，日志为 accepts 1 arg(s), received 4，未触及下载/SSH/线上发布。已修正查询并对真实 API 响应验证；T15 三项验收标准保持 false，等待重跑与公网验收。"
+        },
+        {
+          "at": "2026-11-09T15:56:05Z",
+          "status": "inProgress",
+          "note": "修正 gh api --jq 参数错误并复用整体成功 CI 后，production dispatch 42648873760 全部步骤成功；受限 SSH 上传原始 artifact ZIP、校验发布摘要、原子切换、本地/公网 401/200/SSE、证书、systemd、DB 迁移与 forced-command 拒绝均通过。T15 仍保留三项 false：真实赛事、完整 App UI、资源/断网/回滚和 F1 Live 上游未验收。"
         }
       ]
     },
