@@ -34,8 +34,8 @@ The sole rebuilt main App launched at 09:38:48. Its controller logged `automatic
 - `cargo test --locked --manifest-path server/Cargo.toml --all-targets`: 66 passed, no skips. Includes a loopback negotiate/WebSocket peer asserting affinity cookie, bearer header, subscription Topics, split handshake, combined completion/feed records and shutdown; also callback argument/lifecycle, sparse sectors, Sprint identity and missing metadata regression tests.
 - `cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings`: passed.
 - `cargo fmt --manifest-path server/Cargo.toml -- --check`: passed.
-- `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build`: passed.
-- `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build-for-testing`: passed; test hosts were not launched.
+- `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build`: passed.
+- `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing`: passed; test hosts were not launched.
 - Terminal `swiftc` compiling the actual APIModels, CalendarLogic, LiveModels and LiveIslandLogic: 14 assertions passed for optional sector decoding, missing values, helmet/favorite unique identity, duplicate rejection, Session label, total-lap label and replay/stale labels.
 
 New XCTest cases compiled but were not run under the user's prohibition on desktop test automation. The local replay fixture includes synthetic sector times/statuses and missing-sector coverage; it was not substituted for the live server. New UI screenshots, actual hide click, favorite selection, menu coexistence, external-display changes and VoiceOver still require user-operated acceptance. No commit or push was made.

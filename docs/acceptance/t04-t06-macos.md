@@ -4,7 +4,7 @@
 
 - `PreferencesView` 改用 macOS 26 原生 `NavigationSplitView` 侧栏、透明可滚动详情和 `GlassEffectContainer` / `.glassEffect` / `.glassProminent` 操作层；保留连接、本地提醒、Live Island、关注车手四类设置及原有 `AppModel` 行为。
 - 设置场景使用 800×640 默认尺寸、760×560 内容最小尺寸和统一紧凑工具栏；设置入口先收起菜单栏 Popup，避免 Popup 覆盖设置窗口。
-- 最终 `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`：82 项单测通过，0 失败。
+- 最终 `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`：82 项单测通过，0 失败。
 - 最终 `F1CompanionLiveAcceptance` scheme 仅运行 `MenuBarAcceptanceTests/testSettingsWindowPromotesAppAndRestoresAccessoryPolicy` 和 `MenuBarAcceptanceTests/testSettingsWindowLightAppearance`：2 项通过，0 失败、未跳过。覆盖齿轮打开、四类侧栏切换、关闭后重开、regular/accessory 往返、已打开设置时 Cmd+, 不增加第二个设置窗口。该 Cmd+, 断言不证明从关闭状态独立打开设置。
 - 浅色测试同时传入 `-AppleInterfaceStyle Light -NSRequiresAquaSystemAppearance YES`；仅前一参数在本机未生效。最终八张截图已逐张检查：800×640 窗口的浅深色四类页面均无遮挡，文字和控件未裁切，空 Token 操作正确显示禁用态。截图均为 2× 像素导出，未裁切、未合成。
 - 最小尺寸尝试两次失败：角落和直边拖拽后 XCTest 仍报告 800×640，760×560 断言失败。未确定是拖拽工具还是窗口缩放行为所致，因此移除不稳定拖拽断言，保留真实缩放与滚动为未验收项，不把最终两项交互测试通过扩大为缩放通过。
@@ -35,7 +35,7 @@
 
 ## 门禁结果
 
-- `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`：39 项通过、0 失败（最终重跑）；含身份归一、Keychain 错误和 Season boundary 回归。
+- `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`：39 项通过、0 失败（最终重跑）；含身份归一、Keychain 错误和 Season boundary 回归。
 - `cargo fmt --manifest-path server/Cargo.toml -- --check`、`cargo test --locked --manifest-path server/Cargo.toml`、严格 Clippy `-D warnings`：通过；其中真实同步时间/未知 provider 时间分离有固定断言。
 - `node docs/tasks/validate.mjs` 与任务 JSON 数据测试：8 项通过。
 - 本地 API 曾返回 2026 赛季 24 站，`/meetings/next?season=2026` 返回 Singapore Grand Prix；复启后 fetchedAt 为当前 UTC，不是固定旧日期。该联调数据库来自本地 provider 尝试/缓存；不将其描述为上游实时成功证明。
@@ -59,7 +59,7 @@
 
 ## 续接验证与预览恢复（2026-10-09）
 
-- 对中断前已写入的赛历透明列表、轻量返回标题与局部覆盖式滚动条执行完整 `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`，结果 **40 tests / 0 failures / TEST SUCCEEDED**。新增的一项检查覆盖 NSScrollView 配置；该检查不证明 SwiftUI 实际视图中的锚点已找到滚动容器，也不代替视觉验收。
+- 对中断前已写入的赛历透明列表、轻量返回标题与局部覆盖式滚动条执行完整 `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test`，结果 **40 tests / 0 failures / TEST SUCCEEDED**。新增的一项检查覆盖 NSScrollView 配置；该检查不证明 SwiftUI 实际视图中的锚点已找到滚动容器，也不代替视觉验收。
 - 停止旧 App 进程后，通过 Computer Use 的 App 入口启动当前构建，确认新版进程存在；这不等于通过「退出」按钮验收。没有修改用户 Token、服务器偏好或系统滚动设置。
 - 恢复既有本地联调数据库对应的 loopback 服务；`/api/v1/calendar?season=2026` 为 HTTP 200 / 24 站，`/api/v1/meetings/next?season=2026` 为 HTTP 200 / Singapore Grand Prix。这是本地预览可用性证明，不作为第三方实时 feed 证明。
 - Computer Use 两次绑定目标 App 均报告 timeoutReached；Finder 能返回 AX desktop，但截图是纯白，不足以判断状态栏图标与 Popup 外观。因此未采纳该截图，也未勾选单一入口、退出或真实离线冷启动的未通过项。

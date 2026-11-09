@@ -13,26 +13,25 @@
 ## 工程结构
 
 ```
-Packages/PitPulseKit/
-├── Package.swift                  # platforms: macOS 26 / iOS 26 / watchOS 11
+PitPulse.xcodeproj                   # 单一工程（XcodeGen 由根目录 project.yml 生成）
+├── PitPulseDesktop (macOS app)          # 菜单栏 / Notch / 地图 / 设置
+├── PitPulseDesktopTests / PitPulseDesktopUITests
+├── PitPulseMobile (iOS app)             # 赛程 / Live / 设置
+├── PitPulseLiveActivity (iOS extension) # 灵动岛 / 锁屏 Live Activity
+└── PitPulseMobileTests
+project.yml                          # 工程生成描述（xcodegen generate）
+
+Packages/PitPulseKit/                # 共享模块（本地 SPM，两个 App 共同依赖）
+├── Package.swift                    # platforms: macOS 26 / iOS 26 / watchOS 11
 └── Sources/
-    ├── Shared/                    # 纯值层：FavoriteDriver、PreferenceKeys、WidgetContent、CountryFlag、LiveActivityAttributes
-    ├── Data/                      # APIClient、APIModels、LiveStore、SSE、Cache、Keychain、提醒、日历逻辑
-    └── Components/                # 只吃值的 SwiftUI 原子视图（StatusPill、CountdownText、FlagBadge、LiveWidgetCard）
-
-PitPulse.xcworkspace/                # 根工作区：同时包含 macOS / iOS 工程与本地包
-
-ios/
-├── project.yml                    # XcodeGen 工程描述（可再生成）
-├── PitPulseMobile.xcodeproj       # 提交的生成结果
-├── PitPulseMobile/                # App：赛程 / Live / 设置 + LiveActivityController + AppIcon
-├── PitPulseLiveActivity/          # Widget Extension：灵动岛 / 锁屏 Live Activity
-└── PitPulseMobileTests/           # 数据契约与 Live Activity ContentState 单元测试
+    ├── Shared/                      # 纯值层：FavoriteDriver、PreferenceKeys、WidgetContent、CountryFlag、LiveActivityAttributes
+    ├── Data/                        # APIClient、APIModels、LiveStore、SSE、Cache、Keychain、提醒、日历逻辑
+    └── Components/                  # 只吃值的 SwiftUI 原子视图（StatusPill、CountdownText、FlagBadge、LiveWidgetCard）
 ```
 
-- 根工作区 `PitPulse.xcworkspace` 同时引用 `macos/F1Companion.xcodeproj`、`ios/PitPulseMobile.xcodeproj` 与本地包 `Packages/PitPulseKit`，一个窗口内可切换全部 scheme。
-- macOS App target（`F1Companion`）改为依赖 `PitPulseShared` / `PitPulseData` / `PitPulseComponents`；原 `macos/Core` 的纯 Foundation 文件已移入包，AppKit 视图与 AppModel 平台编排留在 Desktop 壳。
-- `Components` 只依赖 `Shared`，不依赖 `Data`，避免 Widget / Watch 被拖入 URLSession / SSE / Keychain。
+- 根目录只有一个 `PitPulse.xcodeproj`，同时包含 Desktop（macOS）与 Mobile（iOS App + Widget）target；共享模块仍是 `PitPulseKit` 本地包，被两个 App 共同依赖。
+- 两端 App 的显示名统一为 **PitPulse**，并共用 `macos/Resources/AppIcon.icon`（Icon Composer）；构建产物分别为 macOS `PitPulse.app` 与 iOS `PitPulse.app`。
+- `Components` 只依赖 `Shared`，不依赖 `Data`，避免 Widget 被拖入 URLSession / SSE / Keychain。
 - 灵动岛契约 `PitPulseActivityAttributes` 位于 `Shared`，用 `#if os(iOS)` 隔离 ActivityKit，macOS 包编译不受影响。
 
 ## 关键实现
@@ -48,10 +47,10 @@ ios/
 
 | 命令 | 结果 |
 | --- | --- |
-| `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build` | exit 0 |
-| `xcodebuild -project macos/F1Companion.xcodeproj -scheme F1Companion build-for-testing` | exit 0 |
-| `xcodebuild -project ios/PitPulseMobile.xcodeproj -scheme PitPulseMobile build` | exit 0 |
-| `xcodebuild -project ios/PitPulseMobile.xcodeproj -scheme PitPulseMobile test` | TEST SUCCEEDED，3 项通过 |
+| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build` | exit 0 |
+| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop build-for-testing` | exit 0 |
+| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseMobile build` | exit 0 |
+| `xcodebuild -project PitPulse.xcodeproj -scheme PitPulseMobile test` | TEST SUCCEEDED，3 项通过 |
 
 运行验证（真实本地服务 `http://127.0.0.1:38701`，2026 赛季 24 站数据）：
 
@@ -70,8 +69,8 @@ ios/
 ## 复现命令
 
 ```bash
-# 重新生成 iOS 工程（修改 project.yml 后）
-cd ios && xcodegen generate
+# 重新生成工程（修改根目录 project.yml 后）
+xcodegen generate
 
 # 构建 / 测试 iOS
 scripts/xcode-ios-task.sh build Debug

@@ -1,6 +1,6 @@
 import Foundation
 @testable import PitPulseData
-@testable import F1Companion
+@testable import PitPulseDesktop
 
 @MainActor
 final class TestNetworkPathMonitor: NetworkPathMonitoring {

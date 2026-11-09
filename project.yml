@@ -1,0 +1,247 @@
+name: PitPulse
+options:
+  bundleIdPrefix: com.pitpulse
+  deploymentTarget:
+    macOS: "26.0"
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+packages:
+  PitPulseKit:
+    path: Packages/PitPulseKit
+  Nook:
+    url: https://github.com/twinkling-reality/opennook.git
+    revision: 2b50b5c3a99df8914e25e199d29bf7aa505f7a59
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  # ---- Desktop module (macOS app) ----
+  PitPulseDesktop:
+    type: application
+    platform: macOS
+    sources:
+      - path: macos/App
+      - path: macos/Core/Models
+      - path: macos/Features
+        excludes:
+          - "Maps/map.html"
+      - path: macos/Resources/PitPulseAssets.xcassets
+        buildPhase: resources
+      - path: macos/Resources/AppIcon.icon
+        buildPhase: resources
+      - path: macos/Features/Maps/map.html
+        buildPhase: resources
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: macos/Support/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1Companion
+        PRODUCT_NAME: PitPulse
+        PRODUCT_MODULE_NAME: PitPulseDesktop
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
+    dependencies:
+      - package: Nook
+        product: NookApp
+      - package: PitPulseKit
+        product: PitPulseShared
+      - package: PitPulseKit
+        product: PitPulseData
+      - package: PitPulseKit
+        product: PitPulseComponents
+
+  # ---- Desktop unit tests ----
+  PitPulseDesktopTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: macos/Tests
+        excludes:
+          - "Headless/**"
+          - "live-map-check.swift"
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1CompanionTests
+        PRODUCT_NAME: PitPulseTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PitPulse.app/Contents/MacOS/PitPulse"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - target: PitPulseDesktop
+      - package: PitPulseKit
+        product: PitPulseShared
+      - package: PitPulseKit
+        product: PitPulseData
+      - package: PitPulseKit
+        product: PitPulseComponents
+
+  # ---- Desktop UI acceptance tests ----
+  PitPulseDesktopUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: macos/UITests
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1CompanionUITests
+        PRODUCT_NAME: PitPulseUITests
+        TEST_TARGET_NAME: PitPulseDesktop
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - target: PitPulseDesktop
+
+  # ---- Mobile module (iOS app + widget extension) ----
+  PitPulseMobile:
+    type: application
+    platform: iOS
+    sources:
+      - path: ios/PitPulseMobile
+        excludes:
+          - "Info.plist"
+          - "Assets.xcassets/**"
+      - path: macos/Resources/AppIcon.icon
+        buildPhase: resources
+    info:
+      path: ios/PitPulseMobile/Info.plist
+      properties:
+        CFBundleDisplayName: PitPulse
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSupportsIndirectInputEvents: true
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: true
+    settings:
+      base:
+        SDKROOT: iphoneos
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile
+        PRODUCT_NAME: PitPulse
+        PRODUCT_MODULE_NAME: PitPulseMobile
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
+    dependencies:
+      - package: PitPulseKit
+        product: PitPulseShared
+      - package: PitPulseKit
+        product: PitPulseData
+      - package: PitPulseKit
+        product: PitPulseComponents
+      - target: PitPulseLiveActivity
+        embed: true
+
+  PitPulseLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ios/PitPulseLiveActivity
+        excludes:
+          - "Info.plist"
+    info:
+      path: ios/PitPulseLiveActivity/Info.plist
+      properties:
+        CFBundleDisplayName: PitPulse Live
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        SDKROOT: iphoneos
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.liveactivity
+        PRODUCT_NAME: PitPulseLiveActivity
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+    dependencies:
+      - package: PitPulseKit
+        product: PitPulseShared
+      - package: PitPulseKit
+        product: PitPulseComponents
+
+  PitPulseMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ios/PitPulseMobileTests
+    settings:
+      base:
+        SDKROOT: iphoneos
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - package: PitPulseKit
+        product: PitPulseShared
+      - package: PitPulseKit
+        product: PitPulseData
+
+schemes:
+  PitPulseDesktop:
+    build:
+      targets:
+        PitPulseDesktop: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PitPulseDesktopTests
+    archive:
+      config: Release
+  PitPulseMobile:
+    build:
+      targets:
+        PitPulseMobile: all
+        PitPulseLiveActivity: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PitPulseMobileTests
+    archive:
+      config: Release
+  PitPulseLiveAcceptance:
+    build:
+      targets:
+        PitPulseDesktop: all
+        PitPulseDesktopUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - PitPulseDesktopUITests
+  PitPulseLiveActivity:
+    build:
+      targets:
+        PitPulseLiveActivity: all
+    run:
+      config: Debug

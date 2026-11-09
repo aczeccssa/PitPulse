@@ -12,7 +12,7 @@
 
 | 检查 | 结果 |
 |---|---|
-| `xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 56 passed，0 failed；覆盖通知授权／拒绝、稳定 ID、重复刷新、并发刷新、改期／取消、服务器／赛季隔离、DST UTC 时刻、过期、安排失败及重试。 |
+| `xcodebuild -quiet -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 56 passed，0 failed；覆盖通知授权／拒绝、稳定 ID、重复刷新、并发刷新、改期／取消、服务器／赛季隔离、DST UTC 时刻、过期、安排失败及重试。 |
 | `CalendarCacheTests` 离线与生命周期用例 | 断网冷启动读取赛历、成绩、WDC/WCC；网络恢复刷新；401 不循环；429 等待响应头；普通失败推进退避；睡眠取消请求、唤醒与网络恢复合并为一次赛历刷新。 |
 | Rust 验证 | `cargo fmt --manifest-path server/Cargo.toml -- --check`、locked strict Clippy、locked tests、release build 和验收 example 编译通过。 |
 

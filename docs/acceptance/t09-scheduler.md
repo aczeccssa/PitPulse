@@ -20,7 +20,7 @@
 | `cargo test --manifest-path server/Cargo.toml` | 50 passed，0 failed：28 unit、6 API、9 calendar sync、1 results sync、6 storage。 |
 | `cargo clippy --manifest-path server/Cargo.toml -- -D warnings` | 通过。 |
 | `cargo build --release --manifest-path server/Cargo.toml` | 通过。 |
-| `xcodebuild -quiet -project macos/F1Companion.xcodeproj -scheme F1Companion -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 47 passed，0 failed；覆盖 15 分钟轮询、关闭取消、系统唤醒 REST 请求、revision 更新、赛季晚到响应丢弃和失败保留。 |
+| `xcodebuild -quiet -project PitPulse.xcodeproj -scheme PitPulseDesktop -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test` | 47 passed，0 failed；覆盖 15 分钟轮询、关闭取消、系统唤醒 REST 请求、revision 更新、赛季晚到响应丢弃和失败保留。 |
 | `node docs/tasks/validate.mjs` / `node --test docs/tasks/tests/task-data.test.mjs` | 15 tasks / 4 milestones 校验通过；8 passed，0 failed。 |
 
 关键测试位于 [scheduler.rs](../../server/src/scheduler.rs)、[http.rs](../../server/src/providers/http.rs)、[storage.rs](../../server/tests/storage.rs)、[results_sync.rs](../../server/tests/results_sync.rs)、[api.rs](../../server/tests/api.rs) 和 [AppModel tests](../../macos/Tests/CalendarCacheTests.swift)。覆盖注入时钟与 jitter 边界、午夜 / 24 / 72 小时、估算结束时间、取消任务、429 两种 Retry-After、5xx、timeout、单次请求、持久截止重启恢复、mock Session 单飞、空结果 retry deadline、失败回滚、相同内容去重和更正后 revision 增长。
