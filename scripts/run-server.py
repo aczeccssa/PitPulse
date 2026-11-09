@@ -20,8 +20,10 @@ def main():
             for key, value in values.items()
         ):
             raise SystemExit("Local server environment must contain only string F1 configuration values")
-        env.update(values)
-    env.setdefault("F1_COMPANION_BIND", "127.0.0.1:38701")
+        # Local file supplies defaults only: explicit Taskdeck / shell env wins.
+        for key, value in values.items():
+            env.setdefault(key, value)
+    env.setdefault("F1_COMPANION_BIND", "0.0.0.0:38701")
     env.setdefault("F1_COMPANION_DATABASE_PATH", str(local / "server/pitpulse.sqlite"))
     token = local / "mapbox-public-token"
     if token.exists():

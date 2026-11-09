@@ -3676,7 +3676,7 @@
       ],
       "blockers": [],
       "nextAction": "本地继续使用 Taskdeck；正式部署项保持未完成。",
-      "updatedAt": "2026-10-11T09:32:35Z",
+      "updatedAt": "2026-11-09T08:01:13Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3722,6 +3722,11 @@
           "at": "2026-10-11T09:32:35Z",
           "status": "inReview",
           "note": "Taskdeck 重启 Run App 后实际进程为 Release 构建产物，参数仅指定真实服务 38701。Debug 实例已停止。"
+        },
+        {
+          "at": "2026-11-09T08:01:13Z",
+          "status": "inReview",
+          "note": "服务端 bind 改为可由 Taskdeck/环境变量配置：run-server.py 中本地 environment.json 改为仅提供默认值，显式 F1_COMPANION_BIND 优先；本机配置与 Taskdeck 均设为 0.0.0.0:38701，供 LAN 设备访问。"
         }
       ]
     },
