@@ -48,15 +48,15 @@ jobs:
           jq -e '[.jobs[] | select(.name == "Server fmt / clippy / test / build")] |
             length == 1 and .[0].status == "completed" and .[0].conclusion == "success"
           ' <<<"$server_jobs" >/dev/null
-          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/artifacts?per_page=100" \
-            --jq --arg sha "$REQUESTED_SHA" '
+          artifacts_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/artifacts?per_page=100")"
+          artifact="$(jq -e --arg sha "$REQUESTED_SHA" '
               [.artifacts[] | select(
                 .name == ("pitpulse-server-linux-x86_64-" + $sha)
                 and .expired == false
                 and .workflow_run.head_branch == "main"
                 and .workflow_run.head_sha == $sha
               )] | if length == 1 then .[0] else error("expected exactly one release artifact") end
-            ')"
+            ' <<<"$artifacts_json")"
           artifact_id="$(jq -r '.id' <<<"$artifact")"
           digest="$(jq -r '.digest' <<<"$artifact")"
           [[ "$artifact_id" =~ ^[0-9]+$ && "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] ||
