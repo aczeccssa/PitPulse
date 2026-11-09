@@ -1082,7 +1082,7 @@ private struct LiveHelmetView: View {
             return MotorsportAsset.image(kind: .driverPhoto, id: id, season: model.selectedSeason)
         }
         guard let id = LiveIslandLogic.rosterID(for: driver, favorites: model.favoriteDrivers) else { return nil }
-        return MotorsportAsset.image(kind: .helmet, id: id, season: model.selectedSeason)
+        return MotorsportAsset.f1DriverImage(id: id, season: model.selectedSeason)
     }
 
     var body: some View {

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    response::Html,
+    http::header,
+    response::{Html, IntoResponse},
     routing::{get, post},
 };
 use serde_json::json;
@@ -49,7 +50,38 @@ pub fn build_router(state: AppState) -> Router<AppState> {
 }
 
 async fn index() -> Html<&'static str> {
-    Html("PitPulse API is running")
+    Html(
+        r#"<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>PitPulse API</title>
+    <link rel="icon" href="/favicon.ico?v=1" sizes="16x16 32x32 48x48">
+    <link rel="icon" type="image/png" href="/favicon.png?v=1" sizes="64x64">
+</head>
+<body>PitPulse API is running</body>
+</html>"#,
+    )
+}
+
+pub async fn favicon_ico() -> impl IntoResponse {
+    (
+        [
+            (header::CONTENT_TYPE, "image/x-icon"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        include_bytes!("../../resources/branding/favicon.ico").as_slice(),
+    )
+}
+
+pub async fn favicon_png() -> impl IntoResponse {
+    (
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        include_bytes!("../../resources/branding/favicon.png").as_slice(),
+    )
 }
 
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, ApiError> {

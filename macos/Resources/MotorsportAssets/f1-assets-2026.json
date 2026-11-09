@@ -1,17 +1,19 @@
 {
   "schemaVersion": 1,
   "season": 2026,
-  "collectedAt": "2026-11-08T14:30:00Z",
+  "collectedAt": "2026-11-08T17:52:12Z",
   "rightsBasis": "localAuthorizationProvidedByOwner",
   "redistribution": "localUseOnly",
   "sourcePages": [
     "https://www.formula1.com/en/teams",
     "https://media.formula1.com/image/upload/c_fit,w_800/q_auto/v1740000001/common/f1/2026/{team}/2026{team}carright.webp",
-    "https://www.formula1.com/assets/liveTiming/static/images/f1_logo.svg"
+    "https://www.formula1.com/assets/liveTiming/static/images/f1_logo.svg",
+    "https://www.formula1.com/en/drivers/rafael-camara"
   ],
   "notes": [
     "Formula 1 2026 car side views are the team renders published on formula1.com, kept only in the local self-hosted bundle and never fetched at runtime.",
-    "The Formula 1 series mark replaces the country flag in the compact and expanded Live Island headers."
+    "The Formula 1 series mark replaces the country flag in the compact and expanded Live Island headers.",
+    "Rafael Camara 2026 Haas portrait uses the official F1 driver page image; the official image CDN supplies a face-centered 720x720 crop. Local/private-use scope matches the other bundled motorsport portraits."
   ],
   "records": [
     {
@@ -97,6 +99,23 @@
       "asset": "series-f1",
       "source": "https://www.formula1.com/assets/liveTiming/static/images/f1_logo.svg",
       "sha256": "f2a7d96eb916e011b48c24765672833c8382c1328215294505020f74b30f75d8"
+    },
+    {
+      "kind": "driverPhoto",
+      "id": "rafael_camara",
+      "asset": "driver-photo-rafael_camara-2026",
+      "sourcePage": "https://www.formula1.com/en/drivers/rafael-camara",
+      "source": "https://media.formula1.com/image/upload/c_fill,w_720,h_720,g_face/q_auto/v1740000001/common/f1/2026/haas/rafcam01/2026haasrafcam01right.webp",
+      "original": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/haas/rafcam01/2026haasrafcam01right.webp",
+      "seasonBasis": "official F1 CDN /2026/haas/rafcam01/ and current driver profile",
+      "useScope": "privateLocalOnly",
+      "rightsStatus": "unverifiedForRedistribution",
+      "originalPrivateLocalPath": "private-local/driver-photos/2026-haas-rafael-camara-official.webp",
+      "portraitPrivateLocalPath": "private-local/driver-photos/2026-haas-rafael-camara-face.webp",
+      "sha256": "3b909d40191a94943e9b9c056f00cf67b959c93079155d13fa64dc74c9aa2fc5",
+      "originalSha256": "a837cc196b37b496c255e59c3f91e0ebf399f712b0490cadc30fa0e0aa23914a",
+      "portraitSha256": "5a00801fffba8e747cbb6fdbf7705188a21b97f543bb1e033fb68a99346212be",
+      "collectedAt": "2026-11-08T17:52:12Z"
     }
   ]
 }

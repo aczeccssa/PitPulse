@@ -18,6 +18,11 @@ enum MotorsportAsset {
         NSImage(named: name(kind: kind, id: id, season: season))
     }
 
+    static func f1DriverImage(id: String, season: Int) -> NSImage? {
+        image(kind: .helmet, id: id, season: season)
+            ?? image(kind: .driverPhoto, id: id, season: season)
+    }
+
     /// Official series mark shown where the country flag used to be.
     static func seriesLogo(isWec: Bool) -> NSImage? {
         NSImage(named: isWec ? "series-wec" : "series-f1")

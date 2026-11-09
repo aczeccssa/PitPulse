@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T06:05:44Z",
+  "updatedAt": "2026-11-09T09:12:00Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -62,7 +62,8 @@
       "title": "部署与最终验收",
       "description": "本地演练与真实 VPS／赛事证据分别记录",
       "taskIds": [
-        "T15"
+        "T15",
+        "T24"
       ]
     },
     {
@@ -4858,7 +4859,7 @@
       "milestone": "M6",
       "area": "Rust / macOS",
       "status": "done",
-      "summary": "在恢复 F1 原计时表布局的前提下，为 F1/WEC 增加轮胎与虚拟能量行内数据及持久化开关；WEC 计时行显示制造商标志本身（不含文字组合），详情条显示官方赛车侧面图与车手肖像；F1 详情条新增 2026 各队官方赛车侧视图；折叠 Nook 与展开头部使用官方 F1/WEC 系列标识替代国家旗帜；仅通过 Live Island 赛事标题菜单切换 F1/WEC；WEC 提供组别标签页、按车手身份关注与“旗标 + 文字”状态标识。折叠 Nook 显示短代码警示胶囊；列表行选择与星标关注互相独立，关注车手不在会话时显示 No selected。",
+      "summary": "F1 哈斯新秀 Rafael Camara 的官方 2026 肖像已补入私有本地图集；Live Island、成绩与积分在缺少头盔时显示该头像。Release 构建与运行 App 图集检查通过。",
       "dependencies": [
         "T22"
       ],
@@ -4867,7 +4868,7 @@
         "T14",
         "T16"
       ],
-      "scope": "server/src/domain/live.rs、f1_live/reducer.rs、wec_live.rs；macos/Core/LiveStore、Core/Models、Features/LiveIsland、Features/MenuBar、Resources/PitPulseAssets.xcassets。",
+      "scope": "server/src/domain/live.rs、f1_live/reducer.rs、wec_live.rs；macos/Core/LiveStore、Core/Models、Features/LiveIsland、Features/MenuBar、Resources/PitPulseAssets.xcassets。；F1 模式为新增/缺少头盔的车手提供本地官方头像回退，补 Rafael Camara 2026 Haas 头像。",
       "steps": [
         "F1 订阅 Stints topic 并映射当前轮胎与圈龄",
         "WEC 映射 tires、carsEnergyTanks 与 manufacturer",
@@ -4915,6 +4916,11 @@
           "id": "T23-A8",
           "text": "F1 详情条显示 2026 官方赛车侧视图，折叠与展开头部使用官方 F1/WEC 系列标识替代国家旗帜",
           "done": true
+        },
+        {
+          "id": "T23-A9",
+          "text": "F1 Rafael Camara（rafael_camara）缺少头盔资源时显示本地官方 2026 Haas 头像；已有头盔与 WEC 头像行为保持，App 构建和运行资源核对通过。",
+          "done": true
         }
       ],
       "deliverables": [
@@ -4940,6 +4946,14 @@
         },
         {
           "label": "F1 本地素材清单",
+          "path": "macos/Resources/MotorsportAssets/f1-assets-2026.json"
+        },
+        {
+          "label": "Rafael Camara F1 头像图集",
+          "path": "macos/Resources/PitPulseAssets.xcassets/driver-photo-rafael_camara-2026.imageset/image.png"
+        },
+        {
+          "label": "F1 素材来源清单",
           "path": "macos/Resources/MotorsportAssets/f1-assets-2026.json"
         }
       ],
@@ -5028,11 +5042,30 @@
           "label": "制造商标志尺寸微调",
           "path": "docs/acceptance/wec-live-poc.md",
           "detail": "按验收反馈将 WEC 列表制造商标志缩至 80%（保留 32pt 行槽），Debug build exit 0。"
+        },
+        {
+          "label": "官方头像来源和本地文件",
+          "path": "macos/Resources/MotorsportAssets/f1-assets-2026.json",
+          "detail": "F1 官方 Rafael Camara 页面对应 2026 Haas 头像，原图720×2069与官方脸部裁切720×720；私有本地保留原件，图集PNG RGBA720×720和SHA-256已记录。"
+        },
+        {
+          "label": "F1 Rafael Camara 素材编译",
+          "path": "macos/Resources/PitPulseAssets.xcassets/driver-photo-rafael_camara-2026.imageset/image.png",
+          "detail": "Taskdeck Build App Release generation3 exited/exit_code0；Xcode Assets.car 经 assetutil 确认 driver-photo-rafael_camara-2026 为 Image。"
+        },
+        {
+          "label": "运行 App 的 Rafael Camara 图集核对",
+          "path": "macos/Resources/PitPulseAssets.xcassets/driver-photo-rafael_camara-2026.imageset/Contents.json",
+          "detail": "Taskdeck Run App generation19 处于 running 且实际进程为 F1Companion；运行包 Assets.car 经 assetutil 命中 driver-photo-rafael_camara-2026/Image 一项；pgrep 检查只有一个 App 实例。未运行桌面 UI 自动测试。"
+        },
+        {
+          "label": "当前沙箱回归检查",
+          "detail": "2026-11-09：cargo fmt --check、严格 clippy 与任务报告检查通过；避开本地监听限制的 Rust 单元测试 66/66 通过。完整测试中 7 项仅因沙箱禁止绑定本地端口失败；本轮 xcodebuild 因沙箱禁止写入 DerivedData 且无法访问 GitHub Swift Package，未产生新的构建结论。"
         }
       ],
       "blockers": [],
-      "nextAction": "无；T23 已由用户在运行中的 App 上验收。",
-      "updatedAt": "2026-11-08T14:45:11Z",
+      "nextAction": "无；T23 新增的 Rafael Camara 头像验收已完成。",
+      "updatedAt": "2026-11-09T09:12:00Z",
       "history": [
         {
           "at": "2026-11-08T11:08:00Z",
@@ -5113,6 +5146,211 @@
           "at": "2026-11-08T14:45:11Z",
           "status": "done",
           "note": "含 80% 制造商标志尺寸的 Release 已重建并重启，App 正在运行。"
+        },
+        {
+          "at": "2026-11-08T17:50:23Z",
+          "status": "inProgress",
+          "note": "用户反馈 F1 模式哈斯新秀 Rafael Camara 缺头像；当前 Live 名称 Rafael CAMARA、车号51与积分榜稳定 ID rafael_camara 对齐。官方 F1 车手页确认 2026 Haas 肖像来源。重开 T23 增补资源和回退验收，保留既有证据。"
+        },
+        {
+          "at": "2026-11-08T17:52:12Z",
+          "status": "inProgress",
+          "note": "官方 F1 Rafael Camara 车手页和 CDN 提供 2026 Haas 全身原图及脸部居中裁切；已视觉核对、保存私有本地原件与720×720 PNG图集。F1 缺头盔时回退 driverPhoto，既有头盔优先与WEC分支保持。"
+        },
+        {
+          "at": "2026-11-08T17:53:17Z",
+          "status": "inProgress",
+          "note": "首轮 Release 构建退出0；补查成绩和积分视图也单独读取头盔，现抽为统一 f1DriverImage，四处F1展示共用头盔优先/肖像回退；最终构建待复跑。"
+        },
+        {
+          "at": "2026-11-08T17:54:15Z",
+          "status": "inProgress",
+          "note": "最终四处展示代码 Release 构建成功，assetutil 从编译 Assets.car 中确认 Camara 图片名称；准备更新已有运行 App。"
+        },
+        {
+          "at": "2026-11-09T09:12:00Z",
+          "status": "done",
+          "note": "补充当前环境回归：Rust 格式、严格 Clippy、任务报告检查通过；不依赖本地监听的 66 项单元测试全部通过。完整套件的 7 项监听测试被沙箱 Operation not permitted 阻断，macOS Release 复跑被 DerivedData 权限与 GitHub 包访问限制阻断；不改变既有已验收结论。"
+        }
+      ]
+    },
+    {
+      "id": "T24",
+      "title": "PitPulse 分层 Logo 与 App/server 图标接入",
+      "priority": "P1",
+      "milestone": "M4",
+      "area": "Design / macOS",
+      "status": "done",
+      "summary": "用户确认的赛道形 P 已应用到 macOS 原生分层 AppIcon 和 server PNG/ICO favicon；Release/Rust/fmt/Clippy通过，已有 App/server 已更新，真实HTTP返回资源与源文件一致。",
+      "dependencies": [],
+      "relatedTasks": [
+        "T04",
+        "T15"
+      ],
+      "scope": "design/brand/pitpulse-v1/、macos 图标资源与 Xcode 配置、server 静态 favicon 与首页引用、相关构建检查任务；用户已确认设计并要求应用到 App/server。",
+      "steps": [
+        "根据 PitPulse 实时赛车信息定位设计原创几何标识。",
+        "分别生成透明前景和独立背景，提供实际方形 App 图标预览。",
+        "检查图片尺寸、透明通道、视觉清晰度并记录生成提示词和交付路径。",
+        "接入 macOS 应用图标并构建验证打包产物。",
+        "接入 server favicon 与首页引用，验证浏览器资源可读且 API 仍受原鉴权保护。",
+        "按具名任务重启已有 App/server 并核对实际图标资源。"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T24-A1",
+          "text": "交付简约原创标识与实际 App 图标合成预览；无样机场景、文案或第三方赛事 Logo。",
+          "done": true
+        },
+        {
+          "id": "T24-A2",
+          "text": "Logo 主体具有真实 alpha 透明通道；背景单独交付；两层画布尺寸一致。",
+          "done": true
+        },
+        {
+          "id": "T24-A3",
+          "text": "素材、分层使用说明和生成提示词保存到仓库；任务报告校验通过。",
+          "done": true
+        },
+        {
+          "id": "T24-A4",
+          "text": "macOS Release 构建成功；App bundle 包含并引用新应用图标，已有 Taskdeck App 使用新构建。",
+          "done": true
+        },
+        {
+          "id": "T24-A5",
+          "text": "server 首页声明 favicon；实际 favicon HTTP200 且类型正确；启用 token 时图标可读、API 仍拒绝无凭证请求；已有 server 更新成功。",
+          "done": true
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "透明 Logo 主体",
+          "path": "design/brand/pitpulse-v1/logo-foreground.png"
+        },
+        {
+          "label": "独立石墨黑背景",
+          "path": "design/brand/pitpulse-v1/background.png"
+        },
+        {
+          "label": "App 图标合成预览",
+          "path": "design/brand/pitpulse-v1/app-icon-preview.png"
+        },
+        {
+          "label": "嵌入双位图图层的 SVG",
+          "path": "design/brand/pitpulse-v1/pitpulse-layered.svg"
+        },
+        {
+          "label": "素材包 ZIP",
+          "path": "design/brand/pitpulse-logo-v1.zip"
+        },
+        {
+          "label": "图层使用说明与生成方式",
+          "path": "design/brand/pitpulse-v1/README.md"
+        },
+        {
+          "label": "完整生成提示词",
+          "path": "design/brand/pitpulse-v1/prompts.json"
+        },
+        {
+          "label": "原生分层 macOS AppIcon",
+          "path": "macos/Resources/AppIcon.icon"
+        },
+        {
+          "label": "server favicon 资源",
+          "path": "server/resources/branding"
+        },
+        {
+          "label": "图标集成与验证说明",
+          "path": "docs/acceptance/branding.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "PNG 尺寸和透明通道检查",
+          "path": "design/brand/pitpulse-v1/asset-checks.json",
+          "detail": "三个 PNG 均为1254×1254，可完整解码；前景 RGBA alpha 0–255，四角透明，背景与预览 RGB 不透明；SVG 可解析。"
+        },
+        {
+          "label": "生成式设计视觉检查",
+          "path": "design/brand/pitpulse-v1/app-icon-preview.png",
+          "detail": "已目视检查朱红 P 和石墨黑底，实际正视图标，无文案或样机场景；分层 SVG 原像素叠放，合成 PNG 为生成式预览。"
+        },
+        {
+          "label": "任务报告检查",
+          "detail": "当前 Taskdeck YAML 未提供对应任务，直接运行 node docs/tasks/validate.mjs 与 node --test docs/tasks/tests/task-data.test.mjs；24任务/6里程碑有效，8项测试通过。"
+        },
+        {
+          "label": "本机原生图标渲染",
+          "path": "docs/acceptance/assets/t24/app-icon.png",
+          "detail": "Icon Composer 自带 ictool 导出退出0，已目视核对 P 主体/背景/系统轮廓。favicon PNG64×64及ICO16/32/48可解码。"
+        },
+        {
+          "label": "Taskdeck Release 与 Rust 测试",
+          "detail": "Build App Release generation1 / Test Server generation1 均 exited，exit_code=0；Release bundle 包含 AppIcon.icns，CFBundleIconFile=AppIcon、CFBundleIconName=AppIcon。未运行桌面测试宿主。"
+        },
+        {
+          "label": "最终 Taskdeck 质量检查",
+          "detail": "Build App Release generation1、Test Server generation1、Check Server Format generation2、Lint Server generation1 均 exited/exit_code0。覆盖带token的静态图标可读和API鉴权边界。"
+        },
+        {
+          "label": "实际 App bundle 图标",
+          "path": "docs/acceptance/assets/t24/bundled-app-icon.png",
+          "detail": "构建产物 AppIcon.icns 可解码并目视核对；Taskdeck Run App generation18 已进入 F1Companion 实际进程，运行 bundle 的 CFBundleIconFile/Name 均为 AppIcon。"
+        },
+        {
+          "label": "实际 server favicon HTTP",
+          "path": "docs/acceptance/assets/t24/http-checks.json",
+          "detail": "Run Server generation8 已进入 Rust 服务；PNG/ICO HTTP200、MIME正确、字节与源资源一致；首页两个图标声明，健康接口数据库正常。"
+        },
+        {
+          "label": "当前任务与静态检查",
+          "detail": "2026-11-09：node docs/tasks/validate.mjs、任务数据测试与 board.js 语法检查通过；cargo fmt --check 与严格 clippy 通过。完整 Rust 测试及 macOS Release 复跑分别受沙箱本地端口、DerivedData 写入和 GitHub Swift Package 访问限制，未覆盖新的运行时结论。"
+        }
+      ],
+      "blockers": [],
+      "nextAction": "无；App/server 图标已接入并更新本机运行实例。",
+      "updatedAt": "2026-11-09T09:12:00Z",
+      "history": [
+        {
+          "at": "2026-11-08T16:47:52Z",
+          "status": "inProgress",
+          "note": "用户要求设计简约且适合 App 的真实 Logo，并分离 Logo 主体和背景。现有资源未见 AppIcon 品牌资产；采用独立设计目录交付，保持已有运行服务。"
+        },
+        {
+          "at": "2026-11-08T16:51:02Z",
+          "status": "inProgress",
+          "note": "采用朱红赛道形 P 与石墨黑背景；透明候选已生成，尚在质量复核。当前 Taskdeck YAML 仅注册 Run App/Run Server，无 Check Task Report，故直接运行报告 validator 与8项测试，全部通过；运行服务保持原状态。"
+        },
+        {
+          "at": "2026-11-08T16:54:01Z",
+          "status": "done",
+          "note": "完成原创分层 Logo 素材交付与图片解码/alpha/同尺寸/视觉检查，附完整提示词和 ZIP。完成仅针对本次设计素材范围，不声明用户已确认视觉或 App 运行集成。直接报告检查作为缺失 Taskdeck 检查任务的替代。"
+        },
+        {
+          "at": "2026-11-08T16:59:40Z",
+          "status": "inProgress",
+          "note": "用户确认 Logo 设计，并明确要求应用到 App 的应用图标和 server favicon；重新打开 T24，新增集成范围和验收项，保留原设计交付证据。"
+        },
+        {
+          "at": "2026-11-08T17:02:46Z",
+          "status": "inProgress",
+          "note": "Icon Composer 界面自动控制失败，改用安装版本自带 ictool 离线导出，首轮格式导出退出0；继续校对层顺序。Taskdeck 已新增 Build App Release、Test Server、Check Server Format、Lint Server、Check Task Report，全部 manual；任务报告检查通过。"
+        },
+        {
+          "at": "2026-11-08T17:05:48Z",
+          "status": "inProgress",
+          "note": "完成分层 .icon 的 Xcode 资源接入和两条公开静态 favicon 路由；首页及API继续受原 Bearer 层保护。新增边界回归，App Release 构建和 Rust 测试运行中；格式检查发现新增测试换行，已按输出修正，待复跑。"
+        },
+        {
+          "at": "2026-11-08T17:06:45Z",
+          "status": "inProgress",
+          "note": "Build App Release 与 Test Server 均实际结束并退出0；验证图标编译为 AppIcon.icns，plist引用正确。原生图标已目视检查，接下来完成fmt/Clippy、已有服务重启和实际HTTP/运行图标读取。"
+        },
+        {
+          "at": "2026-11-09T09:12:00Z",
+          "status": "done",
+          "note": "补充当前环境回归：任务报告、board.js 语法、Rust fmt 与严格 Clippy 通过；Taskdeck daemon/MCP 当前无可用 executor，完整测试和 Release 构建复跑分别被沙箱禁止本地监听、DerivedData 写入及 GitHub 包访问阻断。保留既有已完成的 Taskdeck 与 HTTP/App bundle 证据，不宣称本轮复跑通过。"
         }
       ]
     },

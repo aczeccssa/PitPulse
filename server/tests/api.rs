@@ -36,6 +36,73 @@ async fn test_health_without_required_token_returns_ok() {
 }
 
 #[tokio::test]
+async fn test_favicons_are_public_while_api_auth_remains_required() {
+    let (mut state, _temp) = test_state().await;
+    std::sync::Arc::make_mut(&mut state.config)
+        .security
+        .require_token = true;
+    std::sync::Arc::make_mut(&mut state.config).security.token = Some("test-token".to_string());
+    let router = server::router(state);
+
+    for (path, content_type, signature) in [
+        ("/favicon.png?v=1", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
+        (
+            "/favicon.ico",
+            "image/x-icon",
+            &b"\x00\x00\x01\x00\x03\x00"[..],
+        ),
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], content_type);
+        assert_eq!(
+            response.headers()[header::CACHE_CONTROL],
+            "public, max-age=86400"
+        );
+        let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        assert!(bytes.starts_with(signature));
+    }
+
+    for path in [
+        "/",
+        "/api/v1/health",
+        "/api/v1/calendar",
+        "/api/v1/live/snapshot",
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+    }
+
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/")
+                .header(header::AUTHORIZATION, "Bearer test-token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = axum::body::to_bytes(response.into_body(), 16 * 1024)
+        .await
+        .unwrap();
+    let html = std::str::from_utf8(&html).unwrap();
+    assert!(html.contains("href=\"/favicon.ico?v=1\""));
+    assert!(html.contains("href=\"/favicon.png?v=1\""));
+}
+
+#[tokio::test]
 async fn test_calendar_returns_stale_empty_meta() {
     let (state, _temp) = test_state().await;
     let response = server::router(state)

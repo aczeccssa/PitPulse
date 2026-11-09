@@ -1,5 +1,5 @@
 use anyhow::Context;
-use axum::{Router, middleware};
+use axum::{Router, middleware, routing::get};
 use tokio::net::TcpListener;
 
 use crate::{
@@ -7,13 +7,17 @@ use crate::{
 };
 
 pub fn router(state: AppState) -> Router {
-    let public_router = build_router(state.clone());
-    let protected_router = public_router.route_layer(middleware::from_fn_with_state(
+    let protected_router = build_router(state.clone()).route_layer(middleware::from_fn_with_state(
         state.clone(),
         require_bearer_token,
     ));
 
-    protected_router.with_state(state)
+    // Browsers request icons without the API's Bearer header. Keep only these
+    // static brand assets outside the authentication layer.
+    protected_router
+        .route("/favicon.ico", get(crate::api::routes::favicon_ico))
+        .route("/favicon.png", get(crate::api::routes::favicon_png))
+        .with_state(state)
 }
 
 pub async fn serve(state: AppState) -> anyhow::Result<()> {
