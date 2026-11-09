@@ -7,8 +7,12 @@ options:
   createIntermediateGroups: true
   developmentLanguage: zh-Hans
 packages:
-  PitPulseKit:
-    path: Packages/PitPulseKit
+  PitPulseShared:
+    path: Packages/PitPulseShared
+  PitPulseData:
+    path: Packages/PitPulseData
+  PitPulseComponents:
+    path: Packages/PitPulseComponents
   Nook:
     url: https://github.com/twinkling-reality/opennook.git
     revision: 2b50b5c3a99df8914e25e199d29bf7aa505f7a59
@@ -54,11 +58,11 @@ targets:
     dependencies:
       - package: Nook
         product: NookApp
-      - package: PitPulseKit
+      - package: PitPulseShared
         product: PitPulseShared
-      - package: PitPulseKit
+      - package: PitPulseData
         product: PitPulseData
-      - package: PitPulseKit
+      - package: PitPulseComponents
         product: PitPulseComponents
 
   # ---- Desktop unit tests ----
@@ -81,11 +85,11 @@ targets:
         CODE_SIGN_STYLE: Automatic
     dependencies:
       - target: PitPulseDesktop
-      - package: PitPulseKit
+      - package: PitPulseShared
         product: PitPulseShared
-      - package: PitPulseKit
+      - package: PitPulseData
         product: PitPulseData
-      - package: PitPulseKit
+      - package: PitPulseComponents
         product: PitPulseComponents
 
   # ---- Desktop UI acceptance tests ----
@@ -149,11 +153,11 @@ targets:
         Debug:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
     dependencies:
-      - package: PitPulseKit
+      - package: PitPulseShared
         product: PitPulseShared
-      - package: PitPulseKit
+      - package: PitPulseData
         product: PitPulseData
-      - package: PitPulseKit
+      - package: PitPulseComponents
         product: PitPulseComponents
       - target: PitPulseLiveActivity
         embed: true
@@ -183,9 +187,9 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
     dependencies:
-      - package: PitPulseKit
+      - package: PitPulseShared
         product: PitPulseShared
-      - package: PitPulseKit
+      - package: PitPulseComponents
         product: PitPulseComponents
 
   PitPulseMobileTests:
@@ -199,9 +203,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.tests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - package: PitPulseKit
+      - package: PitPulseShared
         product: PitPulseShared
-      - package: PitPulseKit
+      - package: PitPulseData
         product: PitPulseData
 
 schemes:

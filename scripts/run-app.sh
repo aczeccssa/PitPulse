@@ -7,7 +7,7 @@ cd "$project"
 
 printf '%s\n' 'Building PitPulse Desktop (Release)…'
 /usr/bin/xcodebuild -quiet \
-    -project PitPulse.xcodeproj \
+    -workspace PitPulse.xcworkspace \
     -scheme PitPulseDesktop \
     -configuration Release \
     -destination 'platform=macOS' \

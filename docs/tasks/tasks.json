@@ -588,11 +588,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -825,11 +825,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -1209,11 +1209,11 @@
           "label": "缓存优先、后台刷新、节流与服务器切换竞争隔离"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/APIClient.swift",
           "label": "自托管 API、schema/HTTP 错误与 Bearer 处理"
         },
         {
-          "path": "Packages/PitPulseKit/Sources/Data/CalendarCache.swift",
+          "path": "Packages/PitPulseData/Sources/PitPulseData/CalendarCache.swift",
           "label": "按服务器/赛季隔离的版本化原子缓存"
         },
         {
@@ -2292,11 +2292,11 @@
       "deliverables": [
         {
           "label": "Session 提醒与 UTC 计划器",
-          "path": "Packages/PitPulseKit/Sources/Data/SessionReminderCoordinator.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/SessionReminderCoordinator.swift"
         },
         {
           "label": "网络路径恢复监听",
-          "path": "Packages/PitPulseKit/Sources/Data/NetworkPathMonitor.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/NetworkPathMonitor.swift"
         },
         {
           "label": "T10 提醒与恢复验收记录",
@@ -2810,7 +2810,7 @@
         },
         {
           "label": "Swift SSE parser 与共享 LiveStore",
-          "path": "Packages/PitPulseKit/Sources/Data/LiveStore.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/LiveStore.swift"
         },
         {
           "label": "Live replay 验收记录",
@@ -2960,7 +2960,7 @@
         },
         {
           "label": "Session / 车手匹配投影规则",
-          "path": "Packages/PitPulseKit/Sources/Data/LiveIslandLogic.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/LiveIslandLogic.swift"
         },
         {
           "label": "loopback Live 场景回放",
@@ -3777,7 +3777,7 @@
         },
         {
           "label": "Swift 可选扩展",
-          "path": "Packages/PitPulseKit/Sources/Data/LiveModels.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/LiveModels.swift"
         }
       ],
       "evidence": [
@@ -4797,7 +4797,7 @@
         },
         {
           "label": "macOS 数据模型与数据源切换",
-          "path": "Packages/PitPulseKit/Sources/Data/LiveModels.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/LiveModels.swift"
         },
         {
           "label": "PoC 验收记录",
@@ -5361,15 +5361,15 @@
       "milestone": "M7",
       "area": "Swift / 模块化",
       "status": "done",
-      "summary": "把 macos/Core 的纯 Foundation 能力抽为本地 SPM 包 PitPulseKit：Shared（值契约）、Data（网络/缓存/Keychain/提醒/日历逻辑）、Components（只吃值的 SwiftUI 原语）。统一到单个 PitPulse.xcodeproj（Desktop/Mobile 两个 App 产物 + 共享包）；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
+      "summary": "把 macos/Core 的纯 Foundation 能力拆为三个独立本地 Swift Package：PitPulseShared（值契约）、PitPulseData（网络/缓存/Keychain/提醒/日历逻辑）、PitPulseComponents（只吃值的 SwiftUI 原语）。统一到单个 PitPulse.xcodeproj（Desktop/Mobile 两个 App 产物 + 共享包）；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
       "dependencies": [],
       "relatedTasks": [
         "T04",
         "T26"
       ],
-      "scope": "Packages/PitPulseKit/Package.swift、Sources/Shared、Sources/Data、Sources/Components；macos/App/AppModel.swift；macos/Features；macos/F1Companion.xcodeproj；macos/Tests。",
+      "scope": "Packages/PitPulseShared、Packages/PitPulseData、Packages/PitPulseComponents；PitPulse.xcodeproj/project.yml；macos/App/AppModel.swift；macos/Features；macos/Tests。",
       "steps": [
-        "新建本地 SPM 包 PitPulseKit（Shared / Data / Components 三个 target）",
+        "拆为三个独立本地 Swift Package（PitPulseShared / PitPulseData / PitPulseComponents，包名=模块名）",
         "移动 Core 纯 Foundation 文件到 Data，值契约与常量放入 Shared",
         "FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared",
         "Components 仅依赖 Shared，修正 CountryFlag 归属",
@@ -5405,19 +5405,19 @@
       "deliverables": [
         {
           "label": "SPM 包清单",
-          "path": "Packages/PitPulseKit/Package.swift"
+          "path": "Packages/PitPulseData/Package.swift"
         },
         {
           "label": "共享值层",
-          "path": "Packages/PitPulseKit/Sources/Shared/Shared.swift"
+          "path": "Packages/PitPulseShared/Sources/PitPulseShared/Shared.swift"
         },
         {
           "label": "数据层",
-          "path": "Packages/PitPulseKit/Sources/Data/APIClient.swift"
+          "path": "Packages/PitPulseData/Sources/PitPulseData/APIClient.swift"
         },
         {
           "label": "共享组件",
-          "path": "Packages/PitPulseKit/Sources/Components/Components.swift"
+          "path": "Packages/PitPulseComponents/Sources/PitPulseComponents/Components.swift"
         },
         {
           "label": "macOS 工程接入",
@@ -5426,6 +5426,14 @@
         {
           "label": "验收记录",
           "path": "docs/acceptance/ios-live-activity.md"
+        },
+        {
+          "label": "共享契约包清单",
+          "path": "Packages/PitPulseShared/Package.swift"
+        },
+        {
+          "label": "Components 包清单",
+          "path": "Packages/PitPulseComponents/Package.swift"
         }
       ],
       "evidence": [
@@ -5436,7 +5444,7 @@
         },
         {
           "label": "包结构",
-          "path": "Packages/PitPulseKit/Package.swift",
+          "path": "Packages/PitPulseData/Package.swift",
           "detail": "PitPulseShared / PitPulseData / PitPulseComponents 三个 target；Components 仅依赖 Shared。"
         },
         {
@@ -5489,7 +5497,7 @@
         "T13",
         "T23"
       ],
-      "scope": "ios/project.yml、ios/PitPulseMobile、ios/PitPulseLiveActivity、ios/PitPulseMobileTests、Packages/PitPulseKit/Sources/Shared/LiveActivity.swift、scripts/xcode-ios-task.sh、taskdeck.yaml、docs/acceptance/ios-live-activity.md。",
+      "scope": "ios/project.yml、ios/PitPulseMobile、ios/PitPulseLiveActivity、ios/PitPulseMobileTests、Packages/PitPulseShared/Sources/PitPulseShared/LiveActivity.swift、scripts/xcode-ios-task.sh、taskdeck.yaml、docs/acceptance/ios-live-activity.md。",
       "steps": [
         "用 XcodeGen 建立 iOS App + Widget Extension 工程并引用本地包",
         "实现赛程 / Live / 设置三屏，复用共享数据层",
@@ -5556,7 +5564,7 @@
         },
         {
           "label": "共享 Live Activity 契约",
-          "path": "Packages/PitPulseKit/Sources/Shared/LiveActivity.swift"
+          "path": "Packages/PitPulseShared/Sources/PitPulseShared/LiveActivity.swift"
         },
         {
           "label": "iOS 任务脚本",
