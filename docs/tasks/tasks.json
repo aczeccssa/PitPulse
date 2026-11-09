@@ -5360,7 +5360,7 @@
       "priority": "P1",
       "milestone": "M7",
       "area": "Swift / 模块化",
-      "status": "inReview",
+      "status": "done",
       "summary": "把 macos/Core 的纯 Foundation 能力抽为本地 SPM 包 PitPulseKit：Shared（值契约）、Data（网络/缓存/Keychain/提醒/日历逻辑）、Components（只吃值的 SwiftUI 原语）。macOS App 改为依赖三个 product；FavoriteDriver / AppConnectionStatus / PreferenceKeys 从 AppModel 下沉到 Shared；CountryFlag 放入 Shared 使 Components 不依赖 Data。App 与 build-for-testing 均通过，运行时行为需在运行中的 App 上复核。",
       "dependencies": [],
       "relatedTasks": [
@@ -5399,7 +5399,7 @@
         {
           "id": "T25-A5",
           "text": "macOS 运行时行为与拆分前一致（MenuBar / Notch / 地图，需用户运行验收）",
-          "done": false
+          "done": true
         }
       ],
       "deliverables": [
@@ -5438,16 +5438,25 @@
           "label": "包结构",
           "path": "Packages/PitPulseKit/Package.swift",
           "detail": "PitPulseShared / PitPulseData / PitPulseComponents 三个 target；Components 仅依赖 Shared。"
+        },
+        {
+          "label": "用户运行确认",
+          "detail": "用户在运行中的 macOS App 上确认分包后行为正常（2026-11-09）。"
         }
       ],
       "blockers": [],
-      "nextAction": "在运行中的 Release App 上确认 MenuBar / Notch / 地图行为无回退，随后关闭 T25。",
-      "updatedAt": "2026-11-09T06:05:44Z",
+      "nextAction": "无；macOS 运行行为已由用户确认正常。",
+      "updatedAt": "2026-11-09T06:19:43Z",
       "history": [
         {
           "at": "2026-11-09T06:05:44Z",
           "status": "inReview",
           "note": "完成 Data/Shared/Components 分包，macOS App 与 build-for-testing 通过；等待运行时行为复核。"
+        },
+        {
+          "at": "2026-11-09T06:19:43Z",
+          "status": "done",
+          "note": "用户确认 macOS 侧无问题；分包后 MenuBar / Notch / 地图行为正常，T25 关闭。"
         }
       ]
     },
