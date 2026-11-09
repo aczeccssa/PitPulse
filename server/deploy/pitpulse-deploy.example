@@ -7,17 +7,23 @@
 #
 # The key's forced command is invoked with the exact SSH_ORIGINAL_COMMAND sent by
 # deploy.yml:
-#   ssh pitpulse-deploy "put <full-commit-sha>"       with the artifact on stdin
+#   ssh pitpulse-deploy "put <full-commit-sha>"       with one base64 line
+#                                                      containing the SHA and
+#                                                      artifact SHA-256, then
+#                                                      the archive bytes
 #   ssh pitpulse-deploy "deploy <full-commit-sha>"    with the base64-encoded
 #                                                      trusted deploy scripts on
 #                                                      stdin
-#   ssh pitpulse-deploy "cleanup"
+#   ssh pitpulse-deploy "cleanup <full-commit-sha>"  remove only that SHA's
+#                                                      staging files
 #
 # No arbitrary shell, path, user, or command from CI is accepted. The artifact
-# is stored under a SHA-named file; deploy-release.sh validates its VERSION,
-# SHA256SUMS and ELF/ABI before switching anything. The runner can invoke only
-# the checked-in deploy/rollback helpers through sudo; it never reads the token
-# or writes /etc directly.
+# is stored under a SHA-named file and is checked against BOTH the immutable
+# release digest published by GitHub Actions and the root-installed manifest
+# for the approved commit. deploy-release.sh additionally validates VERSION,
+# SHA256SUMS and ELF/ABI before switching anything. The runner invokes only a
+# root-owned launcher through a fixed sudoers rule; it never reads the token,
+# supplies root environment variables, or writes /etc directly.
 
 set -Eeuo pipefail
 umask 077
@@ -27,6 +33,7 @@ STAGING=/var/tmp/pitpulse-deploy
 HELPERS=/usr/local/lib/pitpulse
 ARCHIVE_MAX_BYTES=$((128 * 1024 * 1024))
 SCRIPT_MAX_BYTES=$((1024 * 1024))
+DEPLOY_LAUNCHER=/usr/local/sbin/pitpulse-deploy-release
 
 fail() {
     printf '[pitpulse-deploy] denied: %s\n' "$1" >&2
@@ -40,50 +47,94 @@ require_commands() {
     done
 }
 
-require_commands install rm mkdir head grep base64 tar sudo mktemp cmp wc
+require_commands install rm mkdir head grep base64 tar sudo mktemp cmp wc sha256sum cut curl jq
 [[ -n "${SSH_ORIGINAL_COMMAND:-}" ]] || fail "missing original command"
-if [[ "$SSH_ORIGINAL_COMMAND" == "cleanup" ]]; then
-    action=cleanup
-    sha=""
-elif [[ "$SSH_ORIGINAL_COMMAND" =~ ^(put|deploy)[[:space:]]([0-9a-f]{40})$ ]]; then
+if [[ "$SSH_ORIGINAL_COMMAND" =~ ^(put|deploy|cleanup)[[:space:]]([0-9a-f]{40})$ ]]; then
     action="${BASH_REMATCH[1]}"
     sha="${BASH_REMATCH[2]}"
 else
     fail "unsupported command"
 fi
-[[ "$action" == cleanup || ${#sha} -eq 40 ]] || fail "invalid commit SHA"
+[[ ${#sha} -eq 40 ]] || fail "invalid commit SHA"
 
 case "$action" in
     put)
         install -d -m 0755 "$INCOMING"
         temp="$(mktemp "$INCOMING/.upload.XXXXXX")"
-        trap 'rm -f "$temp"' EXIT
+        trap 'rm -f "$temp" "$temp.payload"' EXIT
         head -c "$((ARCHIVE_MAX_BYTES + 1))" > "$temp"
         size="$(wc -c < "$temp")"
         (( size > 0 && size <= ARCHIVE_MAX_BYTES )) || fail "artifact size out of range"
-        tar -tzf "$temp" >/dev/null || fail "artifact is not a valid gzip tar"
-        install -m 0644 "$temp" "$INCOMING/${sha}.tar.gz"
+        IFS= read -r request_line < "$temp" || fail "missing artifact request"
+        request="$(printf '%s' "$request_line" | base64 -d)" || fail "artifact request is not base64"
+        read -r request_sha request_digest <<<"$request"
+        [[ "$request_sha" == "$sha" && "$request_digest" =~ ^[0-9a-f]{64}$ ]] ||
+            fail "artifact request does not match the forced-command SHA"
+        tail -n +2 "$temp" > "$temp.payload"
+        [[ "$(sha256sum "$temp.payload" | cut -d' ' -f1)" == "$request_digest" ]] ||
+            fail "artifact digest does not match its request"
+
+        # The digest is independently published by the public GitHub Actions
+        # API for this exact commit. The forced command does not trust a digest
+        # supplied only by the CI runner, and no token is used here.
+        repo="aczeccssa/PitPulse"
+        endpoint="https://api.github.com/repos/$repo"
+        header=(-H 'Accept: application/vnd.github+json' -H 'User-Agent: pitpulse-vps-verify')
+        runs_url="$endpoint/actions/workflows/ci.yml/runs?head_sha=$sha&event=push&branch=main&status=completed&per_page=100"
+        runs="$(curl -fsSL "${header[@]}" "$runs_url")" ||
+            fail "cannot query GitHub Actions runs for this commit"
+        run_id="$(jq -r --arg sha "$sha" '
+            [.workflow_runs[] | select(
+                .name == "CI" and .event == "push" and .head_branch == "main"
+                and .head_sha == $sha and .status == "completed"
+            )] | sort_by(.created_at) | last | .id // empty
+        ' <<<"$runs")"
+        [[ "$run_id" =~ ^[0-9]+$ ]] || fail "no completed main CI run for this commit"
+        server_job="$(curl -fsSL "${header[@]}" \
+            "$endpoint/actions/runs/$run_id/jobs?per_page=100")" ||
+            fail "cannot query the CI server job"
+        jq -e '.jobs[] | select(.name == "Server fmt / clippy / test / build") |
+            .status == "completed" and .conclusion == "success"' <<<"$server_job" >/dev/null ||
+            fail "the CI server job did not pass"
+        artifacts="$(curl -fsSL "${header[@]}" \
+            "$endpoint/actions/runs/$run_id/artifacts?per_page=100")" ||
+            fail "cannot query CI artifacts"
+        published_digest="$(jq -r --arg sha "$sha" '
+            [.artifacts[] | select(
+                .name == ("pitpulse-server-linux-x86_64-" + $sha) and .expired == false
+                and .workflow_run.head_branch == "main" and .workflow_run.head_sha == $sha
+            ) | .digest] | if length == 1 then .[0] else empty end
+        ' <<<"$artifacts")"
+        [[ "$published_digest" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+            fail "no unique published artifact digest for this commit"
+        [[ "$request_digest" == "${published_digest#sha256:}" ]] ||
+            fail "artifact digest does not match the GitHub-published digest"
+        unexpected="$(tar -tzf "$temp.payload" | grep -Ev '^(pitpulse-server|VERSION|SHA256SUMS|ldd\.txt|config\.production\.toml|pitpulse-server\.service|pitpulse\.caddyfile)$' || true)"
+        [[ -z "$unexpected" ]] || fail "artifact contains unexpected paths"
+        install -m 0644 "$temp.payload" "$INCOMING/${sha}.tar.gz"
         ;;
     deploy)
         install -d -m 0700 "$STAGING"
         scripts="$(mktemp "$STAGING/scripts.XXXXXX")"
-        trap 'rm -rf "$scripts" "$STAGING/unpacked"' EXIT
+        trap 'rm -rf "$scripts" "$STAGING/unpacked" "$STAGING/bundle.tar.gz"' EXIT
         head -c "$((SCRIPT_MAX_BYTES + 1))" > "$scripts"
         size="$(wc -c < "$scripts")"
         (( size > 0 && size <= SCRIPT_MAX_BYTES )) || fail "script bundle size out of range"
         base64 -d < "$scripts" > "$STAGING/bundle.tar.gz"
         rm -rf "$STAGING/unpacked"
         mkdir -p "$STAGING/unpacked"
-        tar -xzf "$STAGING/bundle.tar.gz" -C "$STAGING/unpacked"
+        unexpected="$(tar -tzf "$STAGING/bundle.tar.gz" | grep -Ev '^(lib\.sh|deploy-release\.sh|rollback-release\.sh)$' || true)"
+        [[ -z "$unexpected" ]] || fail "script bundle contains unexpected paths"
+        tar -xzf "$STAGING/bundle.tar.gz" -C "$STAGING/unpacked" --no-same-owner --no-same-permissions
         for name in lib.sh deploy-release.sh rollback-release.sh; do
             [[ -f "$STAGING/unpacked/$name" && ! -L "$STAGING/unpacked/$name" ]] || fail "missing $name"
             cmp -s "$STAGING/unpacked/$name" "$HELPERS/$name" || fail "$name differs from the installed helper"
         done
         rm -f "$STAGING/bundle.tar.gz"
-        sudo -n /usr/bin/env "PITPULSE_DEPLOY_ARTIFACT_SHA=$sha" \
-            "$HELPERS/deploy-release.sh" "$INCOMING/${sha}.tar.gz"
+        sudo -n "$DEPLOY_LAUNCHER" "$sha"
         ;;
     cleanup)
+        rm -f "$INCOMING/${sha}.tar.gz"
         rm -rf "$STAGING"
         ;;
     *)

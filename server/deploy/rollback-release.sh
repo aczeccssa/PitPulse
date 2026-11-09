@@ -28,6 +28,10 @@ release_root="$(resolve_path "$PITPULSE_OPT_DIR/releases")"
     fail "previous release marker points outside releases directory"
 [[ "$target" == "$release_root/"* ]] || fail "previous release resolves outside releases directory"
 [[ -f "$target/pitpulse-server" && ! -L "$target/pitpulse-server" ]] || fail "previous release binary is missing"
+(
+    cd "$target"
+    sha256sum -c SHA256SUMS
+) >/dev/null || fail "previous release failed checksum verification"
 
 WORK_DIR="$(mktemp -d "$PITPULSE_BACKUP_DIR/rollback.XXXXXX")"
 CURL_AUTH="$WORK_DIR/curl-auth.cfg"
@@ -38,11 +42,14 @@ log "stopping the current single SQLite writer"
 stop_service || fail "could not stop $PITPULSE_SERVICE_NAME"
 
 if [[ "$restore_db" == "1" ]]; then
-    if [[ -z "$backup_dir" ]]; then
-        backup_dir="$(find "$PITPULSE_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '*-*' -printf '%T@ %p\n' 2>/dev/null |
-            sort -nr | head -n 1 | cut -d' ' -f2- || true)"
-    fi
-    [[ -n "$backup_dir" && -d "$backup_dir" ]] || fail "PITPULSE_RESTORE_DB=1 requires a valid backup directory"
+    [[ -n "$backup_dir" && -d "$backup_dir" ]] ||
+        fail "PITPULSE_RESTORE_DB=1 requires an explicit PITPULSE_BACKUP_DIR_ARG"
+    [[ -f "$backup_dir/backup-dir" && -f "$backup_dir/user_version.txt" ]] ||
+        fail "backup directory has no complete PitPulse manifest"
+    (
+        cd "$backup_dir"
+        sha256sum -c SHA256SUMS
+    ) >/dev/null || fail "backup checksum verification failed"
     restore_db_from_backup "$backup_dir" "$PITPULSE_DB_PATH" || fail "database restore failed"
     log "restored SQLite from $backup_dir"
 fi

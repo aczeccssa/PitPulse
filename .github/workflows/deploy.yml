@@ -26,16 +26,37 @@ jobs:
         with:
           ref: ${{ inputs.commit_sha }}
 
-      - name: Validate requested commit and forced-command inputs
+      - name: Validate requested commit and approved CI source
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
           CI_RUN_ID: ${{ inputs.artifact_run_id }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$REQUESTED_SHA" = "$(git rev-parse HEAD)"
           git rev-parse --verify 'HEAD^{commit}' >/dev/null
+          test "$REQUESTED_SHA" = "$(git rev-parse HEAD)"
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "commit_sha must be a full lowercase SHA" >&2; exit 1; }
           [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "artifact_run_id must be numeric" >&2; exit 1; }
+
+          run="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID")"
+          server_job="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.name == "Server fmt / clippy / test / build")')"
+          jq -e --arg sha "$REQUESTED_SHA" '
+            .name == "CI" and .event == "push" and .head_branch == "main"
+            and .head_sha == $sha and .status == "completed" and .conclusion == "success"
+          ' <<<"$run" >/dev/null
+          jq -e '.status == "completed" and .conclusion == "success"' <<<"$server_job" >/dev/null
+          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/artifacts?per_page=100" \
+            --jq --arg sha "$REQUESTED_SHA" '
+              [.artifacts[] | select(
+                .name == ("pitpulse-server-linux-x86_64-" + $sha)
+                and .expired == false
+                and .workflow_run.head_branch == "main"
+                and .workflow_run.head_sha == $sha
+              )] | if length == 1 then .[0] else error("expected exactly one release artifact") end
+            ')"
+          jq -r '.digest' <<<"$artifact" > "$RUNNER_TEMP/expected-artifact-digest"
+          [[ "$(cat "$RUNNER_TEMP/expected-artifact-digest")" =~ ^sha256:[0-9a-f]{64}$ ]]
 
       - name: Download approved release artifact
         uses: actions/download-artifact@v4
@@ -48,16 +69,22 @@ jobs:
       - name: Verify artifact identity and checksum
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
+          CI_RUN_ID: ${{ inputs.artifact_run_id }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           sha="$REQUESTED_SHA"
+          expected="$(cat "$RUNNER_TEMP/expected-artifact-digest")"
           archive="release/pitpulse-server-linux-x86_64-${sha}.tar.gz"
           test -f "$archive"
+          expected_hex="${expected#sha256:}"
+          test "$(sha256sum "$archive" | cut -d' ' -f1)" = "$expected_hex"
           (cd release && sha256sum -c "$(basename "$archive").sha256")
           mkdir -p release/extracted
           tar -xzf "$archive" -C release/extracted
           test "$(cat release/extracted/VERSION)" = "$sha"
           (cd release/extracted && sha256sum -c SHA256SUMS)
+          cp "$archive" "$RUNNER_TEMP/pitpulse-approved-${sha}.tar.gz"
 
       - name: Configure dedicated SSH key
         env:
@@ -67,11 +94,10 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           set -euo pipefail
+          [[ "$VPS_HOST" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ || "$VPS_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ && "$VPS_USER" != root ]]
           for name in VPS_HOST VPS_USER VPS_KNOWN_HOSTS VPS_SSH_KEY; do
-            if [[ -z "${!name}" ]]; then
-              echo "Missing deployment secret: $name" >&2
-              exit 1
-            fi
+            [[ -n "${!name}" ]] || { echo "Missing deployment secret: $name" >&2; exit 1; }
           done
           mkdir -p "$HOME/.ssh"
           install -m 0700 /dev/null "$HOME/.ssh/known_hosts"
@@ -85,28 +111,45 @@ jobs:
             printf '  IdentityFile %s\n' "$HOME/.ssh/id_ed25519"
             printf '  IdentitiesOnly yes\n'
             printf '  BatchMode yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+            printf '  UserKnownHostsFile %s\n' "$HOME/.ssh/known_hosts"
           } >> "$HOME/.ssh/config"
           chmod 0600 "$HOME/.ssh/config"
+          printf '%s\n' "$HOME/.ssh/id_ed25519" "$HOME/.ssh/config" "$HOME/.ssh/known_hosts" \
+            > "$RUNNER_TEMP/pitpulse-ssh-files"
+          trap 'while IFS= read -r path; do rm -f "$path"; done < "$RUNNER_TEMP/pitpulse-ssh-files"' EXIT
 
-      - name: Upload artifact through the forced command
+      - name: Upload artifact and trusted helpers through the forced command
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
         run: |
           set -euo pipefail
           sha="$REQUESTED_SHA"
-          archive="release/pitpulse-server-linux-x86_64-${sha}.tar.gz"
-          ssh pitpulse-deploy "put ${sha}" < "$archive"
-
-      - name: Send trusted helper bundle and deploy
-        env:
-          REQUESTED_SHA: ${{ inputs.commit_sha }}
-        run: |
-          set -euo pipefail
-          sha="$REQUESTED_SHA"
+          archive="$RUNNER_TEMP/pitpulse-approved-${sha}.tar.gz"
           bundle="$RUNNER_TEMP/pitpulse-deploy-scripts.tar.gz"
-          tar -czf "$bundle" -C server/deploy lib.sh deploy-release.sh rollback-release.sh
+          helpers="$RUNNER_TEMP/pitpulse-deploy-scripts"
+          mkdir -p "$helpers"
+          cp server/deploy/lib.sh server/deploy/deploy-release.sh \
+            server/deploy/rollback-release.sh "$helpers/"
+          tar -czf "$bundle" -C "$helpers" \
+            lib.sh deploy-release.sh rollback-release.sh
+          printf '%s %s\n' "$sha" "$(sha256sum "$archive" | cut -d' ' -f1)" |
+            base64 -w 0 > "$RUNNER_TEMP/pitpulse-deploy-request.b64"
+          {
+            cat "$RUNNER_TEMP/pitpulse-deploy-request.b64"
+            printf '\n'
+            cat "$archive"
+          } | ssh pitpulse-deploy "put ${sha}"
           base64 -w 0 "$bundle" | ssh pitpulse-deploy "deploy ${sha}"
 
       - name: Clean remote staging files
         if: always()
-        run: ssh pitpulse-deploy cleanup || true
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          if [[ -f "$HOME/.ssh/config" ]]; then
+            ssh pitpulse-deploy "cleanup ${REQUESTED_SHA}" || true
+          fi
+          while IFS= read -r path; do rm -f "$path"; done < "$RUNNER_TEMP/pitpulse-ssh-files" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/pitpulse-approved-${REQUESTED_SHA}.tar.gz" \
+            "$RUNNER_TEMP/pitpulse-deploy-scripts.tar.gz"

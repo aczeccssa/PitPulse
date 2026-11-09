@@ -61,6 +61,7 @@ args = sys.argv[1:]
 url = args[-1] if args else ""
 config = ""
 output = ""
+header_file = ""
 write_out = ""
 is_sse = "-N" in args
 authorized = False
@@ -73,6 +74,9 @@ while i < len(args):
         i += 1
     elif arg == "-o" and i + 1 < len(args):
         output = args[i + 1]
+        i += 1
+    elif arg == "--dump-header" and i + 1 < len(args):
+        header_file = args[i + 1]
         i += 1
     elif arg == "-w" and i + 1 < len(args):
         write_out = args[i + 1]
@@ -104,6 +108,10 @@ if output and output != os.devnull:
     with open(output, "wb") as handle:
         handle.write(body)
     wrote_output = True
+if header_file:
+    content_type = "text/event-stream" if is_sse else "application/json"
+    with open(header_file, "w", encoding="utf-8") as handle:
+        handle.write("HTTP/2 200\r\ncontent-type: " + content_type + "\r\n\r\n")
 if write_out == "%{http_code}":
     print(status, end="")
 elif not wrote_output:
@@ -130,6 +138,7 @@ cat > "$FAKE_CADDY" <<'EOF'
 set -euo pipefail
 if [[ "${1:-}" == "validate" ]]; then
     [[ -f "${3:-}" ]] || exit 1
+    grep -Eq '^\([[:space:]]*access_log[[:space:]]*\)[[:space:]]*\{' "${3:-}" || exit 1
     exit 0
 fi
 exec caddy "$@"
@@ -176,7 +185,7 @@ tar -czf "$ARCHIVE" -C "$STAGE" \
     pitpulse-server VERSION SHA256SUMS ldd.txt \
     config.production.toml pitpulse-server.service pitpulse.caddyfile
 
-log "1/10 verifying artifact helper and rejecting untrusted archive paths"
+log "1/11 verifying artifact helper and rejecting untrusted archive paths"
 DRILL_VERSION="$(verify_artifact "$ARCHIVE" "$WORK_DIR/verify" 1)"
 [[ "$DRILL_VERSION" == "0123456789abcdef0123456789abcdef01234567" ]] || fail "artifact VERSION mismatch"
 EVIL_STAGE="$WORK_DIR/evil-stage"
@@ -197,7 +206,7 @@ if verify_artifact "$EVIL_ARCHIVE" "$WORK_DIR/evil-verify" 1 >/dev/null 2>&1; th
     fail "artifact verifier accepted an unexpected archive path"
 fi
 
-log "2/10 verifying environment parsing, token policy and secret-safe curl configs"
+log "2/11 verifying environment parsing, token policy and secret-safe curl configs"
 load_environment "$PITPULSE_ENV_FILE"
 export F1_COMPANION_TOKEN F1_COMPANION_DATABASE_PATH
 write_curl_config "$AUTH_CONFIG" "application/json"
@@ -231,8 +240,8 @@ if (load_environment "$PLACEHOLDER_ENV") >/dev/null 2>&1; then
     fail "environment parser accepted the example placeholder token"
 fi
 
-log "3/10 verifying deploy settings are parsed, not sourced"
-printf 'PITPULSE_PUBLIC_BASE_URL=https://pitpulse.example.test\n' > "$PITPULSE_DEPLOY_SETTINGS_FILE"
+log "3/11 verifying deploy settings are parsed, not sourced"
+printf '# comments and blank lines are allowed\n\nPITPULSE_PUBLIC_BASE_URL=https://pitpulse.example.test/\n\n' > "$PITPULSE_DEPLOY_SETTINGS_FILE"
 chmod 0644 "$PITPULSE_DEPLOY_SETTINGS_FILE"
 unset PITPULSE_PUBLIC_BASE_URL
 load_deploy_settings "$PITPULSE_DEPLOY_SETTINGS_FILE"
@@ -242,16 +251,17 @@ if (load_deploy_settings "$PITPULSE_DEPLOY_SETTINGS_FILE") >/dev/null 2>&1; then
     fail "deploy settings parser accepted a shell-injection line"
 fi
 [[ ! -f "$WORK_DIR/executed-settings" ]] || fail "deploy settings parser executed shell syntax"
-: > "$PITPULSE_DEPLOY_SETTINGS_FILE"
+printf 'PITPULSE_PUBLIC_BASE_URL=https://pitpulse.lestere.bond\n' > "$PITPULSE_DEPLOY_SETTINGS_FILE"
+chmod 0644 "$PITPULSE_DEPLOY_SETTINGS_FILE"
 unset PITPULSE_PUBLIC_BASE_URL
 
-log "4/10 verifying atomic symlink switching"
+log "4/11 verifying atomic symlink switching"
 atomic_set_symlink "$WORK_DIR/release-one" "$WORK_DIR/current"
 [[ "$(resolve_path "$WORK_DIR/current")" == "$(resolve_path "$WORK_DIR/release-one")" ]] || fail "first symlink switch failed"
 atomic_set_symlink "$WORK_DIR/release-two" "$WORK_DIR/current"
 [[ "$(resolve_path "$WORK_DIR/current")" == "$(resolve_path "$WORK_DIR/release-two")" ]] || fail "second symlink switch failed"
 
-log "5/10 verifying SQLite backup, integrity and cold-start handling"
+log "5/11 verifying SQLite backup, integrity and cold-start handling"
 sqlite3 "$PITPULSE_DB_PATH" 'CREATE TABLE IF NOT EXISTS predeploy (value TEXT); INSERT INTO predeploy VALUES ("before");'
 SNAPSHOT="$(sqlite_snapshot "$PITPULSE_DB_PATH" "$WORK_DIR/backup-existing")"
 [[ -f "$SNAPSHOT/backup-path" ]] || fail "SQLite backup manifest missing"
@@ -264,7 +274,7 @@ COLD_SNAPSHOT="$(sqlite_snapshot "$PITPULSE_DB_PATH" "$WORK_DIR/backup-cold")"
 restore_db_from_backup "$COLD_SNAPSHOT" "$PITPULSE_DB_PATH" || fail "cold-start restore failed"
 sqlite3 "$PITPULSE_DB_PATH" 'CREATE TABLE IF NOT EXISTS cold_start (value TEXT);'
 
-log "6/10 exercising deployment helpers through a curl-compatible responder"
+log "6/11 exercising deployment helpers through a curl-compatible responder"
 systemctl_cmd start "$PITPULSE_SERVICE_NAME"
 wait_for_health "http://$PITPULSE_BIND" "$AUTH_CONFIG" "$HEALTH_OUTPUT" || fail "health gate failed"
 unauth_status="$(http_status "http://$PITPULSE_BIND/api/v1/health" "")"
@@ -273,7 +283,7 @@ check_sse_first_event "http://$PITPULSE_BIND/api/v1/live/stream?series=f1" "$SSE
     fail "SSE first event check failed"
 systemctl_cmd stop "$PITPULSE_SERVICE_NAME"
 
-log "7/10 attempting a real loopback listener (may be blocked by the harness sandbox)"
+log "7/11 attempting a real loopback listener (may be blocked by the harness sandbox)"
 set +e
 python3 -c 'import socket, sys; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()' \
     > "$WORK_DIR/listener-port.txt" 2> "$WORK_DIR/listener-error.txt"
@@ -286,7 +296,7 @@ else
     log "loopback TCP bind is blocked by the sandbox; real socket-level HTTP/SSE remains unverified"
 fi
 
-log "8/10 checking Caddy SSE site template and bootstrap without binding a port"
+log "8/11 checking Caddy SSE site template and bootstrap without binding a port"
 caddy_cmd validate --config "$CADDYFILE" || fail "Caddy drill config is invalid"
 BOOTSTRAP_ROOT="$WORK_DIR/bootstrap-root"
 mkdir -p "$BOOTSTRAP_ROOT"
@@ -307,9 +317,9 @@ grep -q 'flush_interval -1' "$SCRIPT_DIR/pitpulse.caddyfile" || fail "Caddy SSE 
 grep -q 'request>headers>Authorization delete' "$SCRIPT_DIR/caddyfile.global.example" ||
     fail "Caddy access-log Authorization redaction is missing"
 
-log "9/10 checking full deploy success, failed-deploy rollback and manual rollback"
+log "9/11 checking full deploy success, failed-deploy rollback and manual rollback"
 PITPULSE_DEPLOY_ROOT="$WORK_DIR" PITPULSE_SYSTEMCTL=/usr/bin/true \
-    bash "$SCRIPT_DIR/bootstrap-vps.sh" >/dev/null
+    PITPULSE_CADDY="$FAKE_CADDY" bash "$SCRIPT_DIR/bootstrap-vps.sh" >/dev/null
 export F1_COMPANION_DATABASE_PATH
 export F1_COMPANION_TOKEN
 
@@ -366,17 +376,23 @@ fi
 env "${deploy_env[@]}" bash "$SCRIPT_DIR/rollback-release.sh" > "$WORK_DIR/rollback.log" 2>&1 ||
     { cat "$WORK_DIR/rollback.log"; fail "manual rollback drill failed"; }
 
-log "10/10 checking secret redaction, forced-command contract and credential template"
+log "10/11 checking secret redaction, forced-command contract and credential template"
 if grep -Rqs "$TOKEN" "$SCRIPT_DIR"; then
     fail "a drill token was found in tracked deployment scripts"
 fi
 forced="$SCRIPT_DIR/pitpulse-deploy.example"
 credentials="$SCRIPT_DIR/prepare-deploy-credentials.example.sh"
 grep -Fq 'SSH_ORIGINAL_COMMAND' "$forced" || fail "forced-command wrapper does not parse SSH_ORIGINAL_COMMAND"
-grep -Fq '^(put|deploy)[[:space:]]([0-9a-f]{40})$' "$forced" ||
-    fail "forced-command wrapper does not constrain put/deploy SHAs"
+grep -Fq '^(put|deploy|cleanup)[[:space:]]([0-9a-f]{40})$' "$forced" ||
+    fail "forced-command wrapper does not constrain all commands and SHAs"
 grep -Fq 'cmp -s "$STAGING/unpacked/$name" "$HELPERS/$name"' "$forced" ||
     fail "forced-command wrapper does not verify helper copies"
+grep -Fq 'actions/workflows/ci.yml/runs' "$forced" ||
+    fail "forced-command wrapper lacks an independent CI run trust anchor"
+grep -Fq 'sudo -n "$DEPLOY_LAUNCHER" "$sha"' "$forced" ||
+    fail "forced-command wrapper does not use the fixed root launcher"
+grep -Eq 'sudo[^|&;]*[[:space:]]+/usr/bin/env' "$forced" &&
+    fail "forced-command wrapper still uses sudo env"
 grep -Fq 'restrict,command=' "$credentials" || fail "credential template lacks restrict,command"
 grep -Fq '^ssh-ed25519[[:space:]]' "$credentials" || fail "credential template lacks dedicated Ed25519 key validation"
 grep -Fq 'authorized_keys' "$credentials" || fail "credential template lacks authorized_keys policy"
@@ -416,7 +432,26 @@ fi
 if SSH_ORIGINAL_COMMAND='deploy not-a-sha' "$FORCED_WRAPPER" >/dev/null 2>&1; then
     fail "forced-command wrapper accepted an invalid SHA"
 fi
-SSH_ORIGINAL_COMMAND=cleanup "$FORCED_WRAPPER" >/dev/null || fail "forced-command cleanup failed"
+CLEAN_SHA=0123456789abcdef0123456789abcdef01234567
+SSH_ORIGINAL_COMMAND="cleanup $CLEAN_SHA" "$FORCED_WRAPPER" >/dev/null ||
+    fail "SHA-scoped forced-command cleanup failed"
+if SSH_ORIGINAL_COMMAND=cleanup "$FORCED_WRAPPER" >/dev/null 2>&1; then
+    fail "forced-command wrapper accepted an unscoped cleanup"
+fi
+
+log "11/11 checking repeated same-SHA deploy and root-owned database restore"
+env "${deploy_env[@]}" bash "$SCRIPT_DIR/deploy-release.sh" "$ARCHIVE" > "$WORK_DIR/deploy-repeat.log" 2>&1 ||
+    { cat "$WORK_DIR/deploy-repeat.log"; fail "same-SHA re-deploy failed"; }
+[[ -f "$WORK_DIR/opt/pitpulse/releases/$DRILL_VERSION/ldd.txt" ]] ||
+    fail "materialized release is missing all SHA256SUMS inputs"
+(
+    cd "$WORK_DIR/opt/pitpulse/releases/$DRILL_VERSION"
+    sha256sum -c SHA256SUMS
+) >/dev/null || fail "materialized release checksums are incomplete"
+restore_db_from_backup "$SNAPSHOT" "$PITPULSE_DB_PATH" || fail "hardened database restore failed"
+[[ "$(stat -c '%U' "$PITPULSE_DB_PATH" 2>/dev/null || stat -f '%Su' "$PITPULSE_DB_PATH")" == "$(stat -c '%U' "$WORK_DIR" 2>/dev/null || stat -f '%Su' "$WORK_DIR")" ]] ||
+    fail "restored database has the wrong owner"
+[[ ! -L "$PITPULSE_DB_PATH" ]] || fail "restored database became a symlink"
 
 log "deployment helper drill passed (socket-level listener unverified in sandbox)"
 log "drill evidence: $WORK_DIR"

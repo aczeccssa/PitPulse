@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T13:21:37Z",
+  "updatedAt": "2026-11-09T14:04:33Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -3609,7 +3609,7 @@
       "milestone": "M4",
       "area": "Operations / QA",
       "status": "inProgress",
-      "summary": "用户已批准部署专用提交/push、链路专用 SSH key 与生产 token、VPS/Caddy/systemd 变更及首次真实上线；仓库侧发布管线已完成，当前会话正接管并执行端到端自动发布，公网验收前不标 done。",
+      "summary": "用户已批准端到端生产上线；首个部署专用提交已推送并产生真实 CI artifact。发布脚本审计后完成安全加固，正在等待加固提交的新 CI 与 VPS SSH 通道恢复后继续首次 production deploy，公网验收前不标 done。",
       "dependencies": [
         "T11"
       ],
@@ -3749,14 +3749,24 @@
         {
           "label": "用户在当前会话直接授权并接管",
           "detail": "用户明确要求当前会话自行完成全部推进、不再反复确认；批准范围包括部署专用精确暂存/提交/push main、链路专用 SSH key/生产 token 生成安装、forced-command wrapper/sudoers、GitHub Environment production secrets、VPS bootstrap、Caddy/systemd、首次 production deploy 与公网验收。并行会话保持只读；本会话开始执行，失败按管线自动回滚。"
+        },
+        {
+          "label": "首个真实 CI 与发布脚本审计加固",
+          "path": "docs/acceptance/deployment.md",
+          "detail": "部署专用提交 9ca37b1 已推送 main；GitHub CI run 42624865596 的 server job 成功并生成版本化 Linux x86-64 artifact 13678900416，外层 SHA256 与 GitHub artifact digest 均为 sha256:09115656a8fb909eb0af35123e3c596d4a8e6e8543bf2cab306102cb1682b787；macOS job 因引用不存在的旧 Xcode 项目而失败，修复已纳入加固。审计发现 sudo/env 注入、artifact 缺少独立信任锚、helper bundle 路径、同 SHA 重部署、DB 恢复属主、Caddy import 幂等等阻断问题；当前工作区已修复并通过 11/11 隔离部署演练、Bash 语法与 workflow YAML 解析，修复提交及新 CI 尚待执行。production environment 已配置所需 reviewer 但不禁止本人批准。"
+        },
+        {
+          "label": "VPS SSH 只读诊断",
+          "detail": "公网 IPv4 SSH 到 22 与 40000 在主机密钥交换前被关闭；known_hosts、密钥、代理配置与 PermitRootLogin 均不是直接原因。经已授权的 VPS 私网管理地址配合既有 root key 登录成功，并核验 Ubuntu 24.04.4 LTS/x86_64、Caddy 2.11.4、sshd -t OK、ssh.socket/ssh.service active、UFW active、现有 PitPulse 文件数 0、DNS 指向公网 VPS。现有 HTTPS 站点仍在线；公网 IPv4 透明代理/SSH 路径异常不影响使用私网管理地址进行已授权部署。"
         }
       ],
       "blockers": [
-        "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，VPS 上游可能降级；这不影响 API/TLS/部署闭环验收。",
-        "真实 GitHub CI/deploy、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
+        "正式上游 F1_LIVE_ACCESS_TOKEN、Mapbox public token、WEC 设置默认不同步，VPS 上游可能降级；首发布已在无密钥模板中禁用 F1 Live，不影响 API/TLS/部署闭环验收。",
+        "公网 IPv4 路径的 SSH 在主机密钥交换前关闭连接；经已授权的 VPS 私网管理地址核验，Ubuntu/sshd 配置与 DNS 均正常，PitPulse 生产文件尚不存在。后续 CI 部署可改用该私网管理地址；公网 SSH 异常仍单独记录。尚未安装凭据、bootstrap、Caddy/systemd 或执行首次 deploy。",
+        "加固后的真实 CI 整体成功、Linux artifact ABI、systemd/Caddy、公网 HTTPS/SSE、客户端真机与赛事证据仍待完成。"
       ],
-      "nextAction": "精确暂存并推送部署管线，配置 GitHub/VPS 凭据，bootstrap/Caddy/systemd，运行真实 main CI 与 production deploy，记录公网 401/200/SSE/证书证据；未通过则按管线回滚。",
-      "updatedAt": "2026-11-09T13:21:37Z",
+      "nextAction": "推送审计加固提交，取得 server job 成功且含新 artifact 的 main CI run；恢复 VPS SSH 后安装专用凭据/bootstrap/Caddy/systemd，dispatch production deploy，记录公网 401/200/SSE/证书证据；失败按管线自动回滚。",
+      "updatedAt": "2026-11-09T14:04:33Z",
       "history": [
         {
           "at": "2026-10-08T08:54:47Z",
@@ -3852,6 +3862,11 @@
           "at": "2026-11-09T13:21:37Z",
           "status": "inProgress",
           "note": "用户要求不再询问并由当前会话自行推进全部上线动作；T15 纠正为已授权、正在端到端执行。保留部署会话全部旧证据/历史；未把并行会话转述当作其执行授权，当前会话独立按用户原文推进。"
+        },
+        {
+          "at": "2026-11-09T14:04:33Z",
+          "status": "inProgress",
+          "note": "首次部署专用提交与真实 server artifact 已完成；审计发现的发布阻断问题在仓库隔离演练中修复为 11/11 通过，尚未推送修复提交或重新触发 CI。production environment 增加 required reviewer；VPS SSH 预认证阶段关闭连接成为当前上线阻塞，HTTPS 现有站点仍在线。T15 保持 inProgress、三项验收标准 false，保留全部旧证据与历史；未把 CI artifact、本地演练或 reviewer 配置当作生产上线成功。"
         }
       ]
     },

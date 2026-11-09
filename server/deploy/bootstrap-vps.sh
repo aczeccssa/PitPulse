@@ -37,7 +37,12 @@ if [[ -z "$PITPULSE_DEPLOY_ROOT" ]]; then
     chown -R pitpulse:pitpulse "$PITPULSE_LIB_DIR"
 fi
 
-install -m 0644 "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE"
+if [[ ! -f "$PITPULSE_CONFIG_FILE" ]]; then
+    install -m 0644 "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE"
+else
+    cmp -s "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE" ||
+        fail "existing $PITPULSE_CONFIG_FILE differs from the reviewed template; resolve manually"
+fi
 if [[ ! -f "$PITPULSE_ENV_FILE" ]]; then
     install -m 0600 "$SCRIPT_DIR/environment.production.example" "$PITPULSE_ENV_FILE"
 fi
@@ -54,13 +59,20 @@ if [[ ! -f "$PITPULSE_CADDY_FILE" ]]; then
     install -m 0644 "$SCRIPT_DIR/caddyfile.global.example" "$PITPULSE_CADDY_FILE"
 fi
 
-if ! grep -Fq "import $PITPULSE_CADDY_SNIPPET" "$PITPULSE_CADDY_FILE"; then
+import_line="import $PITPULSE_CADDY_SNIPPET"
+if ! grep -Eq "^[[:space:]]*import[[:space:]]+${PITPULSE_CADDY_SNIPPET//\//\\/}[[:space:]]*$" "$PITPULSE_CADDY_FILE"; then
     cat >> "$PITPULSE_CADDY_FILE" <<EOF
 
 # Added by PitPulse bootstrap; reload and certificate issuance require explicit authorization.
-import $PITPULSE_CADDY_SNIPPET
+$import_line
 EOF
 fi
+[[ "$(grep -Ec "^[[:space:]]*import[[:space:]]+${PITPULSE_CADDY_SNIPPET//\//\\/}[[:space:]]*$" "$PITPULSE_CADDY_FILE")" == "1" ]] ||
+    fail "Caddyfile has duplicate PitPulse imports; resolve manually"
+grep -Eq '^\([[:space:]]*access_log[[:space:]]*\)[[:space:]]*\{' "$PITPULSE_CADDY_FILE" ||
+    fail "main Caddyfile does not define the shared (access_log) snippet"
+caddy_cmd validate --config "$PITPULSE_CADDY_FILE" >/dev/null ||
+    fail "Caddy validation failed after bootstrap; no Caddy reload was attempted"
 
 if [[ -z "$PITPULSE_DEPLOY_ROOT" ]]; then
     systemctl_cmd daemon-reload >/dev/null

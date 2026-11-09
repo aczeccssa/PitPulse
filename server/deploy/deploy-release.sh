@@ -25,8 +25,11 @@ ARCHIVE="${1:-}"
 [[ -f "$PITPULSE_CONFIG_FILE" ]] || fail "run bootstrap-vps.sh first; missing $PITPULSE_CONFIG_FILE"
 [[ -f "$PITPULSE_SYSTEMD_DIR/$PITPULSE_SERVICE_NAME.service" ]] || fail "systemd unit is not installed"
 
-load_environment "$PITPULSE_ENV_FILE"
-load_deploy_settings "${PITPULSE_DEPLOY_SETTINGS_FILE:-$PITPULSE_ETC_DIR/deploy.env}"
+load_environment "$PITPULSE_ENV_FILE" || fail "$PITPULSE_ENV_FILE is missing, unsafe, or contains an invalid token/config"
+load_deploy_settings "${PITPULSE_DEPLOY_SETTINGS_FILE:-$PITPULSE_ETC_DIR/deploy.env}" ||
+    fail "production public URL settings are missing or invalid"
+[[ "${PITPULSE_PUBLIC_BASE_URL:-}" == "https://pitpulse.lestere.bond" ]] ||
+    fail "production public URL must be https://pitpulse.lestere.bond"
 require_commands tr stat
 
 mkdir -p "$PITPULSE_OPT_DIR/releases" "$PITPULSE_OPT_DIR/releases.incoming" "$PITPULSE_LIB_DIR" "$PITPULSE_BACKUP_DIR"
@@ -91,7 +94,7 @@ if service_is_active; then
     CURRENT_WAS_ACTIVE=1
 fi
 
-if [[ -f "$RELEASE_DIR/pitpulse-server" ]]; then
+if [[ -e "$RELEASE_DIR" ]]; then
     log "release $VERSION is already materialized; reusing immutable directory"
     (
         cd "$RELEASE_DIR"
@@ -99,9 +102,11 @@ if [[ -f "$RELEASE_DIR/pitpulse-server" ]]; then
     ) >/dev/null || rollback "existing release $VERSION failed checksum verification"
 else
     install -d -m 0755 "$RELEASE_DIR"
+    for name in VERSION SHA256SUMS ldd.txt config.production.toml \
+        pitpulse-server.service pitpulse.caddyfile; do
+        install -m 0644 "$WORK_DIR/stage/$name" "$RELEASE_DIR/$name"
+    done
     install -m 0755 "$WORK_DIR/stage/pitpulse-server" "$RELEASE_DIR/pitpulse-server"
-    install -m 0644 "$WORK_DIR/stage/VERSION" "$RELEASE_DIR/VERSION"
-    install -m 0644 "$WORK_DIR/stage/SHA256SUMS" "$RELEASE_DIR/SHA256SUMS"
     install -m 0644 "$WORK_DIR/stage/ldd.actual.txt" "$RELEASE_DIR/ldd.actual.txt"
     log "materialized release $VERSION"
 fi
@@ -124,31 +129,25 @@ start_service || rollback "systemd could not start the new release"
 wait_for_health "http://$PITPULSE_BIND" "$CURL_AUTH" "$WORK_DIR" ||
     rollback "authenticated health / unauthenticated 401 check failed"
 
-unauth_status="$(http_status "http://$PITPULSE_BIND/api/v1/health" "")"
-[[ "$unauth_status" == "401" ]] || rollback "unauthenticated health returned $unauth_status, expected 401"
+unauth_status="$(http_status "http://$PITPULSE_BIND/api/v1/health" "" || true)"
+[[ "$unauth_status" == "401" ]] || rollback "unauthenticated health returned ${unauth_status:-no-response}, expected 401"
 
 check_sse_first_event \
     "http://$PITPULSE_BIND/api/v1/live/stream?series=f1" \
     "$CURL_SSE" "$WORK_DIR/sse.txt" ||
     rollback "SSE first event was not received"
 
-if [[ -f "$PITPULSE_CADDY_FILE" ]]; then
-    caddy_cmd validate --config "$PITPULSE_CADDY_FILE" >/dev/null 2>&1 ||
-        log "WARNING: Caddy config validation failed; existing Caddy routes were not changed"
-fi
+caddy_cmd validate --config "$PITPULSE_CADDY_FILE" >/dev/null 2>&1 ||
+    rollback "Caddy config validation failed; existing Caddy routes were not changed"
 
-if [[ -n "${PITPULSE_PUBLIC_BASE_URL:-}" ]]; then
-    public_base="${PITPULSE_PUBLIC_BASE_URL%/}"
-    public_status="$(http_status "$public_base/api/v1/health" "")"
-    [[ "$public_status" == "401" ]] || rollback "public unauthenticated health returned $public_status, expected 401"
-    health_with_token "$public_base/api/v1/health" "$CURL_AUTH" "$WORK_DIR/public-health.json" ||
-        rollback "public authenticated health check failed"
-    check_sse_first_event "$public_base/api/v1/live/stream?series=f1" "$CURL_SSE" "$WORK_DIR/public-sse.txt" ||
-        rollback "public SSE first event was not received"
-    log "public HTTPS health and SSE checks passed"
-else
-    log "PITPULSE_PUBLIC_BASE_URL is unset; external HTTPS checks are pending"
-fi
+public_base="${PITPULSE_PUBLIC_BASE_URL%/}"
+public_status="$(http_status "$public_base/api/v1/health" "" || true)"
+[[ "$public_status" == "401" ]] || rollback "public unauthenticated health returned ${public_status:-no-response}, expected 401"
+health_with_token "$public_base/api/v1/health" "$CURL_AUTH" "$WORK_DIR/public-health.json" ||
+    rollback "public authenticated health check failed"
+check_sse_first_event "$public_base/api/v1/live/stream?series=f1" "$CURL_SSE" "$WORK_DIR/public-sse.txt" ||
+    rollback "public SSE first event was not received"
+log "public HTTPS health and SSE checks passed"
 
-log "deployment $VERSION passed local/available health checks"
+log "deployment $VERSION passed local and public health checks"
 log "database user_version: $(cat "$BACKUP_DIR/user_version.txt" 2>/dev/null || printf 'unknown')"

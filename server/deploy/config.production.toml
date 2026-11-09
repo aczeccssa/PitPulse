@@ -7,7 +7,7 @@ path = "/var/lib/pitpulse/pitpulse.sqlite"
 [providers]
 jolpica_enabled = true
 openf1_enabled = true
-f1_live_enabled = true
+f1_live_enabled = false
 wec_live_enabled = false
 wec_live_poll_seconds = 5
 user_agent = "PitPulse/0.1"

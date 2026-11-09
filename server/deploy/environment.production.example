@@ -7,6 +7,8 @@ F1_COMPANION_REQUIRE_TOKEN=true
 F1_COMPANION_TOKEN=REPLACE_WITH_A_NEW_HIGH_ENTROPY_RANDOM_TOKEN
 
 # Optional upstream credentials; inject only after the user explicitly decides.
+# Keep F1 Live disabled in config.production.toml unless an approved access
+# token is installed here. The server remains healthy with live=false.
 # F1_LIVE_ACCESS_TOKEN=
 # F1_COMPANION_MAPBOX_PUBLIC_TOKEN=
 # F1_COMPANION_LIVE_INTERFACE=

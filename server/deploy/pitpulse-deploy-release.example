@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# EXAMPLE root-owned launcher for the dedicated CI deploy account.
+# Install as /usr/local/sbin/pitpulse-deploy-release, mode 0755, owner root.
+# It is the ONLY command allowed by the narrow sudoers rule. No CI-controlled
+# environment variables, executable paths, or shell arguments reach root.
+
+set -Eeuo pipefail
+umask 077
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+fail() {
+    printf '[pitpulse-deploy-release] denied: %s\n' "$1" >&2
+    exit 1
+}
+
+[[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "launcher must run as root"
+[[ "$#" -eq 1 && "$1" =~ ^[0-9a-f]{40}$ ]] || fail "expected one full commit SHA"
+sha="$1"
+archive="/opt/pitpulse/releases.incoming/${sha}.tar.gz"
+helper="/usr/local/lib/pitpulse/deploy-release.sh"
+[[ -f "$archive" && ! -L "$archive" ]] || fail "approved artifact is missing"
+[[ -f "$helper" && ! -L "$helper" ]] || fail "root-installed helper is missing"
+
+# Drop test-only overrides and other potentially inherited variables. The
+# launcher fixes the remaining release settings to their production values.
+for name in PITPULSE_DEPLOY_ROOT PITPULSE_ROOT_LIB_DIR PITPULSE_SYSTEMCTL \
+    PITPULSE_CURL PITPULSE_CADDY PITPULSE_SKIP_BINARY_PREFLIGHT \
+    PITPULSE_DEPLOY_SETTINGS_FILE PITPULSE_PUBLIC_BASE_URL \
+    LD_PRELOAD LD_LIBRARY_PATH PYTHONPATH IFS BASH_ENV ENV CDPATH; do
+    unset "$name" || true
+done
+export PITPULSE_DEPLOY_ARTIFACT_SHA="$sha"
+
+exec "$helper" "$archive"

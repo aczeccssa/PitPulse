@@ -67,14 +67,14 @@ jobs:
 
   macos:
     name: macOS build / test
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Build and test
         run: >-
           xcodebuild
-          -project macos/F1Companion.xcodeproj
-          -scheme F1Companion
+          -project PitPulse.xcodeproj
+          -scheme PitPulseDesktop
           -configuration Debug
           -destination 'platform=macOS'
           CODE_SIGNING_ALLOWED=NO

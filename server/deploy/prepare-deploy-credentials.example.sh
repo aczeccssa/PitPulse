@@ -43,25 +43,29 @@ require_commands() {
 }
 
 require_root
-require_commands install useradd usermod ssh-keygen grep sha256sum cmp
+require_commands install useradd usermod ssh-keygen grep sha256sum cmp visudo chown chmod
 
 deploy_user="${PITPULSE_DEPLOY_USER:-pitpulse-deploy}"
 public_key_file="${PITPULSE_DEPLOY_PUBLIC_KEY_FILE:-}"
 deploy_dir="${PITPULSE_REPO_DEPLOY_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)}"
 wrapper_src="$deploy_dir/pitpulse-deploy.example"
+launcher_src="$deploy_dir/pitpulse-deploy-release.example"
 helpers_src=("$deploy_dir/lib.sh" "$deploy_dir/deploy-release.sh" "$deploy_dir/rollback-release.sh")
 wrapper_dst=/usr/local/sbin/pitpulse-deploy
+launcher_dst=/usr/local/sbin/pitpulse-deploy-release
 helpers_dir=/usr/local/lib/pitpulse
 incoming_dir=/opt/pitpulse/releases.incoming
 staging_dir=/var/tmp/pitpulse-deploy
 sudoers_file=/etc/sudoers.d/pitpulse-deploy
+sudoers_tmp="$(mktemp /etc/sudoers.d/.pitpulse-deploy.XXXXXX)"
 authorized_keys_dir="/home/$deploy_user/.ssh"
+trap 'rm -f "$sudoers_tmp"' EXIT
 
 [[ -n "$public_key_file" && -f "$public_key_file" && ! -L "$public_key_file" ]] ||
     fail "set PITPULSE_DEPLOY_PUBLIC_KEY_FILE to the NEW public key file"
 [[ "$deploy_user" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail "invalid deploy account name"
 [[ "$deploy_user" != root && "$deploy_user" != pitpulse ]] || fail "deploy account must be dedicated and non-root"
-for src in "$wrapper_src" "${helpers_src[@]}"; do
+for src in "$wrapper_src" "$launcher_src" "${helpers_src[@]}"; do
     [[ -f "$src" && ! -L "$src" ]] || fail "missing reviewed template: $src"
 done
 
@@ -83,29 +87,34 @@ install -d -m 0755 "$incoming_dir"
 install -d -m 0700 "$staging_dir"
 install -d -m 0755 "$helpers_dir"
 install -m 0755 "$wrapper_src" "$wrapper_dst"
+install -m 0755 "$launcher_src" "$launcher_dst"
 for src in "${helpers_src[@]}"; do
     install -m 0755 "$src" "$helpers_dir/$(basename "$src")"
 done
-chown -R "$deploy_user:$deploy_user" "$authorized_keys_dir" "$incoming_dir" "$staging_dir"
+chown -R "$deploy_user:$deploy_user" "$incoming_dir" "$staging_dir"
 
-# Only this exact forced command is accepted. `restrict` disables port/agent/X11
-# forwarding, PTY allocation and user rc; the wrapper itself allows only
-# put <sha>, deploy <sha>, and cleanup via SSH_ORIGINAL_COMMAND.
+# Root owns the home/.ssh/authorized_keys path so the deploy account cannot
+# replace its own forced command even if an archive path check regresses.
+# `restrict` disables forwarding, PTY allocation and user rc.
 authorized_keys_line="restrict,command=\"$wrapper_dst\" $public_key"
 install -m 0600 /dev/null "$authorized_keys_dir/authorized_keys"
 printf '%s\n' "$authorized_keys_line" > "$authorized_keys_dir/authorized_keys"
-chown "$deploy_user:$deploy_user" "$authorized_keys_dir/authorized_keys"
+chown -R root:root "/home/$deploy_user" "$authorized_keys_dir" "$authorized_keys_dir/authorized_keys"
+chmod 0700 "/home/$deploy_user" "$authorized_keys_dir"
+chmod 0600 "$authorized_keys_dir/authorized_keys"
 
-# One narrowly scoped sudo rule: the deploy account may invoke ONLY the
-# root-installed deploy-release.sh with the forced-command SHA. The wrapper
-# already checks that CI-supplied helpers byte-for-byte match these copies.
-cat > "$sudoers_file" <<EOF
-$deploy_user ALL=(root) NOPASSWD: /usr/bin/env PITPULSE_DEPLOY_ARTIFACT_SHA=* /usr/local/lib/pitpulse/deploy-release.sh /opt/pitpulse/releases.incoming/*
+# One fixed root-owned launcher is allowed through sudo. No `/usr/bin/env`,
+# shell wildcards, CI-controlled environment variables, or helper paths are in
+# the rule. Validate the temporary file BEFORE installing it so a bad policy
+# cannot disable sudo on the VPS.
+cat > "$sudoers_tmp" <<EOF
+$deploy_user ALL=(root) NOPASSWD: $launcher_dst
 EOF
-chmod 0440 "$sudoers_file"
-visudo -cf "$sudoers_file" >/dev/null || fail "sudoers policy failed validation"
+chmod 0440 "$sudoers_tmp"
+visudo -cf "$sudoers_tmp" >/dev/null || fail "sudoers policy failed validation"
+install -m 0440 "$sudoers_tmp" "$sudoers_file"
 
 printf '[pitpulse] prepared dedicated account %s and forced command %s\n' "$deploy_user" "$wrapper_dst"
 printf '[pitpulse] private key stays OUTSIDE the VPS and repository; add it only to GitHub Environment production secret VPS_SSH_KEY\n'
 printf '[pitpulse] verify host key fingerprint out of band, then set VPS_HOST/VPS_USER/VPS_KNOWN_HOSTS/VPS_SSH_KEY\n'
-printf '[pitpulse] test denials before any deploy: ssh <alias> "uname -a" must be rejected; ssh <alias> cleanup must succeed\n'
+printf '[pitpulse] test denials before any deploy: ssh <alias> "uname -a" must be rejected; ssh <alias> "cleanup <sha>" must succeed\n'

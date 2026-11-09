@@ -60,4 +60,4 @@ Cold start leaves the VPS database to migrations and the scheduler; the local da
 bash server/deploy/test-deploy-scripts.sh
 ```
 
-See [deployment acceptance](../docs/acceptance/deployment.md) for the user-added DNS A record, dedicated SSH key/forced-command requirement, unverified items and the authorization checklist. No DNS, VPS Caddy/systemd, production secret or production deployment has been changed by these repository files.
+See [deployment acceptance](../docs/acceptance/deployment.md) for the user-added DNS A record, dedicated SSH key/forced-command requirement, unverified items and the authorization checklist. The repository files contain no production secret and do not copy a local database. The first deployment is a cold start and keeps F1 Live disabled until an approved upstream token is installed. VPS Caddy/systemd, the production API token, and release switching are performed only by the approved operator workflow outside these files.

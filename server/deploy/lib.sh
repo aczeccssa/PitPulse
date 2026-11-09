@@ -27,7 +27,7 @@ log() {
 
 fail() {
     printf '[pitpulse] ERROR: %s\n' "$*" >&2
-    return 1
+    exit 1
 }
 
 require_commands() {
@@ -125,16 +125,13 @@ load_deploy_settings() {
     while IFS= read -r line || [[ -n "$line" ]]; do
         line="${line%$'\r'}"
         [[ -z "$line" || "$line" == \#* ]] && continue
+        [[ "$line" =~ ^PITPULSE_PUBLIC_BASE_URL=https://([A-Za-z0-9.-]+)/?$ ]] || return 1
         [[ -z "$url" ]] || return 1
-        if [[ ! "$line" =~ ^PITPULSE_PUBLIC_BASE_URL=(https://[A-Za-z0-9.-]+)$ ]]; then
-            return 1
-        fi
-        url="${BASH_REMATCH[1]}"
+        url="https://${BASH_REMATCH[1]}"
     done < "$settings"
 
-    if [[ -n "$url" ]]; then
-        export PITPULSE_PUBLIC_BASE_URL="$url"
-    fi
+    [[ -n "$url" ]] || return 1
+    export PITPULSE_PUBLIC_BASE_URL="$url"
 }
 
 write_curl_config() {
@@ -164,7 +161,7 @@ http_status() {
     if [[ -n "$auth_config" ]]; then
         args+=(--config "$auth_config")
     fi
-    curl_cmd "${args[@]}" "$url"
+    curl_cmd "${args[@]}" "$url" || printf '000'
 }
 
 health_with_token() {
@@ -174,9 +171,11 @@ health_with_token() {
 }
 
 check_sse_first_event() {
-    local url="$1" auth_config="$2" output="$3"
+    local url="$1" auth_config="$2" output="$3" headers="$3.headers"
     : > "$output"
-    curl_cmd -N -sS --max-time 4 --config "$auth_config" -o "$output" "$url" >/dev/null 2>&1 || true
+    curl_cmd -N -sS --max-time 20 --dump-header "$headers" \
+        --config "$auth_config" -o "$output" "$url" >/dev/null 2>&1 || true
+    grep -qi '^content-type:[[:space:]]*text/event-stream' "$headers" || return 1
     grep -q '^event:' "$output"
 }
 
@@ -248,13 +247,18 @@ sqlite_snapshot() {
 }
 
 restore_db_from_backup() {
-    local backup_dir="$1" db_path="$2" backup_path
-    [[ -d "$backup_dir" ]] || return 1
+    local backup_dir="$1" db_path="$2" backup_path temp_path owner_group
+    [[ -d "$backup_dir" && ! -L "$db_path" ]] || return 1
     backup_path="$(cat "$backup_dir/backup-path" 2>/dev/null || true)"
 
-    if [[ -n "$backup_path" && -f "$backup_path" ]]; then
-        cp -f "$backup_path" "$db_path" || return 1
+    if [[ -n "$backup_path" && -f "$backup_path" && ! -L "$backup_path" ]]; then
+        temp_path="$(mktemp "$db_path.restore.XXXXXX")" || return 1
+        cp -f "$backup_path" "$temp_path" || { rm -f "$temp_path"; return 1; }
         rm -f "$db_path-wal" "$db_path-shm"
+        mv -fT "$temp_path" "$db_path" 2>/dev/null || mv -f "$temp_path" "$db_path" || return 1
+        owner_group="$(stat -c '%U:%G' "$(dirname "$db_path")" 2>/dev/null || true)"
+        [[ -n "$owner_group" ]] && chown "$owner_group" "$db_path"
+        chmod 0600 "$db_path"
         [[ "$(sqlite3 "$db_path" 'PRAGMA integrity_check;' 2>/dev/null || true)" == "ok" ]] || return 1
         return 0
     fi
@@ -269,13 +273,14 @@ restore_db_from_backup() {
 
 atomic_set_symlink() {
     local target="$1" link_path="$2" tmp_path
-    tmp_path="${link_path}.tmp"
-    ln -sfn "$target" "$tmp_path" || return 1
+    tmp_path="${link_path}.tmp.$$"
+    rm -f "$tmp_path"
+    ln -s "$target" "$tmp_path" || return 1
     if mv --help 2>&1 | grep -q -- '--no-target-directory'; then
         mv -Tf "$tmp_path" "$link_path"
     else
-        rm -f "$link_path"
-        mv "$tmp_path" "$link_path"
+        # macOS fallback: rename(2) replaces an existing symlink atomically.
+        mv -f "$tmp_path" "$link_path"
     fi
 }
 
