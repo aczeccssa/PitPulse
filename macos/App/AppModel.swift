@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import PitPulseData
 import PitPulseShared
@@ -39,6 +40,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var notchCollapseOnMouseExit: Bool
     @Published private(set) var liveSeries: LiveSeries
 
+    private let widgetPublisher: WidgetSnapshotPublisher?
+    private var widgetSubscription: AnyCancellable?
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
     private let cache: DiskCalendarCache
@@ -75,8 +78,10 @@ final class AppModel: ObservableObject {
         session: URLSession = .shared,
         popupRefreshInterval: TimeInterval = AppModel.refreshInterval,
         retryDelays: [TimeInterval] = [5, 15, 30, 60, 300],
-        autoBootstrap: Bool = true
+        autoBootstrap: Bool = true,
+        widgetPublisher: WidgetSnapshotPublisher? = nil
     ) {
+        self.widgetPublisher = widgetPublisher ?? (autoBootstrap ? WidgetSnapshotPublisher() : nil)
         self.defaults = defaults
         self.credentials = credentials
         self.cache = cache
@@ -104,6 +109,10 @@ final class AppModel: ObservableObject {
 
         let currentYear = Calendar.current.component(.year, from: Date())
         self.selectedSeason = defaults.object(forKey: PreferenceKeys.selectedSeason) as? Int ?? currentYear
+        self.widgetSubscription = liveStore.$snapshot.sink { [weak self] snapshot in
+            guard let self, self.liveSeries == .f1 else { return }
+            self.widgetPublisher?.publishLive(snapshot)
+        }
         self.liveStore.onDataRefresh = { [weak self] event in
             Task { @MainActor [weak self] in await self?.handleDataRefresh(event) }
         }
@@ -554,6 +563,7 @@ final class AppModel: ObservableObject {
         do {
             try credentials.deleteToken(for: server.url)
             isTokenStored = false
+            widgetPublisher?.clear()
             settingsMessage = "Token 已删除"
             retryAttempt = 0
             retryTask?.cancel()
@@ -685,6 +695,7 @@ final class AppModel: ObservableObject {
 
     func setLiveSeries(_ series: LiveSeries) {
         guard series != liveSeries else { return }
+        widgetPublisher?.clearLive()
         liveSeries = series
         defaults.set(series.rawValue, forKey: PreferenceKeys.liveSeries)
         if didBootstrap {
@@ -814,6 +825,7 @@ final class AppModel: ObservableObject {
     }
 
     private func invalidateConnection() {
+        widgetPublisher?.clear()
         generation += 1
         activeRefreshTask?.cancel()
         activeRefreshTask = nil
@@ -876,6 +888,9 @@ final class AppModel: ObservableObject {
             meetings = calendarResponse.data
             meta = calendarResponse.meta
             nextMeetingOverride = validServerNextMeeting(nextResponse.data)
+            // Do not stamp server-stale data as freshly fetched.
+            widgetPublisher?.publishCalendar(meetings: nextMeetingOverride.map { [$0] } ?? meetings,
+                savedAt: calendarResponse.meta.stale ? .distantPast : (calendarResponse.meta.fetchedAt ?? .distantPast))
             lastSuccessfulLoadAt = Date()
             lastSuccessfulAttemptAt = Date()
             errorMessage = nil
@@ -905,6 +920,7 @@ final class AppModel: ObservableObject {
             } else {
                 connectionStatus = .stale
             }
+            if unauthorized { widgetPublisher?.clear() }
             if !unauthorized { Task { await refreshPageData() } }
             scheduleRetry(for: error)
         }
@@ -987,6 +1003,7 @@ final class AppModel: ObservableObject {
             if let cached {
                 meetings = cached.envelope.data
                 meta = cached.envelope.meta
+                widgetPublisher?.publishCalendar(meetings: meetings, savedAt: cached.envelope.meta.stale ? .distantPast : cached.savedAt)
                 lastSuccessfulLoadAt = cached.savedAt
                 // Cached content is not a successful connection in this process.
                 nextMeetingOverride = nil

@@ -88,8 +88,34 @@ public struct RaceWidgetSnapshot: Codable, Equatable, Sendable {
     public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
 }
 
+/// Only the two widget destinations are accepted; no arbitrary URL dispatch.
+public enum WidgetDestination: String, Sendable {
+    case calendar, live
+
+    public init?(url: URL) {
+        guard ["pitpulse", "pitpulse-desktop"].contains(url.scheme?.lowercased() ?? ""),
+              url.user == nil, url.password == nil, url.port == nil,
+              url.path.isEmpty || url.path == "/",
+              let host = url.host, let destination = Self(rawValue: host) else { return nil }
+        self = destination
+    }
+
+    public var url: URL {
+        #if os(macOS)
+        URL(string: "pitpulse-desktop://\(rawValue)")!
+        #else
+        URL(string: "pitpulse://\(rawValue)")!
+        #endif
+    }
+}
+
 public enum RaceWidgetCache {
+    #if os(macOS)
+    // A Team-prefixed Mac group works without new iOS-style provisioning profiles.
+    public static let group = "9RQST8G2LS.com.pitpulse.widgets"
+    #else
     public static let group = "group.com.pitpulse.mobile"
+    #endif
     public static let kind = "PitPulseRaceWeekend"
     public static let key = "raceWeekendSnapshot"
     public static func read(from defaults: UserDefaults? = UserDefaults(suiteName: group)) -> RaceWidgetSnapshot? {

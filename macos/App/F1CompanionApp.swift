@@ -9,7 +9,9 @@ struct F1CompanionApp: App {
     init() {
         let model = AppModel()
         _model = StateObject(wrappedValue: model)
+        // StateObject's autoclosure delays controller setup until AppKit is ready.
         _liveIsland = StateObject(wrappedValue: LiveIslandController(model: model))
+        AppDelegate.configureWidgetRoutes(model: model)
     }
 
     var body: some Scene {

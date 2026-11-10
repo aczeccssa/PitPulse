@@ -115,15 +115,14 @@ tasks:
     stop_timeout_ms: 3000
     clear_logs_on_restart: false
   Run App:
-    command: /bin/zsh
-    args:
-    - -lc
-    - exec scripts/run-app.sh
+    command: /bin/bash
+    args: [scripts/run-app.sh]
     cwd: .
-    env: {}
+    env:
+      PITPULSE_SERVER_URL: http://127.0.0.1:38701
     shell: false
     auto_start: false
-    stop_timeout_ms: 5000
+    stop_timeout_ms: 10000
     clear_logs_on_restart: true
   Run Server:
     command: /bin/zsh
@@ -162,3 +161,16 @@ tasks:
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: true
+
+  Check Widget Publisher:
+    command: /bin/bash
+    args: [scripts/check-widget-publisher.sh]
+    cwd: .
+    auto_start: false
+
+  Check App Launcher:
+    command: /bin/bash
+    args: [scripts/run-app.sh, --check]
+    cwd: .
+    shell: false
+    auto_start: false

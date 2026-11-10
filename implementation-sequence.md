@@ -394,3 +394,17 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 基于 T25 共享包与 T26 iOS 基础，按用户提供的 PitPulse Showcase 实现黑底红色强调的赛程、Live、周末详情、成绩和积分；固定复用 macOS 图像资产。加入小/中/锁屏 Widget、Live Activity 与 Dynamic Island 全部布局。构建、单元测试、模拟器视觉验收和签名真机后台验收分别记录。归属 M7，依赖 T25，关联 T26 / T03；YouTrack PP-40，交付记录 PP-41。
 
 T27 移动端交互范围补充：采用总览、赛历、车手积分、车队积分四个纯图标标签；Logo 设置 sheet、收藏车手、系统浅深色；赛历按用户参考图使用分站号/国旗地点/日期/真实几何轮廓。Live 以底部比赛条动画展开，自动监听 F1/WEC 并处理并行赛事提示与选择；灵动岛提供总览/对比/收藏车手内容。所有图像继续固定复用现有资产。
+
+### T28 — 共享普通 Widget 与 macOS 原生扩展
+
+**归属与依赖**：M7；依赖 T25，关联 T26/T27。共享普通 WidgetKit 视图、TimelineProvider 和快照转换，iOS ActivityKit 单独保留；新增 macOS 原生扩展并嵌入 Desktop App，配置本机 App Group，接入赛历/Live 缓存发布、刷新节流与深链接。不复制 UI、不让扩展直连 Provider、不变更已有 iOS App Group 标识，不扩展 WEC Widget 或服务端推送。
+
+**验收**：两端构建与共享快照回归通过；Mac 断线/换服务器/换数据源不能继续冒充实时；核对扩展嵌入、签名与 App Group，真实 macOS 添加三类小中大 Widget 并验证缓存读取和点击跳转。构建与系统集成证据分开，当前状态只记录在 tasks.json。
+
+**启动链**：Taskdeck `Run App` 使用具名 Release workspace/scheme 构建完整 App 与扩展，核验签名/嵌入，注册 LaunchServices/PlugInKit 后 exec 主进程；本地服务器覆盖显式放在 YAML，凭证仍留 Keychain。拒绝重复实例，保持开发 DerivedData 隔离；路由配置不得提前实例化依赖 AppKit 生命周期的 LiveIslandController。
+
+**App 内预览**：按用户系统 Widget 选择器截图，三类×小中大九页横滑吸附陈列，按真实宽度紧凑排列并露出相邻页，标题/说明/紧凑分页随选择同步。独立 large sheet，纵向固定、仅横向滚动，轻微 XYZ 倾斜；保留主题切换，前台每 15 秒重读真实缓存并在隐藏/后台取消。工具栏信息按钮承载系统添加指引，移除手动刷新、底部大按钮及说明文字；不伪装 App 可直接添加 Widget。
+
+**预览/设置修正**：预览保留等宽分页留白、仅适度收窄间距，移除预览外观选择，继承App主题；sheet工具栏显式图标。设置统一原生分组、输入样式与主保存/次检查层级，偏好集中展示，保留既有存储和网络业务。
+
+**服务器/组件设置修正**：主设置中的服务器为可点击地址、状态符号与单个配置入口；新 server-config sheet 以服务器图标为视觉焦点，仅两个输入和真实 health 测试/保存操作，并维持现有 Keychain 语义。灵动岛与桌面预览归入同一组件组；移除桌面预览重复的行首图标和手画 chevron，使用系统 row 风格。

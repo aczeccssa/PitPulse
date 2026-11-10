@@ -71,7 +71,18 @@
 		AA0000000000000000000002 /* Widget Assets */ = {isa = PBXBuildFile; fileRef = D4939018160EDA5DF8DE2949; };
 		AA0000000000000000000005 = {isa = PBXBuildFile; fileRef = AA0000000000000000000004; };
 		AA0000000000000000000006 = {isa = PBXBuildFile; fileRef = AA0000000000000000000004; };
-		AA0000000000000000000007 /* Shared widget renderers in Sources */ = {isa = PBXBuildFile; fileRef = B5271EDC99039CA37948C293; };
+		BB0000000000000000000005 = {isa = PBXBuildFile; fileRef = BB0000000000000000000001; };
+		BB0000000000000000000006 = {isa = PBXBuildFile; fileRef = BB0000000000000000000001; };
+		BB0000000000000000000007 = {isa = PBXBuildFile; fileRef = BB0000000000000000000001; };
+		BB0000000000000000000008 = {isa = PBXBuildFile; fileRef = BB0000000000000000000002; };
+		BB0000000000000000000009 = {isa = PBXBuildFile; fileRef = BB0000000000000000000002; };
+		BB000000000000000000000A = {isa = PBXBuildFile; fileRef = BB0000000000000000000003; };
+		BB000000000000000000000B = {isa = PBXBuildFile; fileRef = D4939018160EDA5DF8DE2949; };
+		BB000000000000000000000C = {isa = PBXBuildFile; productRef = BB000000000000000000000D; };
+		BB000000000000000000000E = {isa = PBXBuildFile; fileRef = BB0000000000000000000004; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+BB000000000000000000001A = {isa = PBXBuildFile; fileRef = BB0000000000000000000019; };
+BB000000000000000000001B = {isa = PBXBuildFile; fileRef = BB0000000000000000000019; };
+BB000000000000000000001C = {isa = PBXBuildFile; fileRef = BB0000000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +107,7 @@
 			remoteGlobalIDString = DF62D6E2FFB761C0F8FCA7BA;
 			remoteInfo = PitPulseDesktop;
 		};
+		BB0000000000000000000013 = {isa = PBXContainerItemProxy; containerPortal = 3220868BF575D60A65DE956B; proxyType = 1; remoteGlobalIDString = BB0000000000000000000014; remoteInfo = PitPulseWidgets; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -110,6 +122,7 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB0000000000000000000012 = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (BB000000000000000000000E, ); name = "Embed Widget Extension"; runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -175,6 +188,11 @@
 		EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
 		F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerAddressTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "macos/Resources/AppIcon.icon/Assets/logo-foreground.png"; sourceTree = SOURCE_ROOT; };
+		BB0000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widgets/RaceWidgets.swift; sourceTree = SOURCE_ROOT; };
+		BB0000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widgets/WidgetSnapshotPublisher.swift; sourceTree = SOURCE_ROOT; };
+		BB0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macos/PitPulseWidgets/PitPulseDesktopWidgetBundle.swift; sourceTree = SOURCE_ROOT; };
+		BB0000000000000000000004 = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = PitPulseWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+BB0000000000000000000019 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widgets/WidgetSnapshotPublisherTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,6 +245,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB0000000000000000000011 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (BB000000000000000000000C, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -411,6 +430,10 @@
 			isa = PBXGroup;
 			children = (
 				ED376626563BF92E448B23A9 /* ios */,
+                BB0000000000000000000001,
+                BB0000000000000000000002,
+                BB0000000000000000000003,
+                BB0000000000000000000019,
 				09D4D2A59A62EC77AB9FE16C /* macos */,
 				987974C71972AF943077D7B2 /* Packages */,
 				F028EC422759F32C82A31BAC /* Products */,
@@ -430,7 +453,8 @@
 		F028EC422759F32C82A31BAC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E73DA89BDC47A03D282AA36D /* PitPulse.app */,
+				BB0000000000000000000004,
+                E73DA89BDC47A03D282AA36D /* PitPulse.app */,
 				1A7474D1395FD74E6C8F9DA3 /* PitPulseTests.xctest */,
 				8045039CD86CB883EA2801D2 /* PitPulseUITests.xctest */,
 				7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */,
@@ -560,10 +584,12 @@
 				9AC54725BA3FCC65E5C93099 /* Sources */,
 				1EA9ED9642E85E86C6F0542C /* Resources */,
 				F5117DD4353B2F969BB7701F /* Frameworks */,
+                BB0000000000000000000012,
 			);
 			buildRules = (
 			);
 			dependencies = (
+                BB0000000000000000000015,
 			);
 			name = PitPulseDesktop;
 			packageProductDependencies = (
@@ -597,6 +623,18 @@
 			productReference = 7F01345D160274C48DE3799D /* PitPulseLiveActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		BB0000000000000000000014 /* PitPulseWidgets */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = BB0000000000000000000016;
+            buildPhases = (BB000000000000000000000F, BB0000000000000000000010, BB0000000000000000000011, );
+            buildRules = ();
+            dependencies = ();
+            name = PitPulseWidgets;
+            packageProductDependencies = (BB000000000000000000000D, );
+            productName = PitPulseWidgets;
+            productReference = BB0000000000000000000004;
+            productType = "com.apple.product-type.app-extension";
+        };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -644,6 +682,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+                BB0000000000000000000014,
 				DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */,
 				B2415D5F4AA170562698E9EA /* PitPulseDesktopTests */,
 				DC00A15457D61F874F6CB74E /* PitPulseDesktopUITests */,
@@ -685,6 +724,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AA0000000000000000000003 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (AA0000000000000000000002, AA0000000000000000000006,); runOnlyForDeploymentPostprocessing = 0; };
+		BB0000000000000000000010 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (BB000000000000000000000B, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -693,6 +733,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				20338AE5EF1364F6D54990FA /* LiveActivityContentStateTests.swift in Sources */,
+                BB000000000000000000001A,
+                BB000000000000000000001C,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -700,7 +742,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                AA0000000000000000000007 /* Shared widget renderers in Sources */,
+                BB0000000000000000000005 /* Shared widgets */,
+                BB0000000000000000000009 /* Widget publisher */,
 				4758821F064E167835372165 /* CalendarScreen.swift in Sources */,
 				B991392DA0713CA5EE1C8A08 /* LiveActivityController.swift in Sources */,
 				FE0F138B4B2B1DB80B468E53 /* LiveScreen.swift in Sources */,
@@ -717,6 +760,7 @@
 				D04B49005526D8015BFC981F /* AnalysisView.swift in Sources */,
 				B09777FE44844A9573FD17C6 /* AppDelegate.swift in Sources */,
 				40D1F92003B3F7226D47C5E9 /* AppModel.swift in Sources */,
+                BB0000000000000000000008,
 				468FCADEEB4C73302C19DEA4 /* AppSymbol.swift in Sources */,
 				BE58058ED600C2EA064FE8D2 /* CalendarView.swift in Sources */,
 				B266560E4BF9036EAF43177F /* F1CompanionApp.swift in Sources */,
@@ -741,6 +785,7 @@
 			files = (
 				8B85DAEE26A5ADE5470B583E /* PitPulseLiveActivityBundle.swift in Sources */,
 				1B135691C093AE3533BC9D60 /* PitPulseLiveActivityWidget.swift in Sources */,
+                BB0000000000000000000006,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -749,6 +794,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				318D18F4242BA66DCC213E26 /* APIClientTests.swift in Sources */,
+                BB000000000000000000001B,
 				2A160269D082A75A810C1BC5 /* AppSymbolTests.swift in Sources */,
 				10DBDD06493322C110508268 /* CalendarCacheTests.swift in Sources */,
 				D6793F1E882E142F164EFFD4 /* CalendarLogicTests.swift in Sources */,
@@ -770,6 +816,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB000000000000000000000F = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (BB0000000000000000000007, BB000000000000000000000A, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -788,6 +835,7 @@
 			target = DF62D6E2FFB761C0F8FCA7BA /* PitPulseDesktop */;
 			targetProxy = 52451F406F07C5D5ED0E79F2 /* PBXContainerItemProxy */;
 		};
+		BB0000000000000000000015 = {isa = PBXTargetDependency; target = BB0000000000000000000014; targetProxy = BB0000000000000000000013; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -954,6 +1002,7 @@
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = macos/Support/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = macos/Support/PitPulseDesktop.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1100,6 +1149,7 @@
 				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = macos/Support/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = macos/Support/PitPulseDesktop.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1165,6 +1215,34 @@
 			};
 			name = Release;
 		};
+		BB0000000000000000000017 = {isa = XCBuildConfiguration; buildSettings = {
+                APPLICATION_EXTENSION_API_ONLY = YES;
+                CODE_SIGN_STYLE = Automatic;
+                DEVELOPMENT_TEAM = 9RQST8G2LS;
+                CODE_SIGN_ENTITLEMENTS = macos/PitPulseWidgets/PitPulseWidgets.entitlements;
+                ENABLE_APP_SANDBOX = YES;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = macos/PitPulseWidgets/Info.plist;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+                PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1Companion.widgets;
+                PRODUCT_NAME = PitPulseWidgets;
+                SDKROOT = macosx;
+                SKIP_INSTALL = YES;
+            }; name = Debug; };
+		BB0000000000000000000018 = {isa = XCBuildConfiguration; buildSettings = {
+                APPLICATION_EXTENSION_API_ONLY = YES;
+                CODE_SIGN_STYLE = Automatic;
+                DEVELOPMENT_TEAM = 9RQST8G2LS;
+                CODE_SIGN_ENTITLEMENTS = macos/PitPulseWidgets/PitPulseWidgets.entitlements;
+                ENABLE_APP_SANDBOX = YES;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = macos/PitPulseWidgets/Info.plist;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+                PRODUCT_BUNDLE_IDENTIFIER = com.pitpulse.F1Companion.widgets;
+                PRODUCT_NAME = PitPulseWidgets;
+                SDKROOT = macosx;
+                SKIP_INSTALL = YES;
+            }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1231,6 +1309,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		BB0000000000000000000016 = {isa = XCConfigurationList; buildConfigurations = (BB0000000000000000000017, BB0000000000000000000018, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -1317,6 +1396,7 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = PitPulseData;
 		};
+		BB000000000000000000000D = {isa = XCSwiftPackageProductDependency; productName = PitPulseShared; };
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3220868BF575D60A65DE956B /* Project object */;

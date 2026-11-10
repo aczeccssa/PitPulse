@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import WidgetKit
 import PitPulseData
 import PitPulseShared
 
@@ -71,8 +70,7 @@ final class MobileModel: ObservableObject {
     private let activity = LiveActivityController()
     private var liveStarted = false
     private var calendarRequestID = UUID()
-    private var lastWidgetLivePublish = Date.distantPast
-    private var lastWidgetLiveStatus: String?
+    private let widgetPublisher = WidgetSnapshotPublisher()
     @Published private var credentialRevision = 0
 
     var dataContext: String { "\(serverURL?.absoluteString ?? serverText)|\(season)|\(credentialRevision)" }
@@ -86,9 +84,7 @@ final class MobileModel: ObservableObject {
         driverRoster = []
         historiesBySeries = [:]
         liveSnapshots = [:]
-        RaceWidgetCache.write(nil)
-        RaceWidgetCache.writeTiming(nil)
-        WidgetCenter.shared.reloadAllTimelines()
+        widgetPublisher.clear()
     }
 
     init() {
@@ -146,7 +142,7 @@ final class MobileModel: ObservableObject {
         if meetings.isEmpty, let cached = try? await cache.load(server: serverURL, season: selectedSeason) {
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
             meetings = cached.envelope.data.sorted { $0.startDate < $1.startDate }
-            publishWidget(savedAt: cached.savedAt)
+            publishWidget(savedAt: cached.envelope.meta.stale ? .distantPast : cached.savedAt)
         }
         loadState = .loading
         do {
@@ -156,7 +152,7 @@ final class MobileModel: ObservableObject {
             loadState = meetings.isEmpty
                 ? .failed("当前服务器尚无 \(selectedSeason) 赛季 F1 赛历。请检查服务地址或服务器同步状态。")
                 : .loaded(Date())
-            publishWidget()
+            publishWidget(savedAt: envelope.meta.stale ? .distantPast : (envelope.meta.fetchedAt ?? .distantPast))
             try? await cache.save(server: serverURL, season: selectedSeason, envelope: envelope)
         } catch {
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
@@ -165,15 +161,7 @@ final class MobileModel: ObservableObject {
     }
 
     private func publishWidget(savedAt: Date = .now) {
-        let next = CalendarLogic.nextSession(in: meetings, now: .now)
-        RaceWidgetCache.write(next.map {
-            RaceWidgetSnapshot(meeting: $0.meeting.name, session: $0.session.sessionType.displayName,
-                               start: $0.session.startTime, savedAt: savedAt, round: $0.meeting.round, location: $0.meeting.location,
-                               sessions: $0.meeting.sessions.sorted { $0.startTime < $1.startTime }.map {
-                                   RaceWidgetSession(id: $0.id, title: $0.sessionType.displayName, start: $0.startTime)
-                               })
-        })
-        WidgetCenter.shared.reloadAllTimelines()
+        widgetPublisher.publishCalendar(meetings: meetings, savedAt: savedAt)
     }
 
     // MARK: Live
@@ -238,8 +226,7 @@ final class MobileModel: ObservableObject {
         historiesBySeries = [:]
         liveSnapshot = .disconnected()
         activity.end()
-        RaceWidgetCache.writeTiming(nil)
-        WidgetCenter.shared.reloadTimelines(ofKind: RaceWidgetCache.timingKind)
+        widgetPublisher.clearLive()
     }
 
     func autoStartLiveOnce() { startLive() }
@@ -289,20 +276,7 @@ final class MobileModel: ObservableObject {
     }
 
     private func publishLiveWidget(_ snapshot: LiveSnapshot) {
-        guard !snapshot.isWec else { return }
-        let status = snapshot.statusLabel
-        guard Date().timeIntervalSince(lastWidgetLivePublish) >= 30 || status != lastWidgetLiveStatus else { return }
-        lastWidgetLivePublish = Date(); lastWidgetLiveStatus = status
-        let date = snapshot.updatedAt.flatMap(RFC3339.parse) ?? .distantPast
-        RaceWidgetCache.writeTiming(RaceTimingSnapshot(
-            meeting: snapshot.meetingName ?? "Formula 1", session: snapshot.sessionName ?? "—",
-            lap: snapshot.lapLabel, status: status, updatedAt: date, stale: snapshot.sourceStatus != .connected,
-            drivers: snapshot.drivers.sorted { ($0.position ?? Int.max) < ($1.position ?? Int.max) }.prefix(8).map { driver in
-                RaceTimingDriver(id: driver.number, position: driver.position, name: driver.name ?? driver.number,
-                                 gap: driver.gap ?? driver.interval ?? "—", tire: driver.tireShortLabel,
-                                 teamAsset: LiveIslandLogic.teamAssetID(for: driver, isWec: false).map { "team-logo-\($0)-2026" })
-            }))
-        WidgetCenter.shared.reloadTimelines(ofKind: RaceWidgetCache.timingKind)
+        widgetPublisher.publishLive(snapshot)
     }
 
     func endLiveActivity() {

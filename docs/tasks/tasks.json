@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-10T02:14:28Z",
+  "updatedAt": "2026-11-10T08:19:01Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -95,7 +95,8 @@
       "taskIds": [
         "T25",
         "T26",
-        "T27"
+        "T27",
+        "T28"
       ]
     }
   ],
@@ -6071,6 +6072,267 @@
           "at": "2026-11-10T02:14:28Z",
           "status": "inProgress",
           "note": "用户要求新增交付 issue 并提交；已通过 MCP 创建 PP-41，列明本轮实现、测试与未验收项。准备仅提交移动端、共享辅助、测试和 T27 资料；保留 T15 部署/回放服务的无关修改，提交 hash 将回填 PP-41。"
+        }
+      ]
+    },
+    {
+      "id": "T28",
+      "title": "共享普通 Widget 与 macOS 原生扩展",
+      "priority": "P1",
+      "milestone": "M7",
+      "area": "macOS / iOS / WidgetKit",
+      "status": "inProgress",
+      "summary": "共享普通 Widget/macOS 扩展、Run App 启动链、实际尺寸横滑预览及服务器配置sheet已实现并通过构建/回归；首次子sheet瞬开瞬关已按稳定根节点呈现修正，设备复验仍待完成。本轮关联 YouTrack PP-45，准备本地提交。",
+      "dependencies": [
+        "T25"
+      ],
+      "relatedTasks": [
+        "T26",
+        "T27"
+      ],
+      "scope": "共享普通 Widget 视图与 TimelineProvider、平台独立 Bundle、macOS App Group 缓存发布和深链接；保留 iOS ActivityKit 和现有签名设置，不修改服务端。",
+      "steps": [
+        "抽离跨平台 WidgetKit 源码并保留 iOS 独有 ActivityKit",
+        "新增并嵌入 macOS Widget Extension、共享本机 App Group",
+        "复用快照转换，接入 macOS 赛历与 Live 发布、节流、失效与深链接",
+        "两端构建、回归与真实 macOS 系统 Widget 验收分别留证"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T28-A1",
+          "text": "iOS 与 macOS 普通 Widget 使用同一份布局及 TimelineProvider，ActivityKit 保持 iOS-only；两端构建通过。",
+          "done": true
+        },
+        {
+          "id": "T28-A2",
+          "text": "macOS App 正确发布本机赛历和 F1 Live 快照；节流、断线、切换服务器/数据源、旧缓存与过期边界有回归验证。",
+          "done": false
+        },
+        {
+          "id": "T28-A3",
+          "text": "macOS 扩展嵌入及签名/App Group 配置核验；三类小中大组件可在真实系统添加，并核验缓存读取及点击跳转。",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "共享 WidgetKit 实现",
+          "path": "Shared/Widgets/RaceWidgets.swift"
+        },
+        {
+          "label": "共享快照发布器",
+          "path": "Shared/Widgets/WidgetSnapshotPublisher.swift"
+        },
+        {
+          "label": "共享回归测试",
+          "path": "Shared/Widgets/WidgetSnapshotPublisherTests.swift"
+        },
+        {
+          "label": "Mac 扩展入口",
+          "path": "macos/PitPulseWidgets/PitPulseDesktopWidgetBundle.swift"
+        },
+        {
+          "label": "Mac Widget 验收记录",
+          "path": "docs/acceptance/macos-widgets.md"
+        },
+        {
+          "label": "Taskdeck 配置",
+          "path": "taskdeck.yaml"
+        },
+        {
+          "label": "完整启动脚本",
+          "path": "scripts/run-app.sh"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "macOS Debug 构建",
+          "detail": "Taskdeck Build App 首轮 exit 0；中途尝试直接使用 iOS group 标识需要额外 provisioning profiles，恢复 Mac Team-prefixed group 后最终 Build App Tests 和 Build App Release 均 exit 0。未修改开发者账户。"
+        },
+        {
+          "label": "macOS Release 构建",
+          "detail": "Taskdeck Build App Release exit 0，PitPulseWidgets.appex 已嵌入 PitPulse.app。"
+        },
+        {
+          "label": "iOS 构建与测试",
+          "detail": "Taskdeck Build iOS exit 0；Test iOS exit 0，16 tests / 0 failures（原 12 + shared publisher/routing 4）。"
+        },
+        {
+          "label": "共享发布器回归",
+          "path": "docs/acceptance/macos-widgets.md",
+          "detail": "Check Widget Publisher exit 0，4 XCTest / 0 failures；覆盖旧缓存年龄、取消场次、节流、会话/状态刷新、断线/回放/缺时间戳、WEC 隔离、清理和深链接。"
+        },
+        {
+          "label": "签名与配置",
+          "path": "docs/acceptance/macos-widgets.md",
+          "detail": "Release host/extension codesign --verify --deep --strict 通过；host 与 sandboxed extension entitlement 的 App Group 均为 9RQST8G2LS.com.pitpulse.widgets。"
+        },
+        {
+          "label": "任务报告",
+          "detail": "Check Task Report exit 0：Valid task report: 28 tasks, 7 milestones。"
+        },
+        {
+          "label": "最终 Mac XCTest 编译",
+          "detail": "最终 Taskdeck Build App Tests exit 0（TEST BUILD SUCCEEDED）；未启动桌面 App test host，不影响运行中的 App。"
+        },
+        {
+          "label": "完整 Run App 启动链",
+          "path": "docs/acceptance/taskdeck-local-runtime.md",
+          "detail": "Taskdeck Check App Launcher exit 0；Run App 完成 Release 构建、内嵌扩展与深度签名检查、LaunchServices 和 PlugInKit 注册后 exec 主 App。重复检查单一 PitPulse PID 与 Taskdeck PID 一致，server 进程未变。"
+        },
+        {
+          "label": "启动 SIGTRAP 修复",
+          "path": "macos/App/F1CompanionApp.swift",
+          "detail": "崩溃栈定位提前构造 LiveIslandController 后同步 Published 初值访问 NSApp；恢复 StateObject 惰性构造，路由通过已有 reopen notification，不再提前创建控制器。实际新版启动存活。"
+        },
+        {
+          "label": "重复实例保护",
+          "path": "scripts/run-app.sh",
+          "detail": "主 App 运行中调用 --check 返回 1 且提示 already running，在 Xcode 构建前拒绝覆盖运行 bundle。"
+        },
+        {
+          "label": "启动修正最终编译",
+          "detail": "Taskdeck Build App Tests exit 0（TEST BUILD SUCCEEDED），未运行 App test host；新版 Run App 持续 running，单一主 App PID 与 Taskdeck 一致，原 server PID 保持不变。"
+        },
+        {
+          "label": "横滑 Widget 预览编译与回归",
+          "path": "Shared/Widgets/RaceWidgets.swift",
+          "detail": "Taskdeck Build iOS exit 0；最终 Test iOS exit 0，16 tests / 0 failures。原生 ScrollView/viewAligned/scrollPosition 实现九页陈列；单元测试不代表手势和视觉验收。"
+        },
+        {
+          "label": "七项预览细化最终回归",
+          "path": "Shared/Widgets/RaceWidgets.swift",
+          "detail": "Build iOS exit 0；显式居中吸附最终源码Test iOS exit 0，16 tests / 0 failures；七项源代码检查和git diff --check通过。未以单元测试代替原生手势/视觉验收。"
+        },
+        {
+          "label": "预览间距及设置层级最终回归",
+          "path": "ios/PitPulseMobile/SettingsScreen.swift",
+          "detail": "Build iOS exit 0；最终Test iOS exit 0（16 tests / 0 failures），包含分页槽宽修正及预览主题移除。视觉/输入交互与可访问性实际操作未由单元测试证明。"
+        },
+        {
+          "label": "最终实际尺寸与统一组件设置回归",
+          "detail": "Build iOS exit 0；最终 Test iOS exit 0，16 tests / 0 failures。预览取消缩放、恢复等宽分页槽和16pt间距；设置合并灵动岛/桌面组件，删除结束活动行；未做设备视觉验收。"
+        },
+        {
+          "label": "服务器配置与设置分组最终回归",
+          "path": "ios/PitPulseMobile/SettingsScreen.swift",
+          "detail": "Build iOS exit 0；最终 Test iOS exit 0（16/0）；任务报告验证和8项task-data测试通过。实际服务器状态、配置Sheet和辅助功能设备操作仍待验收。"
+        },
+        {
+          "label": "提交前最终源码回归",
+          "detail": "Taskdeck Test iOS exit 0，16 tests / 0 failures；仍不将单元测试视为首次sheet点击或Widget视觉验收。YouTrack PP-45已创建，并关联PP-40、PP-41。"
+        }
+      ],
+      "blockers": [
+        "macOS 桌面三类 Widget 的尺寸/浅深色、跨进程显示和点击尚未人工验收；当前会话 PlugInKit discovery 查询返回 unauthorized discovery flag，注册命令成功不等于图库可见。"
+      ],
+      "nextAction": "将本地提交 hash 和验证证据回填 PP-45/PP-40/PP-41；设备复验首次服务器编辑sheet与完整系统Widget交互，不推送。",
+      "updatedAt": "2026-11-10T08:19:01Z",
+      "history": [
+        {
+          "at": "2026-11-10T03:22:25Z",
+          "status": "inProgress",
+          "note": "用户授权开始实现共享 Widget 与 macOS 原生扩展；保留工作区现有部署/回放修改，不启动或停止运行中的 App。"
+        },
+        {
+          "at": "2026-11-10T03:31:45Z",
+          "status": "inProgress",
+          "note": "共享布局/Provider、App-only publisher、Mac Bundle/entitlements/嵌入与 Widget 深链接已实现；两端构建及 Mac XCTest 编译通过。运行中的 App/server 未重启，系统 Widget 实际添加未验收。"
+        },
+        {
+          "at": "2026-11-10T03:41:52Z",
+          "status": "inProgress",
+          "note": "最终实现验证：Release macOS 构建通过，iOS 16 tests / 0 failures，publisher XCTest 4 / 0 failures，签名与 App Group 一致。保留真实桌面系统验收缺口；未停止或替换当前运行 App/server。"
+        },
+        {
+          "at": "2026-11-10T03:43:28Z",
+          "status": "inProgress",
+          "note": "最终 Mac build-for-testing exit 0，补齐真实验收记录及构建/签名方案边界；共享代码与两端构建标准通过。系统 Widget 添加/点击/跨进程缓存及 AppModel 运行链路仍需新版 App 实际验收，未勾选相关标准。"
+        },
+        {
+          "at": "2026-11-10T03:49:33Z",
+          "status": "inProgress",
+          "note": "用户要求更新 Run App；只读发现最新 Run App 已 SIGTRAP 退出且无存活主 App，server 仍运行。崩溃报告定位 LiveIslandController.init 的同步 Published 回调在 App init 内过早访问 NSApp；不会将其误判为构建或 Widget 签名失败。"
+        },
+        {
+          "at": "2026-11-10T03:55:25Z",
+          "status": "inProgress",
+          "note": "完成用户要求的 Run App 配置和完整启动脚本更新，并通过具名任务启动新版 Release；修复 StateObject 提前构造回归，服务器保持原进程。构建签名/嵌入/注册已观察成功，实际 Widget UI 验收仍保持未通过。"
+        },
+        {
+          "at": "2026-11-10T03:56:50Z",
+          "status": "inProgress",
+          "note": "启动修正后的最终 Build App Tests exit 0；重复确认新版 Run App 与原 server 均持续 running。Check App Launcher、重复实例保护、签名与任务数据验证通过；系统 Widget 人工验收仍未关闭。"
+        },
+        {
+          "at": "2026-11-10T06:12:22Z",
+          "status": "inProgress",
+          "note": "用户提供系统 Widget 选择器截图，并确认将现有 App 内预览改为三类×三尺寸横滑陈列；保留同源布局/缓存，不伪造系统添加按钮。"
+        },
+        {
+          "at": "2026-11-10T06:15:59Z",
+          "status": "inProgress",
+          "note": "按用户确认范围完成 App 内原生九页横滑陈列，同源布局/真实缓存、标题说明同步、分页按钮、主题/刷新、添加指引与可访问调整动作。Build iOS 与最终 16 项回归通过；没有将编译当成实际手势/视觉验收，Mac App/server 未重启。"
+        },
+        {
+          "at": "2026-11-10T06:36:35Z",
+          "status": "inProgress",
+          "note": "用户明确七项 Widget 预览修订，保持现有真实缓存和共享组件；不改系统 Widget 或 Mac 运行服务。"
+        },
+        {
+          "at": "2026-11-10T06:40:50Z",
+          "status": "inProgress",
+          "note": "已按七项反馈完成代码：独立预览 sheet、自动刷新取消生命周期、三轴轻微倾斜、圆点中心距14pt、内容实际宽度紧凑排列和信息指引。Build iOS与16项测试通过；追加显式居中吸附后最终测试执行中，尚未作实际UI验收。"
+        },
+        {
+          "at": "2026-11-10T06:43:09Z",
+          "status": "inProgress",
+          "note": "最终居中吸附版本Test iOS exit 0（16/0），完成七项预览修订的编译/回归；Mac App和server未重启，实际视觉与手势验收保持开放。"
+        },
+        {
+          "at": "2026-11-10T06:53:52Z",
+          "status": "inProgress",
+          "note": "用户反馈实际宽度紧贴排列偏离官方；开始恢复分页留白并适度收窄，移除预览主题控件，重整设置页分组、输入和主次，sheet操作显式图标化。"
+        },
+        {
+          "at": "2026-11-10T07:00:06Z",
+          "status": "inProgress",
+          "note": "按用户参考图恢复分页留白，移除预览外观控件，统一设置层级/输入/主次和sheet图标toolbar；最终16项回归通过，无新增网络或存储逻辑，Mac运行服务未改动。"
+        },
+        {
+          "at": "2026-11-10T07:13:27Z",
+          "status": "inProgress",
+          "note": "按最新反馈完成：Widget恢复actual size和初始式间距，删除关闭当前活动行，灵动岛/桌面组件合并组，服务器group简化；最终16项回归通过，Mac App/server未改动。"
+        },
+        {
+          "at": "2026-11-10T07:23:19Z",
+          "status": "inProgress",
+          "note": "用户要求以独立sheet承载服务器编辑，主设置仅展示已有地址和状态；组件两行统一纯文字，不再加入预览图标。开始实施。"
+        },
+        {
+          "at": "2026-11-10T07:31:13Z",
+          "status": "inProgress",
+          "note": "按用户指定重做服务器单行状态入口与独立配置sheet，真实health测试/保存；删除Live Activity停止行，两个组件功能合并，灵动岛Picker使用系统label/value、桌面预览删除装饰图标与手画箭头；最终iOS构建/16项测试与task report通过。"
+        },
+        {
+          "at": "2026-11-10T07:56:52Z",
+          "status": "inProgress",
+          "note": "用户要求优化SettingsScreen服务器sheet标题/副标题；完成Apple式字号、字重、tracking和secondary层级，iOS Build通过。"
+        },
+        {
+          "at": "2026-11-10T08:05:47Z",
+          "status": "inProgress",
+          "note": "用户报告首次server edit sheet瞬开瞬关。发现sheet挂在Form Section且首次health/roster异步更新重建；将两个子sheet统一移到稳定NavigationStack根。未宣称已实机复现或证明根因，开始编译回归。"
+        },
+        {
+          "at": "2026-11-10T08:07:07Z",
+          "status": "inProgress",
+          "note": "用户报告首次server edit sheet瞬开瞬关；将两个sheet提升到Settings NavigationStack稳定根节点，保留现有业务。Build iOS/Test iOS通过，需设备首次点击复验。"
+        },
+        {
+          "at": "2026-11-10T08:19:01Z",
+          "status": "inProgress",
+          "note": "按用户要求提交并更新issues/时间。创建PP-45记录T28并关联PP-40/PP-41；保留未验收项。最终源码Test iOS 16/0。提交仅纳入本轮Widget/客户端/启动链及对应文档，独立部署/回放和T15修改留工作区。时间字段已使用真实UTC更新；项目无可写自定义日期字段，不虚构完成日期或工时。"
         }
       ]
     }
