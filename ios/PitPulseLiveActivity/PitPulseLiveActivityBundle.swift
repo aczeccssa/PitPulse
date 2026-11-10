@@ -5,5 +5,8 @@ import WidgetKit
 struct PitPulseLiveActivityBundle: WidgetBundle {
     var body: some Widget {
         PitPulseLiveActivityWidget()
+        RaceWeekendWidget()
+        WeekendScheduleWidget()
+        LiveTimingWidget()
     }
 }

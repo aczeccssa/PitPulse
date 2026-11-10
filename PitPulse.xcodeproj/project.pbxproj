@@ -67,6 +67,11 @@
 		FA99B1559D221E962BFEC13C /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = 1716685A82E59887653AFFE4 /* PitPulseData */; };
 		FBBF496EFF2A41F18445ABF2 /* PitPulseData in Frameworks */ = {isa = PBXBuildFile; productRef = 755A1CD3E2949B283F56BAFA /* PitPulseData */; };
 		FE0F138B4B2B1DB80B468E53 /* LiveScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469415DA6E03C9FF15F879D2 /* LiveScreen.swift */; };
+		AA0000000000000000000001 /* Mobile Assets */ = {isa = PBXBuildFile; fileRef = D4939018160EDA5DF8DE2949; };
+		AA0000000000000000000002 /* Widget Assets */ = {isa = PBXBuildFile; fileRef = D4939018160EDA5DF8DE2949; };
+		AA0000000000000000000005 = {isa = PBXBuildFile; fileRef = AA0000000000000000000004; };
+		AA0000000000000000000006 = {isa = PBXBuildFile; fileRef = AA0000000000000000000004; };
+		AA0000000000000000000007 /* Shared widget renderers in Sources */ = {isa = PBXBuildFile; fileRef = B5271EDC99039CA37948C293; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -169,6 +174,7 @@
 		E8181598D0C5E86A02523BA8 /* PitPulse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PitPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EBC4E20D757AFE6F706E26A8 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
 		F2821768733DFA1F01CF73B7 /* ServerAddressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerAddressTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = image.png; path = "macos/Resources/AppIcon.icon/Assets/logo-foreground.png"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -574,6 +580,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 94B2388B39C29F9B70385E96 /* Build configuration list for PBXNativeTarget "PitPulseLiveActivity" */;
 			buildPhases = (
+				AA0000000000000000000003 /* Resources */,
 				A447524D5CECF2BB9399CCE2 /* Sources */,
 				D4154A3F6D202CDF60BC51CB /* Frameworks */,
 			);
@@ -672,9 +679,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				89BA86524A9166A59FFA7186 /* AppIcon.icon in Resources */,
+				AA0000000000000000000001 /* Mobile Assets */,
+                AA0000000000000000000005 /* Existing Brand */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000003 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (AA0000000000000000000002, AA0000000000000000000006,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -690,6 +700,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                AA0000000000000000000007 /* Shared widget renderers in Sources */,
 				4758821F064E167835372165 /* CalendarScreen.swift in Sources */,
 				B991392DA0713CA5EE1C8A08 /* LiveActivityController.swift in Sources */,
 				FE0F138B4B2B1DB80B468E53 /* LiveScreen.swift in Sources */,
@@ -787,6 +798,7 @@
 				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = ios/PitPulseLiveActivity/PitPulseLiveActivity.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -807,6 +819,7 @@
 				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseLiveActivity/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = ios/PitPulseLiveActivity/PitPulseLiveActivity.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -850,6 +863,7 @@
 				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = ios/PitPulseMobile/PitPulseMobile.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -962,6 +976,7 @@
 				DEVELOPMENT_TEAM = 9RQST8G2LS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ios/PitPulseMobile/Info.plist;
+                CODE_SIGN_ENTITLEMENTS = ios/PitPulseMobile/PitPulseMobile.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

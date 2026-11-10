@@ -388,3 +388,9 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 ### T26 — iOS 26+ App 与灵动岛 Live Activity
 
 新增 iOS 26+ App（赛程 / Live / 设置）与独立 Widget Extension，复用 `PitPulseData` 的数据层；`PitPulseActivityAttributes` 与 `ContentState` 定义在 Shared，App 内 `LiveActivityController` 驱动灵动岛与锁屏 Live Activity，无需服务端推送。验收以 iOS 构建、`Test iOS` 单元测试、模拟器真实数据运行与真机灵动岛复核为准。
+
+### T27 — 移动端视觉与 Widget
+
+基于 T25 共享包与 T26 iOS 基础，按用户提供的 PitPulse Showcase 实现黑底红色强调的赛程、Live、周末详情、成绩和积分；固定复用 macOS 图像资产。加入小/中/锁屏 Widget、Live Activity 与 Dynamic Island 全部布局。构建、单元测试、模拟器视觉验收和签名真机后台验收分别记录。归属 M7，依赖 T25，关联 T26 / T03；YouTrack PP-40，交付记录 PP-41。
+
+T27 移动端交互范围补充：采用总览、赛历、车手积分、车队积分四个纯图标标签；Logo 设置 sheet、收藏车手、系统浅深色；赛历按用户参考图使用分站号/国旗地点/日期/真实几何轮廓。Live 以底部比赛条动画展开，自动监听 F1/WEC 并处理并行赛事提示与选择；灵动岛提供总览/对比/收藏车手内容。所有图像继续固定复用现有资产。

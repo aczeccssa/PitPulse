@@ -13,10 +13,19 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
         public var lapLabel: String
         public var leaderName: String?
         public var leaderGap: String?
+        public var challengerName: String?
+        public var challengerGap: String?
+        public var leaderAsset: String?
+        public var challengerAsset: String?
         public var trackLabel: String?
         public var driverCount: Int
         public var isStale: Bool
         public var updatedLabel: String?
+        public var presentation: String?
+        public var favoriteName: String?
+        public var favoritePosition: Int?
+        public var favoriteGap: String?
+        public var favoriteAsset: String?
 
         public init(
             sessionName: String,
@@ -25,10 +34,19 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
             lapLabel: String,
             leaderName: String? = nil,
             leaderGap: String? = nil,
+            challengerName: String? = nil,
+            challengerGap: String? = nil,
+            leaderAsset: String? = nil,
+            challengerAsset: String? = nil,
             trackLabel: String? = nil,
             driverCount: Int = 0,
             isStale: Bool = false,
-            updatedLabel: String? = nil
+            updatedLabel: String? = nil,
+            presentation: String? = nil,
+            favoriteName: String? = nil,
+            favoritePosition: Int? = nil,
+            favoriteGap: String? = nil,
+            favoriteAsset: String? = nil
         ) {
             self.sessionName = sessionName
             self.meetingName = meetingName
@@ -36,10 +54,19 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
             self.lapLabel = lapLabel
             self.leaderName = leaderName
             self.leaderGap = leaderGap
+            self.challengerName = challengerName
+            self.challengerGap = challengerGap
+            self.leaderAsset = leaderAsset
+            self.challengerAsset = challengerAsset
             self.trackLabel = trackLabel
             self.driverCount = driverCount
             self.isStale = isStale
             self.updatedLabel = updatedLabel
+            self.presentation = presentation
+            self.favoriteName = favoriteName
+            self.favoritePosition = favoritePosition
+            self.favoriteGap = favoriteGap
+            self.favoriteAsset = favoriteAsset
         }
     }
 

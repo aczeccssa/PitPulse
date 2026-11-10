@@ -6,7 +6,7 @@
     "description": "先交付可用的 Menu Bar V1；Live、Notch 与素材独立推进。",
     "timezone": "Asia/Shanghai"
   },
-  "updatedAt": "2026-11-09T15:56:05Z",
+  "updatedAt": "2026-11-10T02:14:28Z",
   "sourceDocuments": [
     {
       "label": "技术架构",
@@ -94,7 +94,8 @@
       "description": "抽出 Data / Components / Shared 供 macOS 与 iOS 复用；新增 iOS 26+ App 与 ActivityKit 灵动岛 Live Activity。",
       "taskIds": [
         "T25",
-        "T26"
+        "T26",
+        "T27"
       ]
     }
   ],
@@ -5796,6 +5797,280 @@
           "at": "2026-11-09T07:53:21Z",
           "status": "inReview",
           "note": "修复 scheme 可运行目标：PitPulseMobile / PitPulseLiveActivity scheme 的 Run/Profile 指向 PitPulse.app（此前误指向 .appex，导致 Xcode 运行时报 SBAvocado/SpringBoard 错误）；iOS build 通过。"
+        }
+      ]
+    },
+    {
+      "id": "T27",
+      "title": "移动端参考图 UI、Widget 与 Live Activity",
+      "priority": "P1",
+      "milestone": "M7",
+      "area": "iOS / SwiftUI / WidgetKit",
+      "status": "inProgress",
+      "summary": "完成 11 项改版的代码与主要模拟器交互：主题/收藏/头盔/参考赛历/四图标 tab/Live 条全屏/并行赛事/灵动岛模式。12 项测试通过，Live 展开收起录屏已保存；桌面全尺寸、真机与完整主题覆盖未验收。",
+      "dependencies": [
+        "T25"
+      ],
+      "relatedTasks": [
+        "T26",
+        "T03"
+      ],
+      "scope": "iOS App/Widget 的浅深色；总览/赛历/车手积分/车队积分四个纯图标 tab；Logo 设置 sheet；收藏车手与头盔资产；参考图赛历列表与真实赛道轮廓；Live 底部条/全屏动画/自动并行赛事选择；灵动岛三种内容。保留图表、固定原资产与数据真实性要求。",
+      "steps": [
+        "修复保存地址与刷新语义，检查 F1 赛历/车手/车队实际条数",
+        "三类 Widget：下一场、周末赛程、Live；分别开发小/中/大/锁屏布局",
+        "兑现 Live 连接、计时、圈速、轮胎、赛会与车手遥测详情",
+        "加入有用途且尊重减少动态效果设置的原生动效",
+        "将组件放入模拟器桌面，逐尺寸截图并与参考图对照"
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "T27-A1",
+          "text": "App 页面使用现有 API 与固定 macOS 资产",
+          "done": true
+        },
+        {
+          "id": "T27-A2",
+          "text": "Widget 与 Live Activity / Dynamic Island 布局实现",
+          "done": true
+        },
+        {
+          "id": "T27-A3",
+          "text": "Build iOS 与 Test iOS 通过",
+          "done": true
+        },
+        {
+          "id": "T27-A4",
+          "text": "模拟器视觉核对与交互验证",
+          "done": false
+        },
+        {
+          "id": "T27-A5",
+          "text": "签名真机 Widget / 灵动岛 / 后台行为复核",
+          "done": false
+        },
+        {
+          "id": "T27-A6",
+          "text": "三类 Widget 的小/中/大尺寸均实际放到模拟器桌面核对并有证据",
+          "done": false
+        },
+        {
+          "id": "T27-A7",
+          "text": "Live 各模式和车手图表由真实数据流驱动并实际操作验证",
+          "done": false
+        },
+        {
+          "id": "T27-A8",
+          "text": "动效有实际录屏且布局与用户参考图对照复核",
+          "done": false
+        },
+        {
+          "id": "T27-A9",
+          "text": "App 与普通 Widget 支持系统浅深色并分别验收",
+          "done": false
+        },
+        {
+          "id": "T27-A10",
+          "text": "支持收藏喜欢的车手，赛事卡片不再使用无关车队赛车图",
+          "done": true
+        },
+        {
+          "id": "T27-A11",
+          "text": "Live / 车手积分用头盔，车队 logo 与名称置于车手名下",
+          "done": true
+        },
+        {
+          "id": "T27-A12",
+          "text": "首页是下一场总览，赛历第二 tab 且按用户图片做分隔列表",
+          "done": true
+        },
+        {
+          "id": "T27-A13",
+          "text": "P logo 打开设置 sheet，底部四个纯图标 tab 分别为总览/赛历/车手积分/车队积分",
+          "done": true
+        },
+        {
+          "id": "T27-A14",
+          "text": "Live 比赛条位于 tab 上方并动画展开全屏",
+          "done": true
+        },
+        {
+          "id": "T27-A15",
+          "text": "自动发现 F1/WEC；单比赛无切换按钮，多比赛提示并提供切换",
+          "done": false
+        },
+        {
+          "id": "T27-A16",
+          "text": "灵动岛支持总览/前排对比/喜欢车手内容切换",
+          "done": false
+        }
+      ],
+      "deliverables": [
+        {
+          "label": "移动端 App",
+          "path": "ios/PitPulseMobile/LiveScreen.swift"
+        },
+        {
+          "label": "赛程与比赛周末",
+          "path": "ios/PitPulseMobile/CalendarScreen.swift"
+        },
+        {
+          "label": "Widget 与 Live Activity",
+          "path": "ios/PitPulseLiveActivity/PitPulseLiveActivityWidget.swift"
+        },
+        {
+          "label": "移动端验收记录",
+          "path": "docs/acceptance/mobile-racing-ui.md"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Taskdeck iOS 构建",
+          "detail": "Build iOS exit 0；模拟器本地 ad-hoc 签名并成功建立 App Group 容器。"
+        },
+        {
+          "label": "Taskdeck iOS 单元测试",
+          "detail": "Test iOS exit 0，6 tests / 0 failures：内容契约、旧活动兼容、Widget 缓存与过期、冲刺/正赛积分聚合及缺失边界。"
+        },
+        {
+          "label": "赛程首页",
+          "path": "docs/acceptance/assets/t27/calendar.png",
+          "detail": "现有本地 API 的 Las Vegas 赛事、倒计时与原 macOS 赛车图。"
+        },
+        {
+          "label": "Live 过期数据",
+          "path": "docs/acceptance/assets/t27/live.png",
+          "detail": "本地服务器旧 São Paulo 快照明确显示数据过期，无虚构轮胎数据。"
+        },
+        {
+          "label": "积分趋势",
+          "path": "docs/acceptance/assets/t27/standings.png",
+          "detail": "车手头盔/车队 logo 复用原资产；同分站冲刺赛与正赛先合并累计。"
+        },
+        {
+          "label": "Widget 共享缓存",
+          "path": "docs/acceptance/assets/t27/widget-small.png",
+          "detail": "桌面实际 Widget 读取 App Group 赛历并显示 Las Vegas / FP1 动态倒计时。"
+        },
+        {
+          "label": "锁屏 Live Activity",
+          "path": "docs/acceptance/assets/t27/live-activity-lockscreen.png",
+          "detail": "DEBUG 演示，明确标注非实时；双车赛车图、差距、圈数与赛道状态。"
+        },
+        {
+          "label": "灵动岛展开态",
+          "path": "docs/acceptance/assets/t27/island-expanded.png",
+          "detail": "DEBUG 演示，边缘文字裁切已修正；当前紧凑态使用现有赛事系列标识，minimal 与全部 Widget 尺寸尚未逐一截图。"
+        },
+        {
+          "label": "11 项导航改版交互",
+          "path": "docs/acceptance/assets/t27/navigation-rework/live-light.png",
+          "detail": "原生模拟器：WEC 比赛条展开后切换 F1；真实记录回放明确标识，差距图和头盔/车队行。收藏选择与灵动岛模式已实际操作，桌面全尺寸未验收。"
+        },
+        {
+          "label": "最终移动端回归",
+          "detail": "Taskdeck Test iOS exit 0，12 tests / 0 failures；包含最终普通 Widget 头盔行修正，保持旧缓存兼容。"
+        },
+        {
+          "label": "深色头盔积分页",
+          "path": "docs/acceptance/assets/t27/navigation-rework/drivers-dark.png"
+        },
+        {
+          "label": "参考图赛历列表",
+          "path": "docs/acceptance/assets/t27/navigation-rework/calendar-light.png"
+        },
+        {
+          "label": "Live 原生展开收起动效",
+          "path": "docs/acceptance/assets/t27/navigation-rework/live-expand-collapse.mp4",
+          "detail": "最终代码、实际 F1 比赛记录回放；38 秒录屏包含底部条展开全屏与收起，保留回放标识。"
+        },
+        {
+          "label": "下一场组件主题对照",
+          "path": "docs/acceptance/assets/t27/navigation-rework/widget-next-large-dark.png",
+          "detail": "App 内调用同一个 Widget 渲染器；五场完整周末，不能替代系统桌面验收。"
+        }
+      ],
+      "blockers": [
+        "缺少连接的签名 iPhone，真机 App Group / Dynamic Island / 后台持续更新尚未验收。",
+        "模拟器系统 Widget 选择行缺少可用 AX 目标，坐标操作持续 noWindowsAvailable；应用内同源预览不算桌面全尺寸验收。"
+      ],
+      "nextAction": "保留桌面逐类型逐尺寸、签名真机/后台更新、单比赛与灵动岛各展示态的实际验收缺口。",
+      "updatedAt": "2026-11-10T02:14:28Z",
+      "history": [
+        {
+          "at": "2026-11-09T16:20:34Z",
+          "status": "inProgress",
+          "note": "用户授权新分支开发；通过 YouTrack MCP 创建并回读 PP-40。保留已有回放工作区改动。"
+        },
+        {
+          "at": "2026-11-09T16:25:14Z",
+          "status": "inProgress",
+          "note": "首轮 Taskdeck Build iOS exit 0；新增 Widget 缓存/过期与旧活动兼容测试，Test iOS 正在执行。"
+        },
+        {
+          "at": "2026-11-09T16:31:05Z",
+          "status": "inProgress",
+          "note": "模拟器已验证真实本地 API 的赛程→周末→成绩链路、积分榜与趋势加载；修正资产 ID 与冲刺赛重复分站图表，新增积分聚合回归测试。第二轮 Build iOS exit 0，最终 Test iOS 正在运行。"
+        },
+        {
+          "at": "2026-11-09T16:37:18Z",
+          "status": "inProgress",
+          "note": "补齐周末概览/天气/成绩分栏；普通 Widget 已在系统添加界面注册，Live Activity 展开态已渲染双车资产与非实时演示标识。发现模拟器无签名产物缺少 App Group，调整 Taskdeck 脚本使用本地 ad-hoc 签名以验证共享缓存。"
+        },
+        {
+          "at": "2026-11-09T16:45:47Z",
+          "status": "inReview",
+          "note": "最终 Build iOS exit 0，6 项测试通过；普通 Widget 跨进程缓存、锁屏 Live Activity 与灵动岛展开态均有模拟器截图。原模拟器服务地址与 WEC 设置已恢复。保留真机与未逐尺寸截图的验收边界；最终静态图标调整后再运行 Test iOS。"
+        },
+        {
+          "at": "2026-11-09T16:46:59Z",
+          "status": "inReview",
+          "note": "最终系列图标调整后的 Taskdeck Test iOS exit 0，6 tests / 0 failures；Check Task Report exit 0。YouTrack PP-40 写回并回读确认，未提交或推送。"
+        },
+        {
+          "at": "2026-11-09T17:03:59Z",
+          "status": "inProgress",
+          "note": "用户指出 F1 数据为空及 Widget 只有单一拉伸布局，重新打开开发。已复现 38702 赛历/车手/车队均为空，38701 分别有 24/25/11 条；上轮恢复旧地址导致空数据，且逐尺寸验收不足。保留既有历史，重新设计 Widget。"
+        },
+        {
+          "at": "2026-11-09T17:12:30Z",
+          "status": "inProgress",
+          "note": "用户补充必须实际放到模拟器桌面、Live 功能兑现、加入动效并对比效果图。已实现三类不同 Widget 的全尺寸分支及新缓存契约；连接保存不再逐字切换或清空既有 Token，切换地址/赛季会使页面重新加载；新增车手实时遥测详情与分栏/数值/按压动效，正在编译回归。"
+        },
+        {
+          "at": "2026-11-09T17:28:40Z",
+          "status": "inProgress",
+          "note": "用户要求车手数据用图表而非传统列表承载。已改为实时速度/踏板曲线、分段柱图、历史圈速趋势/分段堆叠/轮胎区间图，并给 Live 大组件加入差距图。已在 App 验证 F1 24 场/25 位车手/11 队，Live 回放计时/圈速/轮胎/赛会/遥测值变化均可操作；发现并修复小数秒时间戳采样与胎龄重复。原生操作工具的坐标点击持续 noWindowsAvailable，桌面全尺寸人工验收受工具阻碍，已请求用户协助进入组件选择页，继续实现与编译。"
+        },
+        {
+          "at": "2026-11-10T01:20:05Z",
+          "status": "inProgress",
+          "note": "用户补充 11 项明确 UI/交互要求及 HEIC 赛历参考图；已读取图片，赛历目标为大分站号、国旗地点/赛事/日期、右侧真实赛道轮廓、回顾与前瞻分隔。开始按新范围重组 App，保留全部既有证据和未验收项。"
+        },
+        {
+          "at": "2026-11-10T01:32:17Z",
+          "status": "inProgress",
+          "note": "完成新导航与主题初版：四个图标 tab、Overview 独立页、参考图赛历分隔行/真实 GeoJSON 轮廓、P 设置 sheet；收藏车手/头盔/姓名下方车队标识；F1/WEC 双流自动发现、保留已选赛事/新比赛提示/仅并行显示切换；灵动岛三种内容。新增自动赛事选择/过期与结束过滤/头盔命名测试，Test iOS 12 项通过；正在编译预览入口及最终补充。"
+        },
+        {
+          "at": "2026-11-10T01:53:58Z",
+          "status": "inProgress",
+          "note": "最新 12 项 XCTest 通过；原生模拟器实际选择 Norris 后首页显示头盔/P6/246PTS，比赛条展开 WEC 全屏并切换 F1，灵动岛选择喜欢车手生效。参考图赛历分隔行已渲染。发现无比赛空白 accessory 与顶部通知影响导航布局，修复并编译通过；最终追加大组件全五场赛程，回归正在运行。"
+        },
+        {
+          "at": "2026-11-10T02:02:55Z",
+          "status": "inProgress",
+          "note": "最终普通 Widget 行也改为头盔，车队 logo 下移；Test iOS exit 0（12/0）。原生截图核对浅色赛历/车队页、深色车手积分/总览/Live，以及下一场大组件深浅色、赛程中大组件、Live 中大组件同源预览。38 秒最终录屏确认 mini player 展开与收起。收藏测试值恢复未选择，灵动岛恢复总览，默认启动回正常服务。未将预览计为桌面验收；保留未验收项。"
+        },
+        {
+          "at": "2026-11-10T02:03:32Z",
+          "status": "inProgress",
+          "note": "Check Task Report exit 0：27 tasks / 7 milestones，8 项任务数据测试通过；git diff --check 通过。YouTrack PP-40 描述已按最终 11 项范围重写并回读，保持 In Progress。未提交或推送，未将桌面/真机缺口计为完成。"
+        },
+        {
+          "at": "2026-11-10T02:14:28Z",
+          "status": "inProgress",
+          "note": "用户要求新增交付 issue 并提交；已通过 MCP 创建 PP-41，列明本轮实现、测试与未验收项。准备仅提交移动端、共享辅助、测试和 T27 资料；保留 T15 部署/回放服务的无关修改，提交 hash 将回填 PP-41。"
         }
       ]
     }
