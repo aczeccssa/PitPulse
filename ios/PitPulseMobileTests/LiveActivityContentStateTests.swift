@@ -1,8 +1,145 @@
 import XCTest
+import UIKit
 @testable import PitPulseShared
 @testable import PitPulseData
 
 final class LiveActivityContentStateTests: XCTestCase {
+    func testPositionFocusFollowsContinuingLossBeyondTenSeconds() {
+        var focus = IslandPositionFocus()
+        focus.update(positions: ["a": 1, "b": 2, "c": 3, "d": 4, "e": 5], now: 0)
+        focus.update(positions: ["a": 1, "b": 3, "c": 2, "d": 4, "e": 5], now: 3)
+        XCTAssertEqual(focus.driverID, "b") // Follow the car losing the place.
+        focus.update(positions: ["a": 1, "b": 4, "c": 2, "d": 3, "e": 5], now: 9)
+        XCTAssertEqual(focus.driverID, "b")
+        focus.update(positions: ["a": 1, "b": 5, "c": 2, "d": 3, "e": 4], now: 14)
+        XCTAssertEqual(focus.driverID, "b") // Eleven seconds later, still following B.
+        let settled = ["a": 2, "b": 5, "c": 1, "d": 3, "e": 4]
+        focus.update(positions: settled, now: 16)
+        XCTAssertEqual(focus.driverID, "b") // Other changes cannot steal the focus.
+        focus.update(positions: settled, now: 23)
+        XCTAssertEqual(focus.driverID, "b")
+        focus.update(positions: settled, now: 24)
+        XCTAssertEqual(focus.driverID, "a") // Switch only after B settles.
+        focus.update(positions: settled, now: 40)
+        XCTAssertEqual(focus.driverID, "a")
+    }
+
+    func testPositionFocusChoosesForemostSimultaneousChange() {
+        var focus = IslandPositionFocus()
+        focus.update(positions: ["a": 1, "b": 2, "c": 3, "d": 4, "e": 5], now: 0)
+        focus.update(positions: ["a": 1, "b": 3, "c": 2, "d": 5, "e": 4], now: 12)
+        XCTAssertEqual(focus.driverID, "b")
+    }
+
+    func testPositionModePersistsAndCompactPayloadStaysSmall() throws {
+        let mode = try JSONDecoder().decode(IslandContentMode.self, from: JSONEncoder().encode(IslandContentMode.positionChanges))
+        XCTAssertEqual(mode.title, "全场风云")
+        let drivers = (5...11).map { PitPulseActivityAttributes.Driver(name: "Driver \($0)", position: $0, asset: "helmet-max_verstappen-2026", gap: "+12.345", positionChange: $0 == 7 ? -1 : 1) }
+        let state = PitPulseActivityAttributes.ContentState(sessionName: "Race", meetingName: "São Paulo Grand Prix", statusLabel: "Live", lapLabel: "L32/71", leaderName: "Lando NORRIS", presentation: mode.rawValue, positionDrivers: drivers, positionFocus: "Driver 7", positionWindowStart: 4)
+        let data = try JSONEncoder().encode(state)
+        XCTAssertLessThan(data.count, 4096)
+        XCTAssertEqual(try JSONDecoder().decode(PitPulseActivityAttributes.ContentState.self, from: data), state)
+        XCTAssertEqual(state.compactLeadingText, "P1 · NOR")
+        XCTAssertEqual(state.positionWindowStart, 4)
+        XCTAssertEqual(state.positionDrivers?[2].positionChange, -1)
+        XCTAssertEqual(state.positionDrivers?[0].positionChange, 1)
+    }
+
+    @MainActor
+    func testActivityHelmetsAreDownsampledBeforeWidgetArchiving() throws {
+        let source = IslandPreviewTexture.make(width: 685, height: 597) { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 685, height: 597))
+        }
+        let image = try XCTUnwrap(ActivityHelmetImage.thumbnail(image: source))
+        let pixels = try XCTUnwrap(image.cgImage)
+        XCTAssertLessThanOrEqual(pixels.width, 180)
+        XCTAssertLessThanOrEqual(pixels.height, 180)
+    }
+
+    func testBattleSelectionIsBoundedAndCanDeselect() {
+        XCTAssertEqual(IslandBattleSelection.toggled("16", in: ["1", "4"]), ["1", "4"])
+        XCTAssertEqual(IslandBattleSelection.toggled("1", in: ["1", "4"]), ["4"])
+        XCTAssertEqual(IslandBattleSelection.toggled("16", in: ["4"]), ["4", "16"])
+    }
+    func testBattleDefaultsToFavoriteAndCarAheadOrP2() {
+        func driver(_ number: String, _ position: Int, _ gap: String?, _ interval: String? = nil) -> LiveDriver {
+            .init(number: number, name: number, team: nil, position: position, gap: gap, interval: interval, lapCount: nil, lastLap: nil, bestLap: nil)
+        }
+        let cars = [driver("4", 1, "LEADER"), driver("1", 2, "+0.842", "+0.842"), driver("16", 3, "+4.216", "+3.374")]
+        XCTAssertEqual(IslandBattleSelection.drivers(in: cars, selected: [], favorite: cars[2]).map(\.number), ["1", "16"])
+        XCTAssertEqual(IslandBattleSelection.drivers(in: cars, selected: [], favorite: cars[0]).map(\.number), ["4", "1"])
+        XCTAssertEqual(IslandBattleSelection.drivers(in: cars, selected: ["16"], favorite: cars[0]).map(\.number), ["16"])
+        XCTAssertEqual(IslandBattleSelection.gap(between: [cars[0], cars[2]]), "+4.216")
+        XCTAssertEqual(IslandBattleSelection.gap(between: [driver("4", 1, nil), cars[2]]), "+4.216")
+        XCTAssertEqual(IslandBattleSelection.gap(between: [cars[1], cars[2]]), "+3.374")
+        XCTAssertNil(IslandBattleSelection.gap(between: [cars[0], driver("55", 5, "+1 LAP")]))
+    }
+    func testSingleSelectionCompactFollowsSelectedCarAndMissingBattleGapStaysUnknown() throws {
+        var state = PitPulseActivityAttributes.ContentState(sessionName: "Race", meetingName: "GP", statusLabel: "Live", lapLabel: "L1/71", challengerGap: "+0.842", presentation: IslandContentMode.battle.rawValue, favoriteName: "Max VERSTAPPEN", favoritePosition: 2, battleDrivers: [.init(name: "Charles LECLERC", position: 3)])
+        XCTAssertEqual(state.compactLeadingText, "LEC")
+        XCTAssertEqual(state.compactTrailingText, "P3")
+        state.battleDrivers?.append(.init(name: "Lewis HAMILTON", position: 4))
+        XCTAssertEqual(state.compactTrailingText, "—")
+        XCTAssertEqual(try JSONDecoder().decode(PitPulseActivityAttributes.ContentState.self, from: JSONEncoder().encode(state)), state)
+    }
+
+    func testActivityProgressRejectsUnavailableAndInvalidLapCounts() {
+        var state = PitPulseActivityAttributes.ContentState(sessionName: "Race", meetingName: "São Paulo", statusLabel: "进行中", lapLabel: "L32/71")
+        XCTAssertEqual(state.lapProgress ?? -1, 32.0 / 71, accuracy: 0.0001)
+        for label in ["—", "L0/0", "L72/71", "L-1/71"] {
+            state.lapLabel = label
+            XCTAssertNil(state.lapProgress, label)
+        }
+        state.lapLabel = "L71/71"
+        XCTAssertEqual(state.lapProgress, 1)
+    }
+
+    func testCompactContentFollowsSelectedViewingMode() {
+        var state = PitPulseActivityAttributes.ContentState(sessionName: "Race", meetingName: "São Paulo", statusLabel: "进行中", lapLabel: "L32/71", challengerGap: "+0.842", favoriteName: "Max VERSTAPPEN", favoritePosition: 2)
+        XCTAssertEqual(state.compactTrailingText, "L32/71")
+        state.presentation = IslandContentMode.battle.rawValue
+        XCTAssertEqual(state.compactTrailingText, "+0.842")
+        state.presentation = IslandContentMode.favorite.rawValue
+        XCTAssertEqual(state.compactLeadingText, "VER")
+        XCTAssertEqual(state.compactTrailingText, "P2")
+        state.favoritePosition = nil
+        XCTAssertEqual(state.compactTrailingText, "—")
+    }
+
+    func testGapCaptionIsOptionalForExistingActivityPayloads() throws {
+        let data = Data(#"{"sessionName":"Race","meetingName":"São Paulo","statusLabel":"进行中","lapLabel":"L32/71","driverCount":22,"isStale":false}"#.utf8)
+        var state = try JSONDecoder().decode(PitPulseActivityAttributes.ContentState.self, from: data)
+        XCTAssertNil(state.favoriteGapLabel)
+        XCTAssertNil(state.weather)
+        XCTAssertNil(state.positionDrivers)
+        XCTAssertNil(state.positionFocus)
+        XCTAssertNil(state.positionWindowStart)
+        state.favoriteGapLabel = "距前车"
+        state.weather = .init(rainfall: true, airTemperature: 24, trackTemperature: 37)
+        let decoded = try JSONDecoder().decode(PitPulseActivityAttributes.ContentState.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(decoded.favoriteGapLabel, "距前车")
+        XCTAssertEqual(decoded.weather, state.weather)
+        XCTAssertNil(decoded.weather?.visibilityMeters)
+    }
+
+    @MainActor
+    func testPreviewMetalTextureUsesFixedRGBA8Pixels() throws {
+        // Exercise the actual texture factory with grayscale drawing, which UIKit
+        // previously promoted to @3x and then an unsupported monochrome format.
+        let image = IslandPreviewTexture.make(width: 256, height: 4096) { context in
+            UIColor(white: 0.65, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 256, height: 4096))
+        }
+        let bitmap = try XCTUnwrap(image.cgImage)
+        XCTAssertEqual(bitmap.width, 256)
+        XCTAssertEqual(bitmap.height, 4096)
+        XCTAssertEqual(bitmap.bitsPerComponent, 8)
+        XCTAssertEqual(bitmap.bitsPerPixel, 32)
+        XCTAssertEqual(bitmap.colorSpace?.model, .rgb)
+        XCTAssertEqual(image.scale, 1)
+    }
+
     func testContentStateRoundTripsThroughJSON() throws {
         #if os(iOS)
         let state = PitPulseActivityAttributes.ContentState(

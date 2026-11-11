@@ -1,6 +1,7 @@
 version: 1
 session: PitPulse
 task_order:
+- Run Live Replay
 - Run Server
 - Run App
 - Build App
@@ -174,3 +175,22 @@ tasks:
     cwd: .
     shell: false
     auto_start: false
+  Run Live Replay:
+    command: /usr/bin/python3
+    args: [scripts/run-live-replay.py]
+    cwd: .
+    env:
+      F1_COMPANION_BIND: 0.0.0.0:38702
+      F1_COMPANION_REPLAY_SPEED: '10'
+      F1_COMPANION_REPLAY_HOLD_SECONDS: '10'
+    shell: false
+    auto_start: false
+    stop_timeout_ms: 10000
+    clear_logs_on_restart: false
+  Connect Simulator Replay:
+    command: /usr/bin/python3
+    args: [scripts/connect-ios-replay.py]
+    cwd: .
+    shell: false
+    auto_start: false
+    clear_logs_on_restart: true

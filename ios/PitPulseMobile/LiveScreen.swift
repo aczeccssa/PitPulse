@@ -8,6 +8,7 @@ struct LiveScreen: View {
     @EnvironmentObject private var model: MobileModel
     @State private var mode = 0
     @State private var selectedNumber: String?
+    @State private var islandPreviewPresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         NavigationStack {
@@ -50,11 +51,25 @@ struct LiveScreen: View {
                         PulseCard {
                             VStack(spacing: 0) {
                                 HStack {
+                                    Label("灵动岛对比 · 最多两位", systemImage: "person.2")
+                                    Spacer()
+                                    if !model.islandBattleNumbers.isEmpty { Button("恢复默认") { model.resetIslandBattle() } }
+                                }.font(.caption).padding(.bottom, 12)
+                                HStack {
                                     Text("#").frame(width: 24)
                                     Text("车手"); Spacer()
                                     Text(mode == 1 ? "最快圈 / 上圈" : mode == 2 ? "轮胎 / 胎龄" : "差距"); Text("胎").frame(width: 28)
                                 }.font(.caption2).foregroundStyle(.secondary).padding(.bottom, 12)
                                 ForEach(model.sortedDrivers, id: \.number) { driver in
+                                    HStack(spacing: 8) {
+                                    Button { model.toggleIslandBattle(driver.number) } label: {
+                                        Image(systemName: model.islandBattleNumbers.contains(driver.number) ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(model.islandBattleNumbers.contains(driver.number) ? PulseStyle.red : .secondary)
+                                            .frame(width: 32, height: 44)
+                                    }.buttonStyle(.plain)
+                                    .disabled(model.islandBattleNumbers.count == 2 && !model.islandBattleNumbers.contains(driver.number))
+                                    .accessibilityLabel("灵动岛对比 \(driver.name ?? driver.number)")
+                                    .accessibilityValue(model.islandBattleNumbers.contains(driver.number) ? "已选择" : "未选择")
                                     Button { selectedNumber = driver.number } label: {
                                     HStack(spacing: 10) {
                                         Text(driver.position.map(String.init) ?? "—").frame(width: 24).monospacedDigit()
@@ -78,6 +93,7 @@ struct LiveScreen: View {
                                             .foregroundStyle(tireColor(driver)).overlay(Circle().stroke(tireColor(driver), lineWidth: 1.5))
                                     }.font(.subheadline).padding(.vertical, 11).contentShape(Rectangle())
                                     }.buttonStyle(PulsePressStyle())
+                                    }
                                     Divider().overlay(Color.primary.opacity(0.035))
                                 }
                                 if model.sortedDrivers.isEmpty {
@@ -113,17 +129,30 @@ struct LiveScreen: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                HStack {
-                    Text("灵动岛").font(.caption).foregroundStyle(.secondary)
-                    Picker("灵动岛内容", selection: $model.islandMode) {
-                        ForEach(IslandContentMode.allCases) { mode in Text(mode.title).tag(mode) }
-                    }.pickerStyle(.menu)
-                    Spacer()
-                    Button(model.isLiveRunning ? "断开" : "连接") { model.toggleLive() }.font(.caption)
-                }.padding(.horizontal, 20).padding(.vertical, 10).background(.regularMaterial)
+                    HStack {
+                        Button {
+                            islandPreviewPresented = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("灵动岛")
+                                Text(model.islandMode.title).foregroundStyle(.secondary)
+                                Image(systemName: "chevron.up.chevron.down").font(.caption2)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("灵动岛显示：\(model.islandMode.title)")
+                        Spacer()
+                        Button(model.isLiveRunning ? "断开" : "连接") { model.toggleLive() }.font(.caption)
+                    }.padding(.horizontal, 20).padding(.vertical, 10).background(.regularMaterial)
             }
             .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: mode)
             .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: model.sortedDrivers.map(\.number))
+            .sheet(isPresented: $islandPreviewPresented) {
+                IslandModePreviewSheet()
+                    .environmentObject(model)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             .sheet(isPresented: Binding(get: { selectedNumber != nil }, set: { if !$0 { selectedNumber = nil } })) {
                 if let number = selectedNumber { LiveDriverDetail(number: number).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
             }

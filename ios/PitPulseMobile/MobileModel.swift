@@ -60,6 +60,12 @@ final class MobileModel: ObservableObject {
     @Published var islandMode: IslandContentMode {
         didSet { defaults.set(islandMode.rawValue, forKey: "mobileIslandMode"); updateActivity() }
     }
+    @Published private(set) var islandBattleNumbers: [String] = []
+    func toggleIslandBattle(_ number: String) {
+        islandBattleNumbers = IslandBattleSelection.toggled(number, in: islandBattleNumbers)
+        islandMode = .battle
+    }
+    func resetIslandBattle() { islandBattleNumbers = []; updateActivity() }
     private let liveStores: [LiveSeries: LiveStore] = [.f1: LiveStore(), .wec: LiveStore()]
     private var historiesBySeries: [LiveSeries: [String: [LiveTelemetry]]] = [:]
     private var liveConnectionContext: String?
@@ -234,6 +240,7 @@ final class MobileModel: ObservableObject {
 
     func selectLiveSeries(_ next: LiveSeries) {
         guard availableLiveSeries.contains(next), let snapshot = liveSnapshots[next] else { return }
+        islandBattleNumbers = []
         series = next
         liveSnapshot = snapshot
         liveHistory = historiesBySeries[next] ?? [:]
@@ -242,6 +249,7 @@ final class MobileModel: ObservableObject {
     }
 
     private func handle(_ snapshot: LiveSnapshot, from incomingSeries: LiveSeries) {
+        if incomingSeries == series, liveSnapshot.sessionId != snapshot.sessionId { islandBattleNumbers = [] }
         let previousAvailable = Set(availableLiveSeries)
         let currentWasAvailable = previousAvailable.contains(series)
         liveSnapshots[incomingSeries] = snapshot
@@ -272,7 +280,7 @@ final class MobileModel: ObservableObject {
     }
 
     private func updateActivity() {
-        activity.update(snapshot: liveSnapshot, mode: islandMode, favorite: favoriteLiveDriver, favoriteName: favoriteStanding?.driverName)
+        activity.update(snapshot: liveSnapshot, mode: islandMode, favorite: favoriteLiveDriver, favoriteName: favoriteStanding?.driverName, selectedNumbers: islandBattleNumbers)
     }
 
     private func publishLiveWidget(_ snapshot: LiveSnapshot) {

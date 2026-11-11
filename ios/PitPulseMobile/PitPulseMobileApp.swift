@@ -8,9 +8,19 @@ struct PitPulseMobileApp: App {
     @AppStorage("mobileAppearance") private var appearance = "system"
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if CommandLine.arguments.contains("--island-preview") {
+                IslandModePreviewSheet().environmentObject(model)
+            } else {
+                RootView().environmentObject(model)
+                    .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
+                    .tint(PulseStyle.red)
+            }
+            #else
             RootView().environmentObject(model)
                 .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
                 .tint(PulseStyle.red)
+            #endif
         }
     }
 }
