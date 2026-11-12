@@ -1,8 +1,0 @@
-Query chain:
- →Find: Target Application 'com.pitpulse.F1Companion'
-  ↪︎Find: Descendants matching type Any
-    ↪︎Find: Elements matching predicate '"opennook.panel" IN identifiers'
-      ↪︎Find: First Match
-        ↪︎Find: Descendants matching type StaticText
-          ↪︎Find: Elements matching predicate 'value CONTAINS[c] "Race Control"'
-            ↪︎Find: First Match

@@ -53,11 +53,9 @@ Use direct `cargo`, `xcodebuild`, or `node` only when Taskdeck is unavailable or
 - Secrets come from `F1_COMPANION_TOKEN` or Keychain; config lives outside the repo. Prefer HTTPS + Bearer auth or a Tailscale private network.
 - Degrade gracefully: mark `stale`/`disconnected` instead of showing fabricated realtime data.
 
-## Task Status Report — Required Agent Workflow
+## Task Tracking & Docs Policy — Required Agent Workflow
 
-- The task status source of truth is `docs/tasks/tasks.json`. The read-only static board is `docs/tasks/index.html`; it reads the JSON directly. Do not hardcode task cards, counts, progress, or current statuses in HTML/JavaScript, and do not create a second state store.
-- **Every task start, substantive progress update, blocker, review, acceptance, or completion MUST update the corresponding JSON task in the same change.** Maintain `status`, `summary`, `nextAction`, `acceptanceCriteria[].done`, real `deliverables`/`evidence`, `blockers`, task `updatedAt`, and top-level `updatedAt`. Append a chronological `history` entry; never rewrite previous evidence/history.
-- Allowed states are `pending`, `inProgress`, `inReview`, `done`, and `blocked`. Use RFC 3339 UTC timestamps ending in `Z`; the board displays them in `project.timezone`. Mark `done` only when all acceptance criteria passed, supporting evidence is present, and unresolved blockers are empty. Partial research, a passing build, or a downloaded candidate is not full acceptance.
-- Preserve stable task IDs and unrelated task updates. When adding tasks or changing scope/dependencies, also update milestone membership and relevant definitions in `implementation-sequence.md`. The Markdown plan defines scope/order; **current progress belongs only in JSON**, not a duplicated Markdown status table.
-- Never put tokens, secrets, SQLite data, raw captured live-feed logs, or machine-specific private paths into the report. Recorded document paths are repository-relative and must exist. Asset licensing/download/bundle readiness must remain distinct; missing T03 assets must not block V1 by default.
-- After updating task data, run `node docs/tasks/validate.mjs` and `node --test docs/tasks/tests/task-data.test.mjs`. For board UI changes also run `node --check docs/tasks/board.js` and verify the page via local HTTP, including filters and error states. See `docs/tasks/README.md` for the data contract and preview command.
+- Task status lives in YouTrack project `PP` (`https://lestere-dev.youtrack.cloud`). After each commit, add an issue comment with the hash, branch, scope, verification commands and results, and anything still unverified. Keep an issue `In Progress` until its acceptance criteria are actually verified; never report a build or preview as full acceptance.
+- `docs/` holds only documents the user explicitly authorized. Do not add acceptance records, research notes, reviews, screenshots, asset dumps or generated evidence there, and do not recreate the removed `docs/tasks` board.
+- Without that authorization, write every such file under `temp/docs/` instead. `temp/` is git-ignored and never committed.
+- Never put tokens, secrets, SQLite data, raw captured live-feed logs or machine-specific private paths into a report, an issue comment or an ignored file's path list.

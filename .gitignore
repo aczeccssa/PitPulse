@@ -31,5 +31,8 @@ xcuserdata/
 .zcode/
 .zcodeignore
 
-# Local capture dumps. Screenshots used as acceptance evidence stay tracked.
-docs/acceptance/assets/**/*.mp4
+# Local tooling and unapproved working material.
+# docs/ is only for documents the user authorized; everything else goes to temp/docs/.
+.claude/
+.dsh/
+temp/
