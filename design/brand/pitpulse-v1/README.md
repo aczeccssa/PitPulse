@@ -18,7 +18,7 @@
 
 `pitpulse-layered.svg` 是包含两个位图图层的 SVG 容器，**不是纯矢量路径稿**。它直接引用内嵌的原始像素，是准确的分层组合；`app-icon-preview.png` 是 imagegen 的合成预览，像素不保证与直接叠图完全一致。
 
-这些设计源保留完整方形画布。用户确认后，App 接入使用 `macos/Resources/AppIcon.icon/`，由 Xcode 处理系统图标轮廓；server 的 favicon 来自同一原生图标导出。接入说明见 `docs/acceptance/branding.md`。
+这些设计源保留完整方形画布。用户确认后，App 接入使用 `Packages/SharedComponents/Resources/AppIcon.icon/`，由 Xcode 处理系统图标轮廓；server 的 favicon 来自同一原生图标导出。接入说明见 `docs/acceptance/branding.md`。
 
 ## 菜单栏紧凑版
 

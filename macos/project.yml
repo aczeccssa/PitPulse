@@ -35,7 +35,7 @@ targets:
           - "Maps/map.html"
       - path: Resources/AppAssets.xcassets
         buildPhase: resources
-      - path: Resources/AppIcon.icon
+      - path: ../Packages/SharedComponents/Resources/AppIcon.icon
         buildPhase: resources
       - path: Features/Maps/map.html
         buildPhase: resources

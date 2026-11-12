@@ -18,6 +18,7 @@
 		33856DA9D130E54D360D2D58 /* CountryFlagTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCD1EEB4D9A6B5F5291BFA89 /* CountryFlagTests.swift */; };
 		386A195DF5669D83A558DB87 /* PitPulseWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E02380F33D70EAB98DB249D9 /* PitPulseWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3D544C7D976265FB9A7D8405 /* map.html in Resources */ = {isa = PBXBuildFile; fileRef = 4C62E9EB2312150DBD01AEE4 /* map.html */; };
+		4169158A69C62B230CCBC013 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = AD8157E384A35ECF14FA9FB4 /* AppIcon.icon */; };
 		49A29D76F5DA9B62C3DCA753 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 474834179F3C05A4E50632E6 /* SharedData */; };
 		55DCBB0BBB28B3F744108A67 /* ServerAddressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D64E9C68B4DDE9577C4B43 /* ServerAddressTests.swift */; };
 		6425FF1ABCEF4BC38778CAA9 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61C7E4945392C1F76162C12 /* MapView.swift */; };
@@ -34,7 +35,6 @@
 		98ABC4D38FD474D0721739B7 /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = CEDABD09FAD99E76FFEADF63 /* SharedComponents */; };
 		AE4278062F14D3F5D8F77B22 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C45B56BBE485DC5C0ED3E6 /* APIClientTests.swift */; };
 		AEE34152BA1C28CE83064552 /* LiveIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904905236A6847E0B7730E6A /* LiveIsland.swift */; };
-		B04B8845B53A5FD5CD9A77AB /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = CAF74F926C34D5AC1D0E3325 /* AppIcon.icon */; };
 		B844EA8C4C7F4E39F3F5B021 /* run-live-map-check.sh in Resources */ = {isa = PBXBuildFile; fileRef = 6A6EFA06E72D92B2E36B4C82 /* run-live-map-check.sh */; };
 		B9DDD761FDCF88096FFBCCBD /* MotorsportAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374280346D07EE8826891ED7 /* MotorsportAsset.swift */; };
 		BB7E1F4FD34D5E27816AF3DE /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 7186A00281D1D46D3ECD5E1B /* SharedData */; };
@@ -124,13 +124,13 @@
 		972E6DC30F132CE660E96401 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		978D0AC5B2D352B2888628B8 /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
 		A0962921FBC414E813CB0537 /* CalendarLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLogicTests.swift; sourceTree = "<group>"; };
+		AD8157E384A35ECF14FA9FB4 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		B4BC764E9F1B724DE9183A4A /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		B61C7E4945392C1F76162C12 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		B8EDB12972786BE5FB43E489 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		BD007297260B6612207E9C4F /* MenuBarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRootView.swift; sourceTree = "<group>"; };
 		BE4D91847E5BEC99C2CF65CA /* AppSymbol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSymbol.swift; sourceTree = "<group>"; };
 		CA1FC5647ACD0FEA8ECB6FFD /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
-		CAF74F926C34D5AC1D0E3325 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		CB3E6E583CF6F39FDB3CC103 /* PitPulseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PitPulseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA4CA4F6A1B8A359DC73A1AC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E02380F33D70EAB98DB249D9 /* PitPulseWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PitPulseWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -200,12 +200,21 @@
 				1950F28BC9712E8CADE97864 /* Core */,
 				6E0A569DCD5201C2C87D68A6 /* Features */,
 				84E84B8FB0628AF5787BB1E1 /* Packages */,
+				8F56FF7CAAD7B54AB1A4531D /* PitPulse */,
 				C4AD62D925A4C8318DA8BEAD /* PitPulseWidgets */,
 				E108677A3CFCBAF37C20256C /* Resources */,
 				B6FD8EBBEDA11A3100C71C5E /* Tests */,
 				67ED2157E540BC95AFE0431F /* UITests */,
 				E24755CC2E4CA3CE6FABA0B0 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		671C079749313AE80B1F7811 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AC27FCA3E667C6BC9EDBB5FC /* SharedComponents */,
+			);
+			path = Packages;
 			sourceTree = "<group>";
 		};
 		67ED2157E540BC95AFE0431F /* UITests */ = {
@@ -259,6 +268,15 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		8F56FF7CAAD7B54AB1A4531D /* PitPulse */ = {
+			isa = PBXGroup;
+			children = (
+				671C079749313AE80B1F7811 /* Packages */,
+			);
+			name = PitPulse;
+			path = ..;
+			sourceTree = "<group>";
+		};
 		902EB2C9221FC4B24DD7B38D /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -278,6 +296,22 @@
 				904905236A6847E0B7730E6A /* LiveIsland.swift */,
 			);
 			path = LiveIsland;
+			sourceTree = "<group>";
+		};
+		A51B9631F9025607EC3A86EA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AD8157E384A35ECF14FA9FB4 /* AppIcon.icon */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AC27FCA3E667C6BC9EDBB5FC /* SharedComponents */ = {
+			isa = PBXGroup;
+			children = (
+				A51B9631F9025607EC3A86EA /* Resources */,
+			);
+			path = SharedComponents;
 			sourceTree = "<group>";
 		};
 		B6FD8EBBEDA11A3100C71C5E /* Tests */ = {
@@ -342,7 +376,6 @@
 			isa = PBXGroup;
 			children = (
 				978D0AC5B2D352B2888628B8 /* AppAssets.xcassets */,
-				CAF74F926C34D5AC1D0E3325 /* AppIcon.icon */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -525,7 +558,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				086EABCDFFE4B964BD7834F1 /* AppAssets.xcassets in Resources */,
-				B04B8845B53A5FD5CD9A77AB /* AppIcon.icon in Resources */,
+				4169158A69C62B230CCBC013 /* AppIcon.icon in Resources */,
 				3D544C7D976265FB9A7D8405 /* map.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

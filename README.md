@@ -60,11 +60,12 @@ Rules:
 3. Packages never import app code. App-specific types (`AppModel`, `LiveIsland`, view controllers) stay in the app targets.
 4. Cross-module symbols used by the app or extensions are `public`; keep platform-only code behind the app target or `#if os(...)`, not in shared modules.
 5. New shared code belongs in one of these two packages. Create a new package only when it has an independent dependency or distribution boundary, then add it to `PitPulse.xcworkspace` and declare the product dependency in both project specs.
+6. A project spec never references files from the other platform's project folder. Anything both apps need — code or resources such as the icon — lives in a shared package or a neutral top-level folder.
 
 ### Naming and icons
 
 - App display name is **PitPulse** on both platforms (`CFBundleDisplayName` / `CFBundleName`).
-- Both app targets share `macos/Resources/AppIcon.icon` (Icon Composer) via `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`.
+- Both app targets share `Packages/SharedComponents/Resources/AppIcon.icon` (Icon Composer) via `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`; neither project reaches into the other project's folder. The package keeps this icon outside `Sources/` so SwiftPM does not bundle it into the library.
 - macOS keeps bundle id `com.pitpulse.F1Companion` for Keychain / preferences compatibility; iOS uses `com.pitpulse.mobile`.
 - Scheme names: `PitPulseDesktop`, `PitPulseMobile`, `PitPulseLiveActivity`, `PitPulseLiveAcceptance`.
 - Run the **`PitPulseMobile` app scheme**; the widget extension is embedded and is not a standalone runnable app.

@@ -28,7 +28,7 @@ targets:
       - path: PitPulseMobile
         excludes:
           - "Info.plist"
-      - path: ../macos/Resources/AppIcon.icon
+      - path: ../Packages/SharedComponents/Resources/AppIcon.icon
         buildPhase: resources
     settings:
       base:

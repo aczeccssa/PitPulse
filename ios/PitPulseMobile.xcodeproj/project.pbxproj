@@ -11,9 +11,9 @@
 		1B4DB6A133DB691A39B7540F /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = D51A857A5FE80A50291D3676 /* SharedComponents */; };
 		3D11ED92881C099AC2F1488D /* MobileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B525A6B0EA63B112E914DF0E /* MobileModel.swift */; };
 		43AB4DF6BED37641EF9D6914 /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 8F74FCCEC7D7A4992565D30D /* SharedComponents */; };
-		480731FF2FD4D4B0CB0DBFD2 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DBC8B0DE52F943C3A5F57227 /* AppIcon.icon */; };
 		497FBF29DF709207CACA4BA1 /* LiveActivityContentStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE5F5E5E80554FF7F62AD10 /* LiveActivityContentStateTests.swift */; };
 		607C8BD68FC83A9E5A28C3D9 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 563CF994AC6474A9E6FF31F3 /* SharedData */; };
+		6D481E30FB5CD454C2E7B40C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 9D2128B0AEBCB37EE9CA9C58 /* AppIcon.icon */; };
 		92944C118B0675B6FF146DB4 /* PitPulseLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22DD96034FE30742D4E1E116 /* PitPulseLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A43A97843804BD3FE8FCA9BF /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00EC44447B1EB0403A65750 /* SettingsScreen.swift */; };
 		B911A9AC4959FD14D7CD1E35 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 78B5C7AB69AA2A14B3287765 /* SharedData */; };
@@ -60,13 +60,13 @@
 		6444D0B1B94B2BB24466741E /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
 		6D0D1EDC8C4EDE76CE50AB84 /* SharedData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SharedData; path = ../Packages/SharedData; sourceTree = SOURCE_ROOT; };
 		77538125267C714348B5B812 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D2128B0AEBCB37EE9CA9C58 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		AE67C0880B7A4287A2B64473 /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
 		B525A6B0EA63B112E914DF0E /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
 		B8594F498E882DE188E7C2F4 /* PitPulseLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityBundle.swift; sourceTree = "<group>"; };
 		CC88D10DA3BFCFC0BC092785 /* PitPulseMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PitPulseMobile.entitlements; sourceTree = "<group>"; };
 		D00EC44447B1EB0403A65750 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		D2298C99B1BD1A9C4CDE2C7A /* LiveScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScreen.swift; sourceTree = "<group>"; };
-		DBC8B0DE52F943C3A5F57227 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		EEAFB16BFFF5D0F229770045 /* PitPulseLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -101,12 +101,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		26D04D902EB614A2973B1709 /* Resources */ = {
+		133A0C0C2A96BB86291EF14B /* SharedComponents */ = {
 			isa = PBXGroup;
 			children = (
-				DBC8B0DE52F943C3A5F57227 /* AppIcon.icon */,
+				56AA1704313C5B3ECBC27E5C /* Resources */,
 			);
-			path = Resources;
+			path = SharedComponents;
 			sourceTree = "<group>";
 		};
 		3C37D8D60D028DE1DE84AD23 /* PitPulseMobileTests */ = {
@@ -131,6 +131,14 @@
 			path = PitPulseMobile;
 			sourceTree = "<group>";
 		};
+		56AA1704313C5B3ECBC27E5C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9D2128B0AEBCB37EE9CA9C58 /* AppIcon.icon */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		5ECB5B10DDF1BC8214A1C41C /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -140,12 +148,12 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
-		70B64C2033EC1C00584BA760 /* macos */ = {
+		6D1AB940D3F99E33E53CC296 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				26D04D902EB614A2973B1709 /* Resources */,
+				133A0C0C2A96BB86291EF14B /* SharedComponents */,
 			);
-			path = macos;
+			path = Packages;
 			sourceTree = "<group>";
 		};
 		8761DB3967C3F0F7725A92EF /* PitPulseLiveActivity */ = {
@@ -183,7 +191,7 @@
 		F3A38F9257D63658C13978C2 /* PitPulse */ = {
 			isa = PBXGroup;
 			children = (
-				70B64C2033EC1C00584BA760 /* macos */,
+				6D1AB940D3F99E33E53CC296 /* Packages */,
 			);
 			name = PitPulse;
 			path = ..;
@@ -307,7 +315,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				480731FF2FD4D4B0CB0DBFD2 /* AppIcon.icon in Resources */,
+				6D481E30FB5CD454C2E7B40C /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
