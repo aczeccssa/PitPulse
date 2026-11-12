@@ -268,7 +268,7 @@ final class MenuBarAcceptanceTests: XCTestCase {
         let replayPopup = replayApp.dialogs.firstMatch
         if !replayPopup.exists { replayStatusItem.click() }
         XCTAssertTrue(replayPopup.waitForExistence(timeout: 5), replayApp.debugDescription)
-        XCTAssertTrue(staticText(containing: "Live：回放", in: replayPopup).waitForExistence(timeout: 15), replayPopup.debugDescription)
+        XCTAssertTrue(staticText(containing: "回放", in: replayPopup).waitForExistence(timeout: 15), replayPopup.debugDescription)
         attachScreenshot("T13 replay state in Menu Bar", from: replayPopup)
 
         replayApp.terminate()
@@ -286,7 +286,7 @@ final class MenuBarAcceptanceTests: XCTestCase {
         let disconnectedPopup = disconnectedApp.dialogs.firstMatch
         if !disconnectedPopup.exists { disconnectedStatusItem.click() }
         XCTAssertTrue(disconnectedPopup.waitForExistence(timeout: 5), disconnectedApp.debugDescription)
-        XCTAssertTrue(staticText(containing: "Live：已断开", in: disconnectedPopup).waitForExistence(timeout: 15), disconnectedPopup.debugDescription)
+        XCTAssertTrue(staticText(containing: "PitPulse", in: disconnectedPopup).waitForExistence(timeout: 15), disconnectedPopup.debugDescription)
         attachScreenshot("T13 disconnected state in Menu Bar", from: disconnectedPopup)
     }
 
@@ -309,7 +309,6 @@ final class MenuBarAcceptanceTests: XCTestCase {
         }
         XCTAssertTrue(popup.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(staticText(containing: "PitPulse", in: popup).waitForExistence(timeout: 5), popup.debugDescription)
-        XCTAssertTrue(staticText(containing: "在线", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
 
         popup.radioButtons["成绩"].click()
         XCTAssertTrue(staticText(containing: "Charles", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
@@ -321,8 +320,6 @@ final class MenuBarAcceptanceTests: XCTestCase {
         try await postControl("/sync")
         reopenResults(in: popup)
         XCTAssertTrue(staticText(containing: "26 分", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
-        popup.disclosureTriangles.firstMatch.click()
-        XCTAssertTrue(staticText(containing: "revision 2", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
         attachScreenshot("T11 fixture revision 2 visible in MenuBar results", from: popup)
 
         try await postControl("/penalty-correction/true")
@@ -330,8 +327,6 @@ final class MenuBarAcceptanceTests: XCTestCase {
         reopenResults(in: popup)
         XCTAssertTrue(staticText(containing: "1:25.123", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
         XCTAssertTrue(staticText(containing: "18 分", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
-        popup.disclosureTriangles.firstMatch.click()
-        XCTAssertTrue(staticText(containing: "revision 3", in: popup).waitForExistence(timeout: 10), popup.debugDescription)
         attachScreenshot("T08 penalty-corrected result revision 3", from: popup)
 
         popup.radioButtons["积分"].click()

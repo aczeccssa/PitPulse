@@ -2,6 +2,237 @@ import AppKit
 import SwiftUI
 import PitPulseData
 
+// MARK: - Design tokens
+
+enum PitPulseTheme {
+    static let accent = Color(red: 0.84, green: 0.13, blue: 0.16)
+    static let accentSoft = accent.opacity(0.14)
+    static let windowWidth: CGFloat = 540
+    static let windowHeight: CGFloat = 740
+    static let cardRadius: CGFloat = 20
+    static let controlRadius: CGFloat = 10
+    static let cardSpacing: CGFloat = 10
+    static let pagePadding: CGFloat = 16
+}
+
+/// Liquid Glass card used by every page, so the popup reads as one system.
+struct GlassCard<Content: View>: View {
+    var radius: CGFloat = PitPulseTheme.cardRadius
+    var padding: CGFloat = 14
+    @ViewBuilder let content: () -> Content
+
+    init(radius: CGFloat = PitPulseTheme.cardRadius, padding: CGFloat = 14, @ViewBuilder content: @escaping () -> Content) {
+        self.radius = radius
+        self.padding = padding
+        self.content = content
+    }
+
+    var body: some View {
+        content()
+            .padding(padding)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+    }
+}
+
+struct CardHeader: View {
+    let title: String
+    var actionTitle: String? = nil
+    var actionSymbol: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.5)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            if let actionTitle, let action {
+                Button(action: action) {
+                    HStack(spacing: 3) {
+                        Text(actionTitle)
+                        if let actionSymbol {
+                            Image(systemName: actionSymbol).font(.system(size: 9, weight: .bold))
+                        }
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(PitPulseTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+struct MetricTile: View {
+    let label: String
+    let value: String
+    let symbol: String
+    var tint: Color = .secondary
+    var detail: String? = nil
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            Spacer(minLength: 0)
+            if let detail {
+                Text(detail)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+struct StatusPill: View {
+    let text: String
+    var tint: Color = .secondary
+    var showsDot = true
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if showsDot {
+                Circle().fill(tint).frame(width: 6, height: 6)
+            }
+            Text(text)
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.3)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: Capsule())
+    }
+}
+
+struct GlassIconButton: View {
+    let symbol: String
+    let label: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 30, height: 30)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Circle())
+        .help(label)
+        .accessibilityLabel(label)
+    }
+}
+
+/// Drivers are always represented by a helmet. A portrait is never used as a
+/// stand-in; drivers without a helmet asset get a neutral helmet glyph.
+struct DriverHelmetAvatar: View {
+    let driverID: String
+    let name: String
+    let season: Int
+    var size: CGFloat = 26
+
+    var body: some View {
+        Group {
+            if let image = MotorsportAsset.f1HelmetImage(id: driverID, season: season) {
+                Image(nsImage: image).resizable().scaledToFit()
+            } else {
+                Image(systemName: "helmet.fill")
+                    .font(.system(size: size * 0.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.primary.opacity(0.06), in: Circle())
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Shared Liquid Glass segmented control used by secondary pages.
+struct LiquidSegmented<Value: Hashable>: View {
+    struct Item: Identifiable {
+        let value: Value
+        let title: String
+
+        var id: Value { value }
+    }
+
+    let items: [Item]
+    @Binding var selection: Value
+    var compact = false
+
+    var body: some View {
+        GlassEffectContainer(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(items) { item in
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { selection = item.value }
+                    } label: {
+                        Text(item.title)
+                            .font(.system(size: compact ? 11 : 11.5, weight: .semibold))
+                            .foregroundStyle(selection == item.value ? PitPulseTheme.accent : Color.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, compact ? 4 : 6)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(
+                        selection == item.value
+                            ? .regular.tint(PitPulseTheme.accent.opacity(0.18)).interactive()
+                            : .regular.interactive(),
+                        in: Capsule()
+                    )
+                    .accessibilityLabel(item.title)
+                    .accessibilityAddTraits(selection == item.value ? .isSelected : [])
+                }
+            }
+        }
+    }
+}
+
+struct EmptyStateCard: View {
+    let symbol: String
+    let title: String
+    let message: String
+
+    var body: some View {
+        GlassCard {
+            VStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .font(.system(size: 24, weight: .light))
+                    .foregroundStyle(.secondary)
+                Text(title).font(.system(size: 14, weight: .semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 22)
+        }
+    }
+}
+
+// MARK: - Root
+
 struct MenuBarRootView: View {
     enum Section: String, CaseIterable, Identifiable {
         case next
@@ -30,10 +261,19 @@ struct MenuBarRootView: View {
 
         var symbol: String {
             switch self {
-            case .next: "flag.checkered"
+            case .next: "house"
             case .calendar: "calendar"
-            case .results: "list.number"
-            case .standings: "chart.bar.xaxis"
+            case .results: "trophy"
+            case .standings: "person.3"
+            }
+        }
+
+        var selectedSymbol: String {
+            switch self {
+            case .next: "house.fill"
+            case .calendar: "calendar"
+            case .results: "trophy.fill"
+            case .standings: "person.3.fill"
             }
         }
     }
@@ -43,58 +283,19 @@ struct MenuBarRootView: View {
     @EnvironmentObject private var liveIsland: LiveIslandController
     @Environment(\.openSettings) private var openSettings
     @State private var section: Section = .next
+    @Namespace private var switcherNamespace
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
-            HStack(spacing: 4) {
-                ForEach(Section.allCases) { item in
-                    Button {
-                        section = item
-                    } label: {
-                        Image(systemName: item.symbol).font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(section == item ? Color.white : Color.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background {
-                            if section == item {
-                                RoundedRectangle(cornerRadius: 9).fill(Color.accentColor)
-                            }
-                        }
-                        .contentShape(RoundedRectangle(cornerRadius: 9))
-                    }
-                    .buttonStyle(.plain)
-                    .help(item.title)
-                    .accessibilityLabel(item.title)
-                    .accessibilityValue(section == item ? "已选中" : "")
-                    .accessibilityAddTraits(section == item ? .isSelected : [])
-                }
-            }
-            .padding(4)
-            .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-
-            Group {
-                switch section {
-                case .next:
-                    NextMeetingCard()
-                case .calendar:
-                    CalendarView()
-                case .results:
-                    SessionResultsView(model: model)
-                case .standings:
-                    StandingsView(model: model)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            Divider()
+            primarySwitcher
+            Divider().opacity(0.5)
+            content
+            liveStrip
+            Divider().opacity(0.5)
             footer
         }
-        .frame(width: 480, height: 640)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: PitPulseTheme.windowWidth, height: PitPulseTheme.windowHeight)
         .onAppear {
             model.popupDidAppear()
         }
@@ -105,134 +306,248 @@ struct MenuBarRootView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
-            Image(systemName: AppSymbol.menuBar.resolvedSystemName())
-                .font(.title3)
-            Text("PitPulse")
-                .font(.headline)
-            if liveStore.snapshot.sourceMode == .replay {
-                Text("回放").font(.caption).foregroundStyle(.orange)
-            }
-            Spacer()
-            Button {
-                model.refreshCurrentPage(target: section.refreshTarget)
-            } label: {
-                Image(systemName: AppSymbol.refresh.resolvedSystemName())
-            }
-            .buttonStyle(.borderless)
-            .help("刷新")
-            .disabled(model.isRefreshing)
+        HStack(spacing: 8) {
+            Image("PitPulseMenuBar")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 22, height: 18)
+                .accessibilityHidden(true)
 
-            Button {
-                NSApp.keyWindow?.orderOut(nil)
-                NSApp.activate()
-                openSettings()
-            } label: {
-                Image(systemName: AppSymbol.settings.resolvedSystemName())
+            Text("PitPulse")
+                .font(.system(size: 15, weight: .semibold))
+
+            if liveStore.snapshot.sourceMode == .replay {
+                Text("回放")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .glassEffect(.regular.tint(.orange.opacity(0.16)), in: Capsule())
             }
-            .buttonStyle(.borderless)
-            .help("设置")
-            .accessibilityLabel("设置")
-            .accessibilityIdentifier("menuBar.settings")
+
+            Spacer(minLength: 8)
+
+            if model.isRefreshing {
+                ProgressView().controlSize(.mini)
+            } else if let date = model.lastSuccessfulLoadAt {
+                Text(date.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, PitPulseTheme.pagePadding)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+    }
+
+    /// iOS-style Liquid Glass tab bar: one continuous glass capsule with a
+    /// tinted lens that slides between the icon-only items.
+    private var primarySwitcher: some View {
+        GlassEffectContainer(spacing: 10) {
+            HStack(spacing: 0) {
+                ForEach(Section.allCases) { item in
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { section = item }
+                    } label: {
+                        Image(systemName: section == item ? item.selectedSymbol : item.symbol)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(section == item ? PitPulseTheme.accent : Color.secondary)
+                            .contentTransition(.symbolEffect(.replace))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background {
+                                if section == item {
+                                    Capsule()
+                                        .fill(PitPulseTheme.accent.opacity(0.15))
+                                        .overlay {
+                                            Capsule().strokeBorder(PitPulseTheme.accent.opacity(0.22), lineWidth: 1)
+                                        }
+                                        .matchedGeometryEffect(id: "liquidSwitcher", in: switcherNamespace)
+                                }
+                            }
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .help(item.title)
+                    .accessibilityLabel(item.title)
+                    .accessibilityValue(section == item ? "已选中" : "")
+                    .accessibilityAddTraits(section == item ? .isSelected : [])
+                    .accessibilityIdentifier("menuBar.section.\(item.rawValue)")
+                }
+            }
+            .padding(5)
+            .glassEffect(.regular, in: Capsule())
+        }
+        .padding(.horizontal, PitPulseTheme.pagePadding)
+        .padding(.bottom, 10)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        Group {
+            switch section {
+            case .next:
+                NextMeetingCard()
+            case .calendar:
+                CalendarView()
+            case .results:
+                SessionResultsView(model: model)
+            case .standings:
+                StandingsView(model: model)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var liveStrip: some View {
+        let snapshot = liveStore.snapshot
+        if !snapshot.drivers.isEmpty, snapshot.sourceStatus == .connected {
+            LiveStrip(
+                snapshot: snapshot,
+                favorite: liveFavorite,
+                isVisible: liveIsland.isVisible,
+                expand: {
+                    if !liveIsland.isVisible { liveIsland.toggleManually() }
+                }
+            )
+            .padding(.horizontal, PitPulseTheme.pagePadding)
+            .padding(.bottom, 8)
+        }
     }
 
     private var footer: some View {
         HStack(spacing: 10) {
-            Menu {
-                Text(statusTitle)
-                Text(liveStatusText)
-                if let detail = statusDetail { Text(detail) }
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 14))
-                    .frame(width: 30, height: 30)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("连接详情")
-            .accessibilityLabel("连接详情")
-            Spacer()
             Button {
                 liveIsland.toggleManually()
             } label: {
-                Label(liveIsland.isVisible ? "隐藏" : "显示", systemImage: liveIsland.isVisible ? "eye.slash" : "eye")
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(.quaternary, in: Capsule())
+                Image(systemName: liveIsland.isVisible ? "eye.slash" : "eye")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 28, height: 28)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
             .help(liveIsland.isVisible ? "隐藏 Live Island" : "显示 Live Island")
             .accessibilityLabel(liveIsland.isVisible ? "隐藏 Live Island" : "显示 Live Island")
             .accessibilityIdentifier("menuBar.liveIsland")
-            Menu {
-                Button("退出 PitPulse", role: .destructive) { NSApp.terminate(nil) }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(width: 30, height: 30)
-                    .background(.quaternary, in: Circle())
+
+            Spacer(minLength: 0)
+
+            GlassEffectContainer(spacing: 10) {
+                HStack(spacing: 8) {
+                    footerButton(symbol: AppSymbol.refresh.resolvedSystemName(), label: "刷新") {
+                        model.refreshCurrentPage(target: section.refreshTarget)
+                    }
+                    .disabled(model.isRefreshing)
+                    .opacity(model.isRefreshing ? 0.45 : 1)
+
+                    footerButton(symbol: AppSymbol.settings.resolvedSystemName(), label: "设置") {
+                        NSApp.keyWindow?.orderOut(nil)
+                        NSApp.activate()
+                        openSettings()
+                    }
+                    .accessibilityIdentifier("menuBar.settings")
+
+                    footerButton(symbol: "power", label: "退出 PitPulse", prominent: true) {
+                        NSApp.terminate(nil)
+                    }
+                    .accessibilityIdentifier("menuBar.quit")
+                }
             }
-            .menuStyle(.borderlessButton)
-            .help("更多操作")
-            .accessibilityLabel("更多操作")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, PitPulseTheme.pagePadding)
+        .padding(.vertical, 12)
     }
 
-    private var liveStatusText: String {
-        let snapshot = liveStore.snapshot
-        let updated = snapshot.lastUpdatedLabel.map { " · \($0)" } ?? ""
-        return "Live：\(snapshot.statusLabel)\(updated)"
+    private func footerButton(
+        symbol: String,
+        label: String,
+        prominent: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(prominent ? Color.white : Color.primary)
+                .frame(width: 22, height: 22)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 9)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(
+            prominent
+                ? .regular.tint(PitPulseTheme.accent).interactive()
+                : .regular.interactive(),
+            in: Capsule()
+        )
+        .help(label)
+        .accessibilityLabel(label)
     }
 
-    private var statusTitle: String {
-        switch model.connectionStatus {
-        case .idle: "尚未连接"
-        case .loading: "正在连接"
-        case .connected: "在线"
-        case .stale: "正在显示缓存"
-        case .offline: "离线"
-        case .requiresToken: "需要有效 Token"
-        case .failed: "连接失败"
-        }
+    private var liveFavorite: LiveDriver? {
+        guard let favoriteID = model.favoriteDriverId(for: model.liveSeries) else { return nil }
+        return LiveIslandLogic.matchedDriver(
+            favoriteId: favoriteID,
+            favorites: model.favoriteDrivers,
+            drivers: liveStore.snapshot.drivers
+        )
     }
-
-    private var statusDetail: String? {
-        if let error = model.errorMessage {
-            return error
-        }
-        if let date = model.lastSuccessfulLoadAt {
-            return "最近成功：\(date.formatted(date: .abbreviated, time: .shortened))"
-        }
-        return nil
-    }
-
 }
 
-struct PlaceholderView: View {
-    let symbol: AppSymbol
-    let title: String
-    let message: String
+// MARK: - Live strip
+
+private struct LiveStrip: View {
+    let snapshot: LiveSnapshot
+    let favorite: LiveDriver?
+    let isVisible: Bool
+    let expand: () -> Void
+
+    private var driver: LiveDriver? {
+        favorite ?? snapshot.drivers.first
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: symbol.resolvedSystemName())
-                .font(.system(size: 30))
-                .foregroundStyle(.secondary)
-            Text(title)
-                .font(.headline)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 36)
+        Button(action: expand) {
+            HStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    Circle().fill(PitPulseTheme.accent).frame(width: 6, height: 6)
+                    Text("LIVE")
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.8)
+                        .foregroundStyle(PitPulseTheme.accent)
+                }
+                Text(snapshot.meetingName ?? snapshot.sessionName ?? "实时会话")
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                Text(snapshot.lapLabel)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 6)
+                if let driver {
+                    Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(.yellow)
+                    Text(driver.name ?? "#\(driver.number)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                    Text(driver.classLabel ?? "P\(driver.position.map(String.init) ?? "—")")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    if let gap = driver.gap {
+                        Text(gap)
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .glassEffect(.regular.tint(PitPulseTheme.accent.opacity(0.10)).interactive(), in: Capsule())
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .buttonStyle(.plain)
+        .help("展开 Live Island")
+        .accessibilityLabel("展开 Live Island，\(snapshot.meetingName ?? "实时会话")")
     }
 }
