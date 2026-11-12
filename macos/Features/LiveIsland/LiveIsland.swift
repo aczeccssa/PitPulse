@@ -3,8 +3,7 @@ import Combine
 import NookApp
 import OSLog
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 @MainActor
 final class LiveIslandActions: ObservableObject {

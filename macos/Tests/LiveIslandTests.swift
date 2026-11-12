@@ -1,7 +1,6 @@
 import AppKit
 import XCTest
-@testable import PitPulseData
-@testable import PitPulseShared
+@testable import SharedData
 @testable import PitPulseDesktop
 
 final class LiveIslandTests: XCTestCase {

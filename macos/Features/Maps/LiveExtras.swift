@@ -1,7 +1,7 @@
 import AVFoundation
 import Combine
 import SwiftUI
-import PitPulseData
+import SharedData
 
 @MainActor
 final class RadioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {

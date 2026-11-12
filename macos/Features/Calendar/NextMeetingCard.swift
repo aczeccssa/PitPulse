@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 // MARK: - Race weekend dashboard
 

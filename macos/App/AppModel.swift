@@ -1,8 +1,7 @@
 import AppKit
 import Combine
 import Foundation
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 @MainActor
 final class AppModel: ObservableObject {

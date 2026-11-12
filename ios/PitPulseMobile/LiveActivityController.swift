@@ -1,7 +1,6 @@
 import ActivityKit
 import Foundation
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 /// ActivityKit's `Activity` is a non-Sendable class whose update methods are
 /// safe to call off the main actor. Box it so the async update task can capture

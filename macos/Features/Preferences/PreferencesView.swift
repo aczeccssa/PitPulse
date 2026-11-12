@@ -1,6 +1,5 @@
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 struct PreferencesView: View {
     @EnvironmentObject private var model: AppModel

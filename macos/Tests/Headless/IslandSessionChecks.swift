@@ -1,9 +1,8 @@
 import Foundation
-@testable import PitPulseData
-@testable import PitPulseShared
+@testable import SharedData
 
 // Standalone compilation excludes AppModel and its AppKit lifecycle.
-// FavoriteDriver now lives in PitPulseShared.
+// FavoriteDriver now lives in SharedData.
 
 @main
 struct IslandSessionChecks {

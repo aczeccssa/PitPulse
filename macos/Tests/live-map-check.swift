@@ -1,7 +1,7 @@
 // Standalone checks use production models, MapStore and RadioPlayer without starting the App.
 import Foundation
 import SwiftUI
-@testable import PitPulseData
+@testable import SharedData
 
 final class RefreshURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: ((URLRequest) -> (HTTPURLResponse, Data))?

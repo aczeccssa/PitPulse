@@ -1,8 +1,7 @@
-import PitPulseComponents
+import SharedComponents
 import XCTest
 import UIKit
-@testable import PitPulseShared
-@testable import PitPulseData
+@testable import SharedData
 
 final class LiveActivityContentStateTests: XCTestCase {
     @MainActor

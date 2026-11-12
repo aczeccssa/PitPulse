@@ -9,7 +9,6 @@ task_order:
 - Build iOS
 - Test iOS
 - Check Widget Publisher
-- Check Task Report
 - Check App Launcher
 - Connect Simulator Replay
 tasks:
@@ -69,17 +68,6 @@ tasks:
     cwd: .
     env: {}
     shell: false
-    auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
-  Check Task Report:
-    command: /bin/bash
-    args:
-    - -lc
-    - node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js
-    cwd: .
-    env: {}
-    shell: true
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: false

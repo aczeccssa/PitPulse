@@ -5,30 +5,31 @@
 PitPulse (F1 Companion) is a self-hosted F1 timing system with two deliverables. The design lives in `F1-Companion-Architecture.md`.
 
 - `server/` — single Rust process (Tokio/Axum/Reqwest/SQLite). Modules: `providers/` (Jolpica, OpenF1, `f1_live/`), `domain/`, `services/`, `storage/migrations/`, `scheduler.rs`, `api/`, `tests/`, `deploy/`.
-- `macos/` — Swift 6 / SwiftUI Menu Bar + Notch app. `App/`, `Core/` (APIClient, Models, LiveStore, Cache, Notifications), `Features/` (MenuBar, Calendar, SessionResults, Standings, LiveIsland, Preferences), `Resources/`.
-- Keep each provider behind its own adapter; never call third-party APIs from the macOS client.
+- `PitPulse.xcworkspace` — Xcode entry point containing two independent projects and two shared packages.
+- `macos/PitPulseDesktop.xcodeproj` — Swift 6 / SwiftUI Menu Bar + Notch app, WidgetKit extension and tests. Sources: `App/`, `Core/` (APIClient, Models, LiveStore, Cache, Notifications), `Features/`, `PitPulseWidgets/`, `Tests/`, `UITests/`, generated from `macos/project.yml`.
+- `ios/PitPulseMobile.xcodeproj` — iOS app, Live Activity extension and tests, generated from `ios/project.yml`.
+- `Packages/SharedData` — contracts, API/storage/live services, widget snapshot publishing. `Packages/SharedComponents` — shared SwiftUI components and image assets; depends on `SharedData`. Both app projects link both packages.
+- Keep each provider behind its own adapter; never call third-party APIs from the macOS or iOS client.
 
 ## Build, Test, and Development Commands
 
 **Prefer Taskdeck for routine development, builds, tests, lint, and runtime control.** `taskdeck.yaml` is the command source of truth for the `PitPulse` session. Before acting, inspect `taskdeck status --session PitPulse --json`; register the existing config on a new machine with `taskdeck register --session PitPulse`, and use `taskdeck update --session PitPulse` after changing it. `taskdeck init` is only for the first initialization and refuses to overwrite an existing file.
 
-Start one named task with `taskdeck start --session PitPulse --task "<label>"`; inspect its status and logs until it exits, and verify its exit code. A start response or `running` state is not a passing build/check. For the development services, use targeted `restart` / `stop` for `Run Server` or `Run App`; do not launch a second unmanaged instance.
+Start one named task with `taskdeck start --session PitPulse --task "<label>"`; inspect its status and logs until it exits, and verify its exit code. A start response or `running` state is not a passing build/check. For the development services, use targeted `restart` / `stop` for `Run Live Replay` or `Run App`; do not launch a second unmanaged instance.
 
 | Task | Purpose |
 | --- | --- |
-| `Run Server`, `Run App` | Build then run the real local server and the Release native App under Taskdeck |
-| `Build Server`, `Build Server Release` | Locked Rust debug/release build |
-| `Test Server` | Locked Rust unit/integration tests with fixtures |
-| `Check Server Format`, `Lint Server` | rustfmt check and strict Clippy across all targets |
-| `Build App`, `Build App Release` | Swift debug/release build, separate from the running App bundle |
-| `Build App Tests` | Compile App and XCTest targets without starting a test host |
-| `Test App` | Run the unit XCTest scheme; launches a native App test host |
-| `Check Map Page`, `Check Live Models` | Map JavaScript checks and production Swift CLI model/store checks |
-| `Check Task Report` | Validate task JSON, run task-data tests, and check board JavaScript syntax |
+| `Run Live Replay`, `Run App` | Run the live replay server workflow and the Release native App under Taskdeck |
+| `Build App`, `Build App Release` | Swift debug/release build of the Desktop project, separate from the running App bundle |
+| `Build App Tests` | Compile Desktop App and XCTest targets without starting a test host |
+| `Build iOS`, `Test iOS` | Build or test the Mobile project for the iOS Simulator |
+| `Connect Simulator Replay` | Point the simulator build at the live replay workflow |
+| `Check Widget Publisher` | Run the `SharedData` widget snapshot publisher tests |
+| `Check App Launcher` | Verify the built Release bundle and embedded WidgetKit extension |
 
-All tasks are manual (`auto_start: false`). Always select a task explicitly: a start/restart of the entire session would also run builds and the App-host tests. Serialize Rust build/test/lint tasks that share Cargo artifacts, and Xcode tasks that share their development DerivedData. `Test App` refuses to run while F1Companion is running; coordinate with the user before stopping their App or running desktop-affecting tests. Prefer `Build App Tests` when desktop interaction is out of scope. UI acceptance schemes remain a separate, explicitly authorized workflow.
+All tasks are manual (`auto_start: false`). Always select a task explicitly: a start/restart of the entire session would also run builds and the App-host tests. Serialize Rust build/test/lint commands that share Cargo artifacts, and Xcode tasks that share their development DerivedData. `Test iOS` and desktop App-host tests must not overlap with a running App; coordinate with the user before stopping their App or running desktop-affecting tests. Prefer `Build App Tests` when desktop interaction is out of scope. UI acceptance schemes remain a separate, explicitly authorized workflow.
 
-Use direct `cargo`, `xcodebuild`, or `node` only when Taskdeck is unavailable or a focused diagnostic is not represented by a task; explain the fallback. Keep standard task commands in YAML aligned with required repository gates. Tokens, config, SQLite and Xcode products stay outside Git. Build/test success does not replace real UI or upstream acceptance.
+Use direct `cargo`, `xcodebuild`, `swift test`, or `node` only when Taskdeck is unavailable or a focused diagnostic is not represented by a task; explain the fallback. Keep standard task commands in YAML aligned with required repository gates. Tokens, config, SQLite and Xcode products stay outside Git. Build/test success does not replace real UI or upstream acceptance.
 
 ## Coding Style & Naming Conventions
 
@@ -40,7 +41,7 @@ Use direct `cargo`, `xcodebuild`, or `node` only when Taskdeck is unavailable or
 
 - Rust tests live beside modules and in `server/tests/`; name them `test_<behavior>` or `<unit>_<condition>_<expected>`.
 - Cover patch/reducer merging, provider adapters, and cache/retry paths with recorded fixtures. Never assert on live network output in CI.
-- macOS tests go in the Xcode test target; use `xcodebuild test`.
+- macOS and iOS tests go in their project test targets; shared package tests go in `Packages/<Name>/Tests/` and run with `swift test --package-path Packages/<Name>`.
 
 ## Commit & Pull Request Guidelines
 

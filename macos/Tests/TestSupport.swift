@@ -1,5 +1,5 @@
 import Foundation
-@testable import PitPulseData
+@testable import SharedData
 @testable import PitPulseDesktop
 
 @MainActor

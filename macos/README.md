@@ -10,11 +10,13 @@
 
 ## 构建与测试
 
+在仓库根目录执行：
+
 ```sh
-xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop   -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
+xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseDesktop -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 ```
 
-共享 scheme `PitPulseDesktop` 包含 App 和单元测试 target。部署目标为 macOS 26.0；当前运行验收记录以本机 macOS 26.5 / Xcode 26.6 为准。
+`macos/project.yml` 是 Desktop 工程的 XcodeGen 源；修改 target、scheme 或签名后运行 `xcodegen generate --spec macos/project.yml` 并提交生成的工程。共享 scheme `PitPulseDesktop` 包含 App 和单元测试 target，两个共享包由 workspace 统一解析。部署目标为 macOS 26.0；当前运行验收记录以本机 macOS 26.5 / Xcode 26.6 为准。
 
 ## Live Island 诊断
 

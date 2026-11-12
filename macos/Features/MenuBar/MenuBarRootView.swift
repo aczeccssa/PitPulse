@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import PitPulseData
+import SharedData
 
 // MARK: - Design tokens
 

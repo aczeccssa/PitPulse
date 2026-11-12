@@ -1,5 +1,5 @@
 import XCTest
-@testable import PitPulseData
+@testable import SharedData
 @testable import PitPulseDesktop
 
 final class ServerAddressTests: XCTestCase {

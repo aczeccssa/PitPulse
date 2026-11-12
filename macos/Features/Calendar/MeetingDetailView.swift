@@ -1,6 +1,5 @@
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 struct MeetingDetailView: View {
     enum DetailTab: String, CaseIterable, Identifiable {

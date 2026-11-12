@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import PitPulseData
+@testable import SharedData
 @testable import PitPulseDesktop
 
 @MainActor

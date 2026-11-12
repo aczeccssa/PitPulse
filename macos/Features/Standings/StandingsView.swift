@@ -1,7 +1,7 @@
 import AppKit
 import Charts
 import SwiftUI
-import PitPulseData
+import SharedData
 
 struct StandingsView: View {
     @ObservedObject var model: AppModel

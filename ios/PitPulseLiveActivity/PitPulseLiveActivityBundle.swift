@@ -1,4 +1,4 @@
-import PitPulseComponents
+import SharedComponents
 import SwiftUI
 import WidgetKit
 

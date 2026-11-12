@@ -1,8 +1,7 @@
-import PitPulseComponents
+import SharedComponents
 import SwiftUI
 import SceneKit
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 struct SettingsScreen: View {
     @EnvironmentObject private var model: MobileModel
@@ -94,7 +93,7 @@ struct SettingsScreen: View {
 
                 Section("关于") {
                     LabeledContent("版本", value: "0.1.0")
-                    LabeledContent("数据层", value: model.hasToken ? "PitPulseData · Token 已保存" : "PitPulseData")
+                    LabeledContent("数据层", value: model.hasToken ? "SharedData · Token 已保存" : "SharedData")
                 }
             }
             .scrollContentBackground(.hidden)

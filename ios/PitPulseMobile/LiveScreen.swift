@@ -1,7 +1,6 @@
 import SwiftUI
 import Charts
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 struct LiveScreen: View {
     var onClose: (() -> Void)? = nil

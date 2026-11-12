@@ -1,7 +1,6 @@
-import PitPulseComponents
+import SharedComponents
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 @main
 struct PitPulseMobileApp: App {

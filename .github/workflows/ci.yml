@@ -73,7 +73,7 @@ jobs:
       - name: Build for testing
         run: >-
           xcodebuild
-          -project PitPulse.xcodeproj
+          -workspace PitPulse.xcworkspace
           -scheme PitPulseDesktop
           -configuration Debug
           -destination 'platform=macOS'

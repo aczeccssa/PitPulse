@@ -1,0 +1,174 @@
+name: PitPulseDesktop
+options:
+  bundleIdPrefix: com.pitpulse
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+packages:
+  SharedData:
+    path: ../Packages/SharedData
+  SharedComponents:
+    path: ../Packages/SharedComponents
+  Nook:
+    url: https://github.com/twinkling-reality/opennook.git
+    revision: 2b50b5c3a99df8914e25e199d29bf7aa505f7a59
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "2"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEVELOPMENT_TEAM: "9RQST8G2LS"
+targets:
+  PitPulseDesktop:
+    productName: PitPulse
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+      - path: Core/Models
+      - path: Features
+        excludes:
+          - "Maps/map.html"
+      - path: Resources/AppAssets.xcassets
+        buildPhase: resources
+      - path: Resources/AppIcon.icon
+        buildPhase: resources
+      - path: Features/Maps/map.html
+        buildPhase: resources
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Support/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: "Pit Pulse"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.sports"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        CODE_SIGN_ENTITLEMENTS: Support/PitPulseDesktop.entitlements
+        CODE_SIGN_STYLE: Automatic
+        COMBINE_HIDPI_IMAGES: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1Companion
+        PRODUCT_MODULE_NAME: PitPulseDesktop
+        PRODUCT_NAME: PitPulse
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
+    dependencies:
+      - package: Nook
+        product: NookApp
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+      - target: PitPulseWidgets
+        embed: true
+
+  PitPulseWidgets:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: PitPulseWidgets/PitPulseDesktopWidgetBundle.swift
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: PitPulseWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PitPulseWidgets/PitPulseWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        ENABLE_APP_SANDBOX: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1Companion.widgets
+        PRODUCT_NAME: PitPulseWidgets
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@executable_path/../../../../Frameworks"
+    dependencies:
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+
+  PitPulseDesktopTests:
+    productName: PitPulseTests
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+        excludes:
+          - "Headless/**"
+          - "live-map-check.swift"
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1CompanionTests
+        PRODUCT_NAME: PitPulseTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PitPulse.app/Contents/MacOS/PitPulse"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        CODE_SIGN_STYLE: Automatic
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@loader_path/../Frameworks"
+    dependencies:
+      - target: PitPulseDesktop
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+
+  PitPulseDesktopUITests:
+    productName: PitPulseUITests
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: UITests
+    settings:
+      base:
+        SDKROOT: macosx
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.F1CompanionUITests
+        PRODUCT_NAME: PitPulseUITests
+        TEST_TARGET_NAME: PitPulseDesktop
+        CODE_SIGN_STYLE: Automatic
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+          - "@loader_path/Frameworks"
+    dependencies:
+      - target: PitPulseDesktop
+
+schemes:
+  PitPulseDesktop:
+    build:
+      targets:
+        PitPulseDesktop: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PitPulseDesktopTests
+    archive:
+      config: Release
+  PitPulseLiveAcceptance:
+    build:
+      targets:
+        PitPulseDesktop: all
+        PitPulseDesktopUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - PitPulseDesktopUITests

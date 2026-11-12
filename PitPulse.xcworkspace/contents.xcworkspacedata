@@ -2,15 +2,15 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:PitPulse.xcodeproj">
+      location = "group:macos/PitPulseDesktop.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Packages/PitPulseShared">
+      location = "group:ios/PitPulseMobile.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Packages/PitPulseData">
+      location = "group:Packages/SharedData">
    </FileRef>
    <FileRef
-      location = "group:Packages/PitPulseComponents">
+      location = "group:Packages/SharedComponents">
    </FileRef>
 </Workspace>

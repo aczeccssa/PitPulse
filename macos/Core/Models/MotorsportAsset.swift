@@ -1,6 +1,6 @@
 import AppKit
-import PitPulseComponents
-import PitPulseShared
+import SharedComponents
+import SharedData
 
 enum MotorsportAsset {
     enum Kind: Equatable { case helmet, driverPhoto, teamLogo, carSide }

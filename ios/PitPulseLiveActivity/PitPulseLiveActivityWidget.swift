@@ -1,8 +1,8 @@
-import PitPulseComponents
+import SharedComponents
 import ActivityKit
 import SwiftUI
 import WidgetKit
-import PitPulseShared
+import SharedData
 
 struct PitPulseLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {

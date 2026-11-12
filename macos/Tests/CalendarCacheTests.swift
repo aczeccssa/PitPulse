@@ -1,6 +1,5 @@
 import XCTest
-@testable import PitPulseData
-@testable import PitPulseShared
+@testable import SharedData
 @testable import PitPulseDesktop
 
 final class CalendarCacheTests: XCTestCase {

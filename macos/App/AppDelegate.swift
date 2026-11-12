@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import PitPulseShared
+import SharedData
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {

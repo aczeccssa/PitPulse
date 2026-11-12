@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 @MainActor
 final class MobileModel: ObservableObject {

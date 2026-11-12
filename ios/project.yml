@@ -1,0 +1,126 @@
+name: PitPulseMobile
+options:
+  bundleIdPrefix: com.pitpulse
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+packages:
+  SharedData:
+    path: ../Packages/SharedData
+  SharedComponents:
+    path: ../Packages/SharedComponents
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "2"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEVELOPMENT_TEAM: "9RQST8G2LS"
+targets:
+  PitPulseMobile:
+    productName: PitPulse
+    type: application
+    platform: iOS
+    sources:
+      - path: PitPulseMobile
+        excludes:
+          - "Info.plist"
+      - path: ../macos/Resources/AppIcon.icon
+        buildPhase: resources
+    settings:
+      base:
+        SDKROOT: iphoneos
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: PitPulseMobile/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: "Pit Pulse"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.sports"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        CODE_SIGN_ENTITLEMENTS: PitPulseMobile/PitPulseMobile.entitlements
+        CODE_SIGN_STYLE: Automatic
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile
+        PRODUCT_MODULE_NAME: PitPulseMobile
+        PRODUCT_NAME: PitPulse
+        TARGETED_DEVICE_FAMILY: "1"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
+    dependencies:
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+      - target: PitPulseLiveActivity
+        embed: true
+
+  PitPulseLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PitPulseLiveActivity
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        SDKROOT: iphoneos
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: PitPulseLiveActivity/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PitPulseLiveActivity/PitPulseLiveActivity.entitlements
+        CODE_SIGN_STYLE: Automatic
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.liveactivity
+        PRODUCT_NAME: PitPulseLiveActivity
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+          - "@executable_path/../../Frameworks"
+    dependencies:
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+
+  PitPulseMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PitPulseMobileTests
+    settings:
+      base:
+        SDKROOT: iphoneos
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - package: SharedData
+        product: SharedData
+      - package: SharedComponents
+        product: SharedComponents
+
+schemes:
+  PitPulseMobile:
+    build:
+      targets:
+        PitPulseMobile: all
+        PitPulseLiveActivity: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PitPulseMobileTests
+    archive:
+      config: Release
+  PitPulseLiveActivity:
+    build:
+      targets:
+        PitPulseLiveActivity: all
+    run:
+      config: Debug

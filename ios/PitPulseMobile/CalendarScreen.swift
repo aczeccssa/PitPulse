@@ -1,6 +1,5 @@
 import SwiftUI
-import PitPulseData
-import PitPulseShared
+import SharedData
 
 struct OverviewScreen: View {
     @EnvironmentObject private var model: MobileModel

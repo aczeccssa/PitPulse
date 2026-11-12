@@ -139,7 +139,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 ### T04 — macOS 原生工程与壳
 
-**实现范围**：`PitPulse.xcodeproj`、共享 scheme、`macos/App/`、`Features/MenuBar/`、`Core/Models/AppSymbol.swift`、测试 target、macOS CI job。
+**实现范围**：`macos/PitPulseDesktop.xcodeproj`（当前由 `macos/project.yml` 生成）、共享 scheme、`macos/App/`、`Features/MenuBar/`、`Core/Models/AppSymbol.swift`、测试 target、macOS CI job。
 
 - Swift 6；一个 `@main App`；`MenuBarExtra(.window)` + Settings；无第二 App 入口、无主窗口抢焦点。
 - 先完成连接状态、loading / empty / error、页签导航；预览样本与真实运行明确隔离，禁止正式版默认展示编造赛事。
@@ -296,9 +296,9 @@ cargo test --locked --manifest-path server/Cargo.toml
 cargo build --release --locked --manifest-path server/Cargo.toml
 
 # macOS（T04 建好项目、共享 scheme 与 test target 后执行）
-xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
+xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseDesktop \
   -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
+xcodebuild -workspace PitPulse.xcworkspace -scheme PitPulseDesktop \
   -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
 ```
 
@@ -387,11 +387,11 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 ### T25 — E1 客户端分包（Data / Components / Desktop 基座）
 
-把 `macos/Core` 的纯 Foundation 能力拆为三个独立本地 Swift Package（`PitPulseShared` / `PitPulseData` / `PitPulseComponents`，包名=模块名），由 `PitPulse.xcworkspace` 与单一 `PitPulse.xcodeproj` 统一管理；Components 只依赖 Shared，不把网络栈带进 Widget / Watch。验收以 `Build App` 与 `Build App Tests` 通过为准，并需在运行中的 App 上复核 MenuBar / Notch / 地图无回退。
+把 `macos/Core` 的纯 Foundation 能力拆为本地 Swift Package，由 `PitPulse.xcworkspace` 统一管理。当前结构已收敛为两个包：`SharedData`（契约、API / 存储 / Live 服务）与 `SharedComponents`（共享 SwiftUI 组件与资源，依赖 `SharedData`）；Desktop 与 Mobile 各自为独立 project 并同时链接两个包。验收以 `Build App` 与 `Build App Tests` 通过为准，并需在运行中的 App 上复核 MenuBar / Notch / 地图无回退。
 
 ### T26 — iOS 26+ App 与灵动岛 Live Activity
 
-新增 iOS 26+ App（赛程 / Live / 设置）与独立 Widget Extension，复用 `PitPulseData` 的数据层；`PitPulseActivityAttributes` 与 `ContentState` 定义在 Shared，App 内 `LiveActivityController` 驱动灵动岛与锁屏 Live Activity，无需服务端推送。验收以 iOS 构建、`Test iOS` 单元测试、模拟器真实数据运行与真机灵动岛复核为准。
+新增 iOS 26+ App（赛程 / Live / 设置）与独立 Live Activity Extension，复用 `SharedData` 的数据层；`PitPulseActivityAttributes` 与 `ContentState` 定义在 `SharedData`，App 内 `LiveActivityController` 驱动灵动岛与锁屏 Live Activity，无需服务端推送。验收以 iOS 构建、`Test iOS` 单元测试、模拟器真实数据运行与真机灵动岛复核为准。
 
 ### T27 — 移动端视觉与 Widget
 

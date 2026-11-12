@@ -1,6 +1,6 @@
 import SwiftUI
 import Charts
-import PitPulseData
+import SharedData
 
 struct AnalysisCard<Content: View>: View {
     let title: String
