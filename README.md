@@ -91,17 +91,17 @@ See `server/README.md` for server build, test, run and deployment guidance.
 
 `taskdeck.yaml` is the command source of truth for the `PitPulse` session. Register it on a new machine with `taskdeck register --session PitPulse`, and run `taskdeck update --session PitPulse` after editing the file.
 
-Tasks currently registered by this configuration: `Run Server`, `Run App`, `Check App Launcher`, `Build App`, `Build App Tests`, `Build App Release`, `Build iOS`, `Test iOS`, `Check Widget Publisher`, `Check Task Report`, `Test Server`, `Check Server Format`, `Lint Server`, and `Check Deployment Scripts`. Start one explicitly:
+Tasks currently registered by this configuration: `Run Live Dev Server`, `Run App`, `Check App Launcher`, `Build App`, `Build App Tests`, `Build App Release`, `Build iOS`, `Test iOS`, `Check Widget Publisher`, and `Check Task Report`. Start one explicitly:
 
 ```sh
-taskdeck start --session PitPulse --task "Run Server"
+taskdeck start --session PitPulse --task "Run Live Dev Server"
 taskdeck start --session PitPulse --task "Run App"
 taskdeck status --session PitPulse
 taskdeck restart --session PitPulse --task "Run App"
 taskdeck stop --session PitPulse --task "Run App"
 ```
 
-`Run Server` uses `scripts/run-server.py` and the real F1 provider. Local configuration is read from `~/Library/Application Support/PitPulse/server/environment.json` when present (string `F1_COMPANION_*` / `F1_LIVE_ACCESS_TOKEN` values only); Mapbox's public token is read from `~/Library/Application Support/PitPulse/mapbox-public-token`. Keep these local files private and outside Git. The default database also lives in that user directory.
+`Run Live Dev Server` uses `scripts/run-server.py` and the real F1 provider. Local configuration is read from `~/Library/Application Support/PitPulse/server/environment.json` when present (string `F1_COMPANION_*` / `F1_LIVE_ACCESS_TOKEN` values only); Mapbox's public token is read from `~/Library/Application Support/PitPulse/mapbox-public-token`. Keep these local files private and outside Git. The default database also lives in that user directory.
 
 `Run App` directly invokes `scripts/run-app.sh` with Bash. It builds `PitPulseDesktop` Release for the host architecture into `~/Library/Caches/PitPulse/Xcode`, checks the embedded `PitPulseWidgets.appex` and the complete bundle signature, registers the App/deep links and Widget with LaunchServices/PlugInKit, then `exec`s the foreground App so Taskdeck owns its real PID. The YAML explicitly sets the non-secret `PITPULSE_SERVER_URL=http://127.0.0.1:38701`; remove that override to retain the App's saved server preference. Tokens remain in Keychain. The launcher refuses to build over a running main App; use a targeted `Run App` restart rather than launching a second instance. `Check App Launcher` runs the same build/signature checks without registering or starting the App, and likewise requires the main App to be stopped. Development/test builds use separate DerivedData. Server availability remains handled by the App's retry path; stale/disconnected upstream data is not replaced by replay. All tasks remain manual (`auto_start: false`).
 
@@ -109,7 +109,7 @@ taskdeck stop --session PitPulse --task "Run App"
 
 ## VPS release pipeline
 
-[Deployment acceptance](docs/acceptance/deployment.md) documents the versioned CI artifact, manual production approval, dedicated SSH key boundary, immutable release directories, SQLite backup/atomic systemd switch, HTTPS/SSE health checks and rollback. CI builds the Linux x86-64 artifact; `.github/workflows/deploy.yml` is a manually dispatched `production` environment workflow that uses only repository-external GitHub Secrets. Cold start uses a new VPS SQLite DB, never the local WAL database. Configure the app with `https://pitpulse.lestere.bond` and its per-server Keychain Bearer token after the public site is accepted.
+[Deployment acceptance](docs/acceptance/deployment.md) documents the versioned CI artifact, manual production approval, dedicated SSH key boundary, immutable release directories, SQLite backup/atomic systemd switch, HTTPS/SSE health checks and rollback. The active operator config is `/etc/pitpulse/config.toml`; bootstrap preserves an existing file and deploys never replace it, so manually enabled feature flags survive every release. CI builds the Linux x86-64 artifact; `.github/workflows/deploy.yml` is a manually dispatched `production` environment workflow that uses only repository-external GitHub Secrets. Cold start uses a new VPS SQLite DB, never the local WAL database. Configure the app with `https://pitpulse.lestere.bond` and its per-server Keychain Bearer token after the public site is accepted.
 
 The repository contains keyless templates only. The user has added the DNS A record and approved the production rollout; see [deployment acceptance](docs/acceptance/deployment.md) for verification details and go-live checks. Do not store real tokens, SSH keys, SQLite databases or captured live-feed logs in Git or CI artifacts.
  `Test Server` / `Test iOS` run their suites. Run Cargo tasks sequentially and serialize Xcode development tasks; routine agent work follows the Taskdeck-first rules in `AGENTS.md`.

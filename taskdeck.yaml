@@ -2,119 +2,50 @@ version: 1
 session: PitPulse
 task_order:
 - Run Live Replay
-- Run Server
+- Run Live Dev Server
 - Run App
-- Build App
-- Build App Tests
-- Build App Release
-- Build iOS
-- Test iOS
-- Test Server
-- Check Server Format
-- Lint Server
-- Check Task Report
-- Check Deployment Scripts
 tasks:
   Build App:
     command: /bin/bash
-    args:
-    - scripts/xcode-task.sh
-    - build
-    - Debug
+    args: [scripts/xcode-task.sh, build, Debug]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: true
   Build App Release:
     command: /bin/bash
-    args:
-    - scripts/xcode-task.sh
-    - build
-    - Release
+    args: [scripts/xcode-task.sh, build, Release]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: true
   Build App Tests:
     command: /bin/bash
-    args:
-    - scripts/xcode-task.sh
-    - build-for-testing
-    - Debug
+    args: [scripts/xcode-task.sh, build-for-testing, Debug]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: true
   Build iOS:
     command: /bin/bash
-    args:
-    - scripts/xcode-ios-task.sh
-    - build
-    - Debug
+    args: [scripts/xcode-ios-task.sh, build, Debug]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: true
-  Check Deployment Scripts:
+  Test iOS:
     command: /bin/bash
-    args:
-    - server/deploy/test-deploy-scripts.sh
+    args: [scripts/xcode-ios-task.sh, test, Debug]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
-  Check Server Format:
-    command: cargo
-    args:
-    - fmt
-    - --manifest-path
-    - server/Cargo.toml
-    - --
-    - --check
+  Check Widget Publisher:
+    command: /bin/bash
+    args: [scripts/check-widget-publisher.sh]
     cwd: .
-    env: {}
-    shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
   Check Task Report:
-    command: /bin/zsh
-    args:
-    - -lc
-    - node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js
+    command: /bin/bash
+    args: [-lc, 'node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js']
     cwd: .
-    env: {}
+    auto_start: false
+  Check App Launcher:
+    command: /bin/bash
+    args: [scripts/run-app.sh, --check]
+    cwd: .
     shell: false
     auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
-  Lint Server:
-    command: cargo
-    args:
-    - clippy
-    - --locked
-    - --manifest-path
-    - server/Cargo.toml
-    - --all-targets
-    - --
-    - -D
-    - warnings
-    cwd: .
-    env: {}
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
   Run App:
     command: /bin/bash
     args: [scripts/run-app.sh]
@@ -125,56 +56,18 @@ tasks:
     auto_start: false
     stop_timeout_ms: 10000
     clear_logs_on_restart: true
-  Run Server:
+  Run Live Dev Server:
     command: /bin/zsh
     args:
     - -lc
     - exec python3 scripts/run-server.py
     cwd: .
-    env:
-      F1_COMPANION_BIND: 0.0.0.0:38701
+    env: {}
     shell: false
     auto_start: false
     stop_timeout_ms: 10000
     clear_logs_on_restart: false
-  Test Server:
-    command: cargo
-    args:
-    - test
-    - --locked
-    - --manifest-path
-    - server/Cargo.toml
-    cwd: .
-    env: {}
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: false
-  Test iOS:
-    command: /bin/bash
-    args:
-    - scripts/xcode-ios-task.sh
-    - test
-    - Debug
-    cwd: .
-    env: {}
-    shell: false
-    auto_start: false
-    stop_timeout_ms: 3000
-    clear_logs_on_restart: true
 
-  Check Widget Publisher:
-    command: /bin/bash
-    args: [scripts/check-widget-publisher.sh]
-    cwd: .
-    auto_start: false
-
-  Check App Launcher:
-    command: /bin/bash
-    args: [scripts/run-app.sh, --check]
-    cwd: .
-    shell: false
-    auto_start: false
   Run Live Replay:
     command: /usr/bin/python3
     args: [scripts/run-live-replay.py]
