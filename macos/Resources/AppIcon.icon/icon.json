@@ -1,49 +1,55 @@
 {
-  "fill": {
-    "solid": "srgb:0.07,0.075,0.09,1"
+  "fill" : {
+    "solid" : "srgb:0.07000,0.07500,0.09000,1.00000"
   },
-  "groups": [
+  "groups" : [
     {
-      "name": "Logo",
-      "layers": [
+      "layers" : [
         {
-          "name": "Logo",
-          "image-name": "logo-foreground.png",
-          "is-glass": false
+          "image-name" : "logo-foreground.png",
+          "name" : "Logo"
         }
       ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0
+      "name" : "Logo",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0
       },
-      "translucency": {
-        "enabled": false,
-        "value": 0
-      },
-      "specular": false
+      "specular" : false,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
     },
     {
-      "name": "Background",
-      "layers": [
+      "layers" : [
         {
-          "name": "Background",
-          "image-name": "background.png",
-          "is-glass": false
+          "blend-mode" : "normal",
+          "fill" : {
+            "solid" : "extended-gray:1.00000,1.00000"
+          },
+          "image-name" : "background.png",
+          "name" : "Background"
+        },
+        {
+          "hidden" : true,
+          "image-name" : "background.png",
+          "name" : "Background"
         }
       ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0
+      "name" : "Background",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0
       },
-      "translucency": {
-        "enabled": false,
-        "value": 0
-      },
-      "specular": false
+      "specular" : false,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
     }
   ],
-  "supported-platforms": {
-    "squares": "shared",
-    "circles": []
+  "supported-platforms" : {
+    "squares" : "shared"
   }
 }

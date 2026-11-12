@@ -78,7 +78,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 - **M1：第一条可用链路** — T01、T02、T04、T05、T06：真实赛历 → SQLite → REST → Menu Bar；可选赛季、显示国旗和本地时间、离线可读。
 - **M2：完整 V1** — T07～T11：各 Session 成绩、WDC/WCC、修订刷新、提醒、故障恢复；T03 的可用素材逐步接入。
 - **M3：尽力提供 Live V2** — T12～T14：协议事实明确后再接实时链路和 Notch；协议或授权受阻不影响 M2。
-- **M4：个人部署与品牌素材** — T15、T24：本地部署演练先行；真实 VPS / 比赛时段验证独立记录，不用模拟验收代替。
+- **M4：个人部署与品牌素材** — T15、T24、T29：本地部署演练先行；真实 VPS / 比赛时段验证独立记录，不用模拟验收代替。菜单栏品牌图标作为 T24 的后续独立记录。
 
 以可运行的纵向闭环推进，不先造完整设计系统、复杂主题、全量遥测存储、素材后台、账户系统或通用工作流平台。没有日期 / 工期承诺；外部 API 与真实赛期按证据推进。
 
@@ -376,6 +376,12 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 **验收**：原创几何主体与真实 alpha；背景单独保存、画布尺寸一致；预览为正视图标而非设备样机；记录提示词、图层用法与图片检查证据；macOS Release 构建产物包含并引用新图标；server favicon 实际 HTTP200、类型正确，启用 token 时静态图标可读且 API 鉴权保持；具名 App/server 更新成功；任务报告校验通过。
 
 **后续头像补充**：F1 新增车手没有本地头盔时，可回退到同一稳定车手 ID 的本地头像；补 2026 Haas Rafael Camara 官方肖像，已有 F1 头盔优先和 WEC 肖像展示不变。
+
+### T29 — 菜单栏品牌紧凑图标
+
+**范围（M4）**：`design/brand/pitpulse-v1/`、`macos/Resources/PitPulseAssets.xcassets/MenuBarIcon.imageset`、`macos/Features/MenuBar/StatusMenuLabel.swift`。沿用 T24 的透明主体，按 alpha 可见边界裁掉 App 图标的方形画布留白，导出适配 24 pt 菜单栏的紧凑模板图标；不改弹窗、Live Island 功能符号和 App/favicon。
+
+**验收**：`menubar-mark.png` 为 743 × 625 RGBA，透明背景与镂空不变；`MenuBarIcon` 提供 20 × 18 / 40 × 36 / 60 × 54 px 三档，主体高 16 pt、约占画布 89%，并声明 template rendering；`StatusMenuLabel` 使用该资源；构建通过，且重启 App 后浅色/深色菜单栏的大小、着色与对齐已目视确认。
 
 ## 多平台客户端（M7）
 
