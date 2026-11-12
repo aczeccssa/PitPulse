@@ -9,7 +9,11 @@ struct PitPulseMobileApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if CommandLine.arguments.contains("--island-preview") {
+            if CommandLine.arguments.contains("--widget-preview") {
+                NavigationStack { WidgetPreviewGallery() }
+                    .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
+                    .tint(PulseStyle.red)
+            } else if CommandLine.arguments.contains("--island-preview") {
                 IslandModePreviewSheet().environmentObject(model)
             } else {
                 RootView().environmentObject(model)
@@ -74,6 +78,7 @@ struct RootView: View {
             model.startLive()
             await model.loadF1Roster()
             await model.loadCalendar()
+            await model.loadWidgetHighlights()
         }
         .onChange(of: scenePhase) { _, phase in if phase == .active { model.startLive() } }
         .onOpenURL { url in

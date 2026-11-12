@@ -54,6 +54,7 @@ final class MobileModel: ObservableObject {
     @Published var favoriteDriverID: String? {
         didSet {
             defaults.set(favoriteDriverID, forKey: PreferenceKeys.favoriteDriverId)
+            publishFavoriteWidget()
             updateActivity()
         }
     }
@@ -77,6 +78,10 @@ final class MobileModel: ObservableObject {
     private var liveStarted = false
     private var calendarRequestID = UUID()
     private let widgetPublisher = WidgetSnapshotPublisher()
+    private var widgetHighlightsContext: String?
+    private var rosterSavedAt: Date = .distantPast
+    private var recentRaceSources: [FavoriteRaceSource] = []
+    private var recentRaceSavedAt: Date = .distantPast
     @Published private var credentialRevision = 0
 
     var dataContext: String { "\(serverURL?.absoluteString ?? serverText)|\(season)|\(credentialRevision)" }
@@ -90,6 +95,10 @@ final class MobileModel: ObservableObject {
         driverRoster = []
         historiesBySeries = [:]
         liveSnapshots = [:]
+        widgetHighlightsContext = nil
+        rosterSavedAt = .distantPast
+        recentRaceSources = []
+        recentRaceSavedAt = .distantPast
         widgetPublisher.clear()
     }
 
@@ -170,6 +179,62 @@ final class MobileModel: ObservableObject {
         widgetPublisher.publishCalendar(meetings: meetings, savedAt: savedAt)
     }
 
+    /// Publishes the most recent completed races for the post-race and favorite-driver widgets.
+    /// Widgets never fetch; a missing result leaves the previous honest snapshot in place.
+    func loadWidgetHighlights(force: Bool = false) async {
+        guard let serverURL else { return }
+        let races = completedRaces(limit: 3)
+        guard let newest = races.first else { return }
+        let baseContext = dataContext
+        let context = "\(baseContext)|" + races.map(\.session.id).joined(separator: ",")
+        guard force || widgetHighlightsContext != context else { return }
+        let client = APIClient(baseURL: serverURL)
+        var sources: [FavoriteRaceSource] = []
+        for race in races {
+            do {
+                let response = try await client.sessionResults(sessionId: race.session.id, token: currentToken)
+                guard baseContext == dataContext, !Task.isCancelled else { return }
+                guard !response.data.isEmpty else { continue }
+                sources.append(FavoriteRaceSource(meeting: race.meeting, session: race.session,
+                    results: response.data,
+                    savedAt: response.meta.stale ? .distantPast : (response.meta.fetchedAt ?? .now)))
+            } catch {
+                continue
+            }
+        }
+        guard let newestSource = sources.first(where: { $0.session.id == newest.session.id }) else { return }
+        widgetHighlightsContext = context
+        recentRaceSources = sources
+        recentRaceSavedAt = sources.contains { $0.savedAt == .distantPast }
+            ? .distantPast
+            : (sources.map(\.savedAt).max() ?? .distantPast)
+        // Results are enough for the podium, fastest lap and distance. Safety-car
+        // periods need the much heavier analysis payload, so the widget omits them
+        // rather than making every launch download telemetry.
+        widgetPublisher.publishLastRace(meeting: newestSource.meeting, session: newestSource.session,
+            results: newestSource.results, savedAt: newestSource.savedAt)
+        publishFavoriteWidget()
+    }
+
+    private func completedRaces(limit: Int) -> [(meeting: Meeting, session: Session)] {
+        let now = Date()
+        let races = meetings
+            .compactMap { meeting -> (Meeting, Session)? in
+                let race = meeting.sessions
+                    .filter { $0.sessionType == .race && $0.status != .cancelled && $0.status != .postponed }
+                    .filter { session in
+                        if session.status == .finished { return true }
+                        guard session.status != .live else { return false }
+                        let end = session.endTime ?? session.startTime.addingTimeInterval(3 * 3600)
+                        return end < now
+                    }
+                    .max { $0.startTime < $1.startTime }
+                return race.map { (meeting, $0) }
+            }
+            .sorted { $0.1.startTime > $1.1.startTime }
+        return Array(races.prefix(limit))
+    }
+
     // MARK: Live
 
     var availableLiveSeries: [LiveSeries] {
@@ -204,8 +269,23 @@ final class MobileModel: ObservableObject {
             guard context == dataContext, !Task.isCancelled else { return }
             driverRoster = response.data
             rosterLoadError = driverRoster.isEmpty ? "当前服务器暂无 F1 车手数据，请检查服务地址。" : nil
+            let savedAt = response.meta.stale ? .distantPast : (response.meta.fetchedAt ?? .now)
+            widgetPublisher.publishStandings(response.data, season: season, savedAt: savedAt)
+            rosterSavedAt = savedAt
+            publishFavoriteWidget()
             updateActivity()
         } catch { if !Task.isCancelled { rosterLoadError = Self.message(for: error) } }
+    }
+
+    private func publishFavoriteWidget() {
+        guard let favoriteDriverID else {
+            widgetPublisher.publishFavoriteDriver([], favoriteID: nil, season: season, savedAt: rosterSavedAt)
+            return
+        }
+        guard !driverRoster.isEmpty else { return }
+        let savedAt = recentRaceSources.isEmpty ? rosterSavedAt : min(rosterSavedAt, recentRaceSavedAt)
+        widgetPublisher.publishFavoriteDriver(driverRoster, favoriteID: favoriteDriverID,
+            season: season, savedAt: savedAt, recentRaces: recentRaceSources)
     }
 
     func startLive() {

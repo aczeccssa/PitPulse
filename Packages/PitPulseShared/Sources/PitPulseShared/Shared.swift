@@ -177,6 +177,192 @@ extension RaceWidgetCache {
     }
 }
 
+// MARK: - Standings widget
+
+public struct WidgetStandingDriver: Codable, Equatable, Sendable, Identifiable {
+    public var id: String { driverID }
+    public var driverID: String
+    public var name: String
+    public var team: String
+    public var constructorID: String?
+    public var position: Int
+    public var points: Double
+    public var gapToLeader: Double
+    public init(driverID: String, name: String, team: String, constructorID: String? = nil,
+                position: Int, points: Double, gapToLeader: Double) {
+        self.driverID = driverID; self.name = name; self.team = team
+        self.constructorID = constructorID; self.position = position
+        self.points = points; self.gapToLeader = gapToLeader
+    }
+}
+
+public struct StandingsWidgetSnapshot: Codable, Equatable, Sendable {
+    public var season: Int
+    public var savedAt: Date
+    public var drivers: [WidgetStandingDriver]
+    public init(season: Int, savedAt: Date = .now, drivers: [WidgetStandingDriver]) {
+        self.season = season; self.savedAt = savedAt; self.drivers = drivers
+    }
+    public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
+}
+
+// MARK: - Favorite driver widget
+
+public struct FavoriteRaceEntry: Codable, Equatable, Sendable, Identifiable {
+    public var id: String
+    public var round: Int?
+    public var meeting: String
+    public var date: Date
+    public var position: Int?
+    public var points: Double?
+    public var laps: Int?
+    public var fastestLap: String?
+    public var gap: String?
+    public var classification: String?
+    public init(id: String, round: Int? = nil, meeting: String, date: Date, position: Int? = nil,
+                points: Double? = nil, laps: Int? = nil, fastestLap: String? = nil,
+                gap: String? = nil, classification: String? = nil) {
+        self.id = id; self.round = round; self.meeting = meeting; self.date = date
+        self.position = position; self.points = points; self.laps = laps
+        self.fastestLap = fastestLap; self.gap = gap; self.classification = classification
+    }
+}
+
+public struct FavoriteDriverWidgetSnapshot: Codable, Equatable, Sendable {
+    public var season: Int
+    public var savedAt: Date
+    public var favoriteID: String
+    public var driver: WidgetStandingDriver
+    public var wins: Int
+    /// Points advantage over the next driver, used when the favorite leads the championship.
+    public var gapToBehind: Double?
+    /// Most recent completed races, newest first.
+    public var recentRaces: [FavoriteRaceEntry]
+    public init(season: Int, savedAt: Date = .now, favoriteID: String, driver: WidgetStandingDriver,
+                wins: Int = 0, gapToBehind: Double? = nil, recentRaces: [FavoriteRaceEntry] = []) {
+        self.season = season; self.savedAt = savedAt; self.favoriteID = favoriteID
+        self.driver = driver; self.wins = wins; self.gapToBehind = gapToBehind
+        self.recentRaces = recentRaces
+    }
+    public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
+}
+
+// MARK: - Last race widget
+
+public struct LastRacePodiumEntry: Codable, Equatable, Sendable, Identifiable {
+    public var id: String { driverID }
+    public var driverID: String
+    public var name: String
+    public var team: String
+    public var constructorID: String?
+    public var position: Int
+    public var time: String
+    public var points: Double?
+    public init(driverID: String, name: String, team: String, constructorID: String? = nil,
+                position: Int, time: String, points: Double? = nil) {
+        self.driverID = driverID; self.name = name; self.team = team
+        self.constructorID = constructorID; self.position = position
+        self.time = time; self.points = points
+    }
+}
+
+public struct LastRaceWidgetSnapshot: Codable, Equatable, Sendable {
+    public var meeting: String
+    public var session: String
+    public var season: Int?
+    public var round: Int?
+    public var raceDate: Date?
+    public var savedAt: Date
+    public var podium: [LastRacePodiumEntry]
+    public var fastestLap: String?
+    public var laps: Int?
+    public var safetyCars: Int?
+    public init(meeting: String, session: String, season: Int? = nil, round: Int? = nil,
+                raceDate: Date? = nil, savedAt: Date = .now, podium: [LastRacePodiumEntry],
+                fastestLap: String? = nil, laps: Int? = nil, safetyCars: Int? = nil) {
+        self.meeting = meeting; self.session = session; self.season = season
+        self.round = round; self.raceDate = raceDate
+        self.savedAt = savedAt; self.podium = podium; self.fastestLap = fastestLap
+        self.laps = laps; self.safetyCars = safetyCars
+    }
+    public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
+}
+
+// MARK: - Upcoming races widget
+
+public struct UpcomingRaceEntry: Codable, Equatable, Sendable, Identifiable {
+    public var id: String
+    public var round: Int?
+    public var name: String
+    public var location: String
+    public var countryCode: String?
+    public var start: Date
+    public var end: Date
+    public var raceStart: Date?
+    public var nextSessionStart: Date?
+    public var nextSessionTitle: String?
+    public init(id: String, round: Int? = nil, name: String, location: String,
+                countryCode: String? = nil, start: Date, end: Date, raceStart: Date? = nil,
+                nextSessionStart: Date? = nil, nextSessionTitle: String? = nil) {
+        self.id = id; self.round = round; self.name = name; self.location = location
+        self.countryCode = countryCode; self.start = start; self.end = end; self.raceStart = raceStart
+        self.nextSessionStart = nextSessionStart; self.nextSessionTitle = nextSessionTitle
+    }
+}
+
+public struct UpcomingWidgetSnapshot: Codable, Equatable, Sendable {
+    public var savedAt: Date
+    public var races: [UpcomingRaceEntry]
+    public init(savedAt: Date = .now, races: [UpcomingRaceEntry]) {
+        self.savedAt = savedAt; self.races = races
+    }
+    public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
+}
+
+extension RaceWidgetCache {
+    public static let standingsKind = "PitPulseStandings"
+    public static let standingsKey = "standingsWidgetSnapshot"
+    public static let lastRaceKind = "PitPulseLastRace"
+    public static let lastRaceKey = "lastRaceWidgetSnapshot"
+    public static let upcomingKind = "PitPulseUpcoming"
+    public static let upcomingKey = "upcomingWidgetSnapshot"
+    public static let favoriteDriverKind = "PitPulseFavoriteDriver"
+    public static let favoriteDriverKey = "favoriteDriverWidgetSnapshot"
+
+    public static func readStandings(from defaults: UserDefaults? = UserDefaults(suiteName: group)) -> StandingsWidgetSnapshot? {
+        guard let data = defaults?.data(forKey: standingsKey) else { return nil }
+        return try? JSONDecoder().decode(StandingsWidgetSnapshot.self, from: data)
+    }
+    public static func writeStandings(_ snapshot: StandingsWidgetSnapshot?, to defaults: UserDefaults? = UserDefaults(suiteName: group)) {
+        if let snapshot, let data = try? JSONEncoder().encode(snapshot) { defaults?.set(data, forKey: standingsKey) }
+        else { defaults?.removeObject(forKey: standingsKey) }
+    }
+    public static func readLastRace(from defaults: UserDefaults? = UserDefaults(suiteName: group)) -> LastRaceWidgetSnapshot? {
+        guard let data = defaults?.data(forKey: lastRaceKey) else { return nil }
+        return try? JSONDecoder().decode(LastRaceWidgetSnapshot.self, from: data)
+    }
+    public static func writeLastRace(_ snapshot: LastRaceWidgetSnapshot?, to defaults: UserDefaults? = UserDefaults(suiteName: group)) {
+        if let snapshot, let data = try? JSONEncoder().encode(snapshot) { defaults?.set(data, forKey: lastRaceKey) }
+        else { defaults?.removeObject(forKey: lastRaceKey) }
+    }
+    public static func readUpcoming(from defaults: UserDefaults? = UserDefaults(suiteName: group)) -> UpcomingWidgetSnapshot? {
+        guard let data = defaults?.data(forKey: upcomingKey) else { return nil }
+        return try? JSONDecoder().decode(UpcomingWidgetSnapshot.self, from: data)
+    }
+    public static func writeUpcoming(_ snapshot: UpcomingWidgetSnapshot?, to defaults: UserDefaults? = UserDefaults(suiteName: group)) {
+        if let snapshot, let data = try? JSONEncoder().encode(snapshot) { defaults?.set(data, forKey: upcomingKey) }
+        else { defaults?.removeObject(forKey: upcomingKey) }
+    }
+    public static func readFavoriteDriver(from defaults: UserDefaults? = UserDefaults(suiteName: group)) -> FavoriteDriverWidgetSnapshot? {
+        guard let data = defaults?.data(forKey: favoriteDriverKey) else { return nil }
+        return try? JSONDecoder().decode(FavoriteDriverWidgetSnapshot.self, from: data)
+    }
+    public static func writeFavoriteDriver(_ snapshot: FavoriteDriverWidgetSnapshot?, to defaults: UserDefaults? = UserDefaults(suiteName: group)) {
+        if let snapshot, let data = try? JSONEncoder().encode(snapshot) { defaults?.set(data, forKey: favoriteDriverKey) }
+        else { defaults?.removeObject(forKey: favoriteDriverKey) }
+    }
+}
+
 
 public enum IslandContentMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case overview, battle, favorite, positionChanges

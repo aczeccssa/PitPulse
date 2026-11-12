@@ -7,6 +7,9 @@ struct PitPulseLiveActivityBundle: WidgetBundle {
         PitPulseLiveActivityWidget()
         RaceWeekendWidget()
         WeekendScheduleWidget()
-        LiveTimingWidget()
+        StandingsWidget()
+        FavoriteDriverWidget()
+        LastRaceWidget()
+        UpcomingWidget()
     }
 }
