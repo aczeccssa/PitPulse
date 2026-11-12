@@ -6,6 +6,7 @@
     {
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "logo-foreground.png",
           "name" : "Logo"
         }
@@ -25,14 +26,19 @@
       "layers" : [
         {
           "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-gray:1.00000,1.00000"
-          },
-          "image-name" : "background.png",
-          "name" : "Background"
-        },
-        {
-          "hidden" : true,
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "extended-gray:1.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "gray:0.09000,1.00000"
+              }
+            }
+          ],
           "image-name" : "background.png",
           "name" : "Background"
         }
