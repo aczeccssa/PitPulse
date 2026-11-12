@@ -263,7 +263,7 @@ final class AppModelTests: XCTestCase {
             encoder.dateEncodingStrategy = .iso8601
             let responseData: Data
             if path == "/api/v1/refresh" {
-                let body = try JSONDecoder().decode(RefreshRequest.self, from: XCTUnwrap(request.httpBody))
+                let body = try JSONDecoder().decode(RefreshRequest.self, from: XCTUnwrap(request.testBodyData))
                 XCTAssertEqual(body.target, .results)
                 XCTAssertEqual(body.sessionId, "2026:1:race")
                 Thread.sleep(forTimeInterval: 0.05)
@@ -298,7 +298,7 @@ final class AppModelTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTAssertFalse(model.isRefreshing)
-        XCTAssertEqual(model.resultMeta?.revision, 2)
+        XCTAssertEqual(model.resultMeta?.revision, 3)
         XCTAssertEqual(requests.values, [
             "GET /api/v1/sessions/2026:1:race/results",
             "POST /api/v1/refresh",
@@ -308,11 +308,15 @@ final class AppModelTests: XCTestCase {
 
     @MainActor
     func testLateManualRefreshFailureDoesNotAffectSelectedSession() async throws {
-        let (model, root, suite) = makeModel()
+        // A unique host keeps retry tasks left over by earlier tests from
+        // polluting this test's shared URLProtocol handler.
+        let host = "late-refresh-\(UUID().uuidString.lowercased()).example"
+        let (model, root, suite) = makeModel(serverAddress: "https://\(host)")
         defer { cleanup(root, suite) }
         let postStarted = RequestCounter()
         let resultRequests = RequestCounter()
         URLProtocolStub.handler = { request in
+            guard request.url?.host == host else { throw URLError(.badServerResponse) }
             let response: HTTPURLResponse
             let data: Data
             if request.url!.path == "/api/v1/refresh" {
@@ -640,10 +644,16 @@ final class AppModelTests: XCTestCase {
 
     @MainActor
     func testTransientFailureBackoffAdvancesBeforeRecovering() async throws {
-        let (model, root, suite) = makeModel(retryDelays: [0.4, 0.8, 1.2])
+        // A unique host keeps retry tasks left over by earlier tests from
+        // polluting this test's shared URLProtocol handler.
+        // `ServerAddress` lowercases the host it builds the request URL from,
+        // so the UUID has to be lowercased too or the guard never matches.
+        let host = "backoff-\(UUID().uuidString.lowercased()).example"
+        let (model, root, suite) = makeModel(serverAddress: "https://\(host)", retryDelays: [0.4, 0.8, 1.2])
         defer { cleanup(root, suite) }
         let counter = RequestCounter()
         URLProtocolStub.handler = { request in
+            guard request.url?.host == host else { throw URLError(.badServerResponse) }
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             let isCalendar = request.url!.path.hasSuffix("/calendar")

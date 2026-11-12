@@ -128,7 +128,7 @@ final class APIClientTests: XCTestCase {
             XCTAssertEqual(request.url?.path, "/api/v1/refresh")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try XCTUnwrap(request.testBodyData)
             let value = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(value["season"] as? Int, 2026)
             XCTAssertEqual(value["target"] as? String, "results")

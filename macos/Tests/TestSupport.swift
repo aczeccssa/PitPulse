@@ -129,3 +129,21 @@ final class URLProtocolStub: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {}
 }
+
+extension URLRequest {
+    /// URLSession can hand `URLProtocol` the body as a stream instead of `httpBody`.
+    var testBodyData: Data? {
+        if let httpBody { return httpBody }
+        guard let stream = httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        return data
+    }
+}
