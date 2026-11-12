@@ -8,7 +8,7 @@ final class LiveActivityContentStateTests: XCTestCase {
     func testSharedCatalogLoadsHelmetsLogosAndPreservesMissingImageFallback() throws {
         for style in [UIUserInterfaceStyle.light, .dark] {
             let traits = UITraitCollection(userInterfaceStyle: style)
-            for name in ["helmet-leclerc-2026", "team-logo-ferrari-2026", "series-f1", "car-side-ferrari-2026"] {
+            for name in ["helmet-leclerc-2026", "team-logo-ferrari-2026", "series-f1", "car-side-ferrari-2026", MotorsportAssetName.brandLogoName] {
                 let image = try XCTUnwrap(MotorsportImages.uiImage(named: name, traits: traits), name)
                 XCTAssertGreaterThan(image.size.width, 0)
             }

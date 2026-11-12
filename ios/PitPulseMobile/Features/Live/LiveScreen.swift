@@ -13,7 +13,7 @@ struct LiveScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack { AssetImage(name: "logo-foreground.png").frame(width: 44, height: 44); PulseHeading(eyebrow: "Real-time · \(model.series.title)", title: "Live") }
+                    HStack { AssetImage(name: MotorsportAssetName.brandLogoName).frame(width: 44, height: 44); PulseHeading(eyebrow: "Real-time · \(model.series.title)", title: "Live") }
                     PulseCard {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {

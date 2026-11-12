@@ -18,6 +18,8 @@ public enum MotorsportAssetName {
     public static func seriesLogoName(isWec: Bool) -> String {
         isWec ? "series-wec" : "series-f1"
     }
+    /// PitPulse brand mark from the shared asset catalog.
+    public static let brandLogoName = "logo-foreground"
     public static func abbreviation(_ name: String) -> String {
         let parts = name.split(whereSeparator: \.isWhitespace)
         return String((parts.last ?? name.prefix(3)).prefix(3)).uppercased()

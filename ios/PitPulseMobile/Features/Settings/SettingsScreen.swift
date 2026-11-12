@@ -17,7 +17,7 @@ struct SettingsScreen: View {
             Form {
                 Section {
                     HStack(spacing: 12) {
-                        Image("logo-foreground.png").resizable().scaledToFit().frame(width: 42, height: 42)
+                        MotorsportImages.image(named: MotorsportAssetName.brandLogoName).resizable().scaledToFit().frame(width: 42, height: 42)
                         VStack(alignment: .leading, spacing: 4) { Text("PitPulse").font(.title2.bold()); Text("MOTORSPORT LIVE & DATA").font(.system(size: 9, weight: .semibold)).tracking(2).foregroundStyle(.secondary) }
                     }
                 }

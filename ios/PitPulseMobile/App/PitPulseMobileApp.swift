@@ -121,7 +121,7 @@ struct PulseSettingsButton: View {
     @EnvironmentObject private var model: MobileModel
     var body: some View {
         Button { model.settingsPresented = true } label: {
-            Image("logo-foreground.png").resizable().scaledToFit().frame(width: 30, height: 30)
+            MotorsportImages.image(named: MotorsportAssetName.brandLogoName).resizable().scaledToFit().frame(width: 30, height: 30)
         }.accessibilityLabel("打开 PitPulse 设置")
     }
 }
