@@ -109,7 +109,6 @@ schemes:
     build:
       targets:
         PitPulseMobile: all
-        PitPulseLiveActivity: all
     run:
       config: Debug
     test:
