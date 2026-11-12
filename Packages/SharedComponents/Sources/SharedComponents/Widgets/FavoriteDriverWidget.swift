@@ -62,7 +62,7 @@ struct FavoriteDriverWidgetView: View {
         }
     }
 
-    private func small(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
+    func small(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
         let stale = snapshot.isStale(at: entry.date)
         let driver = snapshot.driver
         return VStack(alignment: .leading, spacing: 6) {
@@ -100,7 +100,7 @@ struct FavoriteDriverWidgetView: View {
         }
     }
 
-    private func medium(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
+    func medium(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
         let stale = snapshot.isStale(at: entry.date)
         let driver = snapshot.driver
         let last = snapshot.recentRaces.first
@@ -174,8 +174,8 @@ struct FavoriteDriverWidgetView: View {
             Spacer(minLength: 0)
         }
     }
-
-    private func large(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
+    
+    func large(_ snapshot: FavoriteDriverWidgetSnapshot) -> some View {
         let stale = snapshot.isStale(at: entry.date)
         let driver = snapshot.driver
         let recent = Array(snapshot.recentRaces.prefix(3))
@@ -251,7 +251,7 @@ struct FavoriteDriverWidgetView: View {
         }
     }
 
-    private func seasonProgress(_ driver: WidgetStandingDriver) -> some View {
+    func seasonProgress(_ driver: WidgetStandingDriver) -> some View {
         let leaderPoints = driver.points + driver.gapToLeader
         let share = leaderPoints > 0 ? min(1, max(0, driver.points / leaderPoints)) : 0
         return VStack(alignment: .leading, spacing: 3) {
@@ -269,12 +269,7 @@ struct FavoriteDriverWidgetView: View {
         }
     }
 
-    private func helmet(_ driver: WidgetStandingDriver, season: Int, size: CGSize) -> some View {
-        MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: driver.driverID, name: driver.name, season: season))
-            .resizable().scaledToFit().frame(width: size.width, height: size.height).accessibilityHidden(true)
-    }
-
-    private func recentRaceRow(_ race: FavoriteRaceEntry) -> some View {
+    func recentRaceRow(_ race: FavoriteRaceEntry) -> some View {
         HStack(spacing: 8) {
             Text(race.round.map { "R\($0)" } ?? "—")
                 .font(.system(size: 9, weight: .heavy, design: .rounded))
@@ -302,7 +297,22 @@ struct FavoriteDriverWidgetView: View {
         .padding(.vertical, 5).padding(.horizontal, 4)
     }
 
-    private func raceResultStat(_ label: String, _ value: String, highlight: Bool = false) -> some View {
+    func stat(_ label: String, _ value: String, highlight: Bool = false) -> some View {
+        VStack(spacing: 3) {
+            Text(label).font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+            Text(value)
+                .font(.system(size: 14, weight: .bold)).monospacedDigit()
+                .foregroundStyle(highlight ? widgetRed : .primary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }.frame(maxWidth: .infinity)
+    }
+
+    func helmet(_ driver: WidgetStandingDriver, season: Int, size: CGSize) -> some View {
+        MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: driver.driverID, name: driver.name, season: season))
+            .resizable().scaledToFit().frame(width: size.width, height: size.height).accessibilityHidden(true)
+    }
+
+    func raceResultStat(_ label: String, _ value: String, highlight: Bool = false) -> some View {
         VStack(spacing: 2) {
             Text(label).font(.system(size: 7.5, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
             Text(value)
@@ -312,43 +322,33 @@ struct FavoriteDriverWidgetView: View {
         }.frame(maxWidth: .infinity)
     }
 
-    private func shortMeeting(_ name: String) -> String {
+    func shortMeeting(_ name: String) -> String {
         name.replacingOccurrences(of: " Grand Prix", with: "")
             .replacingOccurrences(of: " GP", with: "")
     }
 
-    private func finishText(_ race: FavoriteRaceEntry) -> String {
+    func finishText(_ race: FavoriteRaceEntry) -> String {
         race.position.map { "P\($0)" } ?? race.classification ?? "—"
     }
 
-    private func pointsText(_ race: FavoriteRaceEntry) -> String {
+    func pointsText(_ race: FavoriteRaceEntry) -> String {
         race.points.map { "\(Int($0.rounded()))" } ?? "—"
     }
 
-    private func recentPoints(_ races: [FavoriteRaceEntry]) -> Int {
+    func recentPoints(_ races: [FavoriteRaceEntry]) -> Int {
         Int(races.compactMap(\.points).reduce(0, +).rounded())
     }
 
-    private func gapLabel(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {
+    func gapLabel(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {
         snapshot.driver.position == 1 ? "领先 P2" : "落后榜首"
     }
 
-    private func gapText(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {
+    func gapText(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {
         if snapshot.driver.position == 1 {
             return snapshot.gapToBehind.map { "+\(Int($0.rounded()))" } ?? "—"
         }
         let value = Int(snapshot.driver.gapToLeader.rounded())
         return value <= 0 ? "—" : "−\(value)"
-    }
-
-    private func stat(_ label: String, _ value: String, highlight: Bool = false) -> some View {
-        VStack(spacing: 3) {
-            Text(label).font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
-            Text(value)
-                .font(.system(size: 14, weight: .bold)).monospacedDigit()
-                .foregroundStyle(highlight ? widgetRed : .primary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }.frame(maxWidth: .infinity)
     }
 }
 

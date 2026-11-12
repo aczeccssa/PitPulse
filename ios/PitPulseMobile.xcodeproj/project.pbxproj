@@ -7,23 +7,44 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1ACD82B374B4C5DD9ED356B7 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6444D0B1B94B2BB24466741E /* LiveActivityController.swift */; };
+		0013CAD769E3B2F8FD94FBB3 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7C1F5CAD9893A0F33E362D /* CalendarScreen.swift */; };
+		0152F8A6EF0581EE820B6A02 /* MobileModel+Roster.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE4D05339C7C56694DB7529C /* MobileModel+Roster.swift */; };
+		05FC50622E4C05FF881C3282 /* LiveComparisonChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92937E98AE91B612C8147150 /* LiveComparisonChart.swift */; };
+		0ADD08509227B8B40E7EE6ED /* MobileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67AEDB36B70E803441CBC20F /* MobileModel.swift */; };
+		12937017E6B794D90E123AF9 /* PreviewDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8824A9CCC4A13C0211EDB9 /* PreviewDisplay.swift */; };
+		151E52D030ED2945E2871D36 /* IslandModelPose.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA0FBBAFF02DD6E01E404BCD /* IslandModelPose.swift */; };
 		1B4DB6A133DB691A39B7540F /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = D51A857A5FE80A50291D3676 /* SharedComponents */; };
-		3D11ED92881C099AC2F1488D /* MobileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B525A6B0EA63B112E914DF0E /* MobileModel.swift */; };
+		25FDA93D6A46F8A21AA8BA34 /* TelemetryChartPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEE755DABCE269339173BFA /* TelemetryChartPanel.swift */; };
+		2D28C4DA9C1869C24EE3C066 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8CFDC08B3BD0D7EE8C3CDFA /* LiveActivityController.swift */; };
+		41FFE2BFBCEFE0B02EFFA257 /* MobileModel+Widgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F1F6D0AAE896E56DC0EB281 /* MobileModel+Widgets.swift */; };
 		43AB4DF6BED37641EF9D6914 /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 8F74FCCEC7D7A4992565D30D /* SharedComponents */; };
 		497FBF29DF709207CACA4BA1 /* LiveActivityContentStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE5F5E5E80554FF7F62AD10 /* LiveActivityContentStateTests.swift */; };
+		59F49EB073FBC8810B30469D /* MobileModel+Connection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 354F3EE211855AAC45563CCA /* MobileModel+Connection.swift */; };
+		5B83D711D5CDC16669DB360E /* IslandPhonePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 960BC3F408844F9A3C407731 /* IslandPhonePreview.swift */; };
 		607C8BD68FC83A9E5A28C3D9 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 563CF994AC6474A9E6FF31F3 /* SharedData */; };
 		6D481E30FB5CD454C2E7B40C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 9D2128B0AEBCB37EE9CA9C58 /* AppIcon.icon */; };
+		73C14BE24C277E39653DA220 /* LiveDriverDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A443B618A943603EB771C5 /* LiveDriverDetail.swift */; };
+		870B19096E29F8147B9D7E26 /* IslandPreviewSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AB1A39EC11498C6473FD9E /* IslandPreviewSample.swift */; };
 		92944C118B0675B6FF146DB4 /* PitPulseLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22DD96034FE30742D4E1E116 /* PitPulseLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A43A97843804BD3FE8FCA9BF /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00EC44447B1EB0403A65750 /* SettingsScreen.swift */; };
+		9B8A9E0893AE095AF810C9B1 /* ServerConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD6D321D88EA9EE2CFFC377 /* ServerConfigurationSheet.swift */; };
+		A32BDF64C8D4E4579D5C6B6D /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95804A8095451FEFD7EC8B7A /* SettingsScreen.swift */; };
+		A360CC6E6661DCAE20E9ECA1 /* ResultsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E197DC05A4BF7F5BE8BCA70 /* ResultsScreen.swift */; };
+		A4377B672682E19435B02122 /* PositionChangesPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7145CDF5164E7ED19C92FE56 /* PositionChangesPreview.swift */; };
+		AA1A5BC4C45734BF3B383FC5 /* MobileModel+Calendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B0D362795EFE07D37E602F /* MobileModel+Calendar.swift */; };
+		B4F58023FFFDB29D01F9E6FC /* ChampionshipScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2081D2CC5DEDA9295B0DCE74 /* ChampionshipScreen.swift */; };
 		B911A9AC4959FD14D7CD1E35 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 78B5C7AB69AA2A14B3287765 /* SharedData */; };
+		B9495539F041E5EE6A60CAEE /* IslandOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BD40D02449DAA64A7CD0B63 /* IslandOverlay.swift */; };
+		BEA7BEF17AE1C90835D7DD4A /* DriverAnalysisScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B7B2517E704FFA2E0ADE7C /* DriverAnalysisScreen.swift */; };
+		C12620B2509C15694D8A88C4 /* IslandLiquidSilhouette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E5C59855F5A1C8A5882587 /* IslandLiquidSilhouette.swift */; };
+		C2F8CE4E7A1AE4F609035B9D /* IslandPhonePreview+Update.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48DA20D84FBC3F4732D1854 /* IslandPhonePreview+Update.swift */; };
 		CB3D8C0FEE3A341E18547DD5 /* PitPulseLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8594F498E882DE188E7C2F4 /* PitPulseLiveActivityBundle.swift */; };
-		D05B06CA2559A23760AEFDAE /* LiveScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2298C99B1BD1A9C4CDE2C7A /* LiveScreen.swift */; };
 		D236BEBAB2C2ED0B787AAF80 /* SharedComponents in Frameworks */ = {isa = PBXBuildFile; productRef = 1C73E5E6F00CF33AD82C1C7E /* SharedComponents */; };
 		D59244AC1FB98A0AA312B51E /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = CCBFAF90DB950886DA89FE2B /* SharedData */; };
+		D5C4F82F9D20C0CCD28C0651 /* LiveScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8580E2A23570F66F63D291E /* LiveScreen.swift */; };
 		D6B7551C9D90CBE9EC4A8D3F /* PitPulseLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEAFB16BFFF5D0F229770045 /* PitPulseLiveActivityWidget.swift */; };
-		E09B24363CD5B904DB668A8F /* PitPulseMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE67C0880B7A4287A2B64473 /* PitPulseMobileApp.swift */; };
-		F9C92142A9719D8A697B3402 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000D19CFFACE0F9537B2F9BC /* CalendarScreen.swift */; };
+		D8B9B8F1EC918E15816314E5 /* IslandModePreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 463D577F8BF1A639A69871A2 /* IslandModePreviewSheet.swift */; };
+		FBDC87CD23F2E9F498B51108 /* MobileModel+Live.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB67410EE5A9A06B35E438E8 /* MobileModel+Live.swift */; };
+		FF6F11C6B5078DC0BE6AAB3B /* PitPulseMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 735E4CBE1CB233533E0F0260 /* PitPulseMobileApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,22 +72,43 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		000D19CFFACE0F9537B2F9BC /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
+		0BD6D321D88EA9EE2CFFC377 /* ServerConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigurationSheet.swift; sourceTree = "<group>"; };
+		1E197DC05A4BF7F5BE8BCA70 /* ResultsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsScreen.swift; sourceTree = "<group>"; };
 		1EE5F5E5E80554FF7F62AD10 /* LiveActivityContentStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityContentStateTests.swift; sourceTree = "<group>"; };
+		2081D2CC5DEDA9295B0DCE74 /* ChampionshipScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChampionshipScreen.swift; sourceTree = "<group>"; };
 		217199C3F49DA2A709C847D7 /* PitPulseLiveActivity.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PitPulseLiveActivity.entitlements; sourceTree = "<group>"; };
 		22DD96034FE30742D4E1E116 /* PitPulseLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PitPulseLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		28B0D362795EFE07D37E602F /* MobileModel+Calendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileModel+Calendar.swift"; sourceTree = "<group>"; };
+		354F3EE211855AAC45563CCA /* MobileModel+Connection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileModel+Connection.swift"; sourceTree = "<group>"; };
+		3BD40D02449DAA64A7CD0B63 /* IslandOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandOverlay.swift; sourceTree = "<group>"; };
+		3D8824A9CCC4A13C0211EDB9 /* PreviewDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewDisplay.swift; sourceTree = "<group>"; };
 		3D9045A315AAF499904AA7C1 /* PitPulse.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PitPulse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F1F6D0AAE896E56DC0EB281 /* MobileModel+Widgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileModel+Widgets.swift"; sourceTree = "<group>"; };
+		41B7B2517E704FFA2E0ADE7C /* DriverAnalysisScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverAnalysisScreen.swift; sourceTree = "<group>"; };
 		43C937FD9459FDEAABD65728 /* SharedComponents */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SharedComponents; path = ../Packages/SharedComponents; sourceTree = SOURCE_ROOT; };
-		6444D0B1B94B2BB24466741E /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
+		463D577F8BF1A639A69871A2 /* IslandModePreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandModePreviewSheet.swift; sourceTree = "<group>"; };
+		67AEDB36B70E803441CBC20F /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
+		6AEE755DABCE269339173BFA /* TelemetryChartPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryChartPanel.swift; sourceTree = "<group>"; };
 		6D0D1EDC8C4EDE76CE50AB84 /* SharedData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SharedData; path = ../Packages/SharedData; sourceTree = SOURCE_ROOT; };
+		7145CDF5164E7ED19C92FE56 /* PositionChangesPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionChangesPreview.swift; sourceTree = "<group>"; };
+		735E4CBE1CB233533E0F0260 /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
 		77538125267C714348B5B812 /* PitPulseMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PitPulseMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		87AB1A39EC11498C6473FD9E /* IslandPreviewSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPreviewSample.swift; sourceTree = "<group>"; };
+		92937E98AE91B612C8147150 /* LiveComparisonChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveComparisonChart.swift; sourceTree = "<group>"; };
+		94E5C59855F5A1C8A5882587 /* IslandLiquidSilhouette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandLiquidSilhouette.swift; sourceTree = "<group>"; };
+		95804A8095451FEFD7EC8B7A /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
+		960BC3F408844F9A3C407731 /* IslandPhonePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPhonePreview.swift; sourceTree = "<group>"; };
 		9D2128B0AEBCB37EE9CA9C58 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		AE67C0880B7A4287A2B64473 /* PitPulseMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseMobileApp.swift; sourceTree = "<group>"; };
-		B525A6B0EA63B112E914DF0E /* MobileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileModel.swift; sourceTree = "<group>"; };
+		B48DA20D84FBC3F4732D1854 /* IslandPhonePreview+Update.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IslandPhonePreview+Update.swift"; sourceTree = "<group>"; };
 		B8594F498E882DE188E7C2F4 /* PitPulseLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityBundle.swift; sourceTree = "<group>"; };
 		CC88D10DA3BFCFC0BC092785 /* PitPulseMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PitPulseMobile.entitlements; sourceTree = "<group>"; };
-		D00EC44447B1EB0403A65750 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
-		D2298C99B1BD1A9C4CDE2C7A /* LiveScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScreen.swift; sourceTree = "<group>"; };
+		D8580E2A23570F66F63D291E /* LiveScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScreen.swift; sourceTree = "<group>"; };
+		DE4D05339C7C56694DB7529C /* MobileModel+Roster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileModel+Roster.swift"; sourceTree = "<group>"; };
+		DE7C1F5CAD9893A0F33E362D /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
+		E0A443B618A943603EB771C5 /* LiveDriverDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDriverDetail.swift; sourceTree = "<group>"; };
+		E8CFDC08B3BD0D7EE8C3CDFA /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
+		EA0FBBAFF02DD6E01E404BCD /* IslandModelPose.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandModelPose.swift; sourceTree = "<group>"; };
+		EB67410EE5A9A06B35E438E8 /* MobileModel+Live.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileModel+Live.swift"; sourceTree = "<group>"; };
 		EEAFB16BFFF5D0F229770045 /* PitPulseLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -109,6 +151,20 @@
 			path = SharedComponents;
 			sourceTree = "<group>";
 		};
+		39C3E21C9E37A75B9D3F999E /* Live */ = {
+			isa = PBXGroup;
+			children = (
+				2081D2CC5DEDA9295B0DCE74 /* ChampionshipScreen.swift */,
+				41B7B2517E704FFA2E0ADE7C /* DriverAnalysisScreen.swift */,
+				92937E98AE91B612C8147150 /* LiveComparisonChart.swift */,
+				E0A443B618A943603EB771C5 /* LiveDriverDetail.swift */,
+				D8580E2A23570F66F63D291E /* LiveScreen.swift */,
+				1E197DC05A4BF7F5BE8BCA70 /* ResultsScreen.swift */,
+				6AEE755DABCE269339173BFA /* TelemetryChartPanel.swift */,
+			);
+			path = Live;
+			sourceTree = "<group>";
+		};
 		3C37D8D60D028DE1DE84AD23 /* PitPulseMobileTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -117,18 +173,33 @@
 			path = PitPulseMobileTests;
 			sourceTree = "<group>";
 		};
+		3C42DF918504DD40F425098D /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				DE7C1F5CAD9893A0F33E362D /* CalendarScreen.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
 		42C5FD311414EEA3FEE001E6 /* PitPulseMobile */ = {
 			isa = PBXGroup;
 			children = (
-				000D19CFFACE0F9537B2F9BC /* CalendarScreen.swift */,
-				6444D0B1B94B2BB24466741E /* LiveActivityController.swift */,
-				D2298C99B1BD1A9C4CDE2C7A /* LiveScreen.swift */,
-				B525A6B0EA63B112E914DF0E /* MobileModel.swift */,
 				CC88D10DA3BFCFC0BC092785 /* PitPulseMobile.entitlements */,
-				AE67C0880B7A4287A2B64473 /* PitPulseMobileApp.swift */,
-				D00EC44447B1EB0403A65750 /* SettingsScreen.swift */,
+				A28E96EA2CB56686374D4273 /* App */,
+				604B95866324BC75165C3D1A /* Core */,
+				A60AD0DE75682E0232DB8C7A /* Features */,
 			);
 			path = PitPulseMobile;
+			sourceTree = "<group>";
+		};
+		50D3A59D4FF9088C0F7FD413 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				0BD6D321D88EA9EE2CFFC377 /* ServerConfigurationSheet.swift */,
+				95804A8095451FEFD7EC8B7A /* SettingsScreen.swift */,
+				8298C0B84F2D610B1278F54D /* IslandPreview */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		56AA1704313C5B3ECBC27E5C /* Resources */ = {
@@ -148,12 +219,42 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		604B95866324BC75165C3D1A /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				E8CFDC08B3BD0D7EE8C3CDFA /* LiveActivityController.swift */,
+				67AEDB36B70E803441CBC20F /* MobileModel.swift */,
+				28B0D362795EFE07D37E602F /* MobileModel+Calendar.swift */,
+				354F3EE211855AAC45563CCA /* MobileModel+Connection.swift */,
+				EB67410EE5A9A06B35E438E8 /* MobileModel+Live.swift */,
+				DE4D05339C7C56694DB7529C /* MobileModel+Roster.swift */,
+				3F1F6D0AAE896E56DC0EB281 /* MobileModel+Widgets.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
 		6D1AB940D3F99E33E53CC296 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
 				133A0C0C2A96BB86291EF14B /* SharedComponents */,
 			);
 			path = Packages;
+			sourceTree = "<group>";
+		};
+		8298C0B84F2D610B1278F54D /* IslandPreview */ = {
+			isa = PBXGroup;
+			children = (
+				94E5C59855F5A1C8A5882587 /* IslandLiquidSilhouette.swift */,
+				EA0FBBAFF02DD6E01E404BCD /* IslandModelPose.swift */,
+				463D577F8BF1A639A69871A2 /* IslandModePreviewSheet.swift */,
+				3BD40D02449DAA64A7CD0B63 /* IslandOverlay.swift */,
+				960BC3F408844F9A3C407731 /* IslandPhonePreview.swift */,
+				B48DA20D84FBC3F4732D1854 /* IslandPhonePreview+Update.swift */,
+				87AB1A39EC11498C6473FD9E /* IslandPreviewSample.swift */,
+				7145CDF5164E7ED19C92FE56 /* PositionChangesPreview.swift */,
+				3D8824A9CCC4A13C0211EDB9 /* PreviewDisplay.swift */,
+			);
+			path = IslandPreview;
 			sourceTree = "<group>";
 		};
 		8761DB3967C3F0F7725A92EF /* PitPulseLiveActivity */ = {
@@ -164,6 +265,24 @@
 				EEAFB16BFFF5D0F229770045 /* PitPulseLiveActivityWidget.swift */,
 			);
 			path = PitPulseLiveActivity;
+			sourceTree = "<group>";
+		};
+		A28E96EA2CB56686374D4273 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				735E4CBE1CB233533E0F0260 /* PitPulseMobileApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A60AD0DE75682E0232DB8C7A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				3C42DF918504DD40F425098D /* Calendar */,
+				39C3E21C9E37A75B9D3F999E /* Live */,
+				50D3A59D4FF9088C0F7FD413 /* Settings */,
+			);
+			path = Features;
 			sourceTree = "<group>";
 		};
 		B5591BFE06FC69B5A07CE663 /* Products */ = {
@@ -326,12 +445,33 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F9C92142A9719D8A697B3402 /* CalendarScreen.swift in Sources */,
-				1ACD82B374B4C5DD9ED356B7 /* LiveActivityController.swift in Sources */,
-				D05B06CA2559A23760AEFDAE /* LiveScreen.swift in Sources */,
-				3D11ED92881C099AC2F1488D /* MobileModel.swift in Sources */,
-				E09B24363CD5B904DB668A8F /* PitPulseMobileApp.swift in Sources */,
-				A43A97843804BD3FE8FCA9BF /* SettingsScreen.swift in Sources */,
+				0013CAD769E3B2F8FD94FBB3 /* CalendarScreen.swift in Sources */,
+				B4F58023FFFDB29D01F9E6FC /* ChampionshipScreen.swift in Sources */,
+				BEA7BEF17AE1C90835D7DD4A /* DriverAnalysisScreen.swift in Sources */,
+				C12620B2509C15694D8A88C4 /* IslandLiquidSilhouette.swift in Sources */,
+				D8B9B8F1EC918E15816314E5 /* IslandModePreviewSheet.swift in Sources */,
+				151E52D030ED2945E2871D36 /* IslandModelPose.swift in Sources */,
+				B9495539F041E5EE6A60CAEE /* IslandOverlay.swift in Sources */,
+				C2F8CE4E7A1AE4F609035B9D /* IslandPhonePreview+Update.swift in Sources */,
+				5B83D711D5CDC16669DB360E /* IslandPhonePreview.swift in Sources */,
+				870B19096E29F8147B9D7E26 /* IslandPreviewSample.swift in Sources */,
+				2D28C4DA9C1869C24EE3C066 /* LiveActivityController.swift in Sources */,
+				05FC50622E4C05FF881C3282 /* LiveComparisonChart.swift in Sources */,
+				73C14BE24C277E39653DA220 /* LiveDriverDetail.swift in Sources */,
+				D5C4F82F9D20C0CCD28C0651 /* LiveScreen.swift in Sources */,
+				AA1A5BC4C45734BF3B383FC5 /* MobileModel+Calendar.swift in Sources */,
+				59F49EB073FBC8810B30469D /* MobileModel+Connection.swift in Sources */,
+				FBDC87CD23F2E9F498B51108 /* MobileModel+Live.swift in Sources */,
+				0152F8A6EF0581EE820B6A02 /* MobileModel+Roster.swift in Sources */,
+				41FFE2BFBCEFE0B02EFFA257 /* MobileModel+Widgets.swift in Sources */,
+				0ADD08509227B8B40E7EE6ED /* MobileModel.swift in Sources */,
+				FF6F11C6B5078DC0BE6AAB3B /* PitPulseMobileApp.swift in Sources */,
+				A4377B672682E19435B02122 /* PositionChangesPreview.swift in Sources */,
+				12937017E6B794D90E123AF9 /* PreviewDisplay.swift in Sources */,
+				A360CC6E6661DCAE20E9ECA1 /* ResultsScreen.swift in Sources */,
+				9B8A9E0893AE095AF810C9B1 /* ServerConfigurationSheet.swift in Sources */,
+				A32BDF64C8D4E4579D5C6B6D /* SettingsScreen.swift in Sources */,
+				25FDA93D6A46F8A21AA8BA34 /* TelemetryChartPanel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

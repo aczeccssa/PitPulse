@@ -18,7 +18,7 @@ macos/
 ios/
 ├── PitPulseMobile.xcodeproj    # committed Mobile project (generated)
 ├── project.yml                 # XcodeGen source for the Mobile project
-├── PitPulseMobile/             # iOS app sources
+├── PitPulseMobile/             # iOS sources: App/, Core/, Features/ (Calendar, Live, Settings)
 ├── PitPulseLiveActivity/       # Live Activity / Dynamic Island extension
 └── PitPulseMobileTests/
 Packages/
@@ -61,6 +61,7 @@ Rules:
 4. Cross-module symbols used by the app or extensions are `public`; keep platform-only code behind the app target or `#if os(...)`, not in shared modules.
 5. New shared code belongs in one of these two packages. Create a new package only when it has an independent dependency or distribution boundary, then add it to `PitPulse.xcworkspace` and declare the product dependency in both project specs.
 6. A project spec never references files from the other platform's project folder. Anything both apps need — code or resources such as the icon — lives in a shared package or a neutral top-level folder.
+7. Keep every Swift file under 300 lines: one screen/page per file, one group of related components per file, and feature folders (`Features/<Feature>/`) instead of a flat directory. Split a large type across `Type+Area.swift` extensions rather than growing one file.
 
 ### Naming and icons
 
