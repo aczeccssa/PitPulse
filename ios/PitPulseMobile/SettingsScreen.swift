@@ -1,3 +1,4 @@
+import PitPulseComponents
 import SwiftUI
 import SceneKit
 import PitPulseData
@@ -17,7 +18,7 @@ struct SettingsScreen: View {
             Form {
                 Section {
                     HStack(spacing: 12) {
-                        AssetImage(name: "logo-foreground.png").frame(width: 42, height: 42)
+                        Image("logo-foreground.png").resizable().scaledToFit().frame(width: 42, height: 42)
                         VStack(alignment: .leading, spacing: 4) { Text("PitPulse").font(.title2.bold()); Text("MOTORSPORT LIVE & DATA").font(.system(size: 9, weight: .semibold)).tracking(2).foregroundStyle(.secondary) }
                     }
                 }
@@ -1067,7 +1068,7 @@ private struct PositionChangesPreview: View {
                         Text(MotorsportAssetName.abbreviation(cars[leaderID].name))
                             .font(.system(size: 17, weight: .heavy)).foregroundStyle(PulseStyle.red)
                     }
-                    if let asset = cars[leaderID].asset { Image(asset).resizable().scaledToFit().frame(width: 44, height: 44) }
+                    if let asset = cars[leaderID].asset { MotorsportImages.image(named: asset).resizable().scaledToFit().frame(width: 44, height: 44) }
                 }
             }.frame(width: 105, alignment: .leading)
             Rectangle().fill(.white.opacity(0.12)).frame(width: 1)
@@ -1080,7 +1081,7 @@ private struct PositionChangesPreview: View {
                             ActivityNumberText("\(b + 1)")
                                 .environment(\.activityPreviewNumbers, .init(previous: ["\(b + 1)": "\(a + 1)"], progress: exchange, reduceMotion: reduceMotion))
                                         .font(.system(size: 10, weight: .semibold)).frame(width: 16)
-                            if let asset = cars[id].asset { Image(asset).resizable().scaledToFit().frame(width: 25, height: 25) }
+                            if let asset = cars[id].asset { MotorsportImages.image(named: asset).resizable().scaledToFit().frame(width: 25, height: 25) }
                             Text(MotorsportAssetName.abbreviation(cars[id].name)).font(.system(size: 10, weight: .semibold))
                             if a != b {
                                 Image(systemName: b < a ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")

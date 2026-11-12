@@ -172,6 +172,7 @@ public struct SessionResult: Codable, Identifiable, Equatable, Sendable {
     public let position: Int?
     public let classification: String
     public let driverId: String
+    public var driverNumber: String?
     public let driverName: String
     public let constructorId: String
     public let team: String
@@ -196,6 +197,7 @@ public struct DriverStanding: Codable, Identifiable, Equatable, Sendable {
     public let season: Int
     public let position: Int
     public let driverId: String
+    public var driverNumber: String?
     public let driverName: String
     public let constructor: String
     public let constructorIds: [String]

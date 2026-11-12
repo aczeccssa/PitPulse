@@ -17,6 +17,8 @@ struct F1CompanionApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarRootView()
+                // Let the separate glass modules sample the desktop without a full-panel material.
+                .containerBackground(.clear, for: .window)
                 .environmentObject(model)
                 .environmentObject(model.liveStore)
                 .environmentObject(liveIsland)

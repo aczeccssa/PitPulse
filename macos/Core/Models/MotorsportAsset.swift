@@ -1,21 +1,22 @@
 import AppKit
+import PitPulseComponents
+import PitPulseShared
 
 enum MotorsportAsset {
     enum Kind: Equatable { case helmet, driverPhoto, teamLogo, carSide }
 
     static func name(kind: Kind, id: String, season: Int) -> String {
-        let prefix = switch kind {
-        case .helmet: "helmet"
-        case .driverPhoto: "driver-photo"
-        case .teamLogo: "team-logo"
-        case .carSide: "car-side"
+        let sharedKind: MotorsportAssetName.Kind = switch kind {
+        case .helmet: .helmet
+        case .driverPhoto: .driverPhoto
+        case .teamLogo: .teamLogo
+        case .carSide: .carSide
         }
-        let id = kind == .helmet ? ["verstappen": "max_verstappen", "lindblad": "arvid_lindblad"][id] ?? id : id
-        return "\(prefix)-\(id)-\(season)"
+        return MotorsportAssetName.name(kind: sharedKind, id: id, season: season)
     }
 
     static func image(kind: Kind, id: String, season: Int) -> NSImage? {
-        NSImage(named: name(kind: kind, id: id, season: season))
+        MotorsportImages.nsImage(named: name(kind: kind, id: id, season: season))
     }
 
     static func f1DriverImage(id: String, season: Int) -> NSImage? {
@@ -31,7 +32,7 @@ enum MotorsportAsset {
 
     /// Official series mark shown where the country flag used to be.
     static func seriesLogo(isWec: Bool) -> NSImage? {
-        NSImage(named: isWec ? "series-wec" : "series-f1")
+        MotorsportImages.nsImage(named: MotorsportAssetName.seriesLogoName(isWec: isWec))
     }
 
     static func abbreviation(_ name: String) -> String {

@@ -1,9 +1,22 @@
+import PitPulseComponents
 import XCTest
 import UIKit
 @testable import PitPulseShared
 @testable import PitPulseData
 
 final class LiveActivityContentStateTests: XCTestCase {
+    @MainActor
+    func testSharedCatalogLoadsHelmetsLogosAndPreservesMissingImageFallback() throws {
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            for name in ["helmet-leclerc-2026", "team-logo-ferrari-2026", "series-f1", "car-side-ferrari-2026"] {
+                let image = try XCTUnwrap(MotorsportImages.uiImage(named: name, traits: traits), name)
+                XCTAssertGreaterThan(image.size.width, 0)
+            }
+        }
+        XCTAssertNil(MotorsportImages.uiImage(named: "nonexistent-preview-test-image"))
+    }
+
     func testPositionFocusFollowsContinuingLossBeyondTenSeconds() {
         var focus = IslandPositionFocus()
         focus.update(positions: ["a": 1, "b": 2, "c": 3, "d": 4, "e": 5], now: 0)

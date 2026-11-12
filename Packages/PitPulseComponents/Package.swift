@@ -15,7 +15,8 @@ let package = Package(
             name: "PitPulseComponents",
             dependencies: [
                 .product(name: "PitPulseShared", package: "PitPulseShared")
-            ]
+            ],
+            resources: [.process("Resources")]
         )
     ]
 )

@@ -1,3 +1,4 @@
+import PitPulseComponents
 import SwiftUI
 import WidgetKit
 
@@ -7,5 +8,9 @@ struct PitPulseDesktopWidgetBundle: WidgetBundle {
         RaceWeekendWidget()
         WeekendScheduleWidget()
         LiveTimingWidget()
+        StandingsWidget()
+        FavoriteDriverWidget()
+        LastRaceWidget()
+        UpcomingWidget()
     }
 }

@@ -1,3 +1,4 @@
+import PitPulseComponents
 import SwiftUI
 import PitPulseData
 import PitPulseShared
@@ -80,7 +81,12 @@ struct RootView: View {
             await model.loadCalendar()
             await model.loadWidgetHighlights()
         }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { model.startLive() } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                model.startLive()
+                Task { await model.loadCalendar(force: true) }
+            }
+        }
         .onOpenURL { url in
             if url.host == "live" { model.startLive(); showLive = true }
             if url.host == "calendar" { showLive = false; selection = 1 }
@@ -92,7 +98,7 @@ struct LiveMiniBar: View {
     @EnvironmentObject private var model: MobileModel
     var body: some View {
         HStack(spacing: 11) {
-            Image(MotorsportAssetName.seriesLogoName(isWec: model.liveSnapshot.isWec)).renderingMode(.template).resizable().scaledToFit().foregroundStyle(PulseStyle.red).frame(width: 36, height: 24)
+            MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: model.liveSnapshot.isWec)).renderingMode(.template).resizable().scaledToFit().foregroundStyle(PulseStyle.red).frame(width: 36, height: 24)
             VStack(alignment: .leading, spacing: 3) {
                 Text(model.liveSnapshot.meetingName ?? model.series.title).font(.subheadline.bold()).lineLimit(1)
                 Text("\(model.liveSnapshot.sessionName ?? "Live") · \(model.liveSnapshot.lapLabel)").font(.caption2).foregroundStyle(.secondary)
@@ -116,7 +122,7 @@ struct PulseSettingsButton: View {
     @EnvironmentObject private var model: MobileModel
     var body: some View {
         Button { model.settingsPresented = true } label: {
-            AssetImage(name: "logo-foreground.png").frame(width: 30, height: 30)
+            Image("logo-foreground.png").resizable().scaledToFit().frame(width: 30, height: 30)
         }.accessibilityLabel("打开 PitPulse 设置")
     }
 }
@@ -134,7 +140,7 @@ struct AssetImage: View {
     let name: String
     @Environment(\.colorScheme) private var colorScheme
     var body: some View {
-        if let image = UIImage(named: name, in: .main, compatibleWith: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)) {
+        if let image = MotorsportImages.uiImage(named: name, traits: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)) {
             Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().accessibilityHidden(true)
         } else {
             Image(systemName: "person.crop.circle").resizable().scaledToFit().foregroundStyle(.secondary).accessibilityHidden(true)

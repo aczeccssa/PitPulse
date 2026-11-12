@@ -13,19 +13,16 @@ public struct NextSession: Equatable, Sendable {
 public enum CalendarLogic {
     public static func featuredMeeting(in meetings: [Meeting], now: Date, calendar: Calendar = .current) -> Meeting? {
         let available = meetings.filter { $0.status != .cancelled }
-        let week = calendar.dateInterval(of: .weekOfYear, for: now)
-        let thisWeek = available.filter {
-            guard let week else { return false }
-            return $0.startDate < week.end && $0.endDate >= week.start
+        // Keep the race-day recap, then advance to the next weekend rather than the nearest date.
+        let current = available.filter {
+            let recapEnd = calendar.dateInterval(of: .day, for: $0.endDate)?.end ?? $0.endDate
+            return $0.startDate <= now && (now <= $0.endDate || now < recapEnd)
+        }.min { $0.startDate < $1.startDate }
+        if let current { return current }
+        if let upcoming = available.filter({ $0.startDate > now }).min(by: { $0.startDate < $1.startDate }) {
+            return upcoming
         }
-        func distance(_ meeting: Meeting) -> TimeInterval {
-            if now < meeting.startDate { return meeting.startDate.timeIntervalSince(now) }
-            return max(0, now.timeIntervalSince(meeting.endDate))
-        }
-        return (thisWeek.isEmpty ? available : thisWeek).sorted {
-            let left = distance($0), right = distance($1)
-            return left == right ? $0.startDate < $1.startDate : left < right
-        }.first
+        return available.max { $0.endDate < $1.endDate }
     }
 
     public static func nextSession(

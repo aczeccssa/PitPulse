@@ -44,6 +44,58 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
         }
     }
 
+    func testCalendarSnapshotAdvancesWithoutAppRepublishing() throws {
+        try isolated { defaults, publisher, _ in
+            let now = Date(timeIntervalSince1970: 1000)
+            let saved = now.addingTimeInterval(-7 * 3600)
+            let meetings = (0..<4).map { index -> Meeting in
+                let start = now.addingTimeInterval(Double(index) * 86400)
+                let id = "race-\(index)"
+                let sessions = [
+                    Session(id: id + ":fp1", meetingId: id, sessionType: .fp1,
+                        startTime: start.addingTimeInterval(100), endTime: nil, status: .scheduled,
+                        jolpicaSessionId: nil, openf1SessionKey: nil),
+                    Session(id: id + ":race", meetingId: id, sessionType: .race,
+                        startTime: start.addingTimeInterval(900), endTime: nil, status: .scheduled,
+                        jolpicaSessionId: nil, openf1SessionKey: nil)
+                ]
+                return Meeting(id: id, season: 2026, round: index + 1, name: id, country: "",
+                    countryCode: nil, location: "", startDate: start, endDate: start.addingTimeInterval(1000),
+                    status: .scheduled, sessions: sessions, source: "fixture", fetchedAt: saved,
+                    sourceUpdatedAt: nil, revision: nil)
+            }
+            publisher.publishCalendar(meetings: Array(meetings.reversed()), savedAt: saved, now: now)
+            let calendar = try XCTUnwrap(RaceWidgetCache.readUpcoming(from: defaults))
+            XCTAssertEqual(calendar.races.count, 4)
+            let secondSession = try XCTUnwrap(calendar.nextSession(at: now.addingTimeInterval(101)))
+            XCTAssertEqual(secondSession.meeting, "race-0")
+            XCTAssertEqual(secondSession.session, SessionType.race.displayName)
+            XCTAssertEqual(secondSession.savedAt, saved)
+            XCTAssertTrue(secondSession.isStale(at: now))
+            XCTAssertEqual(calendar.nextSession(at: now.addingTimeInterval(1001))?.meeting, "race-1")
+            XCTAssertEqual(calendar.remaining(at: now.addingTimeInterval(1001))?.races.map(\.id),
+                ["race-1", "race-2", "race-3"])
+            XCTAssertEqual(calendar.remaining(at: now.addingTimeInterval(101))?.races.first?.nextSessionTitle,
+                SessionType.race.displayName)
+            let seasonEnd = now.addingTimeInterval(4 * 86400)
+            XCTAssertNil(calendar.nextSession(at: seasonEnd))
+            XCTAssertNil(calendar.remaining(at: seasonEnd))
+        }
+    }
+
+    func testLegacyCalendarCacheDoesNotKeepExpiredRace() throws {
+        let now = Date(timeIntervalSince1970: 1000)
+        let legacy = RaceWidgetSnapshot(meeting: "old", session: "Race", start: now, savedAt: now)
+        XCTAssertNotNil(legacy.advancing(to: now))
+        XCTAssertNil(legacy.advancing(to: now.addingTimeInterval(1)))
+        let data = Data("""
+        {"savedAt":0,"races":[{"id":"legacy","name":"old","location":"", "start":0,"end":100}]}
+        """.utf8)
+        let decoded = try JSONDecoder().decode(UpcomingWidgetSnapshot.self, from: data)
+        XCTAssertNil(decoded.races.first?.sessions)
+        XCTAssertNil(decoded.remaining(at: Date(timeIntervalSinceReferenceDate: 101)))
+    }
+
     func testStandingsPublishesTopFiveAndGapToLeader() throws {
         try isolated { defaults, publisher, reloads in
             let standings = try fixtureStandings()
@@ -52,6 +104,7 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
             let snapshot = try XCTUnwrap(RaceWidgetCache.readStandings(from: defaults))
             XCTAssertEqual(snapshot.drivers.count, 5)
             XCTAssertEqual(snapshot.drivers.first?.points, 390)
+            XCTAssertEqual(snapshot.drivers.first?.driverNumber, "12")
             XCTAssertEqual(snapshot.drivers.map(\.gapToLeader), [0, 111, 128, 141, 176])
             XCTAssertEqual(reloads(), [RaceWidgetCache.standingsKind])
             publisher.clear()
@@ -66,6 +119,7 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
             publisher.publishFavoriteDriver(standings, favoriteID: "leclerc", season: 2026, savedAt: saved)
             let snapshot = try XCTUnwrap(RaceWidgetCache.readFavoriteDriver(from: defaults))
             XCTAssertEqual(snapshot.driver.position, 4)
+            XCTAssertEqual(snapshot.driver.driverNumber, "16")
             XCTAssertEqual(snapshot.driver.points, 249)
             XCTAssertEqual(snapshot.driver.gapToLeader, 141)
             XCTAssertEqual(snapshot.gapToBehind, 35)
@@ -92,7 +146,7 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
                 status: .scheduled, sessions: [session], source: "fixture", fetchedAt: now,
                 sourceUpdatedAt: nil, revision: 1)
             let results = try JSONDecoder().decode([SessionResult].self, from: Data("""
-            [{"sessionId":"race20","position":4,"classification":"CLASSIFIED","driverId":"leclerc","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","gap":"+12.345","bestLap":"1:12.486","laps":71,"points":12,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"}]
+            [{"sessionId":"race20","position":4,"classification":"CLASSIFIED","driverId":"leclerc","driverNumber":"16","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","gap":"+12.345","bestLap":"1:12.486","laps":71,"points":12,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"}]
             """.utf8))
             let source = FavoriteRaceSource(meeting: meeting, session: session, results: results, savedAt: now)
             publisher.publishFavoriteDriver(standings, favoriteID: "leclerc", season: 2026,
@@ -121,13 +175,14 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
                 endDate: now.addingTimeInterval(7200), status: .scheduled, sessions: [session],
                 source: "fixture", fetchedAt: now, sourceUpdatedAt: nil, revision: 1)
             let results = try JSONDecoder().decode([SessionResult].self, from: Data("""
-            [{"sessionId":"race","position":1,"classification":"CLASSIFIED","driverId":"antonelli","driverName":"Andrea Kimi Antonelli","constructorId":"mercedes","team":"Mercedes","raceTime":"1:32:45.678","bestLap":"1:12.486","laps":71,"points":25,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"},
-             {"sessionId":"race","position":2,"classification":"CLASSIFIED","driverId":"verstappen","driverName":"Max Verstappen","constructorId":"red_bull","team":"Red Bull Racing","gap":"+2.145","bestLap":"1:11.900","laps":71,"points":18,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"},
-             {"sessionId":"race","position":3,"classification":"CLASSIFIED","driverId":"russell","driverName":"George Russell","constructorId":"mercedes","team":"Mercedes","gap":"+8.902","bestLap":"1:12.771","laps":71,"points":15,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"}]
+            [{"sessionId":"race","position":1,"classification":"CLASSIFIED","driverId":"antonelli","driverNumber":"12","driverName":"Andrea Kimi Antonelli","constructorId":"mercedes","team":"Mercedes","raceTime":"1:32:45.678","bestLap":"1:12.486","laps":71,"points":25,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"},
+             {"sessionId":"race","position":2,"classification":"CLASSIFIED","driverId":"verstappen","driverNumber":"1","driverName":"Max Verstappen","constructorId":"red_bull","team":"Red Bull Racing","gap":"+2.145","bestLap":"1:11.900","laps":71,"points":18,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"},
+             {"sessionId":"race","position":3,"classification":"CLASSIFIED","driverId":"russell","driverNumber":"63","driverName":"George Russell","constructorId":"mercedes","team":"Mercedes","gap":"+8.902","bestLap":"1:12.771","laps":71,"points":15,"source":"fixture","fetchedAt":0,"revision":1,"quality":"final"}]
             """.utf8))
             publisher.publishLastRace(meeting: meeting, session: session, results: results, savedAt: now)
             let snapshot = try XCTUnwrap(RaceWidgetCache.readLastRace(from: defaults))
             XCTAssertEqual(snapshot.podium.map(\.position), [1, 2, 3])
+            XCTAssertEqual(snapshot.podium.map(\.driverNumber), ["12", "1", "63"])
             XCTAssertEqual(snapshot.podium.first?.time, "1:32:45.678")
             XCTAssertEqual(snapshot.podium[1].time, "+2.145")
             XCTAssertEqual(snapshot.fastestLap, "1:11.900")
@@ -187,14 +242,23 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
         #endif
     }
 
+    func testOldWidgetDriverCacheDecodesWithoutNumber() throws {
+        let data = Data(#"{"driverID":"leclerc","name":"Charles Leclerc","team":"Ferrari","position":4,"points":249,"gapToLeader":141}"#.utf8)
+        let driver = try JSONDecoder().decode(WidgetStandingDriver.self, from: data)
+        XCTAssertNil(driver.driverNumber)
+        let result = try JSONDecoder().decode(LastRacePodiumEntry.self,
+            from: Data(#"{"driverID":"leclerc","name":"Charles Leclerc","team":"Ferrari","position":1,"time":"1:32:45"}"#.utf8))
+        XCTAssertNil(result.driverNumber)
+    }
+
     private func fixtureStandings() throws -> [DriverStanding] {
         try JSONDecoder().decode([DriverStanding].self, from: Data("""
-        [{"season":2026,"position":1,"driverId":"antonelli","driverName":"Andrea Kimi Antonelli","constructor":"Mercedes","constructorIds":["mercedes"],"points":390,"wins":7,"source":"fixture","fetchedAt":0,"revision":1},
-         {"season":2026,"position":2,"driverId":"verstappen","driverName":"Max Verstappen","constructor":"Red Bull Racing","constructorIds":["red_bull"],"points":279,"wins":4,"source":"fixture","fetchedAt":0,"revision":1},
-         {"season":2026,"position":3,"driverId":"russell","driverName":"George Russell","constructor":"Mercedes","constructorIds":["mercedes"],"points":262,"wins":2,"source":"fixture","fetchedAt":0,"revision":1},
-         {"season":2026,"position":4,"driverId":"leclerc","driverName":"Charles Leclerc","constructor":"Ferrari","constructorIds":["ferrari"],"points":249,"wins":1,"source":"fixture","fetchedAt":0,"revision":1},
+        [{"season":2026,"position":1,"driverId":"antonelli","driverNumber":"12","driverName":"Andrea Kimi Antonelli","constructor":"Mercedes","constructorIds":["mercedes"],"points":390,"wins":7,"source":"fixture","fetchedAt":0,"revision":1},
+         {"season":2026,"position":2,"driverId":"verstappen","driverNumber":"1","driverName":"Max Verstappen","constructor":"Red Bull Racing","constructorIds":["red_bull"],"points":279,"wins":4,"source":"fixture","fetchedAt":0,"revision":1},
+         {"season":2026,"position":3,"driverId":"russell","driverNumber":"63","driverName":"George Russell","constructor":"Mercedes","constructorIds":["mercedes"],"points":262,"wins":2,"source":"fixture","fetchedAt":0,"revision":1},
+         {"season":2026,"position":4,"driverId":"leclerc","driverNumber":"16","driverName":"Charles Leclerc","constructor":"Ferrari","constructorIds":["ferrari"],"points":249,"wins":1,"source":"fixture","fetchedAt":0,"revision":1},
          {"season":2026,"position":5,"driverId":"hamilton","driverName":"Lewis Hamilton","constructor":"Ferrari","constructorIds":["ferrari"],"points":214,"wins":0,"source":"fixture","fetchedAt":0,"revision":1},
-         {"season":2026,"position":6,"driverId":"norris","driverName":"Lando Norris","constructor":"McLaren","constructorIds":["mclaren"],"points":199,"wins":0,"source":"fixture","fetchedAt":0,"revision":1}]
+         {"season":2026,"position":6,"driverId":"norris","driverNumber":"4","driverName":"Lando Norris","constructor":"McLaren","constructorIds":["mclaren"],"points":199,"wins":0,"source":"fixture","fetchedAt":0,"revision":1}]
         """.utf8))
     }
 

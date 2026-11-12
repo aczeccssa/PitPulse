@@ -7,46 +7,48 @@ struct OverviewScreen: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    PulseHeading(eyebrow: "Race Weekend", title: "下一场比赛")
-                    if let next = CalendarLogic.nextSession(in: model.meetings, now: .now) {
-                        NavigationLink { WeekendScreen(meeting: next.meeting) } label: {
-                            PulseCard {
-                                VStack(alignment: .leading, spacing: 18) {
-                                    HStack { Text("F1 · R\(next.meeting.round ?? 0)").font(.caption.bold()).foregroundStyle(PulseStyle.red); Spacer(); Image(systemName: "arrow.up.right").font(.caption) }
-                                    Text(next.meeting.name).font(.title.bold()).multilineTextAlignment(.leading)
-                                    Text("\(next.meeting.location), \(next.meeting.country)").font(.subheadline).foregroundStyle(.secondary)
-                                    CircuitOutlineView(meetingID: next.meeting.id).frame(height: 140).padding(.vertical, 8)
-                                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                                        Text(CalendarLogic.countdownText(until: next.session.startTime, now: context.date))
-                                            .font(.title2.bold().monospacedDigit()).contentTransition(.numericText())
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    VStack(alignment: .leading, spacing: 22) {
+                        PulseHeading(eyebrow: "Race Weekend", title: "下一场比赛")
+                        if let next = CalendarLogic.nextSession(in: model.meetings, now: context.date) {
+                            NavigationLink { WeekendScreen(meeting: next.meeting) } label: {
+                                PulseCard {
+                                    VStack(alignment: .leading, spacing: 18) {
+                                        HStack { Text("F1 · R\(next.meeting.round ?? 0)").font(.caption.bold()).foregroundStyle(PulseStyle.red); Spacer(); Image(systemName: "arrow.up.right").font(.caption) }
+                                        Text(next.meeting.name).font(.title.bold()).multilineTextAlignment(.leading)
+                                        Text("\(next.meeting.location), \(next.meeting.country)").font(.subheadline).foregroundStyle(.secondary)
+                                        CircuitOutlineView(meetingID: next.meeting.id).frame(height: 140).padding(.vertical, 8)
+                                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                                            Text(CalendarLogic.countdownText(until: next.session.startTime, now: context.date))
+                                                .font(.title2.bold().monospacedDigit()).contentTransition(.numericText())
+                                        }
+                                        Text("\(next.session.sessionType.displayName) · \(next.session.startTime.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
                                     }
-                                    Text("\(next.session.sessionType.displayName) · \(next.session.startTime.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }.buttonStyle(PulsePressStyle())
+                            PulseCard {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    Text("比赛周末").font(.headline)
+                                    ForEach(next.meeting.sessions.filter { $0.status == .scheduled && $0.startTime >= context.date }.sorted { $0.startTime < $1.startTime }.prefix(3)) { session in
+                                        HStack { Text(session.sessionType.displayName).font(.subheadline.bold()); Spacer(); Text(session.startTime, format: .dateTime.weekday().hour().minute()).font(.caption).foregroundStyle(.secondary) }
+                                    }
+                                }
+                            }
+                        } else if model.loadState.isLoading { ProgressView("加载赛历…") }
+                        else { ContentUnavailableView("暂无下一场比赛", systemImage: "flag.checkered", description: Text(model.loadState.errorText ?? "当前赛季没有待开始的场次。")) }
+                        Button { model.settingsPresented = true } label: {
+                            PulseCard {
+                                HStack(spacing: 14) {
+                                    if let favorite = model.favoriteStanding {
+                                        AssetImage(name: MotorsportAssetName.helmetName(driverID: favorite.id, name: favorite.driverName, season: model.season)).frame(width: 52, height: 48)
+                                        VStack(alignment: .leading, spacing: 5) { Label("喜欢的车手", systemImage: "star.fill").font(.caption).foregroundStyle(PulseStyle.red); Text(favorite.driverName).font(.headline); Text("P\(favorite.position) · \(favorite.points.formatted()) PTS").font(.caption2).foregroundStyle(.secondary) }
+                                    } else { Label("选择喜欢的车手", systemImage: "star").font(.headline) }
+                                    Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }.buttonStyle(PulsePressStyle())
-                        PulseCard {
-                            VStack(alignment: .leading, spacing: 14) {
-                                Text("比赛周末").font(.headline)
-                                ForEach(next.meeting.sessions.filter { $0.startTime > Date() }.prefix(3)) { session in
-                                    HStack { Text(session.sessionType.displayName).font(.subheadline.bold()); Spacer(); Text(session.startTime, format: .dateTime.weekday().hour().minute()).font(.caption).foregroundStyle(.secondary) }
-                                }
-                            }
-                        }
-                    } else if model.loadState.isLoading { ProgressView("加载赛历…") }
-                    else { ContentUnavailableView("暂无下一场比赛", systemImage: "flag.checkered", description: Text(model.loadState.errorText ?? "当前赛季没有待开始的场次。")) }
-                    Button { model.settingsPresented = true } label: {
-                        PulseCard {
-                            HStack(spacing: 14) {
-                                if let favorite = model.favoriteStanding {
-                                    AssetImage(name: MotorsportAssetName.helmetName(driverID: favorite.id, name: favorite.driverName, season: model.season)).frame(width: 52, height: 48)
-                                    VStack(alignment: .leading, spacing: 5) { Label("喜欢的车手", systemImage: "star.fill").font(.caption).foregroundStyle(PulseStyle.red); Text(favorite.driverName).font(.headline); Text("P\(favorite.position) · \(favorite.points.formatted()) PTS").font(.caption2).foregroundStyle(.secondary) }
-                                } else { Label("选择喜欢的车手", systemImage: "star").font(.headline) }
-                                Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }.buttonStyle(PulsePressStyle())
-                }.padding(20)
+                    }.padding(20)
+                }
             }.background(PulseStyle.background)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarLeading) { PulseSettingsButton() } }

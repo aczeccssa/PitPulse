@@ -1,3 +1,4 @@
+import PitPulseComponents
 import ActivityKit
 import SwiftUI
 import WidgetKit
@@ -58,7 +59,7 @@ struct PitPulseLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 HStack(spacing: 4) {
-                    Image(MotorsportAssetName.seriesLogoName(isWec: context.attributes.seriesTitle == "FIA WEC")).resizable().scaledToFit().frame(width: 24, height: 14)
+                    MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: context.attributes.seriesTitle == "FIA WEC")).resizable().scaledToFit().frame(width: 24, height: 14)
                     ActivityNumberText(context.state.compactLeadingText).font(.system(size: 9, weight: .bold)).lineLimit(1)
                 }.foregroundStyle(.red)
             } compactTrailing: {

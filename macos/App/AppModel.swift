@@ -42,6 +42,11 @@ final class AppModel: ObservableObject {
 
     private let widgetPublisher: WidgetSnapshotPublisher?
     private var widgetSubscription: AnyCancellable?
+    private var widgetStandings: [DriverStanding] = []
+    private var widgetStandingsSavedAt = Date.distantPast
+    private var widgetRecentRaces: [FavoriteRaceSource] = []
+    private var widgetHighlightsKey: String?
+    private var widgetHighlightsLoadedAt: Date?
     private let defaults: UserDefaults
     private let credentials: any CredentialStore
     private let cache: DiskCalendarCache
@@ -353,6 +358,7 @@ final class AppModel: ObservableObject {
                       !showingConstructorStandings else { return }
                 driverStandings = response.data
                 standingsMeta = response.meta
+                publishWidgetStandings(response.data, meta: response.meta)
                 try? await cache.save(server: server.url, season: season, key: "standings-drivers", envelope: response)
             }
             standingsError = nil
@@ -680,6 +686,7 @@ final class AppModel: ObservableObject {
             favoriteDriverId = id
             if let id { defaults.set(id, forKey: PreferenceKeys.favoriteDriverId) }
             else { defaults.removeObject(forKey: PreferenceKeys.favoriteDriverId) }
+            publishFavoriteWidget()
         }
     }
 
@@ -727,6 +734,70 @@ final class AppModel: ObservableObject {
                 self.standingsError = error.localizedDescription
             }
         }
+    }
+
+    private func publishWidgetStandings(_ standings: [DriverStanding], meta: ResponseMeta) {
+        widgetStandings = standings
+        widgetStandingsSavedAt = meta.stale ? .distantPast : (meta.fetchedAt ?? .distantPast)
+        widgetPublisher?.publishStandings(standings, season: selectedSeason, savedAt: widgetStandingsSavedAt)
+        publishFavoriteWidget()
+    }
+
+    private func publishFavoriteWidget() {
+        let savedAt = ([widgetStandingsSavedAt] + widgetRecentRaces.map(\.savedAt)).min() ?? .distantPast
+        widgetPublisher?.publishFavoriteDriver(widgetStandings, favoriteID: favoriteDriverId,
+            season: selectedSeason, savedAt: savedAt, recentRaces: widgetRecentRaces)
+    }
+
+    private func refreshWidgetHighlights() async {
+        guard widgetPublisher != nil, networkAvailable, let server = configuredServer else { return }
+        let season = selectedSeason
+        let requestGeneration = generation
+        let now = Date()
+        let races = meetings.filter { $0.status != .cancelled && $0.status != .postponed }
+            .flatMap { meeting in
+                meeting.sessions.filter { session in
+                    guard session.sessionType == .race, session.status != .cancelled,
+                          session.status != .postponed, session.status != .live else { return false }
+                    return session.status == .finished || (session.endTime ?? session.startTime.addingTimeInterval(3 * 3600)) < now
+                }.map { (meeting: meeting, session: $0) }
+            }.sorted { $0.session.startTime > $1.session.startTime }.prefix(3)
+        let key = "\(requestGeneration)|\(season)|" + races.map { $0.session.id }.joined(separator: ",")
+        if widgetHighlightsKey == key, let loadedAt = widgetHighlightsLoadedAt,
+           now.timeIntervalSince(loadedAt) < 900 { return }
+        let client = APIClient(baseURL: server.url, session: session)
+        let token = try? credentials.token(for: server.url)
+        do {
+            let response = try await client.driverStandings(season: season, token: token)
+            guard generation == requestGeneration, selectedSeason == season, configuredServer == server,
+                  !Task.isCancelled else { return }
+            publishWidgetStandings(response.data, meta: response.meta)
+        } catch {
+            // Retain the last dated snapshot if the standings request fails.
+        }
+        var sources: [FavoriteRaceSource] = []
+        for race in races {
+            do {
+                let response = try await client.sessionResults(sessionId: race.session.id, token: token)
+                guard generation == requestGeneration, selectedSeason == season, configuredServer == server,
+                      !Task.isCancelled else { return }
+                guard !response.data.isEmpty else { continue }
+                sources.append(FavoriteRaceSource(meeting: race.meeting, session: race.session,
+                    results: response.data, savedAt: response.meta.stale ? .distantPast : (response.meta.fetchedAt ?? .distantPast)))
+            } catch { continue }
+        }
+        guard generation == requestGeneration, selectedSeason == season, configuredServer == server,
+              !Task.isCancelled else { return }
+        if let newest = races.first, let source = sources.first(where: { $0.session.id == newest.session.id }) {
+            widgetRecentRaces = sources
+            widgetPublisher?.publishLastRace(meeting: source.meeting, session: source.session,
+                results: source.results, savedAt: source.savedAt)
+            publishFavoriteWidget()
+        } else if !races.isEmpty {
+            return
+        }
+        widgetHighlightsKey = key
+        widgetHighlightsLoadedAt = now
     }
 
     func openNotificationSettings() {
@@ -846,6 +917,11 @@ final class AppModel: ObservableObject {
         sessionResults = []
         resultMeta = nil
         resultError = nil
+        widgetStandings = []
+        widgetStandingsSavedAt = .distantPast
+        widgetRecentRaces = []
+        widgetHighlightsKey = nil
+        widgetHighlightsLoadedAt = nil
         driverStandings = []
         constructorStandings = []
         standingsMeta = nil
@@ -889,7 +965,9 @@ final class AppModel: ObservableObject {
             meta = calendarResponse.meta
             nextMeetingOverride = validServerNextMeeting(nextResponse.data)
             // Do not stamp server-stale data as freshly fetched.
-            widgetPublisher?.publishCalendar(meetings: nextMeetingOverride.map { [$0] } ?? meetings,
+            widgetPublisher?.publishCalendar(meetings: nextMeetingOverride.map { next in
+                meetings.filter { $0.id != next.id } + [next]
+            } ?? meetings,
                 savedAt: calendarResponse.meta.stale ? .distantPast : (calendarResponse.meta.fetchedAt ?? .distantPast))
             lastSuccessfulLoadAt = Date()
             lastSuccessfulAttemptAt = Date()
@@ -906,7 +984,10 @@ final class AppModel: ObservableObject {
                 }
             }
             if remindersEnabled { await syncReminders(calendarResponse.data, server: server, season: season) }
-            Task { await refreshPageData() }
+            Task {
+                await refreshPageData()
+                await refreshWidgetHighlights()
+            }
         } catch {
             guard requestGeneration == generation else { return }
             let unauthorized = error as? APIClientError == .unauthorized

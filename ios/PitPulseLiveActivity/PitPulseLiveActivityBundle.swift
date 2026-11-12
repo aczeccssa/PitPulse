@@ -1,3 +1,4 @@
+import PitPulseComponents
 import SwiftUI
 import WidgetKit
 

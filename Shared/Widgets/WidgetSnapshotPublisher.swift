@@ -42,19 +42,23 @@ final class WidgetSnapshotPublisher {
 
     private func upcomingSnapshot(meetings: [Meeting], savedAt: Date, now: Date) -> UpcomingWidgetSnapshot? {
         let races = meetings
-            .filter { $0.status != .cancelled && $0.endDate >= now }
+            .filter { $0.status == .scheduled && $0.endDate >= now }
             .sorted { $0.startDate < $1.startDate }
-            .prefix(3)
             .map { meeting -> UpcomingRaceEntry in
                 let sessions = meeting.sessions
-                    .filter { $0.status != .cancelled && $0.status != .finished && $0.startTime >= now }
+                    .filter { $0.status == .scheduled && $0.startTime >= now }
                     .sorted { $0.startTime < $1.startTime }
                 let next = sessions.first
                 let race = meeting.sessions.first { $0.sessionType == .race && $0.status != .cancelled }
                 return UpcomingRaceEntry(id: meeting.id, round: meeting.round, name: meeting.name,
                     location: meeting.location, countryCode: meeting.countryCode,
                     start: meeting.startDate, end: meeting.endDate, raceStart: race?.startTime,
-                    nextSessionStart: next?.startTime, nextSessionTitle: next?.sessionType.displayName)
+                    nextSessionStart: next?.startTime, nextSessionTitle: next?.sessionType.displayName,
+                    sessions: meeting.sessions.filter {
+                        $0.status == .scheduled || ($0.status == .finished && $0.startTime < now)
+                    }.sorted { $0.startTime < $1.startTime }.map {
+                        RaceWidgetSession(id: $0.id, title: $0.sessionType.displayName, start: $0.startTime)
+                    })
             }
         guard !races.isEmpty else { return nil }
         return UpcomingWidgetSnapshot(savedAt: savedAt, races: Array(races))
@@ -69,7 +73,7 @@ final class WidgetSnapshotPublisher {
         let drivers = standings.sorted { $0.position < $1.position }.prefix(5).map {
             WidgetStandingDriver(driverID: $0.driverId, name: $0.driverName, team: $0.constructor,
                 constructorID: $0.constructorIds.first, position: $0.position, points: $0.points,
-                gapToLeader: max(0, leader.points - $0.points))
+                gapToLeader: max(0, leader.points - $0.points), driverNumber: $0.driverNumber)
         }
         RaceWidgetCache.writeStandings(StandingsWidgetSnapshot(season: season, savedAt: savedAt, drivers: Array(drivers)), to: defaults)
         reload(RaceWidgetCache.standingsKind)
@@ -88,7 +92,7 @@ final class WidgetSnapshotPublisher {
         let driver = WidgetStandingDriver(driverID: standing.driverId, name: standing.driverName,
             team: standing.constructor, constructorID: standing.constructorIds.first,
             position: standing.position, points: standing.points,
-            gapToLeader: max(0, leaderPoints - standing.points))
+            gapToLeader: max(0, leaderPoints - standing.points), driverNumber: standing.driverNumber)
         let recent = recentRaces.compactMap { source -> FavoriteRaceEntry? in
             guard let result = source.results.first(where: { $0.driverId == favoriteID }) else { return nil }
             return FavoriteRaceEntry(
@@ -117,7 +121,7 @@ final class WidgetSnapshotPublisher {
                 ? (result.raceTime ?? result.time ?? result.bestLap ?? "—")
                 : (result.gap ?? result.time ?? "—")
             return LastRacePodiumEntry(driverID: result.driverId, name: result.driverName, team: result.team,
-                constructorID: result.constructorId, position: position, time: time, points: result.points)
+                constructorID: result.constructorId, position: position, time: time, points: result.points, driverNumber: result.driverNumber)
         }
         let fastest = ordered
             .compactMap { result in Self.lapSeconds(result.bestLap).map { (result.bestLap ?? "", $0) } }

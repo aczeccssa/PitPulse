@@ -504,6 +504,7 @@ mod tests {
             position: Some(1),
             classification: "classified".into(),
             driver_id: driver_id.into(),
+            driver_number: None,
             driver_name: "Driver".into(),
             constructor_id: constructor_id.into(),
             team: "Team".into(),

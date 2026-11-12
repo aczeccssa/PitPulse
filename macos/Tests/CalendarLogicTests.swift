@@ -105,4 +105,32 @@ extension CalendarLogicTests {
         XCTAssertNil(CalendarLogic.featuredMeeting(in: [cancelled], now: Date()))
         XCTAssertNil(CalendarLogic.featuredMeeting(in: [], now: Date()))
     }
+
+    func testFeaturedMeetingAdvancesAfterRaceDayEvenWhenPreviousRaceIsCloser() {
+        func meeting(_ id: String, start: String, end: String) -> Meeting {
+            Meeting(
+                id: id, season: 2026, round: nil, name: id, country: "", countryCode: nil,
+                location: "", startDate: TestData.date(start), endDate: TestData.date(end),
+                status: .scheduled, sessions: [], source: nil, fetchedAt: nil,
+                sourceUpdatedAt: nil, revision: nil
+            )
+        }
+        let brazil = meeting("brazil", start: "2026-11-06T14:30:00Z", end: "2026-11-08T19:00:00Z")
+        let upcoming = meeting("next", start: "2026-11-19T14:30:00Z", end: "2026-11-22T19:00:00Z")
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        let meetings = [upcoming, brazil]
+        for (time, expected) in [
+            ("2026-11-08T20:00:00Z", brazil.id),
+            ("2026-11-09T15:59:59Z", brazil.id),
+            ("2026-11-09T16:00:00Z", upcoming.id),
+            ("2026-11-12T04:00:00Z", upcoming.id),
+            ("2026-12-01T04:00:00Z", upcoming.id)
+        ] {
+            XCTAssertEqual(
+                CalendarLogic.featuredMeeting(in: meetings, now: TestData.date(time), calendar: calendar)?.id,
+                expected, time
+            )
+        }
+    }
 }

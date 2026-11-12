@@ -85,6 +85,14 @@ public struct RaceWidgetSnapshot: Codable, Equatable, Sendable {
         self.meeting = meeting; self.session = session; self.start = start; self.savedAt = savedAt
         self.round = round; self.location = location; self.sessions = sessions
     }
+    public func advancing(to date: Date) -> RaceWidgetSnapshot? {
+        let future = sessions?.filter { $0.start >= date }.min { $0.start < $1.start }
+        guard let future else { return start >= date ? self : nil }
+        var copy = self
+        copy.session = future.title
+        copy.start = future.start
+        return copy
+    }
     public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
 }
 
@@ -182,6 +190,7 @@ extension RaceWidgetCache {
 public struct WidgetStandingDriver: Codable, Equatable, Sendable, Identifiable {
     public var id: String { driverID }
     public var driverID: String
+    public var driverNumber: String?
     public var name: String
     public var team: String
     public var constructorID: String?
@@ -189,7 +198,8 @@ public struct WidgetStandingDriver: Codable, Equatable, Sendable, Identifiable {
     public var points: Double
     public var gapToLeader: Double
     public init(driverID: String, name: String, team: String, constructorID: String? = nil,
-                position: Int, points: Double, gapToLeader: Double) {
+                position: Int, points: Double, gapToLeader: Double, driverNumber: String? = nil) {
+        self.driverNumber = driverNumber
         self.driverID = driverID; self.name = name; self.team = team
         self.constructorID = constructorID; self.position = position
         self.points = points; self.gapToLeader = gapToLeader
@@ -252,6 +262,7 @@ public struct FavoriteDriverWidgetSnapshot: Codable, Equatable, Sendable {
 public struct LastRacePodiumEntry: Codable, Equatable, Sendable, Identifiable {
     public var id: String { driverID }
     public var driverID: String
+    public var driverNumber: String?
     public var name: String
     public var team: String
     public var constructorID: String?
@@ -259,7 +270,8 @@ public struct LastRacePodiumEntry: Codable, Equatable, Sendable, Identifiable {
     public var time: String
     public var points: Double?
     public init(driverID: String, name: String, team: String, constructorID: String? = nil,
-                position: Int, time: String, points: Double? = nil) {
+                position: Int, time: String, points: Double? = nil, driverNumber: String? = nil) {
+        self.driverNumber = driverNumber
         self.driverID = driverID; self.name = name; self.team = team
         self.constructorID = constructorID; self.position = position
         self.time = time; self.points = points
@@ -301,12 +313,14 @@ public struct UpcomingRaceEntry: Codable, Equatable, Sendable, Identifiable {
     public var raceStart: Date?
     public var nextSessionStart: Date?
     public var nextSessionTitle: String?
+    public var sessions: [RaceWidgetSession]?
     public init(id: String, round: Int? = nil, name: String, location: String,
                 countryCode: String? = nil, start: Date, end: Date, raceStart: Date? = nil,
-                nextSessionStart: Date? = nil, nextSessionTitle: String? = nil) {
+                nextSessionStart: Date? = nil, nextSessionTitle: String? = nil, sessions: [RaceWidgetSession]? = nil) {
         self.id = id; self.round = round; self.name = name; self.location = location
         self.countryCode = countryCode; self.start = start; self.end = end; self.raceStart = raceStart
         self.nextSessionStart = nextSessionStart; self.nextSessionTitle = nextSessionTitle
+        self.sessions = sessions
     }
 }
 
@@ -316,6 +330,33 @@ public struct UpcomingWidgetSnapshot: Codable, Equatable, Sendable {
     public init(savedAt: Date = .now, races: [UpcomingRaceEntry]) {
         self.savedAt = savedAt; self.races = races
     }
+    public func remaining(at date: Date) -> UpcomingWidgetSnapshot? {
+        var copy = self
+        copy.races = races.filter { $0.end >= date }.sorted { $0.start < $1.start }.map { race in
+            var race = race
+            if let sessions = race.sessions {
+                let next = sessions.filter { $0.start >= date }.min { $0.start < $1.start }
+                race.nextSessionStart = next?.start
+                race.nextSessionTitle = next?.title
+            } else if let start = race.nextSessionStart, start < date {
+                race.nextSessionStart = nil
+                race.nextSessionTitle = nil
+            }
+            return race
+        }
+        return copy.races.isEmpty ? nil : copy
+    }
+
+    public func nextSession(at date: Date) -> RaceWidgetSnapshot? {
+        races.filter { $0.end >= date }.compactMap { race -> RaceWidgetSnapshot? in
+            let next = race.sessions?.filter { $0.start >= date }.min { $0.start < $1.start }
+            guard let start = next?.start ?? race.nextSessionStart, start >= date,
+                  let title = next?.title ?? race.nextSessionTitle else { return nil }
+            return RaceWidgetSnapshot(meeting: race.name, session: title, start: start, savedAt: savedAt,
+                round: race.round, location: race.location, sessions: race.sessions)
+        }.min { $0.start < $1.start }
+    }
+
     public func isStale(at date: Date) -> Bool { date.timeIntervalSince(savedAt) > 3600 * 6 }
 }
 

@@ -164,7 +164,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 7);
+    assert_eq!(database.user_version().await.unwrap(), 8);
     let (meetings, _) = database.calendar(Some(2026)).await.unwrap();
     assert_eq!(meetings.len(), 1);
     assert!(meetings[0].circuit.is_none());
@@ -175,6 +175,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     assert_eq!(rows[0].best_lap, None);
     assert_eq!(rows[0].q1, None);
     assert_eq!(rows[0].race_time, None);
+    assert_eq!(rows[0].driver_number, None);
     assert_eq!(meta.revision, 7);
 }
 
@@ -196,6 +197,7 @@ async fn database_with_session(temp: &TempDir) -> (Database, String) {
 
 fn result(session_id: &str, classification: &str, points: f64, quality: &str) -> SessionResult {
     SessionResult {
+        driver_number: None,
         session_id: session_id.into(),
         position: Some(1),
         classification: classification.into(),
@@ -323,6 +325,7 @@ async fn test_standings_revisions_retain_constructor_identity_and_empty_fetch_ke
         .unwrap();
     database.migrate().await.unwrap();
     let row = DriverStanding {
+        driver_number: Some("16".into()),
         season: 2026,
         position: 1,
         driver_id: "leclerc".into(),
@@ -372,6 +375,22 @@ async fn test_standings_revisions_retain_constructor_identity_and_empty_fetch_ke
     let (rows, meta) = database.driver_standings(Some(2026)).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].constructor_ids, vec!["ferrari"]);
+    assert_eq!(rows[0].driver_number.as_deref(), Some("16"));
+    let mut corrected = rows[0].clone();
+    corrected.driver_number = Some("44".into());
+    assert_eq!(
+        database
+            .replace_driver_standings(vec![corrected])
+            .await
+            .unwrap(),
+        4
+    );
+    assert_eq!(
+        database.driver_standings(Some(2026)).await.unwrap().0[0]
+            .driver_number
+            .as_deref(),
+        Some("44")
+    );
     assert_eq!(rows[0].revision, 3);
     assert_eq!(rows[0].source, "test-source-correction");
     assert_eq!(meta.revision, 3);
@@ -395,4 +414,37 @@ async fn test_standings_revisions_retain_constructor_identity_and_empty_fetch_ke
     );
     let (constructors, _) = database.constructor_standings(Some(2026)).await.unwrap();
     assert_eq!(constructors[0].constructor_id, "ferrari");
+}
+
+#[tokio::test]
+async fn test_result_driver_number_roundtrip_and_number_only_revision() {
+    let temp = TempDir::new().unwrap();
+    let (database, session_id) = database_with_session(&temp).await;
+    let mut row = result(&session_id, "classified", 25.0, "provisional");
+    row.driver_number = Some("16".into());
+    assert_eq!(
+        database
+            .replace_session_results(vec![row.clone()], "provisional")
+            .await
+            .unwrap(),
+        1
+    );
+    let loaded = database.session_results(&session_id).await.unwrap().0;
+    assert_eq!(loaded[0].driver_number.as_deref(), Some("16"));
+    row.driver_number = Some("44".into());
+    assert_eq!(
+        database
+            .replace_session_results(vec![row], "provisional")
+            .await
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        database.session_results(&session_id).await.unwrap().0[0]
+            .driver_number
+            .as_deref(),
+        Some("44")
+    );
+    database.migrate().await.unwrap();
+    assert_eq!(database.user_version().await.unwrap(), 8);
 }
