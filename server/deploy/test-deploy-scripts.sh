@@ -49,6 +49,8 @@ F1_COMPANION_TOKEN=$TOKEN
 EOF
 chmod 0600 "$PITPULSE_ENV_FILE"
 install -m 0644 "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE"
+printf '\n# operator-owned config sentinel: must survive bootstrap and deploy\n' \
+    >> "$PITPULSE_CONFIG_FILE"
 
 cat > "$FAKE_CURL" <<'PY'
 #!/usr/bin/env python3
@@ -320,6 +322,8 @@ grep -q 'request>headers>Authorization delete' "$SCRIPT_DIR/caddyfile.global.exa
 log "9/12 checking full deploy success, failed-deploy rollback and manual rollback"
 PITPULSE_DEPLOY_ROOT="$WORK_DIR" PITPULSE_SYSTEMCTL=/usr/bin/true \
     PITPULSE_CADDY="$FAKE_CADDY" bash "$SCRIPT_DIR/bootstrap-vps.sh" >/dev/null
+grep -Fq 'operator-owned config sentinel' "$PITPULSE_CONFIG_FILE" ||
+    fail "bootstrap replaced the operator-owned config"
 export F1_COMPANION_DATABASE_PATH
 export F1_COMPANION_TOKEN
 
@@ -335,6 +339,8 @@ env "${deploy_env[@]}" bash "$SCRIPT_DIR/deploy-release.sh" "$ARCHIVE" > "$WORK_
     { cat "$WORK_DIR/deploy-success.log"; fail "full deploy-release drill failed"; }
 [[ "$(resolve_path "$WORK_DIR/opt/pitpulse/current")" == "$(resolve_path "$WORK_DIR/opt/pitpulse/releases/$DRILL_VERSION")" ]] ||
     fail "full deploy did not select the new release"
+grep -Fq 'operator-owned config sentinel' "$PITPULSE_CONFIG_FILE" ||
+    fail "deploy replaced the operator-owned config"
 
 BROKEN_CURL="$WORK_DIR/fake-curl-broken.py"
 cat > "$BROKEN_CURL" <<'PY'

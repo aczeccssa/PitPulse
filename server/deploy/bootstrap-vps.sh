@@ -37,11 +37,17 @@ if [[ -z "$PITPULSE_DEPLOY_ROOT" ]]; then
     chown -R pitpulse:pitpulse "$PITPULSE_LIB_DIR"
 fi
 
-if [[ ! -f "$PITPULSE_CONFIG_FILE" ]]; then
+if [[ ! -e "$PITPULSE_CONFIG_FILE" && ! -L "$PITPULSE_CONFIG_FILE" ]]; then
     install -m 0644 "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE"
 else
-    cmp -s "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE" ||
-        fail "existing $PITPULSE_CONFIG_FILE differs from the reviewed template; resolve manually"
+    # The active config is operator-owned. Feature flags and provider settings
+    # belong here, outside every immutable release directory. A deliberate
+    # change must survive bootstrap and deploy; never overwrite it.
+    [[ -f "$PITPULSE_CONFIG_FILE" && ! -L "$PITPULSE_CONFIG_FILE" ]] ||
+        fail "existing $PITPULSE_CONFIG_FILE is not a regular file"
+    if ! cmp -s "$SCRIPT_DIR/config.production.toml" "$PITPULSE_CONFIG_FILE"; then
+        log "preserving existing operator-owned config $PITPULSE_CONFIG_FILE (differs from template)"
+    fi
 fi
 if [[ ! -f "$PITPULSE_ENV_FILE" ]]; then
     install -m 0600 "$SCRIPT_DIR/environment.production.example" "$PITPULSE_ENV_FILE"

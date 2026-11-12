@@ -31,6 +31,8 @@ load_deploy_settings "${PITPULSE_DEPLOY_SETTINGS_FILE:-$PITPULSE_ETC_DIR/deploy.
 [[ "${PITPULSE_PUBLIC_BASE_URL:-}" == "https://pitpulse.lestere.bond" ]] ||
     fail "production public URL must be https://pitpulse.lestere.bond"
 require_commands tr stat
+CONFIG_DIGEST="$(sha256sum "$PITPULSE_CONFIG_FILE" | cut -d' ' -f1)"
+log "using operator-owned config $PITPULSE_CONFIG_FILE; deploy never replaces it"
 
 mkdir -p "$PITPULSE_OPT_DIR/releases" "$PITPULSE_OPT_DIR/releases.incoming" "$PITPULSE_LIB_DIR" "$PITPULSE_BACKUP_DIR"
 WORK_DIR="$(mktemp -d "$PITPULSE_BACKUP_DIR/deploy.XXXXXX")"
@@ -148,6 +150,10 @@ health_with_token "$public_base/api/v1/health" "$CURL_AUTH" "$WORK_DIR/public-he
 check_sse_first_event "$public_base/api/v1/live/stream?series=f1" "$CURL_SSE" "$WORK_DIR/public-sse.txt" ||
     rollback "public SSE first event was not received"
 log "public HTTPS health and SSE checks passed"
+
+[[ "$(sha256sum "$PITPULSE_CONFIG_FILE" | cut -d' ' -f1)" == "$CONFIG_DIGEST" ]] ||
+    rollback "operator-owned config changed during deployment"
+log "operator-owned config remained unchanged across deployment"
 
 log "deployment $VERSION passed local and public health checks"
 log "database user_version: $(cat "$BACKUP_DIR/user_version.txt" 2>/dev/null || printf 'unknown')"
