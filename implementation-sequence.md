@@ -3,7 +3,7 @@
 > 制定日期：2026-10-08（Asia/Shanghai）
 > 架构依据：[`F1-Companion-Architecture.md`](F1-Companion-Architecture.md)
 > 策略：优先交付可用的 Menu Bar V1；Live / Notch 独立推进，不阻塞 V1。
-> 当前状态唯一数据源：[`docs/tasks/tasks.json`](docs/tasks/tasks.json)，通过 [`静态任务看板`](docs/tasks/index.html) 查看；本文件保留任务定义与依赖，不再重复维护当前状态。完成必须有验收证据。
+> 本文件保留任务定义与依赖；完成必须有验收证据。
 
 ## 1. 已核对的起点
 
@@ -54,7 +54,7 @@
 
 ### 2.3 车手头盔与车队 Logo
 
-- 单独任务 **T03**，完整 Agent brief 位于 [`docs/tasks/T03-motorsport-assets.md`](docs/tasks/T03-motorsport-assets.md)。Agent 必须实际联网检索，不把“以后找图”当交付。
+- 单独任务 **T03**。Agent 必须实际联网检索，不把“以后找图”当交付。
 - 头盔不等于头像；车队 Logo 不等于赛车照片。用稳定 `driverId` / `constructorId` + `season` 映射，不能用数组序号、当前车号或显示名称作为唯一键。
 - 素材随 App 本地打包；macOS 不运行时直连 F1 / 第三方图源，素材元数据研究文件不作为客户端联网入口。
 - 来源、授权、赛季、下载与打包状态逐项记录。研究完成、下载完成、可发布和 App 已接入是四种不同状态。
@@ -82,7 +82,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 以可运行的纵向闭环推进，不先造完整设计系统、复杂主题、全量遥测存储、素材后台、账户系统或通用工作流平台。没有日期 / 工期承诺；外部 API 与真实赛期按证据推进。
 
-## 4. 任务定义索引（当前状态读取 JSON）
+## 4. 任务定义索引
 
 | ID | 任务 | 优先级 | 硬依赖 |
 |---|---|---|---|
@@ -102,7 +102,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 | T14 | Notch 紧凑 / 展开态与降级 | P1 | T13、T12 OpenNook 结论 |
 | T15 | 部署、运行证据与最终验收 | P1 | T11；V2 验收另需 T14 |
 
-素材研究记录见 [`docs/assets/collection-report.md`](docs/assets/collection-report.md)，来源与映射见 [`manifest.json`](macos/Resources/MotorsportAssets/manifest.json)。当前任务进度、授权／下载待审项统一读取 [`tasks.json`](docs/tasks/tasks.json)。
+素材研究记录见 [`docs/assets/collection-report.md`](docs/assets/collection-report.md)，来源与映射见 [`manifest.json`](macos/Resources/MotorsportAssets/manifest.json)。授权／下载待审项随素材记录维护。
 
 ## 5. 可直接执行的任务卡
 
@@ -131,11 +131,11 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 ### T03 — 独立素材 Agent
 
-**执行方式**：使用独立 Agent，按 [`docs/tasks/T03-motorsport-assets.md`](docs/tasks/T03-motorsport-assets.md) 在线查找、核验并收集。只写素材专属目录，避免与 App 实现产生冲突。
+**执行方式**：使用独立 Agent，按本节要求在线查找、核验并收集。只写素材专属目录，避免与 App 实现产生冲突。
 
 **交付**：当前赛季名单证据、逐车手头盔 / 逐车队 Logo 覆盖矩阵、可审计 manifest、可打包图片（若许可明确）、缺失与授权待审清单。**不能只写一份网址列表就声称图片已下载。**
 
-**验收**：manifest 可解析；每项 ID / season / 来源 / license / 状态明确；已下载文件 hash、格式与路径有效；区分候选、已下载参考、可发布；缺失有替代 UI 建议。详细要求见独立任务卡。
+**验收**：manifest 可解析；每项 ID / season / 来源 / license / 状态明确；已下载文件 hash、格式与路径有效；区分候选、已下载参考、可发布；缺失有替代 UI 建议。
 
 ### T04 — macOS 原生工程与壳
 
@@ -270,7 +270,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 
 - Release binary + systemd 为默认；token / TOML / SQLite 放仓库外。固定 Ubuntu 24.04 x86-64 CI 产出带 VERSION/SHA256/ldd 的版本化 artifact，GitHub Actions production 环境手动批准后经专用 SSH key 与 forced-command 上传；VPS 使用不可变 release 目录、原子 current symlink、单写者 SQLite 备份、401/200/SSE 健康检查和失败自动回滚。演练 HTTPS 或私网、正常 shutdown、DB 备份恢复、重启与 provider 断网。
 - 本地开发使用 `taskdeck init` 注册 PitPulse，配置 `Run Server` / `Run App`：启动前分别构建 Rust/Swift，前台进程由 Taskdeck 管理；Server 读取仓库外配置与数据库，App 默认连接真实本机服务38701。停止和重启只操作本会话任务，回放始终独立。
-- 常用本地开发检查由Taskdeck具名任务统一入口：Rust debug/release、test/fmt/clippy，Swift debug/release、测试目标编译/单测，以及地图和任务报告检查；遵循AGENTS.md的Taskdeck优先、具名启动和桌面测试隔离规范。
+- 常用本地开发检查由Taskdeck具名任务统一入口：Rust debug/release、test/fmt/clippy，Swift debug/release、测试目标编译/单测，以及地图检查；遵循AGENTS.md的Taskdeck优先、具名启动和桌面测试隔离规范。
 - 有 VPS 访问授权再部署；没有则本地先验收，不捏造远程上线结果。除非用户另行授权，不 commit / push / 创建 PR / 发布 release。
 - 真实练习赛后 5 / 15 / 30 / 45 / 60 分钟记录 Provider 可读性；真实 Session 记录 Live 字段、分钟级时效及降级。
 - 闲置 / 赛事 RSS / CPU 实测，无硬编码低内存承诺；区分 Linux 服务指标和本机 App 指标。
@@ -282,8 +282,8 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 ### 分工与变更边界
 
 - 默认主线按依赖逐任务推进，每次交付一条可验证路径。当前只授权并启动 T03 素材 Agent；其他任务若要多 Agent 并行再明确分配。
-- 未来后端与 macOS 可在 T01 契约完成后分开写；共同契约、migration、工程文件、任务状态由主 Agent 集成，避免抢写。
-- 每次任务开始、实质进展、验收或完成后更新 `docs/tasks/tasks.json` 的状态、步骤、验收项、证据、阻塞、更新时间和追加历史；本文件仅在任务定义 / 依赖变更时同步。未经证据不得把架构原 checklist 批量勾选。
+- 未来后端与 macOS 可在 T01 契约完成后分开写；共同契约、migration、工程文件由主 Agent 集成，避免抢写。
+- 任务定义或依赖变更时同步本文件；验收与进展保留在交付记录中。未经证据不得把架构原 checklist 批量勾选。
 - 不覆盖无关 dirty / staged / untracked 改动；不抓取或提交敏感实时日志；fixture 测试不依赖 live network。
 
 ### 验证命令
@@ -306,12 +306,10 @@ xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
 
 ## 7. 计划交付记录
 
-- 2026-10-08：核对架构与实际骨架；建立本计划及 T03 独立任务卡；启动素材 Agent；Rust 起点 7 项测试、fmt、严格 Clippy 与 locked release build 通过；任务卡唯一性及本次新增文档的本地链接检查通过。
-- 本记录不代表 T01～T15 的业务实现已完成；实际状态以 `docs/tasks/tasks.json` 和各验收证据为准。
+- 2026-10-08：核对架构与实际骨架；建立本计划与 T03 任务定义；启动素材 Agent；Rust 起点 7 项测试、fmt、严格 Clippy 与 locked release build 通过；本次新增文档的本地链接检查通过。
+- 本记录不代表 T01～T15 的业务实现已完成；实际状态以各验收证据为准。
 
-- 2026-10-08：素材 Agent 首轮研究已交付（报告 + 34 项 manifest），JSON 必填字段、唯一键、UTC 时间及权利 / 打包状态隔离检查通过；尚无已下载或可发布图片。
-
-- 2026-10-08：初始化静态任务状态看板和独立 JSON；任务当前状态统一迁移至 `docs/tasks/tasks.json`，后续 Agent 更新按 `AGENTS.md` 必须维护 JSON。
+- 2026-10-08：素材 Agent 首轮研究已交付（报告 + 34 项 manifest），唯一键、UTC 时间及权利 / 打包状态隔离检查通过；尚无已下载或可发布图片。
 
 ### T07/T08 分析加载修正约束
 
@@ -320,7 +318,7 @@ xcodebuild -project PitPulse.xcodeproj -scheme PitPulseDesktop \
 
 ## 地图与赛事信息扩展（M5）
 
-T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、天气与雷达；T19 消息与音频依赖 T16；T20 综合验收依赖 T17–T19。当前进度只记录在 tasks.json。
+T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、天气与雷达；T19 消息与音频依赖 T16；T20 综合验收依赖 T17–T19。
 
 - T16：Position.z / CarData.z 有界解码、逐字段更新与时间、WeatherData / TeamRadio、最多 10 Hz SSE（100ms 合并），保持慢消费者只取最新状态、连接状态立即发送；位置与遥测用独立 `receivedAt` 判断样本新鲜度，重复帧和初始化快照不续期，停流 10 秒清除实时位置/遥测；实际遥测频率受上游采样限制。
 - T17：WKWebView + 固定版本 Mapbox GL JS Standard 夜间 3D，赛道几何与版本化校准；应用内共享 MapStore、交互小地图按需创建、隐藏暂停后复用，同 token 换数据服务器不重新初始化，token 变化/进程故障/隐藏实例内存压力才释放；整圈居中、车队颜色/车号、位置插值、地点标签隐藏、收起/隐藏后恢复展示选项与相机。至少三个控制点拟合、独立点误差 ≤20m；首批为新加坡当前布局及下一站。未校准不得产生车位。Mapbox 渲染资源直连为第三方网络规则的明确例外，其余数据经 Rust adapter。
@@ -331,27 +329,27 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 ### T16 — Live 数据扩展
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ### T17 — Notch 3D 地图与校准
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ### T18 — 赛历地图、天气与雷达
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ### T19 — 消息与音频
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ### T20 — 综合验收
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ### T21 — 菜单栏手动刷新与服务端优先队列
 
-范围与验收遵循上方 M5 定义；任务数据记录当前进度与证据。
+范围与验收遵循上方 M5 定义。
 
 ## 多系列 Live 扩展（M6）
 
@@ -361,7 +359,7 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 **范围**：`server/src/providers/wec_live.rs`、`server/src/config.rs`、`server/src/app_state.rs`、`server/src/scheduler.rs`、`server/src/api/`、`macos/Core/LiveStore/`、`macos/App/AppModel.swift`、`macos/Features/Preferences/PreferencesView.swift`、`macos/Features/LiveIsland/LiveIsland.swift`、`docs/acceptance/wec-live-poc.md`。
 
-**验收**：默认关闭；F1 快照与 SSE 不变；`series=wec` 返回独立 Live 状态；WEC bootstrap 映射多组别、车组、计时赛剩余时间、天气与赛会消息；macOS 可切换数据源并显示组别/FCY/剩余时间；用真实 WEC Live 会话验证快照；Rust 测试、macOS 目标编译与任务报告校验通过。原始抓取载荷、凭证与机器私有路径不得进入仓库或任务报告。
+**验收**：默认关闭；F1 快照与 SSE 不变；`series=wec` 返回独立 Live 状态；WEC bootstrap 映射多组别、车组、计时赛剩余时间、天气与赛会消息；macOS 可切换数据源并显示组别/FCY/剩余时间；用真实 WEC Live 会话验证快照；Rust 测试与 macOS 目标编译通过。原始抓取载荷、凭证与机器私有路径不得进入仓库。
 
 ### T23 — Live Island 展示增强与双系列切换
 
@@ -373,7 +371,7 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 **范围（M4）**：`design/brand/pitpulse-v1/`；为 PitPulse 设计简约、独立于赛事官方标识的 App Logo，交付透明主体、独立背景与实际图标合成预览。无硬依赖，关联 T04/T15；用户确认设计后接入 macOS 应用图标、server favicon 与首页引用，并通过已有 Taskdeck 具名服务更新本机运行实例；对外发布不在范围内。
 
-**验收**：原创几何主体与真实 alpha；背景单独保存、画布尺寸一致；预览为正视图标而非设备样机；记录提示词、图层用法与图片检查证据；macOS Release 构建产物包含并引用新图标；server favicon 实际 HTTP200、类型正确，启用 token 时静态图标可读且 API 鉴权保持；具名 App/server 更新成功；任务报告校验通过。
+**验收**：原创几何主体与真实 alpha；背景单独保存、画布尺寸一致；预览为正视图标而非设备样机；记录提示词、图层用法与图片检查证据；macOS Release 构建产物包含并引用新图标；server favicon 实际 HTTP200、类型正确，启用 token 时静态图标可读且 API 鉴权保持；具名 App/server 更新成功。
 
 **后续头像补充**：F1 新增车手没有本地头盔时，可回退到同一稳定车手 ID 的本地头像；补 2026 Haas Rafael Camara 官方肖像，已有 F1 头盔优先和 WEC 肖像展示不变。
 
@@ -385,7 +383,7 @@ T16 Live 数据扩展 → T17 Notch 3D 地图与校准 → T18 赛历地图、�
 
 ## 多平台客户端（M7）
 
-在保持 macOS 行为不变的前提下，先抽出可共享的 Data / Components / Shared，再加入 iOS 26+ App 与 ActivityKit 灵动岛；watchOS 与 Watch Widget 留到后续。当前进度只记录在 `docs/tasks/tasks.json`，验收细节见 `docs/acceptance/ios-live-activity.md`。
+在保持 macOS 行为不变的前提下，先抽出可共享的 Data / Components / Shared，再加入 iOS 26+ App 与 ActivityKit 灵动岛；watchOS 与 Watch Widget 留到后续。验收细节见 `docs/acceptance/ios-live-activity.md`。
 
 ### T25 — E1 客户端分包（Data / Components / Desktop 基座）
 
@@ -414,3 +412,13 @@ T27 移动端交互范围补充：采用总览、赛历、车手积分、车队�
 **预览/设置修正**：预览保留等宽分页留白、仅适度收窄间距，移除预览外观选择，继承App主题；sheet工具栏显式图标。设置统一原生分组、输入样式与主保存/次检查层级，偏好集中展示，保留既有存储和网络业务。
 
 **服务器/组件设置修正**：主设置中的服务器为可点击地址、状态符号与单个配置入口；新 server-config sheet 以服务器图标为视觉焦点，仅两个输入和真实 health 测试/保存操作，并维持现有 Keychain 语义。灵动岛与桌面预览归入同一组件组；移除桌面预览重复的行首图标和手画 chevron，使用系统 row 风格。
+
+> 合并说明：移动端任务的 T27/T28 与 macOS Liquid Glass 任务的原始 T27 编号冲突；后者在本合并中重编号为 T30，任务内容不变。
+
+### T30 — macOS 26 Liquid Glass 布局重做
+
+**范围（M2，关联 T04 / T06 / T08 / T23）**：`macos/Features/MenuBar/`、`macos/Features/Calendar/`、`macos/Features/SessionResults/`、`macos/Features/Standings/`、`macos/Resources/PitPulseAssets.xcassets/PitPulseMenuBar.imageset/`、`docs/design/liquid-glass/`。Notch / Live Island 不在范围内。
+
+把弹层从 480×640 单列长滚动重做为 540×740 的菜单栏尺度 Liquid Glass 壳：页头只保留品牌紧凑标，顶部为纯图标 Liquid 切换器（house / calendar / trophy / person.3），右下角为刷新 / 设置 / 退出玻璃按钮行，全部卡片与控件使用 `.glassEffect`；比赛页为下一节倒计时 + 周末时间线 + 天气 + 积分领跑，赛历为“待开始 / 已结束”单列分组（待开始行加高并显示赛道、Session 与下一节倒计时），比赛详情使用概览 / 周末 / 天气 / 分析二级标签，成绩与积分的前三使用金字塔布局，成绩点行进入独立车手页展示完整比赛数据；页头不再显示在线状态，页面不再提供“数据详情”折叠区。菜单栏状态项使用 `menubar-mark` 的 template 渲染，弹层页头使用原色标。Notch / Live Island 保持原实现，不做改动。不新增后端字段，缺失数据保持明确空态，不用 0 或虚构值填充。
+
+**验收**：`Build App` / `Build App Tests` / `Test App` 在沙箱外通过；真实 Popup 截图；VoiceOver、增强对比度、减弱动态效果与列表滚动性能复核；浅色 / 深色及三种桌面背景下文字对比度 ≥ 4.5:1。设计稿是 mockup，不得当作运行截图证据。

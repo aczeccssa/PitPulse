@@ -7,12 +7,15 @@ struct AnalysisCard<Content: View>: View {
     @ViewBuilder let content: () -> Content
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.headline)
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.5)
+                .foregroundStyle(.secondary)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -43,16 +46,21 @@ struct SessionAnalysisView: View {
                 }
             }
             if let data, !loading || data.hasData {
-                Picker("分析内容", selection: $tab) {
-                    Text("圈速").tag(0); Text("赛道").tag(1); Text("策略").tag(2); Text("赛事").tag(3)
-                }.pickerStyle(.segmented)
+                LiquidSegmented(
+                    items: [
+                        .init(value: 0, title: "圈速"),
+                        .init(value: 1, title: "赛道"),
+                        .init(value: 2, title: "策略"),
+                        .init(value: 3, title: "赛事"),
+                    ],
+                    selection: $tab
+                )
                 switch tab {
                 case 0: timing
                 case 1: track(data)
                 case 2: strategy(data)
                 default: events(data)
                 }
-                if let meta = response?.meta { DataProvenance(meta: meta) }
                 if !data.warnings.isEmpty {
                     DisclosureGroup("部分分析数据未提供") {
                         ForEach(Array(data.warnings.enumerated()), id: \.offset) { _, warning in
@@ -162,9 +170,15 @@ struct SessionAnalysisView: View {
                         }
                     }
                 }
-                Picker("赛道颜色", selection: $metric) {
-                    Text("速度").tag("速度"); Text("油门").tag("油门"); Text("刹车").tag("刹车")
-                }.pickerStyle(.segmented)
+                LiquidSegmented(
+                    items: [
+                        .init(value: "速度", title: "速度"),
+                        .init(value: "油门", title: "油门"),
+                        .init(value: "刹车", title: "刹车"),
+                    ],
+                    selection: $metric,
+                    compact: true
+                )
                 if data.location.count > 1 {
                     TrackHeatmap(location: data.location, telemetry: data.carData, metric: metric)
                         .frame(height: 230)
@@ -463,7 +477,6 @@ struct SeasonAnalysisView: View {
                         }
                     }
                 }
-                if let meta = response?.meta { DataProvenance(meta: meta) }
                 if let warnings = response?.data.warnings, !warnings.isEmpty {
                     DisclosureGroup("部分历史数据未提供") {
                         ForEach(warnings, id: \.self) { Text($0).font(.caption2).foregroundStyle(.secondary) }
