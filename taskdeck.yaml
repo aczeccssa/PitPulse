@@ -2,88 +2,136 @@ version: 1
 session: PitPulse
 task_order:
 - Run Live Replay
-- Run Live Dev Server
 - Run App
+- Build App
+- Build App Release
+- Build App Tests
+- Build iOS
+- Test iOS
+- Check Widget Publisher
+- Check Task Report
+- Check App Launcher
+- Connect Simulator Replay
 tasks:
   Build App:
     command: /bin/bash
-    args: [scripts/xcode-task.sh, build, Debug]
+    args:
+    - scripts/xcode-task.sh
+    - build
+    - Debug
     cwd: .
+    env: {}
+    shell: true
     auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
   Build App Release:
     command: /bin/bash
-    args: [scripts/xcode-task.sh, build, Release]
+    args:
+    - scripts/xcode-task.sh
+    - build
+    - Release
     cwd: .
+    env: {}
+    shell: true
     auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
   Build App Tests:
     command: /bin/bash
-    args: [scripts/xcode-task.sh, build-for-testing, Debug]
+    args:
+    - scripts/xcode-task.sh
+    - build-for-testing
+    - Debug
     cwd: .
+    env: {}
+    shell: true
     auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
   Build iOS:
     command: /bin/bash
-    args: [scripts/xcode-ios-task.sh, build, Debug]
+    args:
+    - scripts/xcode-ios-task.sh
+    - build
+    - Debug
     cwd: .
+    env: {}
+    shell: true
     auto_start: false
-  Test iOS:
-    command: /bin/bash
-    args: [scripts/xcode-ios-task.sh, test, Debug]
-    cwd: .
-    auto_start: false
-  Check Widget Publisher:
-    command: /bin/bash
-    args: [scripts/check-widget-publisher.sh]
-    cwd: .
-    auto_start: false
-  Check Task Report:
-    command: /bin/bash
-    args: [-lc, 'node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js']
-    cwd: .
-    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
   Check App Launcher:
     command: /bin/bash
-    args: [scripts/run-app.sh, --check]
+    args:
+    - scripts/run-app.sh
+    - --check
     cwd: .
+    env: {}
     shell: false
     auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
+  Check Task Report:
+    command: /bin/bash
+    args:
+    - -lc
+    - node docs/tasks/validate.mjs && node --test docs/tasks/tests/task-data.test.mjs && node --check docs/tasks/board.js
+    cwd: .
+    env: {}
+    shell: true
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
+  Check Widget Publisher:
+    command: /bin/bash
+    args:
+    - scripts/check-widget-publisher.sh
+    cwd: .
+    env: {}
+    shell: true
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
+  Connect Simulator Replay:
+    command: /usr/bin/python3
+    args:
+    - scripts/connect-ios-replay.py
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: true
   Run App:
     command: /bin/bash
-    args: [scripts/run-app.sh]
+    args:
+    - scripts/run-app.sh
     cwd: .
-    env:
-      PITPULSE_SERVER_URL: http://127.0.0.1:38701
+    env: {}
     shell: false
     auto_start: false
     stop_timeout_ms: 10000
     clear_logs_on_restart: true
-  Run Live Dev Server:
-    command: /bin/zsh
+  Run Live Replay:
+    command: /usr/bin/python3
     args:
-    - -lc
-    - exec python3 scripts/run-server.py
+    - scripts/run-live-replay.py
     cwd: .
     env: {}
     shell: false
     auto_start: false
     stop_timeout_ms: 10000
     clear_logs_on_restart: false
-
-  Run Live Replay:
-    command: /usr/bin/python3
-    args: [scripts/run-live-replay.py]
+  Test iOS:
+    command: /bin/bash
+    args:
+    - scripts/xcode-ios-task.sh
+    - test
+    - Debug
     cwd: .
-    env:
-      F1_COMPANION_BIND: 0.0.0.0:38702
-      F1_COMPANION_REPLAY_SPEED: '10'
-      F1_COMPANION_REPLAY_HOLD_SECONDS: '10'
-    shell: false
+    env: {}
+    shell: true
     auto_start: false
-    stop_timeout_ms: 10000
+    stop_timeout_ms: 3000
     clear_logs_on_restart: false
-  Connect Simulator Replay:
-    command: /usr/bin/python3
-    args: [scripts/connect-ios-replay.py]
-    cwd: .
-    shell: false
-    auto_start: false
-    clear_logs_on_restart: true
