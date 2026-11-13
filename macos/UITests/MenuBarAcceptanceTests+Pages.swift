@@ -35,6 +35,12 @@ extension MenuBarAcceptanceTests {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "results.row.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         attachScreenshot("Historical practice classification", from: popup)
         app.buttons["返回分站"].click()
+        let qualifying = app.buttons["calendar.session.2026:20:qualifying"]
+        XCTAssertTrue(qualifying.waitForExistence(timeout: 10), app.debugDescription)
+        qualifying.click()
+        XCTAssertTrue(app.buttons["results.row.norris"].waitForExistence(timeout: 15), app.debugDescription)
+        attachScreenshot("Historical qualifying classification", from: popup)
+        app.buttons["返回分站"].click()
         app.buttons["天气"].click()
         XCTAssertTrue(staticText(containing: "历史实测天气", in: app).waitForExistence(timeout: 15), app.debugDescription)
         attachScreenshot("Archived historical weather", from: popup)
