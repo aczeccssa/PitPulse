@@ -587,28 +587,9 @@ fn project_session(
     session_number: Option<i64>,
     session_name: Option<&str>,
 ) -> Value {
-    let roster_number = (|| {
-        let name = session_name?
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .to_lowercase();
-        let mut matches = bundle["drivers"].as_array()?.iter().filter(|row| {
-            row["fullName"].as_str().is_some_and(|candidate| {
-                candidate
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ")
-                    .to_lowercase()
-                    == name
-            })
-        });
-        let first = matches.next()?;
-        if matches.next().is_some() {
-            return None;
-        }
-        first["driverNumber"].as_i64()
-    })();
+    let roster_number = session_name.and_then(|name| {
+        crate::providers::results::session_number_for_name(bundle["drivers"].as_array()?, name)
+    });
     let session_number = roster_number.or(session_number);
     let mut data = empty_session();
     data["warnings"] = json!(bundle["warnings"].as_array().cloned().unwrap_or_default());
