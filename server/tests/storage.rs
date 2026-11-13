@@ -509,3 +509,69 @@ async fn test_incomplete_calendar_cannot_delete_recorded_results() {
         1
     );
 }
+
+#[tokio::test]
+async fn test_partial_refresh_enriches_missing_fields_without_downgrading_classification() {
+    let temp = TempDir::new().unwrap();
+    let database = Database::open(&temp.path().join("enrichment.sqlite"))
+        .await
+        .unwrap();
+    database.migrate().await.unwrap();
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    let meetings = decode_alpha_schedule(&payload).unwrap();
+    database
+        .replace_calendar(&meetings, "2026-11-13T00:00:00Z")
+        .await
+        .unwrap();
+    let sid = &meetings[0].sessions[0].id;
+    let mut old = result(sid, "classified", 25.0, "provisional");
+    old.best_lap = None;
+    let mut other = old.clone();
+    other.driver_id = "other".into();
+    other.driver_name = "Other Driver".into();
+    other.position = Some(2);
+    database
+        .replace_session_results(vec![old.clone(), other], "provisional")
+        .await
+        .unwrap();
+    let mut partial = old.clone();
+    partial.best_lap = Some("1:20.123".into());
+    partial.driver_number = Some("16".into());
+    partial.points = Some(0.0);
+    partial.fetched_at = "2026-11-13T01:00:00Z".into();
+    assert_eq!(
+        database
+            .replace_session_results(vec![partial.clone()], "partial")
+            .await
+            .unwrap(),
+        2
+    );
+    let (rows, meta) = database.session_results(sid).await.unwrap();
+    assert_eq!(rows.len(), 2);
+    assert!(meta.stale);
+    assert!(rows.iter().all(|row| row.quality == "provisional"));
+    let enriched = rows.iter().find(|r| r.driver_id == old.driver_id).unwrap();
+    assert_eq!(enriched.best_lap.as_deref(), Some("1:20.123"));
+    assert_eq!(enriched.driver_number.as_deref(), Some("16"));
+    assert_eq!(enriched.points, Some(25.0));
+    assert_eq!(enriched.fetched_at, old.fetched_at);
+    partial.time = Some("different timing".into());
+    partial.q1 = Some("unrelated".into());
+    assert_eq!(
+        database
+            .replace_session_results(vec![partial], "partial")
+            .await
+            .unwrap(),
+        2
+    );
+    assert!(
+        database
+            .session_results(sid)
+            .await
+            .unwrap()
+            .0
+            .iter()
+            .all(|r| r.q1.is_none())
+    );
+}

@@ -575,7 +575,7 @@ impl Database {
         if rows.iter().any(|row| row.session_id != session_id) {
             return Err(StorageError::Sqlite(rusqlite::Error::InvalidQuery));
         }
-        let quality = quality.to_string();
+        let mut quality = quality.to_string();
         for row in &mut rows {
             row.quality = quality.clone();
         }
@@ -587,16 +587,31 @@ impl Database {
             old.sort_by(|a, b| a.driver_id.cmp(&b.driver_id));
             rows.sort_by(|a, b| a.driver_id.cmp(&b.driver_id));
             let current_revision = old.iter().map(|row| row.revision).max().unwrap_or(0);
-            if !old.is_empty() && quality_rank(&quality) < quality_rank(&old[0].quality) {
-                tx.rollback()?;
-                return Ok(current_revision);
-            }
-            if quality == "partial"
-                && old.first().is_some_and(|latest| latest.quality == "partial")
-                && rows.len() < old.len()
-            {
-                tx.rollback()?;
-                return Ok(current_revision);
+            let preserve_classification = old.first().is_some_and(|latest| {
+                quality_rank(&quality) < quality_rank(&latest.quality)
+                    || (quality == "partial" && latest.quality == "partial" && rows.len() < old.len())
+            });
+            if preserve_classification {
+                // A partial refresh must not erase a stronger classification,
+                // but can repair missing fields on an otherwise identical row.
+                let incoming = rows;
+                rows = old.clone();
+                quality = old[0].quality.clone();
+                for row in &mut rows {
+                    if let Some(new) = incoming.iter().find(|new| {
+                        new.driver_id == row.driver_id && new.driver_name == row.driver_name
+                            && new.constructor_id == row.constructor_id && new.team == row.team
+                            && new.source == row.source && new.position == row.position
+                            && new.classification == row.classification && new.time == row.time
+                    }) {
+                        row.best_lap = row.best_lap.clone().or_else(|| new.best_lap.clone());
+                        row.driver_number = row.driver_number.clone().or_else(|| new.driver_number.clone());
+                        row.q1 = row.q1.clone().or_else(|| new.q1.clone());
+                        row.q2 = row.q2.clone().or_else(|| new.q2.clone());
+                        row.q3 = row.q3.clone().or_else(|| new.q3.clone());
+                        row.race_time = row.race_time.clone().or_else(|| new.race_time.clone());
+                    }
+                }
             }
             let unchanged = old.len() == rows.len()
                 && old.iter().zip(&rows).all(|(a, b)| same_result_content(a, b));
