@@ -42,7 +42,9 @@ async fn state() -> (AppState, TempDir) {
     db.save_identity_cache(2024, &[json!({"driverId":"leclerc","permanentNumber":"16","givenName":"Charles","familyName":"Leclerc"})], &[], "2024-03-02T18:00:00Z").await.unwrap();
     let standing: DriverStanding = serde_json::from_value(json!({"season":2024,"position":1,"driverId":"leclerc","driverName":"Charles Leclerc","constructor":"Ferrari","constructorIds":["ferrari"],"points":25.,"wins":1,"source":"fixture","fetchedAt":"2024-03-02T18:00:00Z","revision":1})).unwrap();
     db.replace_driver_standings(vec![standing]).await.unwrap();
-    (AppState::new(AppConfig::default(), db), temp)
+    let mut config = AppConfig::default();
+    config.providers.jolpica_enabled = false;
+    (AppState::new(config, db), temp)
 }
 
 async fn read(app: Router, url: &str, token: bool) -> (StatusCode, Value) {
