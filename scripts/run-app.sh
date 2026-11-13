@@ -11,7 +11,9 @@ if [[ "${1:-}" == --check ]]; then
     shift
 fi
 # Never build over the managed runtime bundle or launch a competing main App.
-if /usr/bin/pgrep -x PitPulse >/dev/null || /usr/bin/pgrep -x F1Companion >/dev/null; then
+# The iOS simulator executable has the same process name. Only Desktop
+# bundles use Contents/MacOS; a running simulator must not block this task.
+if /usr/bin/pgrep -f '/[C]ontents/MacOS/(PitPulse|F1Companion)( |$)' >/dev/null; then
     printf '%s\n' 'PitPulse is already running. Stop only Run App before building or launching this runtime bundle.' >&2
     exit 1
 fi

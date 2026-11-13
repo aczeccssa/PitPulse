@@ -17,12 +17,31 @@ struct MeetingDetailView: View {
     @State var forecast: PitPulseForecast?
     @State var forecastStatus = "正在读取预报…"
     @State var mapExpanded = false
+    @State var resultSession: Session?
+    @State var meetingResults: [String: [SessionResult]] = [:]
+    @State var resultsError: String?
 
     var sortedSessions: [Session] {
         meeting.sessions.sorted { $0.startTime < $1.startTime }
     }
 
     var body: some View {
+        Group {
+            if let resultSession {
+                VStack(spacing: 0) {
+                    HStack {
+                        Button { self.resultSession = nil } label: { Label("返回分站", systemImage: "chevron.left") }
+                            .buttonStyle(.plain)
+                        Text(resultSession.sessionType.displayName).font(.headline)
+                        Spacer()
+                    }.padding(12)
+                    SessionResultsView(model: model, context: NextSession(meeting: meeting, session: resultSession))
+                }
+            } else { detailContent }
+        }
+    }
+
+    var detailContent: some View {
         VStack(spacing: 0) {
             header
             subTabs
@@ -43,6 +62,16 @@ struct MeetingDetailView: View {
             }
         }
         .task(id: "\(meeting.id)-\(model.serverAddress)") {
+            meetingResults = [:]
+            resultsError = nil
+            for session in sortedSessions where sessionState(session) == .finished {
+                do {
+                    let response = try await model.meetingSessionResults(sessionID: session.id, season: meeting.season)
+                    try Task.checkCancellation()
+                    meetingResults[session.id] = response.data.sorted { ($0.position ?? Int.max) < ($1.position ?? Int.max) }
+                } catch is CancellationError { return }
+                catch { resultsError = error.localizedDescription }
+            }
             forecast = nil
             forecastStatus = "正在读取预报…"
             do {
@@ -82,7 +111,7 @@ struct MeetingDetailView: View {
                     Text("\(meeting.startDate.formatted(.dateTime.month().day())) – \(meeting.endDate.formatted(.dateTime.month().day()))")
                         .monospacedDigit()
                     Text("·")
-                    Text(meeting.status.displayName)
+                    Text(meeting.endDate < Date() && meeting.status != .cancelled && meeting.status != .postponed ? "比赛结果" : meeting.status.displayName)
                         .foregroundStyle(meeting.status == .scheduled ? Color.secondary : Color.orange)
                 }
                 .font(.system(size: 11, weight: .medium))

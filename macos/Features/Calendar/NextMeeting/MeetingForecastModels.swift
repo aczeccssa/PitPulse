@@ -18,7 +18,8 @@ struct PitPulseForecast: Decodable {
     var statusText: String {
         switch status {
         case "available": "比赛日预报"
-        case "past_event": "已结束赛事不提供天气预报"
+        case "historical": "历史实测天气 · 已归档"
+        case "history_pending", "past_event": "历史天气尚未归档"
         default: "尚无比赛日期预报"
         }
     }
@@ -32,9 +33,17 @@ struct PitPulseForecastHour: Decodable {
     let precipitation: Double?
     let windSpeed: Double?
     let weatherCode: Int?
+    let sessionId: String?
+    let trackTemp: Double?
+    let rainfall: Double?
+
+    var rainText: String {
+        if let rainfall { return rainfall > 0 ? "有雨" : "无雨" }
+        return precipitationProbability.map { String(format: "%.0f%%", $0) } ?? "未提供"
+    }
 
     var conditionText: String {
-        guard let weatherCode else { return "预报" }
+        guard let weatherCode else { return rainfall == nil ? "预报" : "实测" }
         switch weatherCode {
         case 0: return "晴"
         case 1...3: return "多云"

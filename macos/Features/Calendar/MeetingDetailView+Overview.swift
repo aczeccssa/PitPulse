@@ -5,6 +5,14 @@ import SharedData
 extension MeetingDetailView {
     var overview: some View {
         VStack(spacing: PitPulseTheme.cardSpacing) {
+            if let race = sortedSessions.last(where: { $0.sessionType == .race && sessionState($0) == .finished }) {
+                if let results = meetingResults[race.id], !results.isEmpty {
+                    Button { resultSession = race } label: {
+                        Label("完整正赛成绩", systemImage: "list.number").frame(maxWidth: .infinity)
+                    }.buttonStyle(.plain).padding(8).accessibilityIdentifier("calendar.raceResults")
+                    ResultsPodium(results: results, season: meeting.season) { _ in resultSession = race }
+                }
+            }
             HStack(alignment: .top, spacing: 10) {
                 GlassCard(padding: 12) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -28,6 +36,7 @@ extension MeetingDetailView {
                     .frame(width: 204)
             }
 
+            if let resultsError { Text("成绩读取失败：\(resultsError)").font(.caption).foregroundStyle(.orange) }
             circuitCard
 
             if mapExpanded, meeting.circuit != nil {
@@ -40,7 +49,10 @@ extension MeetingDetailView {
 
     func overviewSessionRow(_ session: Session, isLast: Bool) -> some View {
         let state = sessionState(session)
-        return VStack(spacing: 0) {
+        return Button {
+            if state == .finished { resultSession = session }
+        } label: {
+        VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Circle()
                     .fill(state == .running ? PitPulseTheme.accent : (state == .finished ? PitPulseTheme.accent.opacity(0.55) : Color.secondary.opacity(0.35)))
@@ -49,27 +61,36 @@ extension MeetingDetailView {
                     .font(.system(size: 12.5, weight: state == .upcoming ? .semibold : .medium))
                     .foregroundStyle(state == .finished ? Color.secondary : Color.primary)
                     .lineLimit(1)
+                if let leader = meetingResults[session.id]?.first {
+                    Text("P1 \(leader.driverName)")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .lineLimit(1)
+                }
                 Spacer(minLength: 4)
                 Text(session.startTime.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
-                Text(sessionStateLabel(state))
+                Text(state == .finished ? "成绩 ›" : sessionStateLabel(state))
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(state == .running ? PitPulseTheme.accent : Color.secondary.opacity(0.75))
-                    .frame(width: 36, alignment: .trailing)
+                    .frame(width: 44, alignment: .trailing)
             }
             .padding(.vertical, 8)
             if !isLast {
                 Rectangle().fill(Color.primary.opacity(0.06)).frame(height: 1)
             }
         }
+        .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(state != .finished)
         .accessibilityElement(children: .combine)
     }
 
     var weatherSummaryCard: some View {
         GlassCard(padding: 12) {
             VStack(alignment: .leading, spacing: 9) {
-                CardHeader(title: "下一节天气")
+                CardHeader(title: forecast?.status == "historical" ? "正赛历史天气" : "下一节天气")
                 if let hour = nextSessionForecastHour {
                     HStack(spacing: 6) {
                         Image(systemName: "cloud.sun.fill")
@@ -80,7 +101,7 @@ extension MeetingDetailView {
                         Spacer()
                     }
                     miniCondition(label: "气温", value: hour.airTemp.map { String(format: "%.0f°C", $0) } ?? "未提供")
-                    miniCondition(label: "降雨", value: hour.precipitationProbability.map { String(format: "%.0f%%", $0) } ?? "未提供")
+                    miniCondition(label: "降雨", value: hour.rainText)
                     miniCondition(label: "风速", value: hour.windSpeed.map { String(format: "%.1f m/s", $0) } ?? "未提供")
                 } else {
                     Text(forecastStatus)
@@ -89,7 +110,7 @@ extension MeetingDetailView {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
-                Text("Open-Meteo · 仅显示端点返回的预报")
+                Text(forecast?.status == "historical" ? "OpenF1 · 已归档赛事实测" : "Open-Meteo · 比赛日预报")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)

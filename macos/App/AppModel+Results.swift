@@ -3,6 +3,12 @@ import Foundation
 import SharedData
 
 extension AppModel {
+    func meetingSessionResults(sessionID: String, season: Int) async throws -> APIEnvelope<[SessionResult]> {
+        try await analysis(key: "results-\(sessionID)", season: season) { client, token in
+            try await client.sessionResults(sessionId: sessionID, token: token)
+        }
+    }
+
     func selectResultSession(_ sessionID: String) {
         guard selectedResultSessionID != sessionID else { return }
         resultGeneration += 1

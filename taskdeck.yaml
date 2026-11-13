@@ -11,6 +11,9 @@ task_order:
 - Check Widget Publisher
 - Check App Launcher
 - Connect Simulator Replay
+- Test iOS Navigation
+- Check Server
+- Test Desktop Calendar
 tasks:
   Build App:
     command: /bin/bash
@@ -96,7 +99,8 @@ tasks:
     args:
     - scripts/run-app.sh
     cwd: .
-    env: {}
+    env:
+      PITPULSE_SERVER_URL: "http://127.0.0.1:38702"
     shell: false
     auto_start: false
     stop_timeout_ms: 10000
@@ -147,3 +151,15 @@ tasks:
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: false
+  Test Desktop Calendar:
+    command: /bin/bash
+    args:
+    - scripts/xcode-task.sh
+    - test-calendar
+    - Debug
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: true

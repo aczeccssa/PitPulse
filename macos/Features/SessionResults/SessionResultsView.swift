@@ -6,14 +6,20 @@ import SharedData
 
 struct SessionResultsView: View {
     @ObservedObject var model: AppModel
+    var context: NextSession? = nil
+    @State var localResults: [SessionResult] = []
+    @State var localError: String?
     @State var selectedResult: SessionResult?
 
+    var displayedResults: [SessionResult] { context == nil ? model.sessionResults : localResults }
+    var displayedError: String? { context == nil ? model.resultError : localError }
+
     var selectedSession: NextSession? {
-        model.availableResultSessions.first { $0.session.id == model.selectedResultSessionID }
+        context ?? model.availableResultSessions.first { $0.session.id == model.selectedResultSessionID }
     }
 
     var sortedResults: [SessionResult] {
-        model.sessionResults.sorted {
+        displayedResults.sorted {
             ($0.position ?? Int.max, $0.driverId) < ($1.position ?? Int.max, $1.driverId)
         }
     }
@@ -40,25 +46,35 @@ struct SessionResultsView: View {
         .onChange(of: model.serverAddress) { _, _ in
             selectedResult = nil
         }
-        .task(id: model.selectedResultSessionID) { await model.refreshResults() }
+        .task(id: "\(context?.session.id ?? model.selectedResultSessionID ?? "")-\(model.serverAddress)") {
+            if let context {
+                do {
+                    let response = try await model.meetingSessionResults(sessionID: context.session.id, season: context.meeting.season)
+                    try Task.checkCancellation()
+                    localResults = response.data
+                    localError = nil
+                } catch is CancellationError { return }
+                catch { localError = error.localizedDescription }
+            } else { await model.refreshResults() }
+        }
     }
 
     var resultsPage: some View {
         VStack(spacing: 0) {
-            sessionToolbar
+            if context == nil { sessionToolbar }
             ScrollView {
                 VStack(alignment: .leading, spacing: PitPulseTheme.cardSpacing) {
-                    if let error = model.resultError {
+                    if let error = displayedError {
                         Label(error, systemImage: "exclamationmark.triangle")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.orange)
                             .padding(.horizontal, 2)
                     }
 
-                    if model.sessionResults.isEmpty {
+                    if displayedResults.isEmpty {
                         emptyResults
                     } else {
-                        podium
+                        if selectedSession?.session.sessionType == .race || selectedSession?.session.sessionType == .sprint { podium }
                         classificationTable
                     }
                 }
@@ -131,7 +147,7 @@ struct SessionResultsView: View {
     var emptyResults: some View {
         EmptyStateCard(
             symbol: "list.number",
-            title: model.resultError == nil ? "等待赛后成绩" : "无法读取成绩",
+            title: displayedError == nil ? "等待赛后成绩" : "无法读取成绩",
             message: model.availableResultSessions.isEmpty
                 ? "比赛结束后显示实际成绩。"
                 : "成绩来源暂未提供结果，可用后自动更新。"
@@ -141,24 +157,8 @@ struct SessionResultsView: View {
     // MARK: Podium — pyramid: P1 on top, P2 / P3 below
 
     var podium: some View {
-        GlassCard(padding: 12) {
-            VStack(spacing: 8) {
-                CardHeader(title: "领奖台")
-                VStack(spacing: -26) {
-                    if let leader = sortedResults.first {
-                        leaderCard(leader)
-                            .zIndex(1)
-                    }
-                    if sortedResults.count > 1 {
-                        HStack(spacing: -14) {
-                            ForEach(Array(sortedResults.dropFirst().prefix(2).enumerated()), id: \.element.id) { index, result in
-                                runnerCard(result, rank: index + 2)
-                            }
-                        }
-                        .padding(.horizontal, 18)
-                    }
-                }
-            }
+        ResultsPodium(results: sortedResults, season: selectedSession?.meeting.season ?? model.selectedSeason) {
+            selectedResult = $0
         }
     }
 }

@@ -215,6 +215,7 @@ private struct WeekendForecast: Decodable {
             let utc: String
             let airTemp: Double?
             let precipitationProbability: Double?
+            let rainfall: Double?
             let windSpeed: Double?
         }
         let status: String
@@ -235,16 +236,19 @@ private struct WeekendWeather: View {
             VStack(alignment: .leading, spacing: 16) {
                 Label("赛道天气", systemImage: "cloud.sun").font(.headline)
                 if let forecast {
+                    if forecast.data.status == "historical" {
+                        Text("历史实测天气 · 已归档").font(.caption).foregroundStyle(.secondary)
+                    }
                     if forecast.meta.stale { Text("缓存天气已过期").font(.caption).foregroundStyle(.orange) }
                     if forecast.data.hours.isEmpty {
-                        Text(forecast.data.status == "past_event" ? "已结束赛事不展示当前天气。" : "尚未进入天气预报范围。").font(.subheadline).foregroundStyle(.secondary)
+                        Text(["past_event", "history_pending"].contains(forecast.data.status) ? "历史天气尚未归档。" : "尚未进入天气预报范围。").font(.subheadline).foregroundStyle(.secondary)
                     }
                     ForEach(Array(forecast.data.hours.enumerated()), id: \.offset) { _, hour in
                         HStack {
                             Text(ISO8601DateFormatter().date(from: hour.utc)?.formatted(date: .abbreviated, time: .shortened) ?? hour.utc).font(.caption2)
                             Spacer()
                             Text(hour.airTemp.map { "\($0.formatted())°C" } ?? "—")
-                            Text(hour.precipitationProbability.map { "\($0.formatted())%" } ?? "—").foregroundStyle(.secondary)
+                            Text(hour.rainfall.map { $0 > 0 ? "有雨" : "无雨" } ?? hour.precipitationProbability.map { "\($0.formatted())%" } ?? "—").foregroundStyle(.secondary)
                         }.font(.caption.monospacedDigit())
                     }
                 } else if let error { Text(error).font(.caption).foregroundStyle(.orange) }

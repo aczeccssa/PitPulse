@@ -90,15 +90,15 @@ extension CalendarView {
                         .foregroundStyle(isUpcoming ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary))
 
                     if !isUpcoming {
-                        if meeting.status != .scheduled {
+                        if meeting.status == .cancelled || meeting.status == .postponed {
                             Text(meeting.status.displayName)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(.orange)
                                 .frame(width: 34, alignment: .trailing)
                         } else {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.tertiary)
+                            Text("成绩")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(PitPulseTheme.accent)
                                 .frame(width: 34, alignment: .trailing)
                         }
                     }
@@ -143,6 +143,7 @@ extension CalendarView {
             }
         }
         .id(meeting.id)
+        .accessibilityIdentifier("calendar.meeting.\(meeting.id)")
         .accessibilityLabel("\(meeting.name)，第 \(meeting.round.map(String.init) ?? "—") 站，\(meeting.startDate.formatted(date: .abbreviated, time: .omitted))")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

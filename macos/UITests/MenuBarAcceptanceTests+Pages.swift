@@ -3,6 +3,43 @@ import XCTest
 
 extension MenuBarAcceptanceTests {
     @MainActor
+    func testCalendarHistoricalPodiumResultsAndWeather() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.pitpulse.F1Companion")
+        app.launchArguments = ["-serverAddress", "http://127.0.0.1:38702", "-selectedSeason", "2026", "-notchAutoShowEnabled", "NO"]
+        app.launch()
+        defer { app.terminate() }
+        let calendar = app.buttons["menuBar.section.calendar"]
+        if !calendar.exists {
+            app.statusItems.firstMatch.click()
+            if !calendar.waitForExistence(timeout: 5) {
+                app.activate()
+                app.statusItems.firstMatch.click()
+            }
+        }
+        XCTAssertTrue(calendar.waitForExistence(timeout: 15), app.debugDescription)
+        calendar.click()
+        let brazil = app.buttons["calendar.meeting.2026:20"]
+        XCTAssertTrue(brazil.waitForExistence(timeout: 20), app.debugDescription)
+        brazil.click()
+        let fullResults = app.buttons["calendar.raceResults"]
+        XCTAssertTrue(fullResults.waitForExistence(timeout: 30), app.debugDescription)
+        attachScreenshot("Historical calendar podium", from: app)
+        fullResults.click()
+        XCTAssertTrue(app.buttons["results.row.norris"].waitForExistence(timeout: 15), app.debugDescription)
+        app.buttons["返回分站"].click()
+        app.buttons["周末"].click()
+        let practice = app.buttons["calendar.session.2026:20:fp1"]
+        XCTAssertTrue(practice.waitForExistence(timeout: 10), app.debugDescription)
+        practice.click()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "results.row.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+        attachScreenshot("Historical practice classification", from: app)
+        app.buttons["返回分站"].click()
+        app.buttons["天气"].click()
+        XCTAssertTrue(staticText(containing: "历史实测天气", in: app).waitForExistence(timeout: 15), app.debugDescription)
+        attachScreenshot("Archived historical weather", from: app)
+    }
+
+    @MainActor
     func testMenuBarResultsStandingsFallbackAndPenaltyCorrection() async throws {
         let app = XCUIApplication(bundleIdentifier: "com.pitpulse.F1Companion")
         app.launchArguments = [

@@ -1,10 +1,47 @@
-import AppKit
 import SwiftUI
 import SharedData
 
 extension SessionResultsView {
+    func helmetImage(_ result: SessionResult, size: CGFloat) -> some View {
+        DriverHelmetAvatar(
+            driverID: result.driverId,
+            name: result.driverName,
+            season: model.selectedSeason,
+            size: size
+        )
+    }
+
+    func podiumTime(_ result: SessionResult) -> String {
+        if let raceTime = result.raceTime ?? result.time { return raceTime }
+        if let gap = result.gap, !gap.isEmpty { return gap }
+        return result.bestLap ?? "—"
+    }
+}
+
+struct ResultsPodium: View {
+    let results: [SessionResult]
+    let season: Int
+    let select: (SessionResult) -> Void
+
+    var body: some View {
+        GlassCard(padding: 12) {
+            VStack(spacing: 8) {
+                CardHeader(title: "领奖台")
+                VStack(spacing: -26) {
+                    if let leader = results.first { leaderCard(leader).zIndex(1) }
+                    if results.count > 1 {
+                        HStack(spacing: -14) {
+                            ForEach(Array(results.dropFirst().prefix(2).enumerated()), id: \.element.id) { index, result in
+                                runnerCard(result, rank: index + 2)
+                            }
+                        }.padding(.horizontal, 18)
+                    }
+                }
+            }
+        }
+    }
     func leaderCard(_ result: SessionResult) -> some View {
-        Button { selectedResult = result } label: {
+        Button { select(result) } label: {
             VStack(spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "crown.fill")
@@ -43,7 +80,7 @@ extension SessionResultsView {
     }
 
     func runnerCard(_ result: SessionResult, rank: Int) -> some View {
-        Button { selectedResult = result } label: {
+        Button { select(result) } label: {
             VStack(spacing: 4) {
                 helmetImage(result, size: 44)
 
@@ -81,7 +118,7 @@ extension SessionResultsView {
         DriverHelmetAvatar(
             driverID: result.driverId,
             name: result.driverName,
-            season: model.selectedSeason,
+            season: season,
             size: size
         )
     }

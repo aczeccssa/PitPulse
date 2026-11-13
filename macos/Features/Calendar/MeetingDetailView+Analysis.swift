@@ -8,7 +8,8 @@ extension MeetingDetailView {
             GlassCard(padding: 13) {
                 VStack(alignment: .leading, spacing: 8) {
                     CardHeader(title: "Race Control")
-                    let messages = Array((model.liveStore.snapshot.raceControl ?? []).suffix(6).reversed())
+                    let belongsToMeeting = meeting.sessions.contains { $0.id == model.liveStore.snapshot.sessionId }
+                    let messages = Array((belongsToMeeting ? model.liveStore.snapshot.raceControl ?? [] : []).suffix(6).reversed())
                     if messages.isEmpty {
                         Text("当前没有实时 Race Control 消息。")
                             .font(.system(size: 12, weight: .medium))
@@ -56,13 +57,17 @@ extension MeetingDetailView {
     // MARK: Helpers
 
     var nextSessionForecastHour: PitPulseForecastHour? {
-        guard let forecast,
-              let next = CalendarLogic.nextSession(in: [meeting], now: Date()) else { return nil }
+        guard let forecast else { return nil }
+        if forecast.status == "historical", let race = sortedSessions.last(where: { $0.sessionType == .race }) {
+            return hour(for: race, in: forecast)
+        }
+        guard let next = CalendarLogic.nextSession(in: [meeting], now: Date()) else { return nil }
         return hour(for: next.session, in: forecast)
     }
 
     func hour(for session: Session, in forecast: PitPulseForecast) -> PitPulseForecastHour? {
-        guard let hour = forecast.hours.min(by: {
+        let samples = forecast.status == "historical" ? forecast.hours.filter { $0.sessionId == session.id } : forecast.hours
+        guard let hour = samples.min(by: {
             abs($0.time - session.startTime.timeIntervalSince1970) < abs($1.time - session.startTime.timeIntervalSince1970)
         }) else { return nil }
         return abs(hour.time - session.startTime.timeIntervalSince1970) <= 3_600 ? hour : nil
@@ -75,8 +80,9 @@ extension MeetingDetailView {
     func sessionState(_ session: Session) -> SessionState {
         if session.status == .cancelled || session.status == .postponed { return .cancelled }
         let end = session.endTime ?? session.startTime.addingTimeInterval(7_200)
+        if session.status == .finished { return .finished }
         if session.status == .live || (Date() >= session.startTime && Date() < end) { return .running }
-        if session.status == .finished || Date() >= end { return .finished }
+        if Date() >= end { return .finished }
         return .upcoming
     }
 

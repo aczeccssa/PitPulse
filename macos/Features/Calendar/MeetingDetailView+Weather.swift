@@ -7,7 +7,7 @@ extension MeetingDetailView {
         VStack(spacing: PitPulseTheme.cardSpacing) {
             GlassCard(padding: 13) {
                 VStack(alignment: .leading, spacing: 8) {
-                    CardHeader(title: "逐节预报")
+                    CardHeader(title: forecast?.status == "historical" ? "逐节历史天气" : "逐节预报")
                     HStack {
                         Text(forecastStatus)
                             .font(.system(size: 11, weight: .medium))
@@ -15,7 +15,7 @@ extension MeetingDetailView {
                         Spacer()
                         Text("本地时间").font(.system(size: 10.5)).foregroundStyle(.tertiary)
                     }
-                    if let forecast, forecast.status == "available" {
+                    if let forecast, ["available", "historical"].contains(forecast.status) {
                         ForEach(Array(sortedSessions.enumerated()), id: \.element.id) { index, session in
                             if let hour = hour(for: session, in: forecast) {
                                 VStack(spacing: 0) {
@@ -29,7 +29,7 @@ extension MeetingDetailView {
                                         }
                                         Spacer(minLength: 6)
                                         weatherMetric(symbol: "thermometer.medium", text: hour.airTemp.map { String(format: "%.0f°", $0) } ?? "—", tint: .orange)
-                                        weatherMetric(symbol: "drop.fill", text: hour.precipitationProbability.map { String(format: "%.0f%%", $0) } ?? "—", tint: .blue)
+                                        weatherMetric(symbol: "drop.fill", text: hour.rainText, tint: .blue)
                                         weatherMetric(symbol: "wind", text: hour.windSpeed.map { String(format: "%.0f", $0) } ?? "—", tint: .teal)
                                         Text(hour.conditionText)
                                             .font(.system(size: 10.5, weight: .medium))
@@ -45,7 +45,7 @@ extension MeetingDetailView {
                                 HStack {
                                     Text(session.sessionType.displayName).font(.system(size: 12.5, weight: .medium))
                                     Spacer()
-                                    Text("尚无预报").font(.system(size: 11)).foregroundStyle(.tertiary)
+                                    Text(forecast.status == "historical" ? "尚无实测记录" : "尚无预报").font(.system(size: 11)).foregroundStyle(.tertiary)
                                 }
                                 .padding(.vertical, 8)
                             }

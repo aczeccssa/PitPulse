@@ -11,6 +11,7 @@ extension MeetingDetailView {
                         CardHeader(title: group.day.formatted(.dateTime.weekday(.wide).month().day()))
                         ForEach(Array(group.sessions.enumerated()), id: \.element.id) { index, session in
                             let state = sessionState(session)
+                            Button { resultSession = session } label: {
                             VStack(spacing: 0) {
                                 HStack(spacing: 10) {
                                     RoundedRectangle(cornerRadius: 2)
@@ -19,12 +20,16 @@ extension MeetingDetailView {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(session.sessionType.displayName)
                                             .font(.system(size: 13, weight: .semibold))
+                                        if let leader = meetingResults[session.id]?.first {
+                                            Text("P1 \(leader.driverName) · \(leader.q3 ?? leader.q2 ?? leader.q1 ?? leader.bestLap ?? leader.raceTime ?? leader.time ?? leader.gap ?? "—")")
+                                                .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                                        }
                                         Text(sessionTimeRange(session))
                                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                                             .foregroundStyle(.secondary)
                                     }
                                     Spacer(minLength: 6)
-                                    Text(sessionStateLabel(state))
+                                    Text(state == .finished ? "查看成绩 ›" : sessionStateLabel(state))
                                         .font(.system(size: 10.5, weight: .semibold))
                                         .foregroundStyle(state == .running ? PitPulseTheme.accent : Color.secondary)
                                 }
@@ -32,7 +37,9 @@ extension MeetingDetailView {
                                 if index != group.sessions.count - 1 {
                                     Rectangle().fill(Color.primary.opacity(0.06)).frame(height: 1)
                                 }
-                            }
+                            }.contentShape(Rectangle())
+                            }.buttonStyle(.plain).disabled(state != .finished)
+                                .accessibilityIdentifier("calendar.session.\(session.id)")
                         }
                     }
                 }
