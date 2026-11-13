@@ -60,7 +60,25 @@ pub async fn weather(State(state): State<AppState>, Path(id): Path<String>) -> R
             .utc_now()
             .await
             .map_err(|_| "database_error")?;
-        state.weather.forecast(&meeting, &now).await
+        let (forecast, meta) = state.weather.forecast(&meeting, &now).await?;
+        if forecast["status"] != "past_event" {
+            return Ok((forecast, meta));
+        }
+        // Historical observations are already archived with the session bundle.
+        // Never query a forecast provider again for a completed weekend.
+        let mut hours = Vec::new();
+        for session in &meeting.sessions {
+            let bundle = state.database
+                .analysis_cache(&format!("session:{}:bundle", session.id))
+                .await.map_err(|_| "database_error")?;
+            if let Some(bundle) = bundle {
+                hours.extend(historical_weather(&bundle["data"], &session.id));
+            }
+        }
+        hours.sort_by(|a, b| a["utc"].as_str().cmp(&b["utc"].as_str()));
+        let available = !hours.is_empty();
+        Ok((json!({"status": if available { "historical" } else { "history_pending" }, "hours": hours}),
+            Meta::from_cache(Some("openf1-archive".into()), None, 1, false)))
     }
     .await;
     match result {
@@ -159,4 +177,46 @@ fn binary(resource: Resource, source: &str) -> Response {
         resource.bytes,
     )
         .into_response()
+}
+
+fn historical_weather(bundle: &serde_json::Value, session: &str) -> Vec<serde_json::Value> {
+    bundle["weather"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|sample| {
+            let utc = crate::services::analysis::normalize_date(sample["date"].as_str()?)?;
+            Some(json!({
+                "utc": utc, "sessionId": session,
+                "airTemp": sample["airTemperature"],
+                "trackTemp": sample["trackTemperature"],
+                "humidity": sample["humidity"],
+                "rainfall": sample["rainfall"],
+                "windSpeed": sample["windSpeed"],
+                "windDirection": sample["windDirection"],
+                "pressure": sample["pressure"]
+            }))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod weather_tests {
+    use super::*;
+    #[test]
+    fn historical_observations_preserve_measurements_without_inventing_forecasts() {
+        let rows = historical_weather(
+            &json!({"weather":[
+                {"date":"2026-11-08T17:00:00.123Z","airTemperature":27.5,"trackTemperature":42,"rainfall":0,"windSpeed":2.1},
+                {"date":"invalid","airTemperature":99}
+            ]}),
+            "2026:20:race",
+        );
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["sessionId"], "2026:20:race");
+        assert_eq!(rows[0]["airTemp"], 27.5);
+        assert_eq!(rows[0]["trackTemp"], 42);
+        assert!(rows[0].get("precipitationProbability").is_none());
+        assert!(rows[0]["humidity"].is_null());
+    }
 }

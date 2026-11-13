@@ -108,7 +108,7 @@ async fn section(
     }
 }
 
-fn normalize_date(value: &str) -> Option<String> {
+pub(crate) fn normalize_date(value: &str) -> Option<String> {
     let prefix = value.get(..19)?;
     let suffix = value.get(19..)?;
     let suffix = if let Some(fraction) = suffix.strip_prefix('.') {
@@ -587,7 +587,7 @@ fn project_session(
     session_number: Option<i64>,
     session_name: Option<&str>,
 ) -> Value {
-    let session_number = session_number.or_else(|| {
+    let roster_number = (|| {
         let name = session_name?
             .split_whitespace()
             .collect::<Vec<_>>()
@@ -608,7 +608,8 @@ fn project_session(
             return None;
         }
         first["driverNumber"].as_i64()
-    });
+    })();
+    let session_number = roster_number.or(session_number);
     let mut data = empty_session();
     data["warnings"] = json!(bundle["warnings"].as_array().cloned().unwrap_or_default());
     let matches: Vec<_> = bundle["drivers"]
@@ -1065,6 +1066,17 @@ mod tests {
             Some("Paul Aron"),
         );
         assert_eq!(named["laps"][0]["driverNumber"], 44);
+        // A practice classification may carry the season number rather than
+        // this session's car number. The unique session roster owns identity.
+        let corrected = project_session(
+            &bundle,
+            "paul_aron",
+            Some(&identity),
+            Some(16),
+            Some("Paul Aron"),
+        );
+        assert_eq!(corrected["driver"]["driverNumber"], 44);
+        assert_eq!(corrected["laps"][0]["driverNumber"], 44);
         let reserve = project_session(&bundle, "reserve_driver", Some(&identity), Some(44), None);
         assert_eq!(reserve["laps"][0]["driverNumber"], 44);
         assert_eq!(reserve["laps"].as_array().unwrap().len(), 1);
