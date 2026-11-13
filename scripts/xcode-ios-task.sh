@@ -26,7 +26,7 @@ exec /usr/bin/xcodebuild -quiet \
     -scheme "$scheme" \
     -destination "$destination" \
     -configuration "$configuration" \
-    -derivedDataPath "$HOME/Library/Caches/PitPulse/XcodeIOS" \
+    -derivedDataPath "${PITPULSE_IOS_DERIVED_DATA:-$HOME/Library/Caches/PitPulse/XcodeIOSVerification}" \
     CODE_SIGNING_ALLOWED=YES \
     CODE_SIGN_IDENTITY=- \
     "$action"

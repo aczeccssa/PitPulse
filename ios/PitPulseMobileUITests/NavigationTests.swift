@@ -16,6 +16,17 @@ final class NavigationTests: XCTestCase {
             button.tap()
             XCTAssertTrue(tabs.exists)
         }
+        let settings = app.buttons["打开 PitPulse 设置"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+        let configure = app.buttons["配置服务器"]
+        XCTAssertTrue(configure.waitForExistence(timeout: 10))
+        configure.tap()
+        let closeConfiguration = app.buttons["关闭服务器配置"]
+        XCTAssertTrue(closeConfiguration.waitForExistence(timeout: 10))
+        closeConfiguration.tap()
+        app.buttons["关闭设置"].tap()
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         let live = app.buttons["live.open"]
         XCTAssertTrue(live.waitForExistence(timeout: 30), app.debugDescription)
         live.tap()
