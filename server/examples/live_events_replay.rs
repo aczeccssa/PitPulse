@@ -43,18 +43,13 @@ async fn main() -> anyhow::Result<()> {
     install_tracing();
 
     let mut config = AppConfig::load(None).context("load local server settings")?;
-    config.providers.jolpica_enabled = false;
-    config.providers.openf1_enabled = false;
     config.providers.f1_live_enabled = false;
     config.providers.wec_live_enabled = false;
-    config.database.path = std::env::temp_dir().join(format!(
-        "pitpulse-live-events-replay-{}.sqlite",
-        std::process::id()
-    ));
 
     let database = Database::open(&config.database.path).await?;
     database.migrate().await?;
     let state = AppState::new(config, database);
+    let background = pitpulse_server::scheduler::spawn(state.clone());
 
     let directory = replay_directory();
     let speed = std::env::var("F1_COMPANION_REPLAY_SPEED")
@@ -103,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
         "starting dual-series recorded Live replay"
     );
     let result = server::serve(state).await;
+    background.shutdown().await;
     f1.abort();
     wec.abort();
     let _ = f1.await;

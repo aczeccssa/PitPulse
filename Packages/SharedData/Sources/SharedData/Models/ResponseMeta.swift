@@ -8,6 +8,7 @@ public struct ResponseMeta: Codable, Equatable, Sendable {
     public let source: String?
     public let fetchedAt: Date?
     public let sourceUpdatedAt: Date?
+    public var syncStatus: SyncStatus? = nil
     public var analysisStatus: String? = nil
     public var analysisError: String? = nil
     public var analysisIsLoading: Bool { analysisStatus == "loading" || analysisStatus == "pending" }
@@ -52,4 +53,13 @@ public enum DataQuality: String, Codable, Sendable {
         case .stale: "已过期"
         }
     }
+}
+
+public struct SyncStatus: Codable, Equatable, Sendable {
+    public let lastAttemptAt: Date
+    public let lastSuccessAt: Date?
+    public let nextRetryAt: Date?
+    public let lastError: String?
+    public let retryCount: Int
+    public let scheduleNote: String?
 }

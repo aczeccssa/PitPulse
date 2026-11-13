@@ -33,6 +33,7 @@ def main():
             if key not in SKIPPED_LOCAL_KEYS:
                 env.setdefault(key, value)
     env.setdefault("F1_COMPANION_BIND", "0.0.0.0:38702")
+    env.setdefault("F1_COMPANION_DATABASE_PATH", str(LOCAL / "replay/pitpulse.sqlite"))
     replay_dir = Path(env.setdefault("F1_COMPANION_REPLAY_DIR", str(PROJECT / "server/target/replay-data")))
     missing = [name for name in REPLAY_FILES if not (replay_dir / name).is_file()]
     if missing:

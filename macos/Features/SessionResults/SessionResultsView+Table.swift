@@ -93,9 +93,9 @@ extension SessionResultsView {
     func resultTime(_ result: SessionResult) -> String {
         switch selectedSession?.session.sessionType {
         case .qualifying, .sprintQualifying:
-            return result.q3 ?? result.q2 ?? result.q1 ?? "—"
+            return result.q3 ?? result.q2 ?? result.q1 ?? result.time ?? "—"
         case .fp1, .fp2, .fp3:
-            return result.bestLap ?? "—"
+            return result.bestLap ?? result.time ?? "—"
         default:
             if let raceTime = result.raceTime ?? result.time, !raceTime.isEmpty { return raceTime }
             return result.gap ?? result.bestLap ?? "—"
