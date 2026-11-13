@@ -129,6 +129,7 @@ schemes:
       config: Debug
     test:
       config: Debug
+      debugEnabled: false
       targets:
         - PitPulseMobileTests
     archive:

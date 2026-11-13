@@ -9,7 +9,9 @@ struct PitPulseMobileApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if CommandLine.arguments.contains("--widget-preview") {
+            if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+                Color.clear
+            } else if CommandLine.arguments.contains("--widget-preview") {
                 NavigationStack { WidgetPreviewGallery() }
                     .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
                     .tint(PulseStyle.red)
