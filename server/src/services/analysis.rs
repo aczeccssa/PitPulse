@@ -108,7 +108,7 @@ async fn section(
     }
 }
 
-fn normalize_date(value: &str) -> Option<String> {
+pub(crate) fn normalize_date(value: &str) -> Option<String> {
     let prefix = value.get(..19)?;
     let suffix = value.get(19..)?;
     let suffix = if let Some(fraction) = suffix.strip_prefix('.') {
