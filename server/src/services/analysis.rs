@@ -73,10 +73,7 @@ async fn section(
                 elapsed_ms = started.elapsed().as_millis() as u64,
                 "analysis resource loaded"
             );
-            if rows.len() > 4000 {
-                warnings.push(format!("{resource}: 仅显示前 4000 条采样"));
-            }
-            rows.into_iter().take(4000).map(camel).collect()
+            rows.into_iter().map(camel).collect()
         }
         Err(error) => {
             tracing::warn!(resource, %error, elapsed_ms = started.elapsed().as_millis() as u64, "analysis resource unavailable");
