@@ -175,6 +175,7 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
     let task = tokio::spawn(async move { axum::serve(listener, upstream_app).await.unwrap() });
     let (mut state, _temp) = state().await;
     state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), &base);
+    let database = state.database.clone();
     let app = server::router(state);
     let url = "/api/v1/sessions/2024:1:race/drivers/leclerc/analysis";
     let start = std::time::Instant::now();
@@ -185,6 +186,16 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
     let (status, data) = ready(app.clone(), url).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(data["data"]["selectedLap"], 1);
+    let archived = database
+        .analysis_cache("session:2024:1:race:leclerc:base")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(archived["data"]["laps"].as_array().unwrap().len(), 2);
+    assert!(
+        archived["data"]["carData"].as_array().unwrap().is_empty(),
+        "shared lap archive must not retain telemetry from a different selected lap"
+    );
     assert_eq!(data["data"]["laps"][0]["durationSector1"], Value::Null);
     assert_eq!(data["data"]["carData"][0]["nGear"], 7);
     assert_eq!(data["data"]["pit"], json!([]));
