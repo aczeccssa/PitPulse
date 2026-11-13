@@ -181,7 +181,7 @@ async fn test_old_database_upgrades_and_timeout_keeps_cache() {
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 7);
+    assert_eq!(database.user_version().await.unwrap(), 8);
     database.migrate().await.unwrap();
 
     let payload: Value =
@@ -262,4 +262,34 @@ async fn test_expired_calendar_is_stale_until_successful_refresh() {
     database.replace_calendar(&meetings, &now).await.unwrap();
     let (_, refreshed_meta) = database.calendar(Some(2026)).await.unwrap();
     assert!(!refreshed_meta.stale);
+}
+
+#[test]
+fn test_brazil_alias_links_all_sessions_without_linking_other_events() {
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    let mut meetings = decode_alpha_schedule(&payload).unwrap();
+    meetings[0].name = "Brazilian Grand Prix".into();
+    let open_meetings = vec![
+        json!({"meeting_name":"São Paulo Grand Prix","meeting_key":1299,"is_cancelled":false}),
+    ];
+    let sessions: Vec<_> = meetings[0].sessions.iter().enumerate().map(|(i,s)| json!({"meeting_key":1299,"session_name":s.session_type.as_str(),"session_key":11405+i,"date_end":"2026-11-08T19:00:00Z"})).collect();
+    openf1::supplement_calendar(&mut meetings, &open_meetings, &sessions);
+    assert!(
+        meetings[0]
+            .sessions
+            .iter()
+            .all(|s| s.openf1_session_key.is_some())
+    );
+    meetings[0].name = "Australian Grand Prix".into();
+    for session in &mut meetings[0].sessions {
+        session.openf1_session_key = None;
+    }
+    openf1::supplement_calendar(&mut meetings, &open_meetings, &sessions);
+    assert!(
+        meetings[0]
+            .sessions
+            .iter()
+            .all(|s| s.openf1_session_key.is_none())
+    );
 }

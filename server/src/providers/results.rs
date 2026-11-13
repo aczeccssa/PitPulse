@@ -178,6 +178,7 @@ impl IdentityMaps {
                     .flatten();
                 SessionResult {
                     session_id: session_id.to_string(),
+                    driver_number: number_text(&driver["permanent_car_number"]),
                     position,
                     classification,
                     driver_id: driver_id
@@ -305,6 +306,7 @@ impl IdentityMaps {
                     team_name
                 };
                 SessionResult {
+                    driver_number: number.map(|value| value.to_string()),
                     session_id: session_id.to_string(),
                     position,
                     classification: classification.to_string(),
@@ -364,6 +366,7 @@ impl IdentityMaps {
                     season,
                     position: row["position"].as_str()?.parse().ok()?,
                     driver_id: driver["driverId"].as_str()?.to_string(),
+                    driver_number: number_text(&driver["permanentNumber"]),
                     driver_name: format!(
                         "{} {}",
                         driver["givenName"].as_str()?,
@@ -453,6 +456,15 @@ fn normalize_name(value: &str) -> String {
         .collect()
 }
 
+fn number_text(value: &Value) -> Option<String> {
+    let text = value
+        .as_str()
+        .map(str::to_owned)
+        .or_else(|| value.as_u64().map(|n| n.to_string()))?;
+    let text = text.trim();
+    (text.parse::<u32>().ok()? > 0).then(|| text.to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -515,6 +527,7 @@ mod tests {
             );
             assert_eq!(quality, DataQuality::Provisional);
             assert_eq!(rows[0].driver_id, "leclerc");
+            assert_eq!(rows[0].driver_number.as_deref(), Some("16"));
             assert_eq!(rows[0].constructor_id, "ferrari");
             assert_eq!(rows[0].session_id, "2026:1:test");
         }

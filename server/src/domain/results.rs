@@ -8,6 +8,8 @@ pub struct SessionResult {
     pub position: Option<i64>,
     pub classification: String,
     pub driver_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_number: Option<String>,
     pub driver_name: String,
     pub constructor_id: String,
     pub team: String,

@@ -507,7 +507,12 @@ async fn session_bundle(
     for result in state.database.session_results(&session.id).await?.0 {
         let data = project_session(&data, &result.driver_id, identity.as_ref());
         let key = format!("session:{}:{}:base", session.id, result.driver_id);
+        let failed = data["laps"].as_array().is_none_or(Vec::is_empty);
         let mut value = envelope(data, &now, "openf1");
+        if failed {
+            value["meta"]["analysisStatus"] = json!("failed");
+            value["meta"]["analysisError"] = json!("场次详细数据尚不可用，请检查数据源关联。");
+        }
         value["meta"]["stale"] = json!(stale);
         state.analysis.put(state, key, value).await?;
     }
@@ -857,6 +862,49 @@ async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
                 },
             )
             .await;
+        }
+    }
+    // Backfill one historical session per cycle, retaining the latest-session
+    // priority above and avoiding an unbounded upstream burst at startup.
+    let mut history: Vec<_> = state
+        .database
+        .calendar(None)
+        .await?
+        .0
+        .into_iter()
+        .flat_map(|meeting| meeting.sessions)
+        .filter(|session| {
+            session.start_time <= now
+                && session.status != crate::domain::calendar::SessionStatus::Cancelled
+                && session.openf1_session_key.is_some()
+        })
+        .collect();
+    history.sort_by(|a, b| a.start_time.cmp(&b.start_time));
+    for session in history {
+        let key = format!("session:{}:bundle", session.id);
+        let cached = state.analysis.read(state, &key).await?;
+        if cached.as_ref().is_some_and(|value| {
+            value["data"]["laps"]
+                .as_array()
+                .is_some_and(|rows| !rows.is_empty())
+        }) {
+            continue;
+        }
+        if cached.as_ref().is_some_and(fresh_value) {
+            continue;
+        }
+        let results = state.database.session_results(&session.id).await?.0;
+        if let Some(result) = results.first() {
+            preload_job(
+                state,
+                Job::Session {
+                    session: session.id,
+                    driver: result.driver_id.clone(),
+                    lap: None,
+                },
+            )
+            .await;
+            break;
         }
     }
     Ok(())

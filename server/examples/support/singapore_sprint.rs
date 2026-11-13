@@ -156,6 +156,7 @@ pub async fn run(mut config: AppConfig, database: Database) -> anyhow::Result<()
                 .iter()
                 .enumerate()
                 .map(|(index, d)| DriverStanding {
+                    driver_number: Some(d.number.clone()),
                     season: 2026,
                     position: index as i64 + 1,
                     driver_id: d

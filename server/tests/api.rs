@@ -320,6 +320,7 @@ async fn test_nonempty_standings_endpoints_return_snapshot_meta() {
     state
         .database
         .replace_driver_standings(vec![DriverStanding {
+            driver_number: None,
             season,
             position: 1,
             driver_id: "leclerc".into(),
