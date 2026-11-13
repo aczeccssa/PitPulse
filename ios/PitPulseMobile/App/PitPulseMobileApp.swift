@@ -47,6 +47,7 @@ struct RootView: View {
         .liveBottomAccessory(isEnabled: model.hasActiveLive) {
             Group {
                 Button { showLive = true } label: { LiveMiniBar() }
+                    .accessibilityIdentifier("live.open")
                     .buttonStyle(.plain)
                     .matchedTransitionSource(id: "live-player", in: liveTransition)
             }

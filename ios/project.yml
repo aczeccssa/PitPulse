@@ -97,12 +97,28 @@ targets:
         SDKROOT: iphoneos
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PitPulse.app/PitPulse"
+        BUNDLE_LOADER: "$(TEST_HOST)"
         TARGETED_DEVICE_FAMILY: "1,2"
     dependencies:
+      - target: PitPulseMobile
       - package: SharedData
         product: SharedData
       - package: SharedComponents
         product: SharedComponents
+
+  PitPulseMobileUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PitPulseMobileUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: PitPulseMobile
+    dependencies:
+      - target: PitPulseMobile
 
 schemes:
   PitPulseMobile:
@@ -123,3 +139,13 @@ schemes:
         PitPulseLiveActivity: all
     run:
       config: Debug
+
+  PitPulseMobileNavigation:
+    build:
+      targets:
+        PitPulseMobile: all
+        PitPulseMobileUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - PitPulseMobileUITests

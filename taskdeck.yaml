@@ -118,8 +118,32 @@ tasks:
     - test
     - Debug
     cwd: .
-    env: {}
+    env:
+      PITPULSE_IOS_DESTINATION: "platform=iOS Simulator,name=PitPulse Widget Review"
     shell: true
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
+
+  Test iOS Navigation:
+    command: /bin/bash
+    args: [scripts/xcode-ios-task.sh, test-navigation, Debug]
+    cwd: .
+    env:
+      PITPULSE_IOS_DESTINATION: "platform=iOS Simulator,name=PitPulse Widget Review"
+    shell: true
+    auto_start: false
+    stop_timeout_ms: 3000
+    clear_logs_on_restart: false
+
+  Check Server:
+    command: /bin/bash
+    args:
+      - -c
+      - cargo fmt --manifest-path server/Cargo.toml -- --check && cargo test --locked --manifest-path server/Cargo.toml && cargo clippy --locked --manifest-path server/Cargo.toml --all-targets -- -D warnings
+    cwd: .
+    env: {}
+    shell: false
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: false
