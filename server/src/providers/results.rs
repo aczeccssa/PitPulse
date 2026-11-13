@@ -172,13 +172,29 @@ impl IdentityMaps {
                     .as_str()
                     .or_else(|| row["best_lap"].as_str())
                     .map(str::to_string)
-                    .or_else(|| component("FL"));
+                    .or_else(|| component("FL"))
+                    .or_else(|| {
+                        matches!(
+                            session_type,
+                            SessionType::Fp1 | SessionType::Fp2 | SessionType::Fp3
+                        )
+                        .then(|| time.clone())
+                        .flatten()
+                    });
                 let race_time = matches!(session_type, SessionType::Race | SessionType::Sprint)
                     .then(|| time.clone())
                     .flatten();
                 SessionResult {
                     session_id: session_id.to_string(),
-                    driver_number: number_text(&driver["permanent_car_number"]),
+                    driver_number: number_text(&driver["permanent_car_number"]).or_else(|| {
+                        let id = driver_id.as_deref()?;
+                        let mut numbers = self
+                            .drivers_by_number
+                            .iter()
+                            .filter(|(_, mapped)| mapped.as_str() == id);
+                        let number = numbers.next()?.0;
+                        numbers.next().is_none().then(|| number.to_string())
+                    }),
                     position,
                     classification,
                     driver_id: driver_id
@@ -643,6 +659,30 @@ mod tests {
         assert_eq!(rows[0].q1, None);
         assert_eq!(rows[0].q2, None);
         assert_eq!(rows[0].q3, None);
+    }
+
+    #[test]
+    fn test_practice_time_and_known_identity_fill_required_result_fields() {
+        let source = identities();
+        let mut payload: Value =
+            serde_json::from_str(include_str!("../../tests/fixtures/jolpica-result-fp1.json"))
+                .unwrap();
+        let row = &mut payload["data"]["results"][0];
+        row["time"] = serde_json::json!("1:20.267");
+        row["driver"]["permanent_car_number"] = Value::Null;
+        row["fastest_lap"] = Value::Null;
+        row["best_lap"] = Value::Null;
+        row["components"] = serde_json::json!({});
+        let (rows, _) = source.decode_alpha_results(
+            &payload,
+            "2026:1:fp1",
+            SessionType::Fp1,
+            &[],
+            "2026-11-13T00:00:00Z",
+        );
+        assert_eq!(rows[0].best_lap.as_deref(), Some("1:20.267"));
+        assert_eq!(rows[0].driver_id, "leclerc");
+        assert_eq!(rows[0].driver_number.as_deref(), Some("16"));
     }
 
     #[test]
