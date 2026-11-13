@@ -448,3 +448,64 @@ async fn test_result_driver_number_roundtrip_and_number_only_revision() {
     database.migrate().await.unwrap();
     assert_eq!(database.user_version().await.unwrap(), 8);
 }
+
+#[tokio::test]
+async fn test_historical_analysis_survives_capacity_and_reopen() {
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("analysis.sqlite");
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    let value = serde_json::json!({"data":{"laps":[{"lapNumber":1,"lapDuration":80.0}]},"meta":{"fetchedAt":"2026-11-13T00:00:00Z"}});
+    for index in 0..140 {
+        database
+            .save_analysis_cache(&format!("session:2026:1:driver{index}:base"), &value)
+            .await
+            .unwrap();
+    }
+    drop(database);
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    for index in 0..140 {
+        assert_eq!(
+            database
+                .analysis_cache(&format!("session:2026:1:driver{index}:base"))
+                .await
+                .unwrap(),
+            Some(value.clone())
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_incomplete_calendar_cannot_delete_recorded_results() {
+    let temp = TempDir::new().unwrap();
+    let database = Database::open(&temp.path().join("history.sqlite"))
+        .await
+        .unwrap();
+    database.migrate().await.unwrap();
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    let mut meetings = decode_alpha_schedule(&payload).unwrap();
+    database
+        .replace_calendar(&meetings, "2026-11-13T00:00:00Z")
+        .await
+        .unwrap();
+    let session_id = meetings[0].sessions[0].id.clone();
+    database
+        .replace_session_results(
+            vec![result(&session_id, "classified", 0.0, "provisional")],
+            "provisional",
+        )
+        .await
+        .unwrap();
+    meetings[0].sessions.remove(0);
+    database
+        .replace_calendar(&meetings, "2026-11-13T01:00:00Z")
+        .await
+        .unwrap();
+    assert!(database.session_exists(&session_id).await.unwrap());
+    assert_eq!(
+        database.session_results(&session_id).await.unwrap().0.len(),
+        1
+    );
+}

@@ -128,7 +128,7 @@ impl Database {
             let mut connection = connection.blocking_lock();
             let tx = connection.transaction()?;
             tx.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?1,?2,?3) ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at", rusqlite::params![key,json,fetched_at])?;
-            tx.execute("DELETE FROM analysis_cache WHERE cache_key IN (SELECT cache_key FROM analysis_cache ORDER BY fetched_at DESC,rowid DESC LIMIT -1 OFFSET 128)", [])?;
+            // Persist historical analysis; only the in-memory accelerator is bounded.
             tx.commit()
         }).await??;
         Ok(())
@@ -1125,7 +1125,7 @@ fn upsert_calendar(
         let placeholders = seen.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         if !seen.is_empty() {
             let sql = format!(
-                "DELETE FROM sessions WHERE meeting_id = ?1 AND id NOT IN ({placeholders})"
+                "DELETE FROM sessions WHERE meeting_id = ?1 AND id NOT IN ({placeholders}) AND NOT EXISTS (SELECT 1 FROM session_results WHERE session_results.session_id = sessions.id)"
             );
             let mut params: Vec<&dyn rusqlite::ToSql> = vec![&meeting.id];
             for id in &seen {
