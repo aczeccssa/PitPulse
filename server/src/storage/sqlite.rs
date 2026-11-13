@@ -19,6 +19,7 @@ use crate::{
     error::StorageError,
 };
 
+const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
 const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
 const MIGRATION_0002: &str = include_str!("migrations/0002_calendar_contract.sql");
@@ -127,7 +128,7 @@ impl Database {
             let mut connection = connection.blocking_lock();
             let tx = connection.transaction()?;
             tx.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?1,?2,?3) ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at", rusqlite::params![key,json,fetched_at])?;
-            tx.execute("DELETE FROM analysis_cache WHERE cache_key IN (SELECT cache_key FROM analysis_cache ORDER BY fetched_at DESC,rowid DESC LIMIT -1 OFFSET 128)", [])?;
+            // Persist historical analysis; only the in-memory accelerator is bounded.
             tx.commit()
         }).await??;
         Ok(())
@@ -404,7 +405,7 @@ impl Database {
         let results = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality
+                "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, driver_number
                  FROM session_results WHERE session_id = ?1 AND revision = (SELECT MAX(revision) FROM session_results WHERE session_id = ?1) ORDER BY position IS NULL, position",
             )?;
             let rows = statement.query_map([&lookup_id], |row| {
@@ -430,6 +431,7 @@ impl Database {
                     fetched_at: row.get(18)?,
                     revision: row.get(19)?,
                     quality: row.get(20)?,
+                    driver_number: row.get(21)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>, _>>()
@@ -488,7 +490,7 @@ impl Database {
         let rows = spawn_blocking(move || {
             let connection = connection.blocking_lock();
             let mut statement = connection.prepare(
-                "SELECT season, position, driver_id, driver_name, constructor, points, wins, source, fetched_at, revision, constructor_ids
+                "SELECT season, position, driver_id, driver_name, constructor, points, wins, source, fetched_at, revision, constructor_ids, driver_number
                  FROM driver_standings WHERE season = COALESCE(?1, CAST(strftime('%Y','now') AS INTEGER)) ORDER BY position",
             )?;
             let rows = statement.query_map([season], |row| {
@@ -504,6 +506,7 @@ impl Database {
                     fetched_at: row.get(8)?,
                     revision: row.get(9)?,
                     constructor_ids: serde_json::from_str(&row.get::<_, String>(10)?).unwrap_or_default(),
+                    driver_number: row.get(11)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>, _>>()
@@ -612,9 +615,9 @@ impl Database {
             } else {
                 for row in &rows {
                     tx.execute(
-                        "INSERT INTO session_results (session_id, position, classification, driver_id, driver_name, constructor_id, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, best_lap, q1, q2, q3, race_time)
-                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
-                        rusqlite::params![row.session_id, row.position, row.classification, row.driver_id, row.driver_name, row.constructor_id, row.team, row.time, row.gap, row.laps, row.points, row.source, row.source_updated_at, row.fetched_at, revision, quality, row.best_lap, row.q1, row.q2, row.q3, row.race_time],
+                        "INSERT INTO session_results (session_id, position, classification, driver_id, driver_name, constructor_id, team, time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, best_lap, q1, q2, q3, race_time, driver_number)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+                        rusqlite::params![row.session_id, row.position, row.classification, row.driver_id, row.driver_name, row.constructor_id, row.team, row.time, row.gap, row.laps, row.points, row.source, row.source_updated_at, row.fetched_at, revision, quality, row.best_lap, row.q1, row.q2, row.q3, row.race_time, row.driver_number],
                     )?;
                 }
             }
@@ -635,16 +638,16 @@ impl Database {
             let mut connection = connection.blocking_lock();
             let tx = connection.transaction()?;
             let old_revision: i64 = tx.query_row("SELECT COALESCE(MAX(revision), 0) FROM driver_standings WHERE season=?1", [season], |row| row.get(0))?;
-            let mut old = tx.prepare("SELECT position, driver_id, driver_name, constructor, points, wins, constructor_ids, source FROM driver_standings WHERE season=?1 ORDER BY position")?;
-            let old_rows = old.query_map([season], |row| Ok((row.get::<_,i64>(0)?, row.get::<_,String>(1)?, row.get::<_,String>(2)?, row.get::<_,String>(3)?, row.get::<_,f64>(4)?, row.get::<_,i64>(5)?, row.get::<_,String>(6)?, row.get::<_,String>(7)?)))?.collect::<Result<Vec<_>,_>>()?;
+            let mut old = tx.prepare("SELECT position, driver_id, driver_name, constructor, points, wins, constructor_ids, source, driver_number FROM driver_standings WHERE season=?1 ORDER BY position")?;
+            let old_rows = old.query_map([season], |row| Ok((row.get::<_,i64>(0)?, row.get::<_,String>(1)?, row.get::<_,String>(2)?, row.get::<_,String>(3)?, row.get::<_,f64>(4)?, row.get::<_,i64>(5)?, row.get::<_,String>(6)?, row.get::<_,String>(7)?, row.get::<_,Option<String>>(8)?)))?.collect::<Result<Vec<_>,_>>()?;
             drop(old);
             let mut incoming = rows.clone();
             incoming.sort_by(|a,b| a.position.cmp(&b.position));
-            let unchanged = old_rows.len() == incoming.len() && old_rows.iter().zip(&incoming).all(|(a,b)| a.0==b.position && a.1==b.driver_id && a.2==b.driver_name && a.3==b.constructor && a.4==b.points && a.5==b.wins && a.6==serde_json::to_string(&b.constructor_ids).unwrap_or_default() && a.7==b.source);
+            let unchanged = old_rows.len() == incoming.len() && old_rows.iter().zip(&incoming).all(|(a,b)| a.0==b.position && a.1==b.driver_id && a.2==b.driver_name && a.3==b.constructor && a.4==b.points && a.5==b.wins && a.6==serde_json::to_string(&b.constructor_ids).unwrap_or_default() && a.7==b.source && a.8==b.driver_number);
             let revision = if unchanged { old_revision } else { old_revision + 1 };
             tx.execute("DELETE FROM driver_standings WHERE season=?1", [season])?;
             for row in incoming {
-                tx.execute("INSERT INTO driver_standings (season,position,driver_id,driver_name,constructor,points,wins,source,source_updated_at,fetched_at,revision,quality,constructor_ids) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,NULL,?9,?10,'provisional',?11)", rusqlite::params![row.season,row.position,row.driver_id,row.driver_name,row.constructor,row.points,row.wins,row.source,row.fetched_at,revision,serde_json::to_string(&row.constructor_ids).unwrap_or_else(|_| "[]".to_string())])?;
+                tx.execute("INSERT INTO driver_standings (season,position,driver_id,driver_name,constructor,points,wins,source,source_updated_at,fetched_at,revision,quality,constructor_ids,driver_number) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,NULL,?9,?10,'provisional',?11,?12)", rusqlite::params![row.season,row.position,row.driver_id,row.driver_name,row.constructor,row.points,row.wins,row.source,row.fetched_at,revision,serde_json::to_string(&row.constructor_ids).unwrap_or_else(|_| "[]".to_string()),row.driver_number])?;
             }
             tx.commit()?;
             Ok(revision)
@@ -781,7 +784,7 @@ fn load_latest_results(
     session_id: &str,
 ) -> Result<Vec<SessionResult>, rusqlite::Error> {
     let mut statement = connection.prepare(
-        "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality
+        "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, driver_number
          FROM session_results WHERE session_id=?1 AND revision=(SELECT MAX(revision) FROM session_results WHERE session_id=?1) ORDER BY driver_id",
     )?;
     let rows = statement.query_map([session_id], |row| {
@@ -807,6 +810,7 @@ fn load_latest_results(
             fetched_at: row.get(18)?,
             revision: row.get(19)?,
             quality: row.get(20)?,
+            driver_number: row.get(21)?,
         })
     })?;
     rows.collect()
@@ -950,6 +954,10 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
     if version < 7 {
         connection.execute_batch(MIGRATION_0007)?;
         connection.execute_batch("PRAGMA user_version = 7;")?;
+    }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 8 {
+        connection.execute_batch(MIGRATION_0008)?;
     }
 
     Ok(())
@@ -1117,7 +1125,7 @@ fn upsert_calendar(
         let placeholders = seen.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         if !seen.is_empty() {
             let sql = format!(
-                "DELETE FROM sessions WHERE meeting_id = ?1 AND id NOT IN ({placeholders})"
+                "DELETE FROM sessions WHERE meeting_id = ?1 AND id NOT IN ({placeholders}) AND NOT EXISTS (SELECT 1 FROM session_results WHERE session_results.session_id = sessions.id)"
             );
             let mut params: Vec<&dyn rusqlite::ToSql> = vec![&meeting.id];
             for id in &seen {

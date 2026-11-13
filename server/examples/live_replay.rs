@@ -74,6 +74,7 @@ async fn main() -> anyhow::Result<()> {
                 .into_iter()
                 .enumerate()
                 .map(|(index, (id, name))| DriverStanding {
+                    driver_number: None,
                     season,
                     position: index as i64 + 1,
                     driver_id: id.into(),

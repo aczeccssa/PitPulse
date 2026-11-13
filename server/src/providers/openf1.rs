@@ -277,8 +277,18 @@ fn same_meeting(meeting: &Meeting, row: &Value) -> bool {
         .get("is_cancelled")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    name.eq_ignore_ascii_case(&meeting.name)
+    canonical_meeting_name(name) == canonical_meeting_name(&meeting.name)
         && cancelled == (meeting.status == crate::domain::calendar::MeetingStatus::Cancelled)
+}
+
+// Provider display names differ for this event; normalize only the known alias.
+fn canonical_meeting_name(name: &str) -> String {
+    match name.trim().to_lowercase().as_str() {
+        "brazilian grand prix" | "são paulo grand prix" | "sao paulo grand prix" => {
+            "sao paulo grand prix".to_string()
+        }
+        _ => name.trim().to_lowercase(),
+    }
 }
 
 pub fn result_position(row: &Value) -> Option<i64> {
@@ -304,6 +314,18 @@ pub fn fp1_availability(rows: &[Value]) -> ProviderAvailability {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_brazilian_and_sao_paulo_names_match() {
+        assert_eq!(
+            canonical_meeting_name("Brazilian Grand Prix"),
+            canonical_meeting_name("São Paulo Grand Prix")
+        );
+        assert_ne!(
+            canonical_meeting_name("Mexico City Grand Prix"),
+            canonical_meeting_name("São Paulo Grand Prix")
+        );
+    }
 
     #[test]
     fn test_openf1_null_position_stays_null() {
