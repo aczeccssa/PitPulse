@@ -36,7 +36,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection = ProcessInfo.processInfo.environment["PITPULSE_TAB"].flatMap(Int.init) ?? 0
-    @State private var showLive = false
+    @State private var showLive = ProcessInfo.processInfo.environment["PITPULSE_OPEN_LIVE"] == "1"
     @Namespace private var liveTransition
     var body: some View {
         TabView(selection: $selection) {

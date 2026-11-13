@@ -18,7 +18,6 @@ if selected[0]['state'] != 'Booted':
 subprocess.run(['xcrun', 'simctl', 'bootstatus', device_id, '-b'], check=True)
 subprocess.run(['xcrun', 'simctl', 'terminate', device_id, 'com.pitpulse.mobile'],
                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-env = dict(os.environ, SIMCTL_CHILD_PITPULSE_LIVE_SERVER_URL='http://127.0.0.1:38702')
+env = dict(os.environ, SIMCTL_CHILD_PITPULSE_LIVE_SERVER_URL='http://127.0.0.1:38702', SIMCTL_CHILD_PITPULSE_OPEN_LIVE='1')
 subprocess.run(['xcrun', 'simctl', 'launch', device_id, 'com.pitpulse.mobile', '-serverAddress', 'http://127.0.0.1:38702'], env=env, check=True)
-subprocess.run(['xcrun', 'simctl', 'openurl', device_id, 'pitpulse://live'], check=True)
 print('Simulator Live connected to recorded replay at 127.0.0.1:38702')

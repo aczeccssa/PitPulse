@@ -2,6 +2,20 @@ import XCTest
 
 final class NavigationTests: XCTestCase {
     @MainActor
+    func testRecordedLiveLaunchWithoutURLConfirmation() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-serverAddress", "http://127.0.0.1:38702"]
+        app.launchEnvironment["PITPULSE_LIVE_SERVER_URL"] = "http://127.0.0.1:38702"
+        app.launchEnvironment["PITPULSE_OPEN_LIVE"] = "1"
+        app.launch()
+        defer { app.terminate() }
+        let close = app.buttons["收起 Live"]
+        XCTAssertTrue(close.waitForExistence(timeout: 20), app.debugDescription)
+        close.tap()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10))
+    }
+
+    @MainActor
     func testTabsAndRecordedLiveReturn() {
         let app = XCUIApplication()
         app.launchArguments = ["-serverAddress", "http://127.0.0.1:38702"]
