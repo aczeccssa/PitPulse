@@ -18,12 +18,13 @@ extension MenuBarAcceptanceTests {
         }
         XCTAssertTrue(calendar.waitForExistence(timeout: 15), app.debugDescription)
         calendar.click()
+        let popup = app.dialogs.containing(.button, identifier: "menuBar.section.calendar").firstMatch
         let brazil = app.buttons["calendar.meeting.2026:20"]
         XCTAssertTrue(brazil.waitForExistence(timeout: 20), app.debugDescription)
         brazil.click()
         let fullResults = app.buttons["calendar.raceResults"]
         XCTAssertTrue(fullResults.waitForExistence(timeout: 30), app.debugDescription)
-        attachScreenshot("Historical calendar podium", from: app)
+        attachScreenshot("Historical calendar podium", from: popup)
         fullResults.click()
         XCTAssertTrue(app.buttons["results.row.norris"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["返回分站"].click()
@@ -32,11 +33,11 @@ extension MenuBarAcceptanceTests {
         XCTAssertTrue(practice.waitForExistence(timeout: 10), app.debugDescription)
         practice.click()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "results.row.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
-        attachScreenshot("Historical practice classification", from: app)
+        attachScreenshot("Historical practice classification", from: popup)
         app.buttons["返回分站"].click()
         app.buttons["天气"].click()
         XCTAssertTrue(staticText(containing: "历史实测天气", in: app).waitForExistence(timeout: 15), app.debugDescription)
-        attachScreenshot("Archived historical weather", from: app)
+        attachScreenshot("Archived historical weather", from: popup)
     }
 
     @MainActor

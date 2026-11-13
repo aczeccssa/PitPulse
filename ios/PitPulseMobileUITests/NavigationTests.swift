@@ -77,7 +77,20 @@ final class NavigationTests: XCTestCase {
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.lifetime = .keepAlways
         add(screenshot)
-        for _ in 0..<3 { app.navigationBars.buttons.element(boundBy: 0).tap() }
+        for _ in 0..<2 { app.navigationBars.buttons.element(boundBy: 0).tap() }
+        let weather = app.segmentedControls.buttons["天气"]
+        for _ in 0..<6 {
+            if weather.isHittable { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(weather.isHittable, app.debugDescription)
+        weather.tap()
+        XCTAssertTrue(app.staticTexts["历史实测天气 · 已归档"].waitForExistence(timeout: 20), app.debugDescription)
+        let weatherScreenshot = XCTAttachment(screenshot: app.screenshot())
+        weatherScreenshot.name = "Archived historical weather"
+        weatherScreenshot.lifetime = .keepAlways
+        add(weatherScreenshot)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
     }
 
