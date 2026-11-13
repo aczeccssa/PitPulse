@@ -235,6 +235,13 @@ pub fn supplement_calendar(
         let Some(candidate) = openf1_meetings
             .iter()
             .find(|row| same_meeting(meeting, row))
+            .or_else(|| {
+                let mut candidates = openf1_meetings
+                    .iter()
+                    .filter(|row| relocated_meeting(meeting, row, sessions));
+                let first = candidates.next()?;
+                candidates.next().is_none().then_some(first)
+            })
         else {
             continue;
         };
@@ -265,6 +272,36 @@ pub fn supplement_calendar(
             }
         }
     }
+}
+
+fn relocated_meeting(meeting: &Meeting, row: &Value, sessions: &[Value]) -> bool {
+    let Some((original, _)) = meeting.name.split_once(" in ") else {
+        return false;
+    };
+    if !row["meeting_name"]
+        .as_str()
+        .is_some_and(|name| name.eq_ignore_ascii_case(original))
+        || row["is_cancelled"].as_bool().unwrap_or(false)
+            != (meeting.status == crate::domain::calendar::MeetingStatus::Cancelled)
+        || meeting.sessions.len() < 2
+    {
+        return false;
+    }
+    let Some(key) = row["meeting_key"].as_i64() else {
+        return false;
+    };
+    meeting.sessions.iter().all(|session| {
+        sessions.iter().any(|candidate| {
+            candidate["meeting_key"].as_i64() == Some(key)
+                && candidate["session_name"]
+                    .as_str()
+                    .and_then(SessionType::from_provider)
+                    == Some(session.session_type)
+                && candidate["date_start"]
+                    .as_str()
+                    .is_some_and(|start| start.replace("+00:00", "Z") == session.start_time)
+        })
+    })
 }
 
 #[allow(dead_code)]
