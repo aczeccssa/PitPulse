@@ -11,7 +11,9 @@ use crate::{
         quality::ProviderAvailability,
     },
     error::ProviderError,
-    providers::http::{get_json_once, get_json_with_min_interval, shared_client, with_query},
+    providers::http::{
+        get_json_once, get_json_with_min_interval, shared_client_with_timeout, with_query,
+    },
 };
 
 pub const SOURCE: &str = "openf1";
@@ -27,7 +29,7 @@ pub struct OpenF1Provider {
 impl OpenF1Provider {
     pub fn new(config: &crate::config::ProvidersConfig) -> Result<Self, reqwest::Error> {
         Ok(Self {
-            client: shared_client(&config.user_agent)?,
+            client: shared_client_with_timeout(&config.user_agent, Duration::from_secs(30))?,
             enabled: config.openf1_enabled,
             base_url: "https://api.openf1.org".to_string(),
             last_request: Arc::new(Mutex::new(None)),
@@ -83,7 +85,7 @@ impl OpenF1Provider {
             .replace("date%3E%3D=", "date>=")
             .replace("date%3C%3D=", "date<=");
         let payload = tokio::time::timeout(
-            Duration::from_secs(10),
+            Duration::from_secs(35),
             get_json_with_min_interval(
                 &self.client,
                 &url,

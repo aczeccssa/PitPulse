@@ -11,10 +11,17 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_ATTEMPTS: u32 = 3;
 
 pub fn shared_client(user_agent: &str) -> Result<Client, reqwest::Error> {
+    shared_client_with_timeout(user_agent, DEFAULT_TIMEOUT)
+}
+
+pub fn shared_client_with_timeout(
+    user_agent: &str,
+    timeout: Duration,
+) -> Result<Client, reqwest::Error> {
     Client::builder()
         .user_agent(user_agent)
         .connect_timeout(Duration::from_secs(3))
-        .timeout(DEFAULT_TIMEOUT)
+        .timeout(timeout)
         .redirect(reqwest::redirect::Policy::limited(4))
         .build()
 }
@@ -91,13 +98,19 @@ async fn request_once<T: DeserializeOwned>(client: &Client, url: &str) -> Result
             retry_after,
         });
     }
-    response
-        .json()
-        .await
-        .map_err(|error| ProviderError::Decode {
-            url: url.to_string(),
-            error: error.to_string(),
-        })
+    response.json().await.map_err(|error| {
+        if error.is_timeout() {
+            ProviderError::Transport {
+                url: url.to_string(),
+                error: error.to_string(),
+            }
+        } else {
+            ProviderError::Decode {
+                url: url.to_string(),
+                error: error.to_string(),
+            }
+        }
+    })
 }
 
 pub async fn get_json_once(client: &Client, url: &str) -> Result<Value, ProviderError> {
@@ -352,5 +365,42 @@ mod tests {
             .unwrap_err();
         assert!(matches!(error, ProviderError::Transport { .. }));
         server.abort();
+    }
+}
+
+#[cfg(test)]
+mod body_timeout_tests {
+    use super::*;
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+    };
+
+    #[tokio::test]
+    async fn test_body_timeout_is_retryable_and_bulk_timeout_allows_slow_body() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/data", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            for _ in 0..2 {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                tokio::spawn(async move {
+                    let mut request = [0; 1024];
+                    let _ = socket.read(&mut request).await;
+                    socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n").await.unwrap();
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    let _ = socket.write_all(b"[]").await;
+                });
+            }
+        });
+        let short = shared_client_with_timeout("test", Duration::from_millis(30)).unwrap();
+        let error = get_json_once(&short, &url).await.unwrap_err();
+        assert!(matches!(error, ProviderError::Transport { .. }));
+        assert!(error.is_retryable());
+        let bulk = shared_client_with_timeout("test", Duration::from_secs(2)).unwrap();
+        assert_eq!(
+            get_json_once(&bulk, &url).await.unwrap(),
+            serde_json::json!([])
+        );
+        server.await.unwrap();
     }
 }
