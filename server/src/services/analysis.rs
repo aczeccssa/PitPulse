@@ -560,7 +560,13 @@ async fn session_bundle(
         .await?
         .map(|(d, c)| IdentityMaps::from_ergast(&d, &c));
     for result in state.database.session_results(&session.id).await?.0 {
-        let data = project_session(&data, &result.driver_id, identity.as_ref());
+        let data = project_session(
+            &data,
+            &result.driver_id,
+            identity.as_ref(),
+            result.driver_number.as_deref().and_then(|n| n.parse().ok()),
+            Some(&result.driver_name),
+        );
         let key = format!("session:{}:{}:base", session.id, result.driver_id);
         let failed = data["laps"].as_array().is_none_or(Vec::is_empty);
         let mut value = envelope(data, &now, "openf1");
@@ -574,7 +580,35 @@ async fn session_bundle(
     Ok(data)
 }
 
-fn project_session(bundle: &Value, driver: &str, identity: Option<&IdentityMaps>) -> Value {
+fn project_session(
+    bundle: &Value,
+    driver: &str,
+    identity: Option<&IdentityMaps>,
+    session_number: Option<i64>,
+    session_name: Option<&str>,
+) -> Value {
+    let session_number = session_number.or_else(|| {
+        let name = session_name?
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase();
+        let mut matches = bundle["drivers"].as_array()?.iter().filter(|row| {
+            row["fullName"].as_str().is_some_and(|candidate| {
+                candidate
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .to_lowercase()
+                    == name
+            })
+        });
+        let first = matches.next()?;
+        if matches.next().is_some() {
+            return None;
+        }
+        first["driverNumber"].as_i64()
+    });
     let mut data = empty_session();
     data["warnings"] = json!(bundle["warnings"].as_array().cloned().unwrap_or_default());
     let matches: Vec<_> = bundle["drivers"]
@@ -583,8 +617,13 @@ fn project_session(bundle: &Value, driver: &str, identity: Option<&IdentityMaps>
         .flatten()
         .filter(|r| {
             r["driverNumber"].as_i64().is_some_and(|n| {
-                identity.and_then(|i| i.driver_for_number(n)) == Some(driver)
-                    || driver == format!("openf1:{n}")
+                session_number.map_or_else(
+                    || {
+                        identity.and_then(|i| i.driver_for_number(n)) == Some(driver)
+                            || driver == format!("openf1:{n}")
+                    },
+                    |expected| n == expected,
+                )
             })
         })
         .collect();
@@ -627,7 +666,23 @@ async fn refresh_session(
         .identity_cache(meeting.season)
         .await?
         .map(|(d, c)| IdentityMaps::from_ergast(&d, &c));
-    let mut data = project_session(&bundle, driver, identity.as_ref());
+    let result = state
+        .database
+        .session_results(session_id)
+        .await?
+        .0
+        .into_iter()
+        .find(|result| result.driver_id == driver);
+    let session_number = result
+        .as_ref()
+        .and_then(|result| result.driver_number.as_deref().and_then(|n| n.parse().ok()));
+    let mut data = project_session(
+        &bundle,
+        driver,
+        identity.as_ref(),
+        session_number,
+        result.as_ref().map(|result| result.driver_name.as_str()),
+    );
     let now = state.database.utc_now().await?;
     let key = Job::Session {
         session: session_id.into(),
@@ -637,6 +692,16 @@ async fn refresh_session(
     .key();
     let previous = state.analysis.read(state, &key).await?;
     let laps = data["laps"].as_array().cloned().unwrap_or_default();
+    if !laps.is_empty() {
+        state
+            .analysis
+            .put(
+                state,
+                format!("session:{session_id}:{driver}:base"),
+                envelope(data.clone(), &now, "openf1"),
+            )
+            .await?;
+    }
     if let Some(lap) = selected_lap(&laps, requested) {
         data["selectedLap"] = lap["lapNumber"].clone();
         if let (Some(start), Some(key), Some(number)) = (
@@ -991,12 +1056,29 @@ mod tests {
             ],
             &[],
         );
-        let bundle = json!({"drivers":[{"driverNumber":16},{"driverNumber":44}],"laps":[{"driverNumber":16,"lapNumber":1},{"driverNumber":44,"lapNumber":2}],"stints":[],"pit":[],"positions":[],"weather":[],"raceControl":[],"grid":[],"warnings":[]});
-        let data = project_session(&bundle, "leclerc", Some(&identity));
+        let bundle = json!({"drivers":[{"driverNumber":16,"fullName":"Charles LECLERC"},{"driverNumber":44,"fullName":"Paul ARON"}],"laps":[{"driverNumber":16,"lapNumber":1},{"driverNumber":44,"lapNumber":2}],"stints":[],"pit":[],"positions":[],"weather":[],"raceControl":[],"grid":[],"warnings":[]});
+        let named = project_session(
+            &bundle,
+            "paul_aron",
+            Some(&identity),
+            None,
+            Some("Paul Aron"),
+        );
+        assert_eq!(named["laps"][0]["driverNumber"], 44);
+        let reserve = project_session(&bundle, "reserve_driver", Some(&identity), Some(44), None);
+        assert_eq!(reserve["laps"][0]["driverNumber"], 44);
+        assert_eq!(reserve["laps"].as_array().unwrap().len(), 1);
+        assert!(
+            project_session(&bundle, "reserve_driver", Some(&identity), Some(99), None)["laps"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        let data = project_session(&bundle, "leclerc", Some(&identity), None, None);
         assert_eq!(data["laps"].as_array().unwrap().len(), 1);
         assert_eq!(data["laps"][0]["driverNumber"], 16);
         assert!(
-            project_session(&bundle, "unknown", Some(&identity))["laps"]
+            project_session(&bundle, "unknown", Some(&identity), None, None)["laps"]
                 .as_array()
                 .unwrap()
                 .is_empty()
