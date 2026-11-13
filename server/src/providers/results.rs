@@ -184,28 +184,32 @@ impl IdentityMaps {
                 let race_time = matches!(session_type, SessionType::Race | SessionType::Sprint)
                     .then(|| time.clone())
                     .flatten();
+                let driver_name = format!(
+                    "{} {}",
+                    driver["given_name"].as_str().unwrap_or_default(),
+                    driver["family_name"].as_str().unwrap_or_default()
+                )
+                .trim()
+                .to_string();
                 SessionResult {
                     session_id: session_id.to_string(),
-                    driver_number: number_text(&driver["permanent_car_number"]).or_else(|| {
-                        let id = driver_id.as_deref()?;
-                        let mut numbers = self
-                            .drivers_by_number
-                            .iter()
-                            .filter(|(_, mapped)| mapped.as_str() == id);
-                        let number = numbers.next()?.0;
-                        numbers.next().is_none().then(|| number.to_string())
-                    }),
+                    driver_number: session_number_for_name(expected_drivers, &driver_name)
+                        .map(|n| n.to_string())
+                        .or_else(|| number_text(&driver["permanent_car_number"]))
+                        .or_else(|| {
+                            let id = driver_id.as_deref()?;
+                            let mut numbers = self
+                                .drivers_by_number
+                                .iter()
+                                .filter(|(_, mapped)| mapped.as_str() == id);
+                            let number = numbers.next()?.0;
+                            numbers.next().is_none().then(|| number.to_string())
+                        }),
                     position,
                     classification,
                     driver_id: driver_id
                         .unwrap_or_else(|| format!("jolpica-alpha:{raw_driver_id}")),
-                    driver_name: format!(
-                        "{} {}",
-                        driver["given_name"].as_str().unwrap_or_default(),
-                        driver["family_name"].as_str().unwrap_or_default()
-                    )
-                    .trim()
-                    .to_string(),
+                    driver_name,
                     constructor_id: constructor_id
                         .unwrap_or_else(|| format!("jolpica-alpha:{raw_constructor_id}")),
                     team: team["name"].as_str().unwrap_or_default().to_string(),
@@ -435,6 +439,34 @@ impl IdentityMaps {
     }
 }
 
+pub(crate) fn session_number_for_name(drivers: &[Value], name: &str) -> Option<i64> {
+    let normalize = |value: &str| {
+        value
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase()
+    };
+    let name = normalize(name);
+    if name.is_empty() {
+        return None;
+    }
+    let mut matches = drivers.iter().filter(|row| {
+        row.get("full_name")
+            .or_else(|| row.get("fullName"))
+            .and_then(Value::as_str)
+            .is_some_and(|candidate| normalize(candidate) == name)
+    });
+    let first = matches.next()?;
+    if matches.next().is_some() {
+        return None;
+    }
+    first
+        .get("driver_number")
+        .or_else(|| first.get("driverNumber"))
+        .and_then(Value::as_i64)
+}
+
 fn driver_numbers(drivers: &[Value]) -> BTreeSet<i64> {
     drivers
         .iter()
@@ -496,6 +528,28 @@ mod tests {
                 "url": "https://en.wikipedia.org/wiki/Scuderia_Ferrari"
             })],
         )
+    }
+
+    #[test]
+    fn test_alpha_practice_uses_session_number_over_permanent_number() {
+        let mut payload: Value =
+            serde_json::from_str(include_str!("../../tests/fixtures/jolpica-result-fp1.json"))
+                .unwrap();
+        payload["data"]["results"][0]["driver"]["permanent_car_number"] = serde_json::json!(99);
+        let roster = [serde_json::json!({"driver_number":16,"full_name":"Charles LECLERC"})];
+        let (rows, _) = identities().decode_alpha_results(
+            &payload,
+            "2026:1:fp1",
+            SessionType::Fp1,
+            &roster,
+            "2026-10-09T00:00:00Z",
+        );
+        assert_eq!(rows[0].driver_number.as_deref(), Some("16"));
+        let duplicate = [
+            roster[0].clone(),
+            serde_json::json!({"driver_number":44,"full_name":"Charles LECLERC"}),
+        ];
+        assert!(session_number_for_name(&duplicate, "Charles Leclerc").is_none());
     }
 
     #[test]
