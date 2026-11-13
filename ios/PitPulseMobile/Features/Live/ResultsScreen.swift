@@ -36,8 +36,8 @@ struct ResultsScreen: View {
                                         Text(row.points.map { "\($0.formatted()) PTS" } ?? "—").font(.caption2).foregroundStyle(.secondary)
                                     }
                                     Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(.secondary)
-                                }.padding(.vertical, 12)
-                            }.buttonStyle(.plain)
+                                }.padding(.vertical, 12).contentShape(Rectangle())
+                            }.buttonStyle(.plain).accessibilityIdentifier("result.\(row.driverId)")
                             Divider()
                         }
                         if results.isEmpty && !loading { Text("暂无成绩，场次结束并同步后可查看。").font(.subheadline).foregroundStyle(.secondary).padding(.vertical, 24) }

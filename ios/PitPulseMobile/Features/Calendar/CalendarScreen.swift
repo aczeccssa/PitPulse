@@ -98,7 +98,7 @@ struct CalendarScreen: View {
                 Spacer(minLength: 4)
                 CircuitOutlineView(meetingID: meeting.id).frame(width: 88, height: 54)
             }.padding(.vertical, 17)
-        }.listRowBackground(PulseStyle.background).listRowSeparator(.visible)
+        }.accessibilityIdentifier("meeting.\(meeting.id)").listRowBackground(PulseStyle.background).listRowSeparator(.visible)
     }
 }
 
@@ -194,8 +194,8 @@ struct WeekendScreen: View {
                                         Text(session.startTime.formatted(date: .omitted, time: .shortened)).font(.subheadline.bold().monospacedDigit())
                                     }
                                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
-                                }.padding(.vertical, 14)
-                            }.buttonStyle(PulsePressStyle())
+                                }.padding(.vertical, 14).contentShape(Rectangle())
+                            }.buttonStyle(PulsePressStyle()).accessibilityIdentifier("session.\(session.id)")
                             if session.id != meeting.sessions.last?.id { Divider().overlay(Color.primary.opacity(0.04)) }
                         }
                     }

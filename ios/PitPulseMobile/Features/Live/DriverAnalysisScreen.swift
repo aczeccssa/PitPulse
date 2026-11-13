@@ -39,7 +39,7 @@ struct DriverAnalysisScreen: View {
     private func lapChart(_ analysis: SessionAnalysis) -> some View {
         PulseCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("每圈节奏").font(.headline)
+                Text("每圈节奏 · \(analysis.laps.count) 圈").font(.headline).accessibilityIdentifier("analysis.lapCount")
                 Chart(Array(analysis.laps.enumerated()), id: \.offset) { _, lap in
                     if let number = lap.lapNumber, let duration = lap.lapDuration {
                         LineMark(x: .value("圈", number), y: .value("圈速 秒", duration)).foregroundStyle(PulseStyle.red)
@@ -116,12 +116,13 @@ struct DriverAnalysisScreen: View {
         guard let url = model.serverURL else { error = "服务器地址无效"; return }
         error = nil
         do {
-            for attempt in 0..<10 {
+            for attempt in 0..<60 {
                 let response = try await APIClient(baseURL: url).sessionAnalysis(sessionId: sessionID, driverId: driverID, lap: selectedLap, token: model.currentToken)
                 try Task.checkCancellation()
                 let pending = response.meta.analysisStatus == "loading" || response.meta.analysisStatus == "refreshing"
                 if pending {
-                    if attempt == 9 { error = "历史数据仍在后台同步，请下拉刷新。"; return }
+                    if response.data.hasData { analysis = response.data }
+                    if attempt == 59 { error = "历史数据仍在后台同步，请下拉刷新。"; return }
                     try await Task.sleep(for: .seconds(2))
                     continue
                 }
