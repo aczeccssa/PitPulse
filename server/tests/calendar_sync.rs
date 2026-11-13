@@ -293,3 +293,42 @@ fn test_brazil_alias_links_all_sessions_without_linking_other_events() {
             .all(|s| s.openf1_session_key.is_none())
     );
 }
+
+#[test]
+fn test_relocated_meeting_requires_full_schedule_and_unique_candidate() {
+    let payload: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-alpha-2026-australia.json")).unwrap();
+    let mut meetings = decode_alpha_schedule(&payload).unwrap();
+    meetings[0].name = "Australian Grand Prix in Malaysia".into();
+    let candidates = vec![json!({"meeting_name":"Australian Grand Prix","meeting_key":99})];
+    let mut sessions: Vec<_> = meetings[0].sessions.iter().enumerate().map(|(i,s)| json!({"meeting_key":99,"session_name":s.session_type.as_str(),"session_key":100+i,"date_start":s.start_time})).collect();
+    let mut broken = meetings.clone();
+    sessions[0]["date_start"] = json!("2026-03-06T02:30:00Z");
+    openf1::supplement_calendar(&mut broken, &candidates, &sessions);
+    assert!(
+        broken[0]
+            .sessions
+            .iter()
+            .all(|s| s.openf1_session_key.is_none())
+    );
+    sessions[0]["date_start"] = json!(meetings[0].sessions[0].start_time);
+    let mut ambiguous = meetings.clone();
+    openf1::supplement_calendar(
+        &mut ambiguous,
+        &[candidates[0].clone(), candidates[0].clone()],
+        &sessions,
+    );
+    assert!(
+        ambiguous[0]
+            .sessions
+            .iter()
+            .all(|s| s.openf1_session_key.is_none())
+    );
+    openf1::supplement_calendar(&mut meetings, &candidates, &sessions);
+    assert!(
+        meetings[0]
+            .sessions
+            .iter()
+            .all(|s| s.openf1_session_key.is_some())
+    );
+}
