@@ -58,6 +58,31 @@ fn camel(value: Value) -> Value {
     }
 }
 
+fn historical_grid(races: &[Value], round: i64, collection: &str) -> Vec<Value> {
+    let Some(race) = races
+        .iter()
+        .find(|race| race["round"].as_str().and_then(|n| n.parse::<i64>().ok()) == Some(round))
+    else {
+        return Vec::new();
+    };
+    race[collection]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|row| {
+            let number = row["Driver"]["permanentNumber"]
+                .as_str()?
+                .parse::<i64>()
+                .ok()?;
+            let position = row["grid"].as_str()?.parse::<i64>().ok()?;
+            if number <= 0 || position < 0 {
+                return None;
+            }
+            Some(json!({"driverNumber":number,"position":position,"lapDuration":null}))
+        })
+        .collect()
+}
+
 async fn section(
     state: &AppState,
     resource: &str,
@@ -478,6 +503,39 @@ async fn session_bundle(
         }
     } else {
         warnings.push("该 Session 无可用 OpenF1 关联，或 Provider 未启用。".into());
+    }
+    if data["grid"].as_array().is_some_and(Vec::is_empty)
+        && state.jolpica.enabled
+        && matches!(
+            session.session_type,
+            crate::domain::calendar::SessionType::Race
+                | crate::domain::calendar::SessionType::Sprint
+        )
+        && let Some(round) = meeting.round
+    {
+        let sprint = session.session_type == crate::domain::calendar::SessionType::Sprint;
+        let endpoint = if sprint { "sprint" } else { "results" };
+        match tokio::time::timeout(
+            Duration::from_secs(10),
+            state
+                .jolpica
+                .entity_races_once(meeting.season, "", "", endpoint),
+        )
+        .await
+        {
+            Ok(Ok(races)) => {
+                let grid = historical_grid(
+                    &races,
+                    round,
+                    if sprint { "SprintResults" } else { "Results" },
+                );
+                if !grid.is_empty() {
+                    data["grid"] = json!(grid);
+                    warnings.push("grid: 发车位来自 Jolpica 比赛记录。".into());
+                }
+            }
+            _ => warnings.push("grid: Jolpica 发车位补充暂不可用。".into()),
+        }
     }
     data["warnings"] = json!(warnings);
     let stale = if let Some(previous) = &previous {
@@ -910,6 +968,20 @@ async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_historical_grid_uses_exact_round_and_preserves_pitlane_start() {
+        let races = vec![
+            json!({"round":"1","Results":[{"Driver":{"permanentNumber":"16"},"grid":"2"}]}),
+            json!({"round":"2","Results":[{"Driver":{"permanentNumber":"1"},"grid":"0"},{"Driver":{"permanentNumber":"44"},"grid":null}]}),
+        ];
+        assert_eq!(
+            historical_grid(&races, 2, "Results"),
+            vec![json!({"driverNumber":1,"position":0,"lapDuration":null})]
+        );
+        assert!(historical_grid(&races, 3, "Results").is_empty());
+    }
+
     #[test]
     fn test_shared_session_and_season_projection_keep_exact_driver_identity() {
         let identity = IdentityMaps::from_ergast(
