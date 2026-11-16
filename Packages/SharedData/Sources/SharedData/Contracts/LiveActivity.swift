@@ -43,6 +43,7 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
         }
     }
     public struct ContentState: Codable, Hashable, Sendable {
+        public var countryCode: String?
         public var sessionName: String
         public var meetingName: String
         public var statusLabel: String
@@ -100,8 +101,10 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
             weather: Weather? = nil,
             positionDrivers: [Driver]? = nil,
             positionFocus: String? = nil,
-            positionWindowStart: Int? = nil
+            positionWindowStart: Int? = nil,
+            countryCode: String? = nil
         ) {
+            self.countryCode = countryCode
             self.sessionName = sessionName
             self.meetingName = meetingName
             self.statusLabel = statusLabel

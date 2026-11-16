@@ -10,15 +10,9 @@ struct IslandOverlay: View {
     let reduceMotion: Bool
     var sample: IslandPreviewSample { IslandPreviewSample(state: state, elapsed: elapsed, reduceMotion: reduceMotion) }
 
-    var expandedHeight: CGFloat {
-        if state.presentation == IslandPreviewPage.positionChanges.rawValue { return 205 }
-        return switch state.presentation.flatMap(IslandContentMode.init(rawValue:)) ?? .overview {
-        case .overview: 205
-        case .battle: 220
-        case .favorite: 235
-        case .positionChanges: 205
-        }
-    }
+    // Keep every mode within the same preview height budget. The silhouette,
+    // content frame and animated mask all derive their height from this value.
+    let expandedHeight: CGFloat = 160
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -48,12 +42,10 @@ struct IslandOverlay: View {
             .frame(width: width, height: height).frame(maxHeight: .infinity, alignment: .top)
     }
     var expandedContent: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text(state.meetingName).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
-                Spacer(minLength: 4)
-                if state.isStale { ActivityStatus(state: state, expired: false) }
-                else { Text(state.sessionName.uppercased()).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary) }
+        VStack(spacing: 5) {
+            if state.presentation != IslandContentMode.favorite.rawValue && state.presentation != IslandContentMode.positionChanges.rawValue {
+                ActivityHeader(state: state).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
             }
             Spacer(minLength: 0)
             if state.presentation == IslandPreviewPage.positionChanges.rawValue {
@@ -63,14 +55,7 @@ struct IslandOverlay: View {
                     .environment(\.activityPreviewNumbers, sample.numbers)
             }
             Spacer(minLength: 0)
-            if state.presentation != IslandContentMode.overview.rawValue && state.presentation != IslandPreviewPage.positionChanges.rawValue {
-                HStack(spacing: 5) {
-                    Image(systemName: "flag.fill").foregroundStyle(state.trackColor)
-                    Text(state.trackLabel ?? "等待赛道状态").lineLimit(1)
-                    Spacer()
-                    ActivityNumberText(sample.state.lapLabel).monospacedDigit().environment(\.activityPreviewNumbers, sample.numbers)
-                }.font(.system(size: 10)).foregroundStyle(.secondary)
-            }
+
         }
     }
 

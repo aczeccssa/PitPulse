@@ -7,55 +7,39 @@ import SharedData
 struct PitPulseLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PitPulseActivityAttributes.self) { context in
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(context.attributes.seriesTitle.uppercased()).font(.caption2.bold()).tracking(2).foregroundStyle(.red)
-                        Text(context.state.meetingName).font(.headline).lineLimit(1)
-                        Text(context.state.sessionName).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 6) {
-                        ActivityNumberText(context.state.lapLabel).font(.title3.bold().monospacedDigit())
+            VStack(spacing: 6) {
+                if showsHeader(context.state) {
+                    HStack {
+                        ActivityHeader(state: context.state)
+                        Spacer()
                         ActivityStatus(state: context.state, expired: context.isStale)
-                    }
+                    }.padding(.horizontal, 12)
                 }
-                Divider().overlay(Color.primary.opacity(0.1))
-                ActivityPayloadView(state: context.state)
-                Text(context.state.trackLabel ?? "等待赛道状态").font(.caption2).foregroundStyle(.secondary)
+                ActivityPayloadView(state: displayState(context.state, expired: context.isStale))
+
             }
-            .padding(16)
+            .padding(.horizontal, 14).padding(.vertical, 10)
             .activityBackgroundTint(Color(uiColor: .secondarySystemBackground))
             .activitySystemActionForegroundColor(.primary)
             .widgetURL(URL(string: "pitpulse://live"))
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(context.state.sessionName.uppercased()).font(.caption2.bold()).foregroundStyle(.red)
-                        if context.state.presentation != IslandContentMode.overview.rawValue && context.state.presentation != IslandContentMode.positionChanges.rawValue {
-                            ActivityNumberText(context.state.lapLabel).font(.caption.bold().monospacedDigit())
-                        }
-                    }.padding(.leading, 12).padding(.top, 8)
+                    if showsHeader(context.state) {
+                        ActivityHeader(state: context.state).padding(.leading, 20).padding(.top, 8)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    ActivityStatus(state: context.state, expired: context.isStale).padding(.trailing, 10).padding(.top, 8)
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(context.state.meetingName).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    if showsHeader(context.state) {
+                        ActivityStatus(state: context.state, expired: context.isStale)
+                            .padding(.trailing, 18).padding(.top, 8)
+                    }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 10) {
-                        ActivityPayloadView(state: context.state)
-                        if context.state.presentation != IslandContentMode.overview.rawValue && context.state.presentation != IslandContentMode.positionChanges.rawValue {
-                        HStack {
-                            Image(systemName: "flag.fill").foregroundStyle(context.state.trackColor)
-                            Text(context.state.trackLabel ?? "等待赛道状态").lineLimit(1)
-                            Spacer()
-                            Text(context.state.isStale || context.isStale ? "数据过期" : (context.state.updatedLabel ?? ""))
-                        }.font(.system(size: 10)).foregroundStyle(.secondary)
-                        }
-                    }.padding(.horizontal, 12).environment(\.colorScheme, .dark)
+                    VStack(spacing: 4) {
+                        ActivityPayloadView(state: displayState(context.state, expired: context.isStale))
+                    }.padding(.horizontal, 12).padding(.bottom, 8)
+                        .environment(\.colorScheme, .dark)
                 }
             } compactLeading: {
                 HStack(spacing: 4) {
@@ -72,6 +56,14 @@ struct PitPulseLiveActivityWidget: Widget {
             .keylineTint(.red)
             .widgetURL(URL(string: "pitpulse://live"))
         }
+    }
+    private func showsHeader(_ state: PitPulseActivityAttributes.ContentState) -> Bool {
+        state.presentation != IslandContentMode.favorite.rawValue && state.presentation != IslandContentMode.positionChanges.rawValue
+    }
+    private func displayState(_ state: PitPulseActivityAttributes.ContentState, expired: Bool) -> PitPulseActivityAttributes.ContentState {
+        var result = state
+        result.isStale = state.isStale || expired
+        return result
     }
     private func compactValue(_ state: PitPulseActivityAttributes.ContentState) -> String {
         state.compactTrailingText

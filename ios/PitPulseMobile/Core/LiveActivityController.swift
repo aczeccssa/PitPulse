@@ -36,6 +36,9 @@ final class LiveActivityController {
     }
 
     func update(snapshot: LiveSnapshot, mode: IslandContentMode = .overview, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = []) {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" { return }
+        #endif
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         // A reconnect resets the store to a transient "connecting" snapshot;
@@ -100,7 +103,7 @@ final class LiveActivityController {
         }
         let sorted = snapshot.drivers.filter { ($0.position ?? 0) > 0 }.sorted { $0.position! < $1.position! }
         let focusIndex = sorted.firstIndex { $0.number == focusedNumber } ?? 0
-        let windowStart = min(max(0, sorted.count - 5), max(0, focusIndex - 2))
+        let windowStart = min(max(0, sorted.count - 4), max(0, focusIndex - 2))
         let window = sorted.dropFirst(max(0, windowStart - 1)).prefix(7)
         return PitPulseActivityAttributes.ContentState(
             sessionName: snapshot.sessionName ?? snapshot.sessionType ?? "Live",
@@ -136,7 +139,8 @@ final class LiveActivityController {
             },
             positionDrivers: mode == .positionChanges ? window.map { .init(name: $0.name ?? $0.number, position: $0.position, asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026), gap: $0.gap, positionChange: positionChanges[$0.number]) } : nil,
             positionFocus: mode == .positionChanges && sorted.indices.contains(focusIndex) ? (sorted[focusIndex].name ?? sorted[focusIndex].number) : nil,
-            positionWindowStart: mode == .positionChanges ? windowStart : nil
+            positionWindowStart: mode == .positionChanges ? windowStart : nil,
+            countryCode: snapshot.countryCode
         )
 
     }
@@ -147,7 +151,7 @@ final class LiveActivityController {
     /// session currently on track. Never compiled into Release.
     func demoStart() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let state = PitPulseActivityAttributes.ContentState(
+        var state = PitPulseActivityAttributes.ContentState(
             sessionName: "Race",
             meetingName: "São Paulo Grand Prix",
             statusLabel: "演示 · 非实时",
@@ -163,6 +167,22 @@ final class LiveActivityController {
             isStale: false,
             updatedLabel: "刚刚"
         )
+        let sectors: [PitPulseActivityAttributes.Sector] = [
+            .init(time: "23.658", segments: [2049, 2051, 2049, 2048, 2049, 2051], personalFastest: true),
+            .init(time: "32.421", segments: [2049, 2048, 2049, 2049, 2048, 2049]),
+            .init(time: nil, segments: [2049, 2049, nil, nil, nil, nil])]
+        let leader = PitPulseActivityAttributes.Driver(name: "Lando NORRIS", position: 1, asset: "helmet-norris-2026", gap: "LEADER", tire: "S 18", sectors: sectors)
+        let tracked = PitPulseActivityAttributes.Driver(name: "Max VERSTAPPEN", position: 2, asset: "helmet-max_verstappen-2026", gap: "+2.418", interval: "+0.842", tire: "M 12", lastLap: "1:12.345", sectors: sectors, positionChange: 1)
+        let third = PitPulseActivityAttributes.Driver(name: "Charles LECLERC", position: 3, asset: "helmet-leclerc-2026", gap: "+4.216", positionChange: -1)
+        state.presentation = ProcessInfo.processInfo.environment["PITPULSE_DEMO_MODE"] ?? "overview"
+        state.countryCode = "BR"
+        state.podium = [leader, tracked, third]
+        state.battleDrivers = [leader, tracked]; state.battleGap = "+2.418"
+        state.trackedDriver = tracked
+        state.positionDrivers = [leader, tracked, third,
+            .init(name: "Oscar PIASTRI", position: 4, gap: "+6.104"),
+            .init(name: "George RUSSELL", position: 5, gap: "+8.572")]
+        state.positionFocus = tracked.name; state.positionWindowStart = 0
         let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(600))
         let attributes = PitPulseActivityAttributes(seriesTitle: "Formula 1")
         if let created = try? Activity.request(attributes: attributes, content: content, pushType: nil) {

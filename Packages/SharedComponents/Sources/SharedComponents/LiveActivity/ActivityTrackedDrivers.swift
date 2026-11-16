@@ -3,26 +3,29 @@ import SwiftUI
 import SharedData
 
 struct TrackedDriverView: View {
+    let state: PitPulseActivityAttributes.ContentState
     let driver: PitPulseActivityAttributes.Driver
-    let weather: PitPulseActivityAttributes.Weather?
     var body: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 12) {
-                DriverPortrait(driver: driver, size: 66)
+        VStack(spacing: 5) {
+            HStack(spacing: 8) {
+                DriverPortrait(driver: driver, size: 32)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(driver.name).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    HStack(alignment: .top, spacing: 4) {
+                        Text(driver.name).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                        Spacer(minLength: 0)
+                        ActivityTrackSummary(state: state)
+                    }
                     HStack { metric("距领先", driver.gap); metric("距前车", driver.interval) }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-                DriverWeatherView(weather: weather)
             }
             SectorStrip(sectors: driver.sectors)
             HStack {
-                metric("速度", driver.speed.map { "\($0) km/h" })
+                Text("轮胎").foregroundStyle(.secondary)
+                ActivityNumberText(driver.tire ?? "—")
                 Spacer(minLength: 4)
-                metric("轮胎", driver.tire)
-                Spacer(minLength: 4)
-                metric("上圈", driver.lastLap)
-            }
+                Text("上圈").foregroundStyle(.secondary)
+                ActivityNumberText(driver.lastLap ?? "—")
+            }.font(.system(size: 10, design: .monospaced)).lineLimit(1)
         }
     }
     private func metric(_ title: String, _ value: String?) -> some View {
@@ -39,12 +42,18 @@ struct BattleView: View {
         state.battleDrivers ?? [.init(name: state.leaderName ?? "—", position: 1, asset: state.leaderAsset), .init(name: state.challengerName ?? "—", position: 2, asset: state.challengerAsset)]
     }
     var body: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: 4) {
+            HStack {
+                Text(drivers.map { MotorsportAssetName.abbreviation($0.name) }.joined(separator: " · "))
+                    .font(.system(size: 10, weight: .semibold)).lineLimit(1)
+                Spacer(minLength: 4)
+                ActivityTrackSummary(state: state)
+            }
             HStack(spacing: 8) {
                 if let first = drivers.first { driverColumn(first) }
                 Spacer(minLength: 0)
                 VStack(spacing: 3) {
-                    ActivityNumberText((state.battleDrivers == nil ? state.challengerGap : state.battleGap) ?? "—").font(.system(size: 27, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
+                    ActivityNumberText((state.battleDrivers == nil ? state.challengerGap : state.battleGap) ?? "—").font(.system(size: 22, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
                     Text("两车差距").font(.system(size: 9)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -54,8 +63,8 @@ struct BattleView: View {
         }
     }
     private func driverColumn(_ driver: PitPulseActivityAttributes.Driver) -> some View {
-        VStack(spacing: 9) {
-            DriverPortrait(driver: driver, size: 58)
+        VStack(spacing: 4) {
+            DriverPortrait(driver: driver, size: 30)
             HStack(spacing: 5) {
                 ForEach(0..<3, id: \.self) { index in
                     let sector = driver.sectors.indices.contains(index) ? driver.sectors[index] : nil

@@ -19,6 +19,30 @@ public struct ActivityStatus: View {
     }
 }
 
+/// Header and metadata shared by the system activity and settings preview.
+public struct ActivityHeader: View {
+    let state: PitPulseActivityAttributes.ContentState
+    public init(state: PitPulseActivityAttributes.ContentState) { self.state = state }
+    public var body: some View {
+        HStack(spacing: 5) {
+            if let flag = CountryFlag.emoji(for: state.countryCode) { Text(flag) }
+            Text(state.sessionName.uppercased()).lineLimit(1)
+        }.font(.system(size: 10, weight: .semibold))
+    }
+}
+
+struct ActivityTrackSummary: View {
+    let state: PitPulseActivityAttributes.ContentState
+    var body: some View {
+        HStack(spacing: 4) {
+            Label(state.trackLabel ?? "等待赛道状态", systemImage: "flag.fill")
+                .foregroundStyle(state.trackColor).lineLimit(1)
+            ActivityNumberText(state.lapLabel).monospacedDigit().lineLimit(1)
+            if state.isStale { Text("过期").foregroundStyle(.orange) }
+        }.font(.system(size: 9)).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 /// Explicit frames let the SceneKit preview display the same number-roll intent
 /// as native ActivityKit's numeric content transition.
 public struct ActivityPreviewNumbers: Sendable {

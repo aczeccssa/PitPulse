@@ -10,14 +10,14 @@ public struct ActivityPayloadView: View {
         case .positionChanges:
             PositionChangesActivityView(state: state)
         case .battle:
-            if state.battleDrivers?.count == 1 { TrackedDriverView(driver: state.battleDrivers![0], weather: state.weather) }
+            if state.battleDrivers?.count == 1 { TrackedDriverView(state: state, driver: state.battleDrivers![0]) }
             else { BattleView(state: state) }
         case .favorite:
-            TrackedDriverView(driver: state.trackedDriver ?? .init(name: state.favoriteName ?? "请先收藏一位车手", position: state.favoritePosition, asset: state.favoriteAsset, gap: state.favoriteGap), weather: state.weather)
+            TrackedDriverView(state: state, driver: state.trackedDriver ?? .init(name: state.favoriteName ?? "请先收藏一位车手", position: state.favoritePosition, asset: state.favoriteAsset, gap: state.favoriteGap))
         case .overview:
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline) {
-                    ActivityNumberText(state.lapLabel).font(.system(size: 32, weight: .bold, design: .rounded)).monospacedDigit()
+                    ActivityNumberText(state.lapLabel).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
                     Spacer()
                     Label(state.trackLabel ?? "等待赛道状态", systemImage: "flag.fill")
                         .font(.caption.weight(.medium)).foregroundStyle(state.trackColor).lineLimit(1)
@@ -34,14 +34,20 @@ public struct ActivityPayloadView: View {
                     .accessibilityLabel("比赛进度")
                     .accessibilityValue("\(Int(progress * 100))%")
                 }
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: 5) {
                     ForEach(Array((state.podium ?? []).prefix(3).enumerated()), id: \.offset) { _, driver in
-                        VStack(spacing: 3) {
-                            DriverPortrait(driver: driver, size: 48)
-                            ActivityNumberText(driver.position == 1 ? "LEADER" : driver.gap ?? "—").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                        }.frame(maxWidth: .infinity)
+                        HStack(spacing: 3) {
+                            if let asset = driver.asset { ActivityHelmet(asset: asset, size: 28) }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("P\(driver.position.map(String.init) ?? "—") · \(MotorsportAssetName.abbreviation(driver.name))")
+                                    .font(.system(size: 10, weight: .semibold)).lineLimit(1)
+                                ActivityNumberText(driver.position == 1 ? "LEADER" : driver.gap ?? "—")
+                                    .font(.system(size: 9, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+
                     }
-                }
+                }.padding(.top, 10)
 
             }
         }
@@ -66,7 +72,7 @@ struct PositionChangesActivityView: View {
                     }
                     if let asset = state.leaderAsset { ActivityHelmet(asset: asset, size: 30) }
                 }
-            }.frame(width: 98, alignment: .leading)
+            }.frame(width: 80, alignment: .leading)
             Rectangle().fill(.white.opacity(0.12)).frame(width: 1)
             GeometryReader { geometry in
                 ZStack(alignment: .topLeading) {
@@ -90,8 +96,8 @@ struct PositionChangesActivityView: View {
                     }
                 }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.65), value: state.positionDrivers)
-            }.frame(height: 90).clipped()
-        }.frame(height: 90)
+            }.frame(height: 72).clipped()
+        }.frame(height: 72)
     }
 }
 

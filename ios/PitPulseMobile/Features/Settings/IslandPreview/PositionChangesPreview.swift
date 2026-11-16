@@ -70,8 +70,8 @@ struct PositionChangesPreview: View {
         // While the same car keeps changing position, move its viewport along
         // with the rows so the focused helmet stays anchored in the center.
         let scroll = oldFocus == nextFocus ? exchange : (reduceMotion ? 1 : eased(phase / 0.65))
-        let oldStart = min(17, max(0, (old.firstIndex(of: oldFocus) ?? 0) - 2))
-        let newStart = min(17, max(0, (next.firstIndex(of: nextFocus) ?? 0) - 2))
+        let oldStart = min(18, max(0, (old.firstIndex(of: oldFocus) ?? 0) - 2))
+        let newStart = min(18, max(0, (next.firstIndex(of: nextFocus) ?? 0) - 2))
         let start = Double(oldStart) + Double(newStart - oldStart) * scroll
         let leaderID = (exchange < 0.5 ? old : next)[0]
         HStack(spacing: 12) {
@@ -119,8 +119,8 @@ struct PositionChangesPreview: View {
                                 y: (Double(a) + Double(b - a) * exchange - start) * rowHeight)
                     }
                 }
-            }.frame(height: rowHeight * 5).clipped()
-        }.frame(height: rowHeight * 5)
+            }.frame(height: rowHeight * 4).clipped()
+        }.frame(height: rowHeight * 4)
         .accessibilityElement(children: .combine)
     }
 }

@@ -237,6 +237,6 @@ struct IslandModePreviewSheet: View {
             leaderAsset: "helmet-norris-2026", challengerAsset: "helmet-max_verstappen-2026",
             trackLabel: "绿旗 · 赛道畅通", driverCount: 22,
             presentation: mode.rawValue, favoriteName: "Max VERSTAPPEN",
-            favoritePosition: 2, favoriteGap: "+0.842", favoriteGapLabel: "距领先", favoriteAsset: "helmet-max_verstappen-2026", podium: [lando, max, charles], battleDrivers: [lando, max], trackedDriver: max, battleGap: "+0.842", weather: .init(rainfall: false, airTemperature: 24, trackTemperature: 37, visibilityMeters: 10000))
+            favoritePosition: 2, favoriteGap: "+0.842", favoriteGapLabel: "距领先", favoriteAsset: "helmet-max_verstappen-2026", podium: [lando, max, charles], battleDrivers: [lando, max], trackedDriver: max, battleGap: "+0.842", weather: .init(rainfall: false, airTemperature: 24, trackTemperature: 37, visibilityMeters: 10000), countryCode: "BR")
     }
 }
