@@ -19,6 +19,11 @@
 			request>headers>Proxy-Authorization delete
 			request>headers>Cookie delete
 			request>headers>Set-Cookie delete
+			# The dashboard access link carries the bearer token in its query
+			# string; keep it out of the proxy access log.
+			request>uri query {
+				delete token
+			}
 		}
 	}
 }

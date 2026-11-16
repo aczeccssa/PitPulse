@@ -35,71 +35,277 @@ async fn test_health_without_required_token_returns_ok() {
     assert_eq!(response.status(), StatusCode::OK);
 }
 
-#[tokio::test]
-async fn test_favicons_are_public_while_api_auth_remains_required() {
-    let (mut state, _temp) = test_state().await;
-    std::sync::Arc::make_mut(&mut state.config)
-        .security
-        .require_token = true;
-    std::sync::Arc::make_mut(&mut state.config).security.token = Some("test-token".to_string());
-    let router = server::router(state);
+const SHELL_PATHS: [(&str, &str); 5] = [
+    ("/", "text/html; charset=utf-8"),
+    ("/app.css", "text/css; charset=utf-8"),
+    ("/app.js", "text/javascript; charset=utf-8"),
+    ("/theme.js", "text/javascript; charset=utf-8"),
+    ("/manifest.webmanifest", "application/manifest+json"),
+];
 
+fn get(path: &str) -> Request<Body> {
+    Request::builder().uri(path).body(Body::empty()).unwrap()
+}
+
+fn get_with_cookie(path: &str, cookie: &str) -> Request<Body> {
+    Request::builder()
+        .uri(path)
+        .header(header::COOKIE, cookie)
+        .body(Body::empty())
+        .unwrap()
+}
+
+#[tokio::test]
+async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() {
+    let (mut state, _temp) = test_state().await;
+    let mut config = AppConfig::default();
+    config.security.require_token = true;
+    config.security.token = Some("test-token".to_string());
+    state.config = std::sync::Arc::new(config);
+    let router = server::router(state);
+    let session_cookie = format!(
+        "pitpulse_web={}",
+        pitpulse_server::api::web_auth::session_value("test-token")
+    );
+
+    // Icons carry no data and are fetched by browsers and the OS without
+    // credentials, so they stay public.
     for (path, content_type, signature) in [
-        ("/favicon.png?v=1", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
+        ("/favicon.png?v=2", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
         (
             "/favicon.ico",
             "image/x-icon",
             &b"\x00\x00\x01\x00\x03\x00"[..],
         ),
+        ("/icon-192.png", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
+        ("/icon-512.png", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
+        (
+            "/apple-touch-icon.png",
+            "image/png",
+            &b"\x89PNG\r\n\x1a\n"[..],
+        ),
+        ("/brand-mark.png", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
+        (
+            "/motorsport/helmet-hamilton.png",
+            "image/png",
+            &b"\x89PNG\r\n\x1a\n"[..],
+        ),
+        (
+            "/motorsport/team-ferrari.png",
+            "image/png",
+            &b"\x89PNG\r\n\x1a\n"[..],
+        ),
+        (
+            "/motorsport/team-mercedes-dark.png",
+            "image/png",
+            &b"\x89PNG\r\n\x1a\n"[..],
+        ),
     ] {
-        let response = router
-            .clone()
-            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
         assert_eq!(response.headers()[header::CONTENT_TYPE], content_type);
         assert_eq!(
             response.headers()[header::CACHE_CONTROL],
             "public, max-age=86400"
         );
-        let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        let bytes = axum::body::to_bytes(response.into_body(), 512 * 1024)
             .await
             .unwrap();
         assert!(bytes.starts_with(signature));
     }
 
+    // Artwork that is not part of the bundle is a plain 404, not a guess.
     for path in [
-        "/",
+        "/motorsport/helmet-nobody.png",
+        "/motorsport/../../Cargo.toml",
+        "/motorsport/",
+    ] {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
+    }
+
+    // The shell is part of the service: without a session it is not served at
+    // all, and the refusal page carries no assets, no data and no token.
+    for (path, _) in SHELL_PATHS {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+        assert_eq!(
+            response.headers()[header::CONTENT_TYPE],
+            "text/html; charset=utf-8",
+            "{path}"
+        );
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        assert!(response.headers().get(header::SET_COOKIE).is_none());
+        let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        let text = String::from_utf8_lossy(&body);
+        assert!(text.contains("需要访问权限"), "{path}");
+        assert!(!text.contains("app.js"), "{path}");
+        assert!(!text.contains("test-token"), "{path}");
+    }
+
+    // A wrong bootstrap token is refused without issuing a cookie.
+    let response = router.clone().oneshot(get("/?token=wrong")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert!(response.headers().get(header::SET_COOKIE).is_none());
+
+    // The right one exchanges the deployment token for a derived, HttpOnly
+    // session cookie and redirects the browser back to a clean URL.
+    let response = router
+        .clone()
+        .oneshot(get("/?token=test-token"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers()[header::LOCATION], "/");
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    let cookie = response.headers()[header::SET_COOKIE]
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(cookie.starts_with(&session_cookie), "{cookie}");
+    assert!(cookie.contains("; Path=/"), "{cookie}");
+    assert!(cookie.contains("; HttpOnly"), "{cookie}");
+    assert!(cookie.contains("; SameSite=Lax"), "{cookie}");
+    assert!(cookie.contains("; Max-Age="), "{cookie}");
+    assert!(!cookie.contains("Secure"), "{cookie}");
+    assert!(!cookie.contains("test-token"), "{cookie}");
+
+    // Behind the TLS proxy the cookie is marked Secure.
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/?token=test-token")
+                .header("x-forwarded-proto", "https")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(
+        response.headers()[header::SET_COOKIE]
+            .to_str()
+            .unwrap()
+            .contains("; Secure")
+    );
+
+    // With the session cookie the shell and its assets are served, private to
+    // that browser.
+    for (path, content_type) in SHELL_PATHS {
+        let response = router
+            .clone()
+            .oneshot(get_with_cookie(path, &session_cookie))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        assert_eq!(response.headers()[header::CONTENT_TYPE], content_type);
+        assert_eq!(
+            response.headers()[header::CACHE_CONTROL],
+            "private, no-cache",
+            "{path}"
+        );
+        assert_eq!(response.headers()[header::VARY], "Cookie", "{path}");
+    }
+
+    let response = router
+        .clone()
+        .oneshot(get_with_cookie("/", &session_cookie))
+        .await
+        .unwrap();
+    let html = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .unwrap();
+    let html = std::str::from_utf8(&html).unwrap();
+    assert!(html.contains("href=\"/app.css\""));
+    assert!(html.contains("src=\"/app.js\""));
+    assert!(html.contains("href=\"/manifest.webmanifest\""));
+    // The topbar carries the real brand mark, not an inline placeholder.
+    assert!(html.contains("src=\"/brand-mark.png\""));
+    assert!(!html.contains("auth-dialog"));
+    assert!(!html.contains("lock-btn"));
+    assert!(!html.contains("api-meta"));
+    assert!(!html.contains("<footer"));
+    // Icons are versioned so a restyled set is fetched instead of cached.
+    assert!(html.contains("/favicon.png?v=2"));
+
+    let response = router
+        .clone()
+        .oneshot(get_with_cookie("/", &session_cookie))
+        .await
+        .unwrap();
+    let csp = response
+        .headers()
+        .get("content-security-policy")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(csp.contains("default-src 'self'"));
+    assert!(csp.contains("frame-ancestors 'none'"));
+
+    // The same cookie is a read-only API credential: GETs work, writes do not.
+    for path in [
         "/api/v1/health",
         "/api/v1/calendar",
         "/api/v1/live/snapshot",
     ] {
         let response = router
             .clone()
-            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .oneshot(get_with_cookie(path, &session_cookie))
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
     }
-
     let response = router
+        .clone()
         .oneshot(
             Request::builder()
-                .uri("/")
-                .header(header::AUTHORIZATION, "Bearer test-token")
-                .body(Body::empty())
+                .method("POST")
+                .uri("/api/v1/refresh")
+                .header(header::COOKIE, &session_cookie)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"season":2026,"target":"calendar"}"#))
                 .unwrap(),
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    let html = axum::body::to_bytes(response.into_body(), 16 * 1024)
-        .await
-        .unwrap();
-    let html = std::str::from_utf8(&html).unwrap();
-    assert!(html.contains("href=\"/favicon.ico?v=1\""));
-    assert!(html.contains("href=\"/favicon.png?v=1\""));
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    // A stale or forged cookie is refused.
+    for cookie in ["pitpulse_web=bogus", "other=value"] {
+        let response = router
+            .clone()
+            .oneshot(get_with_cookie("/", cookie))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{cookie}");
+    }
+
+    // Scripted and CLI callers keep full access with the bearer token.
+    for path in ["/", "/api/v1/health"] {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(path)
+                    .header(header::AUTHORIZATION, "Bearer test-token")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+    }
+
+    for path in [
+        "/api/v1/health",
+        "/api/v1/calendar",
+        "/api/v1/live/snapshot",
+    ] {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+    }
 }
 
 #[tokio::test]

@@ -3,7 +3,12 @@ use axum::{Router, middleware, routing::get};
 use tokio::net::TcpListener;
 
 use crate::{
-    api::middleware::require_bearer_token, api::routes::build_router, app_state::AppState,
+    api::{
+        middleware::require_bearer_token,
+        routes::{self, build_router},
+        web_auth::require_web_access,
+    },
+    app_state::AppState,
 };
 
 pub fn router(state: AppState) -> Router {
@@ -12,11 +17,34 @@ pub fn router(state: AppState) -> Router {
         require_bearer_token,
     ));
 
-    // Browsers request icons without the API's Bearer header. Keep only these
-    // static brand assets outside the authentication layer.
+    // The dashboard is part of the service rather than a public document, so
+    // when a token is required the shell is served only to a browser that
+    // bootstrapped a session through `/?token=...`. Icons stay reachable
+    // without credentials because browsers and the OS fetch them that way;
+    // they contain no data.
+    let shell = Router::new()
+        .route("/", get(routes::index))
+        .route("/app.css", get(routes::app_css))
+        .route("/app.js", get(routes::app_js))
+        .route("/theme.js", get(routes::theme_js))
+        .route("/manifest.webmanifest", get(routes::manifest))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            require_web_access,
+        ));
+
+    let public_icons = Router::new()
+        .route("/apple-touch-icon.png", get(routes::apple_touch_icon))
+        .route("/brand-mark.png", get(routes::brand_mark))
+        .route("/icon-192.png", get(routes::icon_192))
+        .route("/icon-512.png", get(routes::icon_512))
+        .route("/favicon.ico", get(routes::favicon_ico))
+        .route("/favicon.png", get(routes::favicon_png))
+        .route("/motorsport/{file}", get(routes::motorsport_asset));
+
     protected_router
-        .route("/favicon.ico", get(crate::api::routes::favicon_ico))
-        .route("/favicon.png", get(crate::api::routes::favicon_png))
+        .merge(shell)
+        .merge(public_icons)
         .with_state(state)
 }
 

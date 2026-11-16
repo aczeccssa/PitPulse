@@ -54,9 +54,14 @@ printf '\n# operator-owned config sentinel: must survive bootstrap and deploy\n'
 
 cat > "$FAKE_CURL" <<'PY'
 #!/usr/bin/env python3
-"""Minimal curl-compatible responder for a sandbox without socket binding."""
+"""Minimal curl-compatible responder for a sandbox without socket binding.
+
+Models the two credentials the server accepts: the Bearer token (full API) and
+the read-only browser session cookie issued by `/?token=...` (shell and GETs).
+"""
 import os
 import sys
+from urllib.parse import urlsplit
 
 TOKEN = os.environ["F1_COMPANION_TOKEN"]
 args = sys.argv[1:]
@@ -65,8 +70,12 @@ config = ""
 output = ""
 header_file = ""
 write_out = ""
+cookie_jar = ""
+cookie_input = ""
+data = ""
+method = "GET"
 is_sse = "-N" in args
-authorized = False
+uses_query_data = "-G" in args or "--get" in args
 
 i = 0
 while i < len(args):
@@ -74,7 +83,7 @@ while i < len(args):
     if arg == "--config" and i + 1 < len(args):
         config = args[i + 1]
         i += 1
-    elif arg == "-o" and i + 1 < len(args):
+    elif arg in ("-o", "--output") and i + 1 < len(args):
         output = args[i + 1]
         i += 1
     elif arg == "--dump-header" and i + 1 < len(args):
@@ -83,27 +92,99 @@ while i < len(args):
     elif arg == "-w" and i + 1 < len(args):
         write_out = args[i + 1]
         i += 1
+    elif arg in ("-c", "--cookie-jar") and i + 1 < len(args):
+        cookie_jar = args[i + 1]
+        i += 1
+    elif arg in ("-b", "--cookie") and i + 1 < len(args):
+        cookie_input = args[i + 1]
+        i += 1
+    elif arg in ("--data-urlencode", "--data", "-d") and i + 1 < len(args):
+        data = args[i + 1]
+        i += 1
+    elif arg in ("-X", "--request") and i + 1 < len(args):
+        method = args[i + 1].upper()
+        i += 1
     i += 1
 
+authorized = False
 if config:
     with open(config, encoding="utf-8") as handle:
         authorized = "Bearer " + TOKEN in handle.read()
 
-if not authorized:
-    body = b'{"error":{"code":"unauthorized"}}'
-    status = "401"
-elif "/api/v1/health" in url:
-    if not os.path.exists(os.environ["F1_COMPANION_DATABASE_PATH"]):
-        body = b'{"status":"degraded","database":false}'
+session = False
+if cookie_input and os.path.exists(cookie_input):
+    with open(cookie_input, encoding="utf-8") as handle:
+        session = "pitpulse_web=" in handle.read()
+
+path = urlsplit(url).path or "/"
+shell = {
+    "/": b'<!doctype html><html><head><link rel="stylesheet" href="/app.css">'
+         b'</head><body><script src="/app.js" defer></script></body></html>',
+    "/app.css": b":root { --bg: #0e0e10; }",
+    "/app.js": b'(() => { "use strict"; })();',
+    "/manifest.webmanifest": b'{"name":"PitPulse"}',
+}
+shell_type = {
+    "/": "text/html; charset=utf-8",
+    "/app.css": "text/css; charset=utf-8",
+    "/app.js": "application/javascript",
+    "/manifest.webmanifest": "application/manifest+json",
+}
+denied = (
+    '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
+    "<title>PitPulse 需要访问权限</title></head>"
+    "<body><h1>需要访问权限</h1></body></html>"
+).encode("utf-8")
+
+bootstrap = (
+    uses_query_data
+    and path == "/"
+    and data.startswith("token=")
+    and data.split("=", 1)[1] == TOKEN
+)
+if bootstrap and cookie_jar:
+    with open(cookie_jar, "w", encoding="utf-8") as handle:
+        handle.write("# Netscape HTTP Cookie File\n\npitpulse_web=drill-session\n")
+
+if bootstrap:
+    body = b""
+    status = "303"
+    content_type = "text/html; charset=utf-8"
+elif path.startswith("/api/v1/"):
+    # The browser session is read-only; only the bearer token may write.
+    allowed = authorized or (session and method in ("GET", "HEAD"))
+    if not allowed:
+        body = b'{"error":{"code":"unauthorized"}}'
+        status = "401"
+        content_type = "application/json"
+    elif "/api/v1/health" in url:
+        if not os.path.exists(os.environ["F1_COMPANION_DATABASE_PATH"]):
+            body = b'{"status":"degraded","database":false}'
+        else:
+            body = b'{"status":"ok","database":true,"live":false,"version":"drill"}'
+        status = "200"
+        content_type = "application/json"
+    elif "/api/v1/live/stream" in url and is_sse:
+        body = b"event:snapshot\ndata:{}\n\n"
+        status = "200"
+        content_type = "text/event-stream"
     else:
-        body = b'{"status":"ok","database":true,"live":false,"version":"drill"}'
-    status = "200"
-elif "/api/v1/live/stream" in url and is_sse:
-    body = b"event:snapshot\ndata:{}\n\n"
-    status = "200"
+        body = b'{"error":{"code":"not_found"}}'
+        status = "404"
+        content_type = "application/json"
+elif path in shell:
+    if authorized or session:
+        body = shell[path]
+        status = "200"
+        content_type = shell_type[path]
+    else:
+        body = denied
+        status = "401"
+        content_type = "text/html; charset=utf-8"
 else:
     body = b'{"error":{"code":"not_found"}}'
     status = "404"
+    content_type = "application/json"
 
 wrote_output = False
 if output and output != os.devnull:
@@ -111,7 +192,6 @@ if output and output != os.devnull:
         handle.write(body)
     wrote_output = True
 if header_file:
-    content_type = "text/event-stream" if is_sse else "application/json"
     with open(header_file, "w", encoding="utf-8") as handle:
         handle.write("HTTP/2 200\r\ncontent-type: " + content_type + "\r\n\r\n")
 if write_out == "%{http_code}":
@@ -157,6 +237,9 @@ cat > "$CADDYFILE" <<'EOF'
     log {
         format filter {
             request>headers>Authorization delete
+            request>uri query {
+                delete token
+            }
         }
     }
 }
@@ -283,6 +366,43 @@ unauth_status="$(http_status "http://$PITPULSE_BIND/api/v1/health" "")"
 [[ "$unauth_status" == "401" ]] || fail "unauthenticated request returned $unauth_status, expected 401"
 check_sse_first_event "http://$PITPULSE_BIND/api/v1/live/stream?series=f1" "$SSE_CONFIG" "$SSE_OUTPUT" ||
     fail "SSE first event check failed"
+check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check" local ||
+    fail "web dashboard shell check failed"
+grep -q 'href="/app.css"' "$WORK_DIR/web-check/web-index.html" ||
+    fail "web shell check did not capture the dashboard document"
+[[ -s "$WORK_DIR/web-check/web-app.js" ]] || fail "web shell check did not capture app.js"
+
+BROKEN_WEB_CURL="$WORK_DIR/fake-curl-no-assets.py"
+cat > "$BROKEN_WEB_CURL" <<'PY'
+#!/usr/bin/env python3
+"""Issues the session cookie and serves the shell, but not its assets."""
+import sys
+
+args = sys.argv[1:]
+url = args[-1] if args else ""
+bootstrap = "--get" in args or "-G" in args
+with_cookie = "-b" in args or "--cookie" in args
+asset = url.endswith(("/app.css", "/app.js"))
+if bootstrap:
+    status = "303"
+elif asset:
+    status = "401" if not with_cookie else "404"
+elif with_cookie:
+    status = "200"
+else:
+    status = "401"
+
+if "-w" in args and args.index("-w") + 1 < len(args):
+    print(status, end="")
+elif status == "200":
+    print('<!doctype html><link rel="stylesheet" href="/app.css"><script src="/app.js"></script>', end="")
+else:
+    print('<!doctype html><p>需要访问权限</p>', end="")
+PY
+chmod 0700 "$BROKEN_WEB_CURL"
+if PITPULSE_CURL="$BROKEN_WEB_CURL" check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check-broken" local >/dev/null 2>&1; then
+    fail "web shell check accepted a dashboard whose assets are missing"
+fi
 systemctl_cmd stop "$PITPULSE_SERVICE_NAME"
 
 log "7/12 attempting a real loopback listener (may be blocked by the harness sandbox)"
@@ -318,6 +438,8 @@ caddy adapt --config "$BOOTSTRAP_ROOT/etc/caddy/Caddyfile" --adapter caddyfile -
 grep -q 'flush_interval -1' "$SCRIPT_DIR/pitpulse.caddyfile" || fail "Caddy SSE flush setting is missing"
 grep -q 'request>headers>Authorization delete' "$SCRIPT_DIR/caddyfile.global.example" ||
     fail "Caddy access-log Authorization redaction is missing"
+grep -A2 'request>uri query' "$SCRIPT_DIR/caddyfile.global.example" | grep -q 'delete token' ||
+    fail "Caddy access-log dashboard token redaction is missing"
 
 log "9/12 checking full deploy success, failed-deploy rollback and manual rollback"
 PITPULSE_DEPLOY_ROOT="$WORK_DIR" PITPULSE_SYSTEMCTL=/usr/bin/true \

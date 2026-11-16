@@ -170,6 +170,93 @@ health_with_token() {
     jq -e '.database == true and .status == "ok"' "$output" >/dev/null
 }
 
+# The dashboard is part of the service, so the shell is not public. An
+# unauthenticated request must be refused; the operator's access link
+# (`/?token=...`) exchanges the deployment token for a derived browser session
+# cookie, and only that cookie serves the shell and its assets. Data routes stay
+# behind the token gate, so the check re-confirms the 401 there too.
+#
+# A fourth argument reuses the session cookie bootstrapped by an earlier call
+# instead of sending the deployment token again: the public check runs over
+# HTTPS/Caddy, where the raw token would otherwise reach the proxy access log.
+check_web_shell() {
+    local base_url="$1" work_dir="$2" label="${3:-local}" bootstrap_from="${4:-}" status asset
+    local root="${base_url%/}" token="${F1_COMPANION_TOKEN:-}"
+    local jar="$work_dir/web-cookies.txt"
+    mkdir -p "$work_dir"
+    rm -f "$work_dir/web-index.html" "$work_dir/web-app.css" "$work_dir/web-app.js"
+
+    status="$(curl_cmd -sS --max-time 10 -o "$work_dir/web-denied.html" -w '%{http_code}' "$root/" || printf '000')"
+    [[ "$status" == "401" ]] || {
+        log "$label web shell returned HTTP $status without a session, expected 401"
+        return 1
+    }
+    grep -q '需要访问权限' "$work_dir/web-denied.html" || {
+        log "$label web shell refusal page is missing"
+        return 1
+    }
+    if grep -q 'src="/app.js"' "$work_dir/web-denied.html"; then
+        log "$label web shell was served without a session"
+        return 1
+    fi
+
+    if [[ -n "$bootstrap_from" ]]; then
+        jar="$bootstrap_from/web-cookies.txt"
+        [[ -s "$jar" ]] || {
+            log "$label web shell check has no bootstrapped session to reuse"
+            return 1
+        }
+    else
+        [[ -n "$token" ]] || {
+            log "$label web shell check needs F1_COMPANION_TOKEN"
+            return 1
+        }
+        rm -f "$jar"
+        status="$(curl_cmd -sS --max-time 10 -c "$jar" -o /dev/null -w '%{http_code}' \
+            --get --data-urlencode "token=$token" "$root/" || printf '000')"
+        [[ "$status" == "303" ]] || {
+            log "$label access link returned HTTP $status, expected 303"
+            return 1
+        }
+        grep -q 'pitpulse_web' "$jar" 2>/dev/null || {
+            log "$label access link did not issue a browser session cookie"
+            return 1
+        }
+    fi
+
+    for asset in app.css app.js; do
+        status="$(curl_cmd -sS --max-time 10 -b "$jar" -o "$work_dir/web-$asset" -w '%{http_code}' "$root/$asset" || printf '000')"
+        [[ "$status" == "200" ]] || {
+            log "$label web asset /$asset returned HTTP $status, expected 200"
+            return 1
+        }
+        [[ -s "$work_dir/web-$asset" ]] || {
+            log "$label web asset /$asset is empty"
+            return 1
+        }
+    done
+    status="$(curl_cmd -sS --max-time 10 -b "$jar" -o "$work_dir/web-index.html" -w '%{http_code}' "$root/" || printf '000')"
+    [[ "$status" == "200" ]] || {
+        log "$label web shell returned HTTP $status with a session, expected 200"
+        return 1
+    }
+    grep -q 'href="/app.css"' "$work_dir/web-index.html" || {
+        log "$label web shell does not reference /app.css"
+        return 1
+    }
+    grep -q 'src="/app.js"' "$work_dir/web-index.html" || {
+        log "$label web shell does not reference /app.js"
+        return 1
+    }
+
+    status="$(http_status "$root/api/v1/health" "" || true)"
+    [[ "$status" == "401" ]] || {
+        log "$label unauthenticated API returned ${status:-no-response}, expected 401"
+        return 1
+    }
+    return 0
+}
+
 check_sse_first_event() {
     local url="$1" auth_config="$2" output="$3" headers="$3.headers"
     : > "$output"

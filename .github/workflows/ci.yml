@@ -31,6 +31,51 @@ jobs:
         run: cargo test --locked --manifest-path server/Cargo.toml
       - name: Build release
         run: cargo build --release --locked --manifest-path server/Cargo.toml
+      - name: Smoke-test the embedded web dashboard
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          token="ci-smoke-token-0123456789abcdefghij"
+          F1_COMPANION_BIND=127.0.0.1:38711 \
+          F1_COMPANION_DATABASE_PATH="$tmp/smoke.sqlite" \
+          F1_COMPANION_REQUIRE_TOKEN=1 \
+          F1_COMPANION_TOKEN="$token" \
+            server/target/release/pitpulse-server > "$tmp/server.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if [[ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:38711/ || true)" == "401" ]]; then break; fi
+            sleep 1
+          done
+          # The shell is part of the service: refused without a browser session.
+          status="$(curl -sS -o "$tmp/denied.html" -w '%{http_code}' http://127.0.0.1:38711/)"
+          test "$status" = "401"
+          grep -q '需要访问权限' "$tmp/denied.html"
+          ! grep -q 'app.js' "$tmp/denied.html"
+          # The access link exchanges the token for a derived session cookie.
+          status="$(curl -sS -c "$tmp/cookies.txt" -o /dev/null -w '%{http_code}' \
+            --get --data-urlencode "token=$token" http://127.0.0.1:38711/)"
+          test "$status" = "303"
+          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/ -o "$tmp/index.html" ||
+            { cat "$tmp/server.log"; exit 1; }
+          grep -q 'href="/app.css"' "$tmp/index.html"
+          grep -q 'src="/app.js"' "$tmp/index.html"
+          ! grep -q 'auth-dialog' "$tmp/index.html"
+          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/app.css -o /dev/null
+          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/app.js -o /dev/null
+          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/manifest.webmanifest -o /dev/null
+          status="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:38711/api/v1/health)"
+          test "$status" = "401"
+          # The browser session reads data but must not be able to write.
+          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/api/v1/health | grep -q '"status":"ok"'
+          status="$(curl -sS -b "$tmp/cookies.txt" -X POST \
+            -H 'Content-Type: application/json' -d '{"season":2026,"target":"calendar"}' \
+            -o /dev/null -w '%{http_code}' http://127.0.0.1:38711/api/v1/refresh)"
+          test "$status" = "401"
+          curl -fsS -H "Authorization: Bearer $token" \
+            http://127.0.0.1:38711/api/v1/health | grep -q '"status":"ok"'
+          curl -fsS -H "Authorization: Bearer $token" \
+            -o /dev/null http://127.0.0.1:38711/api/v1/calendar
       - name: Package Linux x86-64 release artifact
         run: |
           set -euo pipefail

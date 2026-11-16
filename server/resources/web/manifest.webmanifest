@@ -1,0 +1,25 @@
+{
+    "name": "PitPulse",
+    "short_name": "PitPulse",
+    "description": "自托管 F1 赛历、积分与实时计时",
+    "lang": "zh-CN",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0E0E10",
+    "theme_color": "#0E0E10",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

@@ -2,18 +2,37 @@ use std::collections::HashMap;
 
 use axum::{
     Json, Router,
+    body::Body,
     extract::{Path, Query, State},
-    http::header,
-    response::{Html, IntoResponse},
+    http::{HeaderValue, header},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde_json::json;
 
 use crate::{api::dto::HealthResponse, app_state::AppState, error::ApiError};
 
+const INDEX_HTML: &str = include_str!("../../resources/web/index.html");
+const APP_CSS: &str = include_str!("../../resources/web/app.css");
+const APP_JS: &str = include_str!("../../resources/web/app.js");
+const THEME_JS: &str = include_str!("../../resources/web/theme.js");
+const MANIFEST: &str = include_str!("../../resources/web/manifest.webmanifest");
+const APPLE_TOUCH_ICON: &[u8] = include_bytes!("../../resources/web/apple-touch-icon.png");
+const BRAND_MARK: &[u8] = include_bytes!("../../resources/web/brand-mark.png");
+const ICON_192: &[u8] = include_bytes!("../../resources/web/icon-192.png");
+const ICON_512: &[u8] = include_bytes!("../../resources/web/icon-512.png");
+
+include!(concat!(env!("OUT_DIR"), "/motorsport_assets.rs"));
+
+/// The shell is served only to browsers holding the session cookie issued by
+/// the `/?token=` bootstrap. It contains no data; every API call it makes is
+/// still authenticated.
+const SHELL_CSP: &str = "default-src 'self'; img-src 'self' data:; style-src 'self'; \
+script-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; \
+form-action 'none'; frame-ancestors 'none'";
+
 pub fn build_router(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(index))
         .route("/api/v1/health", get(health))
         .route("/api/v1/calendar", get(calendar))
         .route("/api/v1/meetings/next", get(next_meeting))
@@ -49,19 +68,115 @@ pub fn build_router(state: AppState) -> Router<AppState> {
         .with_state(state)
 }
 
-async fn index() -> Html<&'static str> {
-    Html(
-        r#"<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>PitPulse API</title>
-    <link rel="icon" href="/favicon.ico?v=1" sizes="16x16 32x32 48x48">
-    <link rel="icon" type="image/png" href="/favicon.png?v=1" sizes="64x64">
-</head>
-<body>PitPulse API is running</body>
-</html>"#,
-    )
+/// Web shell for the self-hosted dashboard, behind the browser session guard.
+pub async fn index() -> Response {
+    let mut response = INDEX_HTML.into_response();
+    let headers = response.headers_mut();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/html; charset=utf-8"),
+    );
+    private_shell_cache(headers);
+    headers.insert(
+        header::HeaderName::from_static("content-security-policy"),
+        HeaderValue::from_static(SHELL_CSP),
+    );
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+}
+
+pub async fn app_css() -> Response {
+    text_asset(APP_CSS, "text/css; charset=utf-8")
+}
+
+pub async fn app_js() -> Response {
+    text_asset(APP_JS, "text/javascript; charset=utf-8")
+}
+
+/// Runs before the first paint so the page never flashes the wrong theme.
+pub async fn theme_js() -> Response {
+    text_asset(THEME_JS, "text/javascript; charset=utf-8")
+}
+
+pub async fn manifest() -> Response {
+    text_asset(MANIFEST, "application/manifest+json")
+}
+
+pub async fn apple_touch_icon() -> Response {
+    icon_asset(APPLE_TOUCH_ICON)
+}
+
+pub async fn brand_mark() -> Response {
+    icon_asset(BRAND_MARK)
+}
+
+pub async fn icon_192() -> Response {
+    icon_asset(ICON_192)
+}
+
+pub async fn icon_512() -> Response {
+    icon_asset(ICON_512)
+}
+
+/// Bundled team logos and driver helmets, derived from the app's asset catalog.
+/// The dashboard only reads them, so they are public like the app icons.
+pub async fn motorsport_asset(Path(file): Path<String>) -> Response {
+    match MOTORSPORT_ASSETS
+        .iter()
+        .find(|(name, _)| *name == file.as_str())
+    {
+        Some((_, bytes)) => icon_asset(bytes),
+        None => (
+            axum::http::StatusCode::NOT_FOUND,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "not found",
+        )
+            .into_response(),
+    }
+}
+
+fn text_asset(body: &'static str, content_type: &'static str) -> Response {
+    let mut response = body.into_response();
+    let headers = response.headers_mut();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(content_type));
+    private_shell_cache(headers);
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+}
+
+/// Authenticated shell responses must not be handed to another browser by a
+/// shared cache, so they are private and keyed on the session cookie.
+fn private_shell_cache(headers: &mut axum::http::HeaderMap) {
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-cache"),
+    );
+    headers.insert(header::VARY, HeaderValue::from_static("Cookie"));
+}
+
+fn icon_asset(bytes: &'static [u8]) -> Response {
+    let mut response = Body::from(bytes).into_response();
+    let headers = response.headers_mut();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=86400"),
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response
 }
 
 pub async fn favicon_ico() -> impl IntoResponse {

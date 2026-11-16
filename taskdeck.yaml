@@ -2,6 +2,7 @@ version: 1
 session: PitPulse
 task_order:
 - Run Live Replay
+- Run Server
 - Run App
 - Build App
 - Build App Release
@@ -163,3 +164,13 @@ tasks:
     auto_start: false
     stop_timeout_ms: 3000
     clear_logs_on_restart: true
+
+  Run Server:
+    command: /usr/bin/python3
+    args: [scripts/run-server.py]
+    cwd: .
+    env: {}
+    shell: false
+    auto_start: false
+    stop_timeout_ms: 10000
+    clear_logs_on_restart: false

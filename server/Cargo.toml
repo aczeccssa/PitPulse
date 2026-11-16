@@ -25,6 +25,7 @@ signalr-client = "=0.3.2"
 tokio-websockets = { version = "=0.13.3", features = ["client", "native-tls", "sha1_smol", "fastrand"] }
 
 base64 = "0.22"
+sha2 = "0.10"
 flate2 = "1"
 libc = "0.2"
 socket2 = { version = "0.6", features = ["all"] }

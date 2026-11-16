@@ -7,7 +7,10 @@ use axum::{
 };
 use serde_json::json;
 
-use crate::app_state::AppState;
+use crate::{
+    api::web_auth::{allows_read_only, bearer_matches, cookie_matches},
+    app_state::AppState,
+};
 
 pub async fn require_bearer_token(
     State(state): State<AppState>,
@@ -25,12 +28,11 @@ pub async fn require_bearer_token(
         .as_ref()
         .expect("token checked during config validation");
 
-    let authorized = request
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .is_some_and(|provided| constant_time_eq(provided.as_bytes(), expected.as_bytes()));
+    // The bearer token grants the full API. The browser session the dashboard
+    // bootstraps is a separate, derived credential and only admits reads, so a
+    // cookie copied out of a browser cannot mutate server state.
+    let authorized = bearer_matches(request.headers(), expected)
+        || (allows_read_only(request.method()) && cookie_matches(request.headers(), expected));
 
     if authorized {
         next.run(request).await
@@ -45,14 +47,4 @@ pub async fn require_bearer_token(
         )
             .into_response()
     }
-}
-
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    a.iter()
-        .zip(b.iter())
-        .fold(0u8, |diff, (left, right)| diff | (left ^ right))
-        == 0
 }
