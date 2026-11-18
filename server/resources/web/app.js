@@ -1826,6 +1826,7 @@
 
     function renderDriverPages() {
         if (!RACING_VIEWS.includes(state.view)) return;
+        delete document.body.dataset.seasonEmpty;
         const view = state.view === 'driver-stats' ? 'drivers' : state.view, root = el(`view-${view}`).querySelector('.racing-workspace'); root.replaceChildren();
         useSeason(driverPages.season);
         if (state.view === 'home') { renderHome(root); return; }
@@ -1936,15 +1937,31 @@
         filters.append(driverSelector('Season', season, seasonYears().map(y => [y, y]), value => { location.hash = `#/${view}?season=${value}`; })); return filters;
     }
     function engineeringStatus(root, data, view) {
-        const unavailable = data.error || (view === 'tech-updates' ? data.meta.unavailable : view === 'destructors-championship' ? data.meta.sections?.incidents?.unavailable : Object.values(data.meta.sections || {}).every(meta => meta.unavailable));
-        if (data.loading || unavailable) {
-            const label = view === 'tech-updates' ? 'technical reports' : view === 'pu-elements' ? 'power unit reports' : 'crash reports';
-            const message = node('div', 'driver-page-message'); message.setAttribute('role', 'status'); message.append(node('p', '', data.loading ? `Loading ${label}…` : `${label[0].toUpperCase() + label.slice(1)} could not be loaded.`));
-            if (!data.loading) { const retry = node('button', 'workspace-button', 'Try again'); retry.onclick = () => { engineeringPages.cache.delete(`${view}:${driverPages.season}`); renderDriverPages(); }; message.append(retry); } root.append(message); return true;
+        const label = view === 'tech-updates' ? 'technical updates' : view === 'pu-elements' ? 'power unit reports' : 'crash reports';
+        if (data.loading) {
+            const message = node('div', 'driver-page-message'); message.setAttribute('role', 'status'); message.append(node('p', '', `Loading ${label}…`)); root.append(message); return true;
+        }
+        if (data.error) {
+            const message = node('div', 'driver-page-message'); message.setAttribute('role', 'status');
+            message.append(node('p', '', `${label[0].toUpperCase() + label.slice(1)} could not be loaded.`));
+            const retry = node('button', 'workspace-button', 'Try again');
+            retry.onclick = () => { engineeringPages.cache.delete(`${view}:${driverPages.season}`); renderDriverPages(); };
+            message.append(retry); root.append(message); return true;
+        }
+        const unavailable = view === 'tech-updates' ? data.meta.unavailable : view === 'destructors-championship' ? data.meta.sections?.incidents?.unavailable : Object.values(data.meta.sections || {}).every(meta => meta.unavailable);
+        if (unavailable) {
+            const empty = node('div', 'engineering-empty');
+            empty.setAttribute('role', 'status');
+            empty.append(node('p', 'engineering-empty-title', `No ${label} recorded for ${driverPages.season}`), node('p', 'engineering-empty-note', 'PitPulse only archives this section for the seasons it has collected reports for.'));
+            root.append(empty);
+            // This page cannot serve the season, so it stops offering a switch.
+            document.body.dataset.seasonEmpty = 'true';
+            return true;
         }
         const missing = Object.entries(data.meta.sections || {}).filter(([, meta]) => meta.unavailable).map(([name]) => ({ usage: 'PU usage', elements: 'element allocations', penalties: 'penalty reports' })[name] || name);
         const source = node('p', 'engineering-source', `Source: PitPulse${data.meta.stale ? ' · Historical archive' : ''}${missing.length ? ` · Unavailable: ${missing.join(', ')}` : ''}`); source.setAttribute('role', 'status'); root.append(source); return false;
     }
+
     function engineeringEmpty(card, message = 'No updates match the selected filters.') {
         card.querySelector('.standings-download').disabled = true; card.append(node('p', 'empty', message)); return card;
     }

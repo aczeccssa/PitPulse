@@ -105,6 +105,18 @@ a {
     text-decoration: none;
 }
 
+/* The reader scrolls with the trackpad or wheel; a drawn scrollbar only adds
+   chrome on top of the racing layout. */
+html, body, .app, .app * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar, .app::-webkit-scrollbar, .app *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
 /* `hidden` must win over the layout display rules used by cards and tables. */
 [hidden] {
     display: none !important;
@@ -129,7 +141,9 @@ input {
     flex: 0 0 60px;
     padding: 0 24px;
     border-bottom: 1px solid var(--line);
-    background: var(--bar);
+    background: color-mix(in srgb, var(--bar) 72%, transparent);
+    backdrop-filter: blur(18px) saturate(1.6);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
 }
 
 .topbar-actions {
@@ -5381,6 +5395,32 @@ body[data-live-phase="loading"] .live {
 .grade-f {
     background: #4a1318;
     color: #ff575d;
+}
+body[data-season-empty="true"] .racing-page-filters {
+    display: none;
+}
+
+.engineering-empty {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 40px 26px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 9px;
+    background: var(--card);
+    text-align: center;
+}
+.engineering-empty-title {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text);
+}
+.engineering-empty-note {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
 }
 .driver-page-message {
     padding: 24px;
