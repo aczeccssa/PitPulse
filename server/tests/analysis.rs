@@ -173,7 +173,7 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
         .route("/v1/{resource}", get(upstream))
         .with_state(count.clone());
     let task = tokio::spawn(async move { axum::serve(listener, upstream_app).await.unwrap() });
-    let (mut state, _temp) = state().await;
+    let (mut state, temp) = state().await;
     state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), &base);
     let database = state.database.clone();
     let app = server::router(state);
@@ -186,16 +186,84 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
     let (status, data) = ready(app.clone(), url).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(data["data"]["selectedLap"], 1);
-    let archived = database
-        .analysis_cache("session:2024:1:race:leclerc:base")
+    let bundle = database
+        .analysis_cache("session:2024:1:race:bundle")
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(archived["data"]["laps"].as_array().unwrap().len(), 2);
-    assert!(
-        archived["data"]["carData"].as_array().unwrap().is_empty(),
-        "shared lap archive must not retain telemetry from a different selected lap"
+    assert_eq!(
+        bundle["meta"]["analysisCacheSchema"],
+        "pitpulse:v2:shared-reference"
     );
+    let fingerprint = bundle["meta"]["bundleFingerprint"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let shared = database
+        .analysis_cache(&format!("session:2024:1:race:shared:{fingerprint}"))
+        .await
+        .unwrap()
+        .unwrap();
+    let bundle_data = shared["data"].clone();
+    assert_eq!(bundle_data["laps"].as_array().unwrap().len(), 2);
+    assert!(
+        bundle_data["carData"].as_array().unwrap().is_empty(),
+        "shared bundle must not retain telemetry from a different selected lap"
+    );
+    assert!(
+        database
+            .analysis_cache("session:2024:1:race:leclerc:base")
+            .await
+            .unwrap()
+            .is_none(),
+        "base is derived from the bundle and must not be materialized"
+    );
+    let reopened = Database::open(&temp.path().join("test.sqlite"))
+        .await
+        .unwrap();
+    let (_, derived) = read(
+        server::router(AppState::new(AppConfig::default(), reopened)),
+        url,
+        false,
+    )
+    .await;
+    assert_eq!(derived, data);
+
+    // A cached per-lap envelope keeps its original selected lap when no lap
+    // query is supplied. The derived base must not overwrite that field.
+    let cached_lap = url.to_string() + "?lap=1";
+    let (_, first) = read(app.clone(), &cached_lap, false).await;
+    assert_eq!(first["data"]["selectedLap"], 1);
+    let restarted = Database::open(&temp.path().join("test.sqlite"))
+        .await
+        .unwrap();
+    let (_, second) = read(
+        server::router(AppState::new(AppConfig::default(), restarted)),
+        &cached_lap,
+        false,
+    )
+    .await;
+    assert_eq!(second["data"]["selectedLap"], first["data"]["selectedLap"]);
+
+    // The fallback's selected lap remains derived from its timing data, even
+    // when a cached per-lap envelope was generated for a different lap.
+    let (_, fallback) = read(
+        server::router(AppState::new(AppConfig::default(), database.clone())),
+        url,
+        false,
+    )
+    .await;
+    assert_eq!(fallback["data"]["selectedLap"], 1);
+    for value in [&data, &derived, &first, &second, &fallback] {
+        assert!(
+            value["meta"].get("analysisCacheSchema").is_none(),
+            "internal shared-reference metadata must not escape the API"
+        );
+        assert!(
+            value["meta"].get("bundleFingerprint").is_none(),
+            "internal bundle fingerprint must not escape the API"
+        );
+    }
     assert_eq!(data["data"]["laps"][0]["durationSector1"], Value::Null);
     assert_eq!(data["data"]["carData"][0]["nGear"], 7);
     assert_eq!(data["data"]["pit"], json!([]));
@@ -333,7 +401,7 @@ async fn test_loading_deduplicates_and_does_not_block_persisted_or_stale_cache()
 #[tokio::test]
 async fn test_analysis_archive_retains_history_and_migration_keeps_results() {
     let (state, _temp) = state().await;
-    assert_eq!(state.database.user_version().await.unwrap(), 8);
+    assert_eq!(state.database.user_version().await.unwrap(), 9);
     assert_eq!(
         state
             .database

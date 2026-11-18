@@ -363,7 +363,7 @@ async fn response(
     if let Some(value) = &cached
         && fresh_value(value)
     {
-        return Ok(Json(value.clone()));
+        return Ok(Json(public_value(state, job, value.clone()).await?));
     }
     queue(state, job.clone()).await;
     let now = state.database.utc_now().await?;
@@ -386,7 +386,26 @@ async fn response(
     value["meta"]["analysisStatus"] = json!("loading");
     // Cached content keeps its timestamp and is readable during the background refresh.
     value["meta"]["stale"] = json!(stale);
-    Ok(Json(value))
+    Ok(Json(public_value(state, job, value).await?))
+}
+
+async fn public_value(state: &AppState, job: Job, mut value: Value) -> Result<Value, ApiError> {
+    let meta = value["meta"].as_object_mut().unwrap();
+    meta.remove("analysisCacheSchema");
+    let fingerprint = meta.remove("bundleFingerprint");
+    let Some(fingerprint) = fingerprint.and_then(|value| value.as_str().map(str::to_owned)) else {
+        return Ok(value);
+    };
+    let key = match &job {
+        Job::Session { session, .. } => format!("session:{session}:shared:{fingerprint}"),
+        Job::Season { .. } => return Ok(value),
+    };
+    if let Some(shared) = state.analysis.read(state, &key).await? {
+        let mut data = std::mem::take(&mut value["data"]);
+        restore_shared_fields(&mut data, &shared["data"]);
+        value["data"] = data;
+    }
+    Ok(value)
 }
 
 pub async fn session_analysis(
@@ -402,10 +421,7 @@ pub async fn session_analysis(
         return Err(invalid("lap must be 1...200"));
     }
     session_context(&state, &session, &driver).await?;
-    let mut base = state
-        .analysis
-        .read(&state, &format!("session:{session}:{driver}:base"))
-        .await?;
+    let mut base = load_session_base(&state, &session, &driver).await?;
     if let Some(value) = &mut base
         && let Some(laps) = value["data"]["laps"].as_array()
     {
@@ -485,6 +501,25 @@ async fn session_bundle(
 ) -> Result<Value, ApiError> {
     let key = format!("session:{}:bundle", session.id);
     let previous = state.analysis.read(state, &key).await?;
+    let normalized = if let Some(value) = &previous
+        && value["meta"]["analysisCacheSchema"] == "pitpulse:v2:shared-reference"
+    {
+        if let Some(fingerprint) = value["meta"]["bundleFingerprint"].as_str() {
+            let key = format!("session:{}:shared:{fingerprint}", session.id);
+            state.analysis.read(state, &key).await?.map(|shared| {
+                let mut restored = value.clone();
+                let mut data = value["data"].clone();
+                restore_shared_fields(&mut data, &shared["data"]);
+                restored["data"] = data;
+                restored
+            })
+        } else {
+            None
+        }
+    } else {
+        previous.clone()
+    };
+    let previous = normalized;
     if let Some(value) = &previous
         && fresh_value(value)
     {
@@ -555,36 +590,132 @@ async fn session_bundle(
     {
         data["drivers"] = previous["data"]["drivers"].clone();
     }
-    let mut value = envelope(data.clone(), &now, "openf1");
+    let shared_fields_data = shared_fields(&data);
+    let fp = fingerprint(&shared_fields_data);
+    let shared_key = format!("session:{}:shared:{fp}", session.id);
+    if state.analysis.read(state, &shared_key).await?.is_none() {
+        let mut shared = envelope(shared_fields_data.clone(), &now, "openf1");
+        shared["meta"]["bundleFingerprint"] = json!(fp);
+        state.analysis.put(state, shared_key, shared).await?;
+    }
+    let mut stored = data.clone();
+    strip_shared_fields(&mut stored);
+    let mut value = envelope(stored, &now, "openf1");
+    value["meta"]["analysisCacheSchema"] = json!("pitpulse:v2:shared-reference");
+    value["meta"]["bundleFingerprint"] = json!(fp);
     value["meta"]["stale"] = json!(stale);
     if data["laps"].as_array().is_none_or(Vec::is_empty) {
         value["meta"]["analysisStatus"] = json!("failed");
     }
     state.analysis.put(state, key, value).await?;
+    Ok(data)
+}
+
+async fn load_session_base(
+    state: &AppState,
+    session: &str,
+    driver: &str,
+) -> Result<Option<Value>, ApiError> {
+    let key = format!("session:{session}:{driver}:base");
+    if let Some(value) = state.analysis.read(state, &key).await? {
+        return Ok(Some(value));
+    }
+    let Some(bundle) = state
+        .analysis
+        .read(state, &format!("session:{session}:bundle"))
+        .await?
+    else {
+        return Ok(None);
+    };
+    let mut bundle_data = bundle["data"].clone();
+    if let Some(fingerprint) = bundle["meta"]["bundleFingerprint"].as_str() {
+        let key = format!("session:{session}:shared:{fingerprint}");
+        if let Some(shared) = state.analysis.read(state, &key).await? {
+            restore_shared_fields(&mut bundle_data, &shared["data"]);
+        }
+    }
+    let Some(result) = state
+        .database
+        .session_results(session)
+        .await?
+        .0
+        .into_iter()
+        .find(|row| row.driver_id == driver)
+    else {
+        return Ok(None);
+    };
+    let season = session
+        .split(':')
+        .next()
+        .and_then(|value| value.parse::<i64>().ok())
+        .unwrap_or_default();
     let identity = state
         .database
-        .identity_cache(meeting.season)
+        .identity_cache(season)
         .await?
-        .map(|(d, c)| IdentityMaps::from_ergast(&d, &c));
-    for result in state.database.session_results(&session.id).await?.0 {
-        let data = project_session(
-            &data,
-            &result.driver_id,
-            identity.as_ref(),
-            result.driver_number.as_deref().and_then(|n| n.parse().ok()),
-            Some(&result.driver_name),
-        );
-        let key = format!("session:{}:{}:base", session.id, result.driver_id);
-        let failed = data["laps"].as_array().is_none_or(Vec::is_empty);
-        let mut value = envelope(data, &now, "openf1");
-        if failed {
-            value["meta"]["analysisStatus"] = json!("failed");
-            value["meta"]["analysisError"] = json!("场次详细数据尚不可用，请检查数据源关联。");
-        }
-        value["meta"]["stale"] = json!(stale);
-        state.analysis.put(state, key, value).await?;
+        .map(|(drivers, constructors)| IdentityMaps::from_ergast(&drivers, &constructors));
+    let number = result.driver_number.as_deref().and_then(|n| n.parse().ok());
+    let data = project_session(
+        &bundle_data,
+        driver,
+        identity.as_ref(),
+        number,
+        Some(&result.driver_name),
+    );
+    let fetched_at = match bundle["meta"]["fetchedAt"].as_str() {
+        Some(value) if !value.is_empty() => value.to_owned(),
+        _ => state.database.utc_now().await.unwrap_or_default(),
+    };
+    let mut value = envelope(data, &fetched_at, "openf1");
+    value["meta"]["stale"] = bundle["meta"]["stale"].clone();
+    value["meta"]["analysisStatus"] = bundle["meta"]["analysisStatus"].clone();
+    if value["data"]["laps"].as_array().is_none_or(Vec::is_empty) {
+        value["meta"]["analysisStatus"] = json!("failed");
+        value["meta"]["analysisError"] = json!("场次详细数据尚不可用，请检查数据源关联。");
     }
-    Ok(data)
+    Ok(Some(value))
+}
+
+const SHARED_FIELDS: [&str; 8] = [
+    "laps",
+    "stints",
+    "pit",
+    "positions",
+    "weather",
+    "raceControl",
+    "grid",
+    "warnings",
+];
+
+fn fingerprint(data: &Value) -> String {
+    use sha2::{Digest, Sha256};
+    let mut fields = data.as_object().cloned().unwrap_or_default();
+    for field in ["location", "carData", "selectedLap"] {
+        fields.remove(field);
+    }
+    let encoded = serde_json::to_vec(&Value::Object(fields)).unwrap_or_default();
+    let digest = Sha256::digest(encoded);
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn shared_fields(data: &Value) -> Value {
+    let mut shared = empty_session();
+    for field in SHARED_FIELDS {
+        shared[field] = data[field].clone();
+    }
+    shared
+}
+
+fn strip_shared_fields(data: &mut Value) {
+    for field in SHARED_FIELDS {
+        data[field] = Value::Null;
+    }
+}
+
+fn restore_shared_fields(data: &mut Value, shared: &Value) {
+    for field in SHARED_FIELDS {
+        data[field] = shared[field].clone();
+    }
 }
 
 fn project_session(
@@ -680,17 +811,25 @@ async fn refresh_session(
     }
     .key();
     let previous = state.analysis.read(state, &key).await?;
+    let previous = if let Some(value) = &previous
+        && value["meta"]["analysisCacheSchema"] == "pitpulse:v2:shared-reference"
+    {
+        if let Some(fingerprint) = value["meta"]["bundleFingerprint"].as_str() {
+            let key = format!("session:{session_id}:shared:{fingerprint}");
+            state.analysis.read(state, &key).await?.map(|shared| {
+                let mut restored = value.clone();
+                let mut data = value["data"].clone();
+                restore_shared_fields(&mut data, &shared["data"]);
+                restored["data"] = data;
+                restored
+            })
+        } else {
+            None
+        }
+    } else {
+        previous.clone()
+    };
     let laps = data["laps"].as_array().cloned().unwrap_or_default();
-    if !laps.is_empty() {
-        state
-            .analysis
-            .put(
-                state,
-                format!("session:{session_id}:{driver}:base"),
-                envelope(data.clone(), &now, "openf1"),
-            )
-            .await?;
-    }
     if let Some(lap) = selected_lap(&laps, requested) {
         data["selectedLap"] = lap["lapNumber"].clone();
         if let (Some(start), Some(key), Some(number)) = (
@@ -722,12 +861,24 @@ async fn refresh_session(
         .as_ref()
         .is_some_and(|v| retain_sections(&mut data, &v["data"]));
     let failed = data["laps"].as_array().is_none_or(Vec::is_empty);
+    let fp = fingerprint(&shared_fields(&data));
+    let shared_key = format!("session:{}:shared:{fp}", session_id);
+    if let Some(shared) = state.analysis.read(state, &shared_key).await? {
+        restore_shared_fields(&mut data, &shared["data"]);
+    } else {
+        let mut shared = envelope(shared_fields(&data), &now, "openf1");
+        shared["meta"]["bundleFingerprint"] = json!(fp);
+        state.analysis.put(state, shared_key, shared).await?;
+    }
     let mut value = envelope(data, &now, "openf1");
     value["meta"]["stale"] = json!(stale);
     if failed {
         value["meta"]["analysisStatus"] = json!("failed");
         value["meta"]["analysisError"] = json!("圈速来源暂未提供数据，可稍后重试。");
     }
+    value["meta"]["analysisCacheSchema"] = json!("pitpulse:v2:shared-reference");
+    value["meta"]["bundleFingerprint"] = json!(fp);
+    strip_shared_fields(&mut value["data"]);
     state.analysis.put(state, key, value).await
 }
 

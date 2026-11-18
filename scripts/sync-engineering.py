@@ -23,6 +23,7 @@ import xml.etree.ElementTree as ET
 
 PROJECT = Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = PROJECT / "server/resources/engineering/fia-reports.json"
+GZIP_PREFIX = b"\x00PULSEGZ\x01"
 ELEMENTS = [("ice", "Internal Combustion Engine"), ("tc", "Turbo Charger"),
             ("ex", "Exhaust Set"), ("mgu-k", "Motor Generator Unit - Kinetic"),
             ("es", "Energy Store"), ("ce", "Power Unit Control Electronics"),
@@ -189,15 +190,32 @@ def parse_tech(xml, spec, source):
     return result
 
 
+def encode(envelope):
+    import gzip
+    text = envelope if isinstance(envelope, str) else envelope.decode()
+    compressed = gzip.compress(text.encode(), compresslevel=1)
+    if len(compressed) < len(envelope):
+        return GZIP_PREFIX + compressed
+    return envelope.encode()
+
+
+def decode(value):
+    import gzip
+    raw = value.encode() if isinstance(value, str) else bytes(value)
+    if raw.startswith(GZIP_PREFIX):
+        return gzip.decompress(raw[len(GZIP_PREFIX):]).decode()
+    return raw.decode()
+
+
 def save(connection, key, data, meta):
     envelope = json.dumps({"data": data, "meta": meta}, ensure_ascii=False)
     connection.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?,?,?) "
                        "ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at",
-                       (key, envelope, meta["fetchedAt"]))
+                       (key, encode(envelope), meta["fetchedAt"]))
 
 
 def rebuild(connection, season, now):
-    reports = [json.loads(row[0]) for row in connection.execute(
+    reports = [json.loads(decode(row[0])) for row in connection.execute(
         "SELECT value_json FROM analysis_cache WHERE cache_key LIKE ?", (f"pitpulse:fia:document:{season}:%",))]
     for kind, resource in [("tech", "tech-updates"), ("usage", "used-elements")]:
         selected = [r for r in reports if r["data"]["kind"] == kind]

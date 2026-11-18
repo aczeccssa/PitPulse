@@ -4,8 +4,10 @@ use std::{
     sync::Arc,
 };
 
+use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::Value;
+use std::io::{Read, Write};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::{
@@ -18,6 +20,12 @@ use crate::{
     },
     error::StorageError,
 };
+
+/// Stored analysis values are gzip encoded with this prefix. Plain JSON
+/// remains readable so an existing database keeps working during a rolling
+/// upgrade; the next write migrates that key to the compressed format.
+const ANALYSIS_CACHE_GZIP_PREFIX: &[u8] = b"\x00PULSEGZ\x01";
+const ANALYSIS_CACHE_FORMAT_VERSION: i64 = 9;
 
 const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
 const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
@@ -104,26 +112,21 @@ impl Database {
     ) -> Result<Option<serde_json::Value>, StorageError> {
         let connection = Arc::clone(&self.connection);
         let key = key.to_string();
-        Ok(spawn_blocking(move || {
-            connection
+        spawn_blocking(move || {
+            let stored: Option<Vec<u8>> = connection
                 .blocking_lock()
                 .query_row(
                     "SELECT value_json FROM analysis_cache WHERE cache_key=?1",
                     [key],
-                    |row| {
-                        let json: String = row.get(0)?;
-                        serde_json::from_str(&json).map_err(|error| {
-                            rusqlite::Error::FromSqlConversionFailure(
-                                0,
-                                rusqlite::types::Type::Text,
-                                Box::new(error),
-                            )
-                        })
+                    |row| match row.get_ref(0)?.as_bytes() {
+                        Ok(bytes) => Ok(bytes.to_vec()),
+                        Err(error) => Err(error.into()),
                     },
                 )
-                .optional()
+                .optional()?;
+            stored.map(decode_analysis_value).transpose()
         })
-        .await??)
+        .await?
     }
 
     pub async fn save_analysis_cache(
@@ -133,7 +136,7 @@ impl Database {
     ) -> Result<(), StorageError> {
         let connection = Arc::clone(&self.connection);
         let key = key.to_string();
-        let json = value.to_string();
+        let stored = encode_analysis_value(&value.to_string());
         let fetched_at = value["meta"]["fetchedAt"]
             .as_str()
             .unwrap_or_default()
@@ -141,7 +144,7 @@ impl Database {
         spawn_blocking(move || -> Result<(), rusqlite::Error> {
             let mut connection = connection.blocking_lock();
             let tx = connection.transaction()?;
-            tx.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?1,?2,?3) ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at", rusqlite::params![key,json,fetched_at])?;
+            tx.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES(?1,?2,?3) ON CONFLICT(cache_key) DO UPDATE SET value_json=excluded.value_json,fetched_at=excluded.fetched_at", rusqlite::params![key,stored,fetched_at])?;
             // Persist historical analysis; only the in-memory accelerator is bounded.
             tx.commit()
         }).await??;
@@ -949,6 +952,44 @@ fn calendar_meta(connection: &Connection, season: Option<i64>) -> Result<Meta, r
     )
 }
 
+fn encode_analysis_value(json: &str) -> Vec<u8> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+    let _ = encoder.write_all(json.as_bytes());
+    let compressed = match encoder.finish() {
+        Ok(compressed) if compressed.len() < json.len() => compressed,
+        _ => return json.as_bytes().to_vec(),
+    };
+    let mut stored = Vec::with_capacity(ANALYSIS_CACHE_GZIP_PREFIX.len() + compressed.len());
+    stored.extend_from_slice(ANALYSIS_CACHE_GZIP_PREFIX);
+    stored.extend_from_slice(&compressed);
+    stored
+}
+
+fn decode_analysis_value(stored: Vec<u8>) -> Result<serde_json::Value, StorageError> {
+    const MAX_DECOMPRESSED_ANALYSIS_BYTES: u64 = 16 * 1024 * 1024;
+    let json = if stored.starts_with(ANALYSIS_CACHE_GZIP_PREFIX) {
+        let mut decoder = GzDecoder::new(&stored[ANALYSIS_CACHE_GZIP_PREFIX.len()..])
+            .take(MAX_DECOMPRESSED_ANALYSIS_BYTES + 1);
+        let mut json = String::new();
+        decoder.read_to_string(&mut json).map_err(|error| {
+            StorageError::CorruptCache(format!("invalid gzip analysis value: {error}"))
+        })?;
+        if json.len() as u64 > MAX_DECOMPRESSED_ANALYSIS_BYTES {
+            return Err(StorageError::CorruptCache(
+                "analysis value exceeds the decompression limit".to_owned(),
+            ));
+        }
+        json
+    } else {
+        String::from_utf8(stored).map_err(|error| {
+            StorageError::CorruptCache(format!("invalid UTF-8 analysis value: {error}"))
+        })?
+    };
+    serde_json::from_str(&json).map_err(|error| {
+        StorageError::CorruptCache(format!("invalid JSON analysis value: {error}"))
+    })
+}
+
 fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < 1 {
@@ -987,6 +1028,13 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < 8 {
         connection.execute_batch(MIGRATION_0008)?;
+    }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < ANALYSIS_CACHE_FORMAT_VERSION {
+        // The read path accepts both plain JSON and compressed values. Writes
+        // use the new format, so existing entries migrate lazily without a
+        // large blocking recompression during startup.
+        connection.execute_batch("PRAGMA user_version = 9;")?;
     }
 
     Ok(())
