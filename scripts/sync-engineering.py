@@ -27,6 +27,8 @@ ELEMENTS = [("ice", "Internal Combustion Engine"), ("tc", "Turbo Charger"),
             ("ex", "Exhaust Set"), ("mgu-k", "Motor Generator Unit - Kinetic"),
             ("es", "Energy Store"), ("ce", "Power Unit Control Electronics"),
             ("anc", "Power Unit Ancillary Components")]
+ELEMENT_NAMES = dict(ELEMENTS + [("mgu-h", "Motor Generator Unit - Heat")])
+
 TEAMS = ["McLaren", "Mercedes", "Red Bull Racing", "Ferrari", "Williams",
          "Racing Bulls", "Aston Martin", "Haas", "Audi", "Alpine", "Cadillac"]
 
@@ -37,8 +39,16 @@ def normalize(text):
 
 def team_name(text):
     compact = normalize(text).replace(" ", "")
-    if "redbullracing" in compact:
+    if "redbullracing" in compact or compact.startswith("rbr"):
         return "Red Bull Racing"
+    for historical in ["AlphaTauri", "Alfa Romeo", "Sauber"]:
+        if normalize(historical).replace(" ", "") in compact:
+            return historical
+    # Car descriptions include their engine supplier (e.g. Haas Ferrari).
+    # Match the constructor prefix before considering any supplier name.
+    for name in TEAMS:
+        if compact.startswith(normalize(name).replace(" ", "")):
+            return name
     if "racingbulls" in compact:
         return "Racing Bulls"
     if "astonmartin" in compact:
@@ -60,7 +70,7 @@ def team_header(words):
 
 def source_url(url):
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme != "https" or parsed.netloc != "www.fia.com" or not parsed.path.startswith("/system/files/") or not parsed.path.endswith(".pdf"):
+    if parsed.scheme != "https" or parsed.netloc != "www.fia.com" or not parsed.path.endswith(".pdf") or not (parsed.path.startswith("/system/files/") or parsed.path.startswith("/sites/default/files/")):
         raise ValueError("Report URLs must be original HTTPS FIA PDF documents")
     return url
 
@@ -94,11 +104,13 @@ def document_info(text, spec, digest):
 
 
 def parse_usage(text, spec, source):
-    if "PU Elements used per Driver" not in text or "MGU-K" not in text:
+    header = next((line for line in text.splitlines() if re.search(r"\bICE\s+TC\s+", line)), "")
+    codes = [code.lower() for code in re.findall(r"\b(?:ICE|TC|MGU-H|MGU-K|ES|CE|EX|ANC)\b", header)]
+    if "pu elements" not in text.lower() or not codes or "mgu-k" not in codes:
         raise ValueError("Unsupported PU usage report")
     rows = []
     for line in text.splitlines():
-        match = re.match(r"^\s*(\d{1,2})\s{2,}(.+?)\s{2,}(.+?)\s{2,}(\d+(?:\s+\d+){6})\s*$", line)
+        match = re.match(r"^\s*(\d{1,2})\s{2,}(.+?)\s{2,}(.+?)\s{2,}(\d+(?:\s+\d+){" + str(len(codes) - 1) + r"})\s*$", line)
         if not match:
             continue
         number, car, driver, counts = match.groups()
@@ -106,12 +118,12 @@ def parse_usage(text, spec, source):
         if any(n > 30 for n in counts):
             raise ValueError("Unexpected PU count")
         team = team_name(car)
-        engine = next((name for name in ["Mercedes", "Ferrari", "Honda", "RB Ford", "Audi"] if name in car), None)
+        engine = next((name for name in ["RB Ford", "Mercedes", "Ferrari", "Honda", "Renault", "Audi", "RBPT"] if name in car), None)
         if not engine:
             raise ValueError("Unknown engine manufacturer")
         rows.append({"driverNumber": int(number), "driverCode": normalize(driver.split()[-1])[:3].upper(),
                      "driverName": driver, "team": team, "engineManufacturer": engine,
-                     "used": dict(zip((e[0] for e in ELEMENTS), counts)), "total": sum(counts),
+                     "used": dict(zip(codes, counts)), "total": sum(counts),
                      "round": spec["round"], "sourceDocuments": [source]})
     # A truncated/scanned document must not silently replace the complete table.
     if not 20 <= len(rows) <= 30 or len({r["driverNumber"] for r in rows}) != len(rows):
