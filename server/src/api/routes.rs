@@ -288,9 +288,7 @@ pub async fn spa_fallback(
     uri: Uri,
     headers: HeaderMap,
 ) -> Response {
-    if uri.path().starts_with("/api/")
-        || uri.path().starts_with("/motorsport")
-    {
+    if uri.path().starts_with("/api/") || uri.path().starts_with("/motorsport") {
         return (
             StatusCode::NOT_FOUND,
             Json(json!({"error": {"code": "not_found", "message": "unknown API path"}})),
