@@ -918,10 +918,10 @@
         const meeting = entry.meeting;
         if (seasonResults.loading) { root.append(node("p", "empty", "Loading Grand Prix results…")); return; }
         const filters = node("div", "meeting-filters");
-        const seasonFilter = node("label", "meeting-filter", "Season "); seasonFilter.append(node("span", "", String(meeting.season))); filters.append(seasonFilter);
-        const grandPrix = node("label", "meeting-filter", "Grand Prix "), select = node("select", "");
-        for (const e of seasonResults.entries.filter(e => Object.values(e.sessions).some(s => s.rows?.length))) { const option = node("option", "", e.meeting.country || e.meeting.name); option.value = e.meeting.id; option.selected = e.meeting.id === meeting.id; select.append(option); }
-        select.onchange = () => { location.hash = `#/results/${encodeURIComponent(select.value)}/race`; }; grandPrix.append(select); filters.append(grandPrix); root.append(filters);
+        filters.append(seasonSelector(meeting.season, value => { location.hash = `#/results?season=${value}`; }));
+        const rounds = seasonResults.entries.filter(e => Object.values(e.sessions).some(s => s.rows?.length)).map(e => [e.meeting.id, e.meeting.country || e.meeting.name]);
+        filters.append(driverSelector('Grand Prix', meeting.id, rounds, value => { location.hash = `#/results/${encodeURIComponent(value)}/race`; }));
+        root.append(filters);
         const title = node("header", "meeting-result-heading");
         const back = node("a", "result-back", `‹ ${meeting.season} F1 Season Results`); back.href = "#/results";
         const countryCode = meeting.countryCode ? meeting.countryCode.toLowerCase() : "";
@@ -1066,7 +1066,7 @@
                 const value = node("div", "stat-value"); value.append(node("strong", "", best?.[metric] ? String(best[metric]) : "—"), node("span", "", unit));
                 cell.append(value);
                 if (best?.[metric]) {
-                    const art = map === drivers ? driverPhotoArt(best.row, "stat-portrait") : teamLogoImage(artSeason(), best.row.team, best.row.constructorId);
+                    const art = map === drivers ? driverPhotoArt(best.row, "stat-portrait") : manufacturerLogo(best.row.team, true);
                     if (art) { art.className = "stat-portrait"; art.style.background = manufacturerColor(best.row.team); art.title = ""; if (map === drivers) { Object.assign(art.dataset, { popover: best.row.driverName, popoverType: "identity", identityDriverId: best.row.driverId, identityName: best.row.driverName, identityTeam: best.row.team }); } cell.append(art); }
                 }
                 pair.append(cell);
@@ -1698,14 +1698,40 @@
     }
 
     function popularComparisons(data, root) {
-        const section = node('section', 'popular-comparisons'); section.append(node('h2', '', 'Popular Driver Comparisons')); const track = node('div', 'comparison-track');
-        const pairs = comparisonPairs(data).sort((a, b) => Math.min(a.first.position, a.second.position) - Math.min(b.first.position, b.second.position));
-        const used = new Set(); for (const pair of pairs) {
-            if (used.has(pair.team)) continue; used.add(pair.team);
-            const card = node('a', 'comparison-board'); card.href = driverPageHref('head-to-head', { driver1: pair.first.driverId, driver2: pair.second.driverId }); card.style.setProperty('--team', manufacturerColor(pair.teamName));
-            const a = driverPhoto(pair.first, 'comparison-photo first'), b = driverPhoto(pair.second, 'comparison-photo second'); if (a) card.append(a); if (b) card.append(b);
-            card.append(node('strong', 'comparison-vs', 'VS'), node('span', 'comparison-name first', shortDriverName(pair.first)), node('span', 'comparison-name second', shortDriverName(pair.second))); card.setAttribute('aria-label', `Compare ${pair.first.driverName} and ${pair.second.driverName}`); track.append(card);
-        } section.append(track); root.append(section);
+        const section = node('section', 'popular-comparisons');
+        const head = node('div', 'popular-comparisons-head');
+        const next = node('button', 'comparison-next');
+        next.type = 'button';
+        next.setAttribute('aria-label', 'Show more comparisons');
+        next.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+        head.append(node('h2', '', 'Popular Driver Comparisons'), next);
+        section.append(head);
+        const track = node('div', 'comparison-track');
+        const pairs = comparisonPairs(data).sort((a, b) => Math.min(a.first.position, b.first.position) - Math.min(b.first.position, b.second.position));
+        const used = new Set();
+        for (const pair of pairs) {
+            if (used.has(pair.team)) continue;
+            used.add(pair.team);
+            const card = node('a', 'comparison-board');
+            card.href = driverPageHref('head-to-head', { driver1: pair.first.driverId, driver2: pair.second.driverId });
+            card.style.setProperty('--team-a', manufacturerColor(pair.first.constructor));
+            card.style.setProperty('--team-b', manufacturerColor(pair.second.constructor));
+            card.setAttribute('aria-label', `Compare ${pair.first.driverName} and ${pair.second.driverName}`);
+            const left = node('span', 'comparison-half first'), right = node('span', 'comparison-half second');
+            left.setAttribute('aria-hidden', 'true'); right.setAttribute('aria-hidden', 'true');
+            card.append(left, right, node('span', 'comparison-cut'));
+            const a = driverPhoto(pair.first, 'comparison-photo first'), b = driverPhoto(pair.second, 'comparison-photo second');
+            if (a) card.append(a);
+            if (b) card.append(b);
+            card.append(node('strong', 'comparison-vs', 'VS'), node('span', 'comparison-name first', shortDriverName(pair.first)), node('span', 'comparison-name second', shortDriverName(pair.second)));
+            track.append(card);
+        }
+        section.append(track);
+        const syncNext = () => { next.hidden = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4; };
+        next.onclick = () => track.scrollBy({ left: Math.max(240, track.clientWidth * .8), behavior: 'smooth' });
+        track.addEventListener('scroll', syncNext, { passive: true });
+        requestAnimationFrame(syncNext);
+        root.append(section);
     }
 
     function renderHeadToHead(root, data) {
@@ -2274,7 +2300,7 @@
         if (data.loading) { root.append(node('p', 'home-status', 'Loading season overview…')); return; }
         const retry = () => { homePages.cache.delete(season); renderDriverPages(); };
         const unavailable = Object.entries(data.meta.summary?.sections || {}).filter(([, meta]) => meta.unavailable).map(([key]) => key), stale = Object.values(data.meta).some(meta => meta.stale);
-        if (data.errors.length || unavailable.length || stale) { const status = node('div', 'home-status'); status.append(node('span', '', `${stale ? 'Includes cached data. ' : ''}${data.errors.length || unavailable.length ? 'Some overview data is unavailable. ' : ''}`)); const button = node('button', 'workspace-button', 'Retry'); button.type = 'button'; button.onclick = retry; status.append(button); root.append(status); }
+
         const schedule = homeSchedule(data.calendar, data.entries), cards = node('div', 'home-summary-grid'), summary = data.summary, unavailableSummary = key => data.errors.includes('summary') || data.meta.summary?.sections?.[key]?.unavailable;
         const counter = node('a', 'home-card home-countdown'), active = schedule.current || schedule.next; counter.href = schedule.display ? `#/results/${encodeURIComponent(schedule.display.id)}/${active?.session.sessionType || 'race'}?season=${season}` : `#/results?season=${season}`;
         if (active) {
