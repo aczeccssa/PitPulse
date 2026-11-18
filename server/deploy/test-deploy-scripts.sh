@@ -111,10 +111,24 @@ if config:
     with open(config, encoding="utf-8") as handle:
         authorized = "Bearer " + TOKEN in handle.read()
 
+def session_cookie_domains(text):
+    """Host scopes of the pitpulse_web cookie in a Netscape cookie jar."""
+    for line in text.splitlines():
+        if not line or (line.startswith("#") and not line.startswith("#HttpOnly_")):
+            continue
+        fields = line.split("\t")
+        if len(fields) >= 7 and fields[5] == "pitpulse_web":
+            domain = fields[0]
+            if domain.startswith("#HttpOnly_"):
+                domain = domain[len("#HttpOnly_"):]
+            yield domain
+
+
 session = False
 if cookie_input and os.path.exists(cookie_input):
     with open(cookie_input, encoding="utf-8") as handle:
-        session = "pitpulse_web=" in handle.read()
+        request_host = urlsplit(url).hostname or ""
+        session = any(domain == request_host for domain in session_cookie_domains(handle.read()))
 
 path = urlsplit(url).path or "/"
 shell = {
@@ -144,7 +158,10 @@ bootstrap = (
 )
 if bootstrap and cookie_jar:
     with open(cookie_jar, "w", encoding="utf-8") as handle:
-        handle.write("# Netscape HTTP Cookie File\n\npitpulse_web=drill-session\n")
+        handle.write(
+            "# Netscape HTTP Cookie File\n\n"
+            "#HttpOnly_127.0.0.1\tFALSE\t/\tFALSE\t0\tpitpulse_web\tdrill-session\n"
+        )
 
 if bootstrap:
     body = b""
@@ -371,6 +388,14 @@ check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check" local ||
 grep -q 'href="/app.css"' "$WORK_DIR/web-check/web-index.html" ||
     fail "web shell check did not capture the dashboard document"
 [[ -s "$WORK_DIR/web-check/web-app.js" ]] || fail "web shell check did not capture app.js"
+# The public check reuses the local session from another origin, so the cookie
+# must be re-hosted instead of carrying the loopback host scope.
+check_web_shell "https://pitpulse.example" "$WORK_DIR/web-check-public" public "$WORK_DIR/web-check" ||
+    fail "web shell check could not reuse the bootstrapped session for another origin"
+grep -q '^# Netscape HTTP Cookie File$' "$WORK_DIR/web-check-public/web-cookies.txt" ||
+    fail "web shell check did not write a cookie jar for the public origin"
+grep -q $'^pitpulse.example\tFALSE\t/\tTRUE\t' "$WORK_DIR/web-check-public/web-cookies.txt" ||
+    fail "web shell check did not scope the re-hosted cookie to the public origin"
 
 BROKEN_WEB_CURL="$WORK_DIR/fake-curl-no-assets.py"
 cat > "$BROKEN_WEB_CURL" <<'PY'

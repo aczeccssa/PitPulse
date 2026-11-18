@@ -181,6 +181,7 @@ health_with_token() {
 # HTTPS/Caddy, where the raw token would otherwise reach the proxy access log.
 check_web_shell() {
     local base_url="$1" work_dir="$2" label="${3:-local}" bootstrap_from="${4:-}" status asset
+    local source_jar cookie_line host secure
     local root="${base_url%/}" token="${F1_COMPANION_TOKEN:-}"
     local jar="$work_dir/web-cookies.txt"
     mkdir -p "$work_dir"
@@ -201,11 +202,29 @@ check_web_shell() {
     fi
 
     if [[ -n "$bootstrap_from" ]]; then
-        jar="$bootstrap_from/web-cookies.txt"
-        [[ -s "$jar" ]] || {
+        source_jar="$bootstrap_from/web-cookies.txt"
+        [[ -s "$source_jar" ]] || {
             log "$label web shell check has no bootstrapped session to reuse"
             return 1
         }
+        # The derived session value is host-independent, but curl only sends a
+        # cookie to the host that issued it and the local bootstrap jar is
+        # scoped to the loopback address. Re-host the same value for this
+        # origin instead of sending the deployment token through the public
+        # proxy access log.
+        cookie_line="$(grep -m 1 'pitpulse_web' "$source_jar" || true)"
+        [[ -n "$cookie_line" ]] || {
+            log "$label web shell check found no session cookie to reuse"
+            return 1
+        }
+        host="${root#*://}"
+        host="${host%%/*}"
+        host="${host%%:*}"
+        secure=FALSE
+        [[ "$root" == https://* ]] && secure=TRUE
+        rm -f "$jar"
+        printf '# Netscape HTTP Cookie File\n%s\tFALSE\t/\t%s\t0\tpitpulse_web\t%s\n' \
+            "$host" "$secure" "${cookie_line##*$'\t'}" > "$jar"
     else
         [[ -n "$token" ]] || {
             log "$label web shell check needs F1_COMPANION_TOKEN"
