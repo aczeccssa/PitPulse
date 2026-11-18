@@ -143,14 +143,31 @@ impl JolpicaProvider {
             format!("/ergast/f1/{season}/{kind}/{id}/{endpoint}.json")
         };
         let url = with_query(&self.base_url, &path, &[("limit", "100".into())])?;
-        let mut rows = Vec::new();
+        let mut rows: Vec<Value> = Vec::new();
         get_pages_once(&self.client, &url, |page| {
-            rows.extend(
-                page.pointer("/MRData/RaceTable/Races")
-                    .and_then(Value::as_array)
-                    .cloned()
-                    .unwrap_or_default(),
-            );
+            let races = page
+                .pointer("/MRData/RaceTable/Races")
+                .and_then(Value::as_array)
+                .ok_or_else(|| ProviderError::MissingField {
+                    field: "RaceTable.Races".into(),
+                })?;
+            for race in races {
+                // Ergast paginates individual classifications, so one round can span pages.
+                if let Some(last) = rows.last_mut()
+                    && last["round"] == race["round"]
+                    && last["season"] == race["season"]
+                {
+                    for key in ["Results", "SprintResults", "QualifyingResults"] {
+                        if let Some(extra) = race[key].as_array()
+                            && let Some(entries) = last[key].as_array_mut()
+                        {
+                            entries.extend(extra.iter().cloned());
+                        }
+                    }
+                } else {
+                    rows.push(race.clone());
+                }
+            }
             Ok(())
         })
         .await?;

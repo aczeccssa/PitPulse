@@ -328,7 +328,7 @@ async fn execute(state: &AppState, job: Job) {
                 driver,
                 lap,
             } => refresh_session(state, session, driver, *lap).await,
-            Job::Season { season, .. } => refresh_season(state, *season).await,
+            Job::Season { season, .. } => refresh_season(state, *season, None).await,
         };
         if let Err(error) = result {
             tracing::warn!(analysis_key = %key, %error, "analysis refresh failed");
@@ -764,11 +764,16 @@ fn project_rounds(races: &[Value], kind: &str, id: &str) -> Vec<Value> {
         .collect()
 }
 
-async fn refresh_season(state: &AppState, season: i64) -> Result<(), ApiError> {
+pub(super) async fn refresh_season(
+    state: &AppState,
+    season: i64,
+    mut imported: Option<[Vec<Value>; 2]>,
+) -> Result<(), ApiError> {
     let now = state.database.utc_now().await?;
     let bundle_key = format!("season:{season}:bundle");
     let old_bundle = state.analysis.read(state, &bundle_key).await?;
-    let bundle = if let Some(value) = &old_bundle
+    let bundle = if imported.is_none()
+        && let Some(value) = &old_bundle
         && fresh_value(value)
     {
         value.clone()
@@ -776,15 +781,23 @@ async fn refresh_season(state: &AppState, season: i64) -> Result<(), ApiError> {
         let mut warnings = Vec::new();
         let mut rows = Vec::new();
         if state.jolpica.enabled {
-            for (endpoint, label, collection) in [
+            for (index, (endpoint, label, collection)) in [
                 ("results", "正赛", "Results"),
                 ("sprint", "Sprint", "SprintResults"),
-            ] {
-                match state
-                    .jolpica
-                    .entity_races_once(season, "", "", endpoint)
-                    .await
-                {
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let races = match &mut imported {
+                    Some(data) => Ok(std::mem::take(&mut data[index])),
+                    None => {
+                        state
+                            .jolpica
+                            .entity_races_once(season, "", "", endpoint)
+                            .await
+                    }
+                };
+                match races {
                     Ok(races) => {
                         for race in races {
                             let entries = race
@@ -792,7 +805,32 @@ async fn refresh_season(state: &AppState, season: i64) -> Result<(), ApiError> {
                                 .and_then(Value::as_array)
                                 .cloned()
                                 .unwrap_or_default();
-                            rows.push(json!({"round":race["round"].as_str().and_then(|s|s.parse::<i64>().ok()),"raceName":race["raceName"],"date":race["date"],"circuitName":race["Circuit"]["circuitName"],"country":race["Circuit"]["Location"]["country"],"sessionType":label,"entries":entries.iter().map(|row|json!({"driverName":format!("{} {}",row["Driver"]["givenName"].as_str().unwrap_or_default(),row["Driver"]["familyName"].as_str().unwrap_or_default()),"driverId":row["Driver"]["driverId"],"constructorId":row["Constructor"]["constructorId"],"position":row["position"].as_str().and_then(|s|s.parse::<i64>().ok()),"points":row["points"].as_str().and_then(|s|s.parse::<f64>().ok()),"laps":row["laps"].as_str().and_then(|s|s.parse::<i64>().ok()),"status":row["status"],"grid":row["grid"].as_str().and_then(|s|s.parse::<i64>().ok())})).collect::<Vec<_>>()}));
+                            let entries = entries.iter().map(|row| {
+                                json!({
+                                    "driverName": format!(
+                                        "{} {}",
+                                        row["Driver"]["givenName"].as_str().unwrap_or_default(),
+                                        row["Driver"]["familyName"].as_str().unwrap_or_default()
+                                    ),
+                                    "driverId": row["Driver"]["driverId"],
+                                    "constructorId": row["Constructor"]["constructorId"],
+                                    "position": row["position"].as_str().and_then(|s| s.parse::<i64>().ok()),
+                                    "points": row["points"].as_str().and_then(|s| s.parse::<f64>().ok()),
+                                    "laps": row["laps"].as_str().and_then(|s| s.parse::<i64>().ok()),
+                                    "status": row["status"],
+                                    "fastestLap": row["FastestLap"]["Time"]["time"],
+                                    "grid": row["grid"].as_str().and_then(|s| s.parse::<i64>().ok()),
+                                })
+                            }).collect::<Vec<_>>();
+                            rows.push(json!({
+                                "round": race["round"].as_str().and_then(|s| s.parse::<i64>().ok()),
+                                "raceName": race["raceName"],
+                                "date": race["date"],
+                                "circuitName": race["Circuit"]["circuitName"],
+                                "country": race["Circuit"]["Location"]["country"],
+                                "sessionType": label,
+                                "entries": entries,
+                            }));
                         }
                     }
                     Err(error) => warnings.push(format!("{endpoint}: {error}")),

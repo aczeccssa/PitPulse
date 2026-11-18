@@ -48,7 +48,8 @@ pub async fn overview(
                     .into_iter()
                     .flatten()
                     .filter(|r| {
-                        r["round"].as_i64() == meeting.round
+                        matches!(session.session_type.as_str(), "race" | "sprint")
+                            && r["round"].as_i64() == meeting.round
                             && (r["sessionType"] == "Sprint")
                                 == (session.session_type.as_str() == "sprint")
                     })
@@ -69,6 +70,11 @@ pub async fn overview(
                     .filter_map(|lap| lap["lapDuration"].as_f64())
                     .filter(|s| *s > 0. && *s < 600.)
                     .min_by(f64::total_cmp);
+                if row["bestLap"].is_null()
+                    && let Some(time) = historical.and_then(|h| h["fastestLap"].as_str())
+                {
+                    row["bestLap"] = json!(time);
+                }
                 if let Some(seconds) = fastest {
                     row["bestLap"] = json!(format!(
                         "{}:{:06.3}",

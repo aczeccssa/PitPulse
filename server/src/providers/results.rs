@@ -13,6 +13,7 @@ use crate::domain::{
 pub struct IdentityMaps {
     drivers_by_wikipedia: HashMap<String, String>,
     drivers_by_number: HashMap<i64, String>,
+    drivers_by_code: HashMap<String, String>,
     constructors_by_wikipedia: HashMap<String, String>,
     constructors_by_name: HashMap<String, String>,
 }
@@ -24,6 +25,10 @@ impl IdentityMaps {
             let Some(id) = row.get("driverId").and_then(Value::as_str) else {
                 continue;
             };
+            if let Some(code) = row["code"].as_str() {
+                maps.drivers_by_code
+                    .insert(code.to_uppercase(), id.to_owned());
+            }
             if let Some(url) = row.get("url").and_then(Value::as_str) {
                 maps.drivers_by_wikipedia
                     .insert(normalize_url(url), id.to_string());
@@ -44,6 +49,18 @@ impl IdentityMaps {
                 maps.constructors_by_wikipedia
                     .insert(normalize_url(url), id.to_string());
             }
+            // Resolve provider branding to the constructor that actually entered this season.
+            let aliases: &[&str] = match id {
+                "alpine" => &["Alpine", "Alpine F1 Team"],
+                "red_bull" => &["Red Bull", "Red Bull Racing"],
+                "alphatauri" | "rb" => &["AlphaTauri", "RB", "Racing Bulls", "Visa Cash App RB"],
+                "alfa" | "sauber" | "audi" => &["Alfa Romeo", "Kick Sauber", "Sauber", "Audi"],
+                _ => &[],
+            };
+            for alias in aliases {
+                maps.constructors_by_name
+                    .insert(normalize_name(alias), id.to_owned());
+            }
             if let Some(name) = row.get("name").and_then(Value::as_str) {
                 maps.constructors_by_name
                     .insert(normalize_name(name), id.to_string());
@@ -60,6 +77,14 @@ impl IdentityMaps {
 
     pub fn driver_for_number(&self, number: i64) -> Option<&str> {
         self.drivers_by_number.get(&number).map(String::as_str)
+    }
+
+    pub fn driver_for_roster(&self, row: &Value) -> Option<&str> {
+        row["name_acronym"]
+            .as_str()
+            .and_then(|code| self.drivers_by_code.get(&code.to_uppercase()))
+            .map(String::as_str)
+            .or_else(|| self.driver_for_number(row["driver_number"].as_i64()?))
     }
 
     pub fn constructor_for_wikipedia(&self, url: &str) -> Option<&str> {
@@ -92,9 +117,9 @@ impl IdentityMaps {
             .and_then(Value::as_str)
             .map(str::to_string);
         let expected_numbers = driver_numbers(expected_drivers);
-        let expected_ids = expected_numbers
+        let expected_ids = expected_drivers
             .iter()
-            .filter_map(|number| self.drivers_by_number.get(number).cloned())
+            .filter_map(|row| self.driver_for_roster(row).map(str::to_owned))
             .collect::<BTreeSet<_>>();
         let mut complete = !rows.is_empty()
             && rows.len() == expected_numbers.len()
@@ -193,8 +218,11 @@ impl IdentityMaps {
                 .to_string();
                 SessionResult {
                     session_id: session_id.to_string(),
-                    driver_number: session_number_for_name(expected_drivers, &driver_name)
-                        .map(|n| n.to_string())
+                    driver_number: number_text(&row["car_number"])
+                        .or_else(|| {
+                            session_number_for_name(expected_drivers, &driver_name)
+                                .map(|n| n.to_string())
+                        })
                         .or_else(|| number_text(&driver["permanent_car_number"]))
                         .or_else(|| {
                             let id = driver_id.as_deref()?;
@@ -273,9 +301,9 @@ impl IdentityMaps {
             .map(|row| {
                 let number = row["driver_number"].as_i64();
                 let roster_driver = number.and_then(|number| roster.get(&number).copied());
-                let driver_id = number
-                    .and_then(|number| self.drivers_by_number.get(&number))
-                    .cloned();
+                let driver_id = roster_driver
+                    .and_then(|row| self.driver_for_roster(row))
+                    .map(str::to_owned);
                 let team_name = roster_driver
                     .and_then(|driver| driver["team_name"].as_str())
                     .unwrap_or_default();

@@ -7,4 +7,5 @@ pub mod sync;
 pub mod circuits;
 pub mod season_results;
 
+pub mod backfill;
 pub mod engineering;

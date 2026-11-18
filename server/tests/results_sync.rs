@@ -369,3 +369,61 @@ async fn test_split_sync_targets_fetch_and_preserve_results_and_both_standings()
         }
     }
 }
+
+#[tokio::test]
+async fn test_backfill_rerun_preserves_recorded_qualifying_revision() {
+    use pitpulse_server::services::backfill;
+    let calendar: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-2021-calendar.json")).unwrap();
+    let qualifying: Value =
+        serde_json::from_str(include_str!("fixtures/jolpica-2021-qualifying.json")).unwrap();
+    let races = json!({"MRData":{"RaceTable":{"Races":[{"round":"1","Results":[{"Driver":{"driverId":"leclerc"},"points":"6"}]}]}}});
+    let app = Router::new()
+        .route(
+            "/f1/alpha/schedules/2021/",
+            get(move || async { Json(calendar) }),
+        )
+        .route("/ergast/f1/2021/drivers.json", get(mock_drivers))
+        .route("/ergast/f1/2021/constructors.json", get(mock_constructors))
+        .route(
+            "/ergast/f1/2021/driverStandings.json",
+            get(mock_driver_standings),
+        )
+        .route(
+            "/ergast/f1/2021/constructorStandings.json",
+            get(mock_constructor_standings),
+        )
+        .route(
+            "/ergast/f1/2021/results.json",
+            get(move || async { Json(races) }),
+        )
+        .route(
+            "/ergast/f1/2021/sprint.json",
+            get(|| async { Json(json!({"MRData":{"RaceTable":{"Races":[]}}})) }),
+        )
+        .route(
+            "/f1/alpha/results/round_3plLtO9q/Q/",
+            get(move || async { Json(qualifying) }),
+        )
+        .fallback(|| async { Json(json!({"data":{"results":[]}})) });
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let upstream = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let temp = TempDir::new().unwrap();
+    let db = Database::open(&temp.path().join("backfill.sqlite"))
+        .await
+        .unwrap();
+    db.migrate().await.unwrap();
+    let mut state = AppState::new(AppConfig::default(), db.clone());
+    state.jolpica = JolpicaProvider::with_base_url(reqwest::Client::new(), base.clone());
+    state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), base);
+    for resume in [false, false, true] {
+        backfill::run(state.clone(), backfill::seasons("2021").unwrap(), resume)
+            .await
+            .unwrap();
+        let (rows, meta) = db.session_results("2021:1:qualifying").await.unwrap();
+        assert_eq!((rows.len(), meta.revision), (20, 1));
+        assert_eq!(db.calendar(Some(2021)).await.unwrap().0.len(), 1);
+    }
+    upstream.abort();
+}

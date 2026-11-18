@@ -12,12 +12,27 @@ async fn main() -> anyhow::Result<()> {
 
     let config_path = std::env::var("F1_COMPANION_CONFIG").ok().map(PathBuf::from);
     let config = AppConfig::load(config_path.as_deref())?;
+    let args: Vec<_> = std::env::args().skip(1).collect();
+    let (args, resume) = match args.strip_suffix(&[String::from("--resume")]) {
+        Some(prefix) if !prefix.is_empty() => (prefix, true),
+        _ => (args.as_slice(), false),
+    };
+    let seasons = match args {
+        [] => None,
+        [command, option, range] if command == "backfill" && option == "--season" => {
+            Some(pitpulse_server::services::backfill::seasons(range)?)
+        }
+        _ => anyhow::bail!("usage: pitpulse-server [backfill --season 2021..2026 [--resume]]"),
+    };
     tracing::info!(bind = %config.server.bind, db = %config.database.path.display(), "starting PitPulse");
 
     let database = Database::open(&config.database.path).await?;
     database.migrate().await?;
 
     let state = AppState::new(config, database);
+    if let Some(seasons) = seasons {
+        return pitpulse_server::services::backfill::run(state, seasons, resume).await;
+    }
     let background = scheduler::spawn(state.clone());
 
     let result = server::serve(state).await;
@@ -27,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
 fn install_tracing() -> anyhow::Result<()> {
     let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
         .with_target(false)
         .with_thread_ids(false);
     tracing_subscriber::registry()

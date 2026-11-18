@@ -181,7 +181,7 @@ impl ResultsSync {
             .iter()
             .filter_map(|driver| {
                 let number = driver["driver_number"].as_i64()?;
-                let canonical = identities.driver_for_number(number)?;
+                let canonical = identities.driver_for_roster(driver)?;
                 Some((
                     "openf1".to_string(),
                     number.to_string(),

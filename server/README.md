@@ -36,6 +36,16 @@ F1_COMPANION_DATABASE_PATH=/tmp/pitpulse.sqlite \
 ```
 
 
+## Historical season import
+
+Run the server executable with the same database configuration as the service. The range is inclusive. The command also accepts a single year.
+
+```sh
+pitpulse-server backfill --season 2021..2026 > coverage.jsonl
+```
+
+Each JSON line reports the season, round, session, stored row count, quality and any gap reason. A season-level failure produces a diagnostic line and a nonzero exit after the other seasons have run. Add `--resume` to skip stored classifications with at least 20 rows. Omit it to refresh official corrections. The 2021 and 2022 imports use Jolpica alone. Sprint qualifying appears only when the source schedules a separate session.
+
 ## 网页首页
 
 服务在 `/` 提供一个只读仪表盘，是自托管 VPS 部署后浏览器直接打开的入口，也支持添加到 iOS 主屏幕。使用哈希路由在五个视图间切换，刷新和直接打开链接都不会请求服务端路由：
