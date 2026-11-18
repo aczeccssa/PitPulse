@@ -2625,16 +2625,20 @@
         });
         const fullscreen = el("fullscreen-toggle");
         fullscreen.hidden = !document.fullscreenEnabled;
+        const syncFullscreen = () => {
+            const active = Boolean(document.fullscreenElement);
+            fullscreen.setAttribute("aria-pressed", String(active));
+            fullscreen.setAttribute("aria-label", active ? "退出全屏" : "进入全屏");
+            fullscreen.title = active ? "退出全屏" : "全屏";
+        };
+        syncFullscreen();
         fullscreen.addEventListener("click", async () => {
             try {
                 if (document.fullscreenElement) await document.exitFullscreen();
                 else await document.documentElement.requestFullscreen();
-            } catch { fullscreen.textContent = "全屏不可用"; }
+            } catch { fullscreen.hidden = true; }
         });
-        document.addEventListener("fullscreenchange", () => {
-            fullscreen.setAttribute("aria-pressed", String(!!document.fullscreenElement));
-            fullscreen.textContent = document.fullscreenElement ? "退出全屏" : "全屏";
-        });
+        document.addEventListener("fullscreenchange", syncFullscreen);
         document.addEventListener("click", (event) => {
             const button = event.target.closest("[data-standings]");
             if (button) setStandingsKind(button.dataset.standings);
