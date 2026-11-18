@@ -1275,8 +1275,13 @@
     }
 
     function flatFlag(meeting) {
-        const image = artImage("flat-flag", `/motorsport/flag-${String(meeting.countryCode || "").toLowerCase()}.png`);
-        image.alt = meeting.country || ""; return image;
+        // The calendar carries an alpha-2 code; the engineering reports only
+        // carry a country name, so fall back to the same table the server uses.
+        const code = String(meeting?.countryCode || engineeringCountry(meeting?.country || "") || "").toLowerCase();
+        const image = artImage("flat-flag", `/motorsport/flag-${code}.png`);
+        image.alt = meeting?.country || "";
+        image.onerror = () => image.remove();
+        return image;
     }
 
     function driverProfile(id, name, team) {
@@ -1892,7 +1897,7 @@
         });
     }
     function engineeringCountry(country) {
-        return ({ Australia: 'AU', China: 'CN', Japan: 'JP', Miami: 'US', Canada: 'CA', Monaco: 'MC', Spain: 'ES', Austria: 'AT', Britain: 'GB', 'Great Britain': 'GB', Belgium: 'BE', Hungary: 'HU', Netherlands: 'NL', Italy: 'IT', Azerbaijan: 'AZ', Qatar: 'QA', Singapore: 'SG', 'United States': 'US', Mexico: 'MX', Brazil: 'BR', 'São Paulo': 'BR', Malaysia: 'MY', Bahrain: 'BH', 'Saudi Arabia': 'SA', 'Abu Dhabi': 'AE' })[country] || '';
+        return ({ Australia: 'AU', China: 'CN', Japan: 'JP', Miami: 'US', Canada: 'CA', Monaco: 'MC', Spain: 'ES', Austria: 'AT', Britain: 'GB', 'Great Britain': 'GB', Belgium: 'BE', Hungary: 'HU', Netherlands: 'NL', Italy: 'IT', Azerbaijan: 'AZ', Qatar: 'QA', Singapore: 'SG', 'United States': 'US', Mexico: 'MX', Brazil: 'BR', 'São Paulo': 'BR', Malaysia: 'MY', Bahrain: 'BH', 'Saudi Arabia': 'SA', 'Abu Dhabi': 'AE', Portugal: 'PT', France: 'FR', Russia: 'RU', Turkey: 'TR' })[country] || '';
     }
     function techRoundCharts(rows, seasonData, major, preference) {
         const teamOrder = ['mclaren', 'ferrari', 'red_bull', 'mercedes', 'aston_martin', 'haas', 'alpine', 'rb', 'williams', 'audi', 'cadillac'];

@@ -444,6 +444,17 @@ mod motorsport_assets_tests {
     }
 
     #[test]
+    fn every_country_code_has_a_flag() {
+        for code in crate::domain::country::ALPHA2_CODES {
+            let name = format!("flag-{}.png", code.to_ascii_lowercase());
+            assert!(
+                MOTORSPORT_LEGACY_ASSETS.iter().any(|(key, _)| *key == name),
+                "no flag artwork for {code} ({name})"
+            );
+        }
+    }
+
+    #[test]
     fn legacy_flags_stay_on_the_flat_path() {
         assert!(
             MOTORSPORT_LEGACY_ASSETS

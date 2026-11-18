@@ -72,6 +72,26 @@ const COUNTRIES: &[(&str, &str)] = &[
     ("sg", "SG"),
     ("sgp", "SG"),
     ("singapore", "SG"),
+    ("fr", "FR"),
+    ("fra", "FR"),
+    ("france", "FR"),
+    ("pt", "PT"),
+    ("prt", "PT"),
+    ("portugal", "PT"),
+    ("ru", "RU"),
+    ("rus", "RU"),
+    ("russia", "RU"),
+    ("tr", "TR"),
+    ("tur", "TR"),
+    ("turkey", "TR"),
+    ("turkiye", "TR"),
+];
+
+/// Every alpha-2 code the table can return. The dashboard ships one flag per
+/// code, so a new venue needs a new entry here and a matching flag file.
+pub const ALPHA2_CODES: &[&str] = &[
+    "AE", "AT", "AU", "AZ", "BE", "BH", "BR", "CA", "CN", "ES", "FR", "GB", "HU", "IT", "JP", "MC",
+    "MX", "MY", "NL", "PT", "QA", "RU", "SA", "SG", "TR", "US",
 ];
 
 pub fn country_code(value: &str) -> Option<String> {
@@ -110,6 +130,52 @@ mod tests {
             ("GBR", "GB"),
         ] {
             assert_eq!(country_code(input).as_deref(), Some(expected), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_every_modern_venue_has_a_code() {
+        // Every country the 2021-2026 calendars visit must resolve, otherwise
+        // the dashboard requests /motorsport/flag-.png and renders no flag.
+        for (input, expected) in [
+            ("Australia", "AU"),
+            ("Austria", "AT"),
+            ("Azerbaijan", "AZ"),
+            ("Bahrain", "BH"),
+            ("Belgium", "BE"),
+            ("Brazil", "BR"),
+            ("Canada", "CA"),
+            ("China", "CN"),
+            ("France", "FR"),
+            ("Hungary", "HU"),
+            ("Italy", "IT"),
+            ("Japan", "JP"),
+            ("Malaysia", "MY"),
+            ("Mexico", "MX"),
+            ("Monaco", "MC"),
+            ("Netherlands", "NL"),
+            ("Portugal", "PT"),
+            ("Qatar", "QA"),
+            ("Russia", "RU"),
+            ("Saudi Arabia", "SA"),
+            ("Singapore", "SG"),
+            ("Spain", "ES"),
+            ("Turkey", "TR"),
+            ("UAE", "AE"),
+            ("UK", "GB"),
+            ("USA", "US"),
+        ] {
+            assert_eq!(country_code(input).as_deref(), Some(expected), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_every_alias_returns_a_declared_code() {
+        for (alias, code) in super::COUNTRIES {
+            assert!(
+                super::ALPHA2_CODES.contains(code),
+                "{alias} maps to undeclared code {code}"
+            );
         }
     }
 
