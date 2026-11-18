@@ -339,7 +339,34 @@ impl IdentityMaps {
                         .map(|value| value.to_string())
                         .or_else(|| row[field].as_str().map(str::to_string))
                 };
-                let time = seconds("duration");
+                let qualifying_phase = |index: usize| {
+                    row["duration"][index]
+                        .as_f64()
+                        .filter(|seconds| *seconds > 0.0)
+                        .map(|seconds| {
+                            let millis = (seconds * 1000.0).round() as u64;
+                            format!(
+                                "{}:{:02}.{:03}",
+                                millis / 60_000,
+                                millis / 1000 % 60,
+                                millis % 1000
+                            )
+                        })
+                };
+                let (q1, q2, q3) = if matches!(
+                    session_type,
+                    SessionType::Qualifying | SessionType::SprintQualifying
+                ) {
+                    (
+                        qualifying_phase(0),
+                        qualifying_phase(1),
+                        qualifying_phase(2),
+                    )
+                } else {
+                    (None, None, None)
+                };
+                let time = seconds("duration")
+                    .or_else(|| q3.clone().or_else(|| q2.clone()).or_else(|| q1.clone()));
                 let best_lap = matches!(
                     session_type,
                     SessionType::Fp1 | SessionType::Fp2 | SessionType::Fp3
@@ -368,9 +395,9 @@ impl IdentityMaps {
                     team: team_name.to_string(),
                     time: time.clone(),
                     best_lap,
-                    q1: None,
-                    q2: None,
-                    q3: None,
+                    q1,
+                    q2,
+                    q3,
                     race_time: matches!(session_type, SessionType::Race | SessionType::Sprint)
                         .then_some(time)
                         .flatten(),
@@ -788,6 +815,20 @@ mod tests {
         assert_eq!(results[0].driver_id, "leclerc");
         assert_eq!(results[0].constructor_id, "ferrari");
         assert_eq!(results[0].race_time.as_deref(), Some("82.4"));
+
+        let sprint_qualifying_rows = [serde_json::json!({
+            "driver_number":16,"position":1,"duration":[65.69,65.186,64.686]
+        })];
+        let (qualifying, _) = source.decode_openf1_results(
+            &sprint_qualifying_rows,
+            &drivers,
+            "session",
+            SessionType::SprintQualifying,
+            1,
+            "2026-10-09T00:00:00Z",
+        );
+        assert_eq!(qualifying[0].q1.as_deref(), Some("1:05.690"));
+        assert_eq!(qualifying[0].q3.as_deref(), Some("1:04.686"));
 
         let practice_rows = [serde_json::json!({
             "driver_number":16,"position":1,"duration":82.4,

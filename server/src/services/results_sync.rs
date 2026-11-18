@@ -301,8 +301,10 @@ impl ResultsSync {
             }
         } else {
             let primary = alpha.await;
-            if session.session_type == SessionType::Sprint
-                && self.openf1.enabled
+            if matches!(
+                session.session_type,
+                SessionType::Sprint | SessionType::SprintQualifying
+            ) && self.openf1.enabled
                 && session.openf1_session_key.is_some()
                 && match &primary {
                     Ok((candidate, _)) => candidate.rows.is_empty(),

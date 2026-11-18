@@ -118,7 +118,13 @@ async fn import_season(state: &AppState, season: i64, resume: bool) -> Result<()
                 reason = Some("cancelled".into());
             } else if session.start_time >= now {
                 reason = Some("scheduled".into());
-            } else if !resume || existing.len() < 20 {
+            } else if !resume
+                || existing.len() < 20
+                || session.session_type == SessionType::SprintQualifying
+                    && existing
+                        .iter()
+                        .any(|row| row.q1.as_deref().is_some_and(|time| !time.contains(':')))
+            {
                 let mut outcome =
                     retry(|| primary.sync_session_once(db, &meeting, session, &identities)).await;
                 if results.openf1.enabled
@@ -129,6 +135,7 @@ async fn import_season(state: &AppState, season: i64, resume: bool) -> Result<()
                             | SessionType::Fp2
                             | SessionType::Fp3
                             | SessionType::Sprint
+                            | SessionType::SprintQualifying
                     )
                     && !matches!(outcome, Ok(SyncOutcome::Stored { .. }))
                 {
