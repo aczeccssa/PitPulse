@@ -1025,10 +1025,10 @@
         }
         root.replaceChildren();
         const heading = node("header", "season-heading racing-page-head");
-        heading.append(node("h1", "", `${seasonYear(meetings)} F1 Season Results`), seasonSelector(seasonYear(meetings), value => { location.hash = `#/results?season=${value}`; }));
+        heading.append(node("h1", "", `${seasonYear(meetings)} F1 Season Results`));
         root.append(heading);
         const controls = node("div", "season-controls");
-        controls.append(node("span", "", "SEASON STATS"));
+        controls.append(seasonSelector(seasonYear(meetings), value => { location.hash = `#/results?season=${value}`; }), node("span", "", "SEASON STATS"));
         const modes = node("div", "segmented");
         for (const [value, label] of [["race", "Race"], ["sprint", "Sprint"], ["combined", "Combined"]]) {
             const button = node("button", value === seasonResults.mode ? "is-active" : "", label);
