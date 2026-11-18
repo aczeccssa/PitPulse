@@ -4,8 +4,15 @@
     "use strict";
 
     const ROUTES = ["home", "standings", "results", "drivers", "head-to-head", "consistency", "tech-updates", "pu-elements", "destructors-championship"];
-    // The dashboard only carries 2021 onward; the server never offers older seasons.
-    const FIRST_SEASON = 2021;
+    // The dashboard carries 2024 onward; older seasons were removed from the
+    // archive and the server never offers them.
+    const FIRST_SEASON = 2024;
+    const LAST_SEASON = () => Math.max(new Date().getFullYear(), Number(state.driversStandings[0]?.season) || 0);
+    function seasonYears() {
+        const years = [];
+        for (let year = LAST_SEASON(); year >= FIRST_SEASON; year--) years.push(year);
+        return years;
+    }
     const VIEW_TITLES = {
         home: "Home",
         standings: "积分榜",
@@ -750,7 +757,8 @@
         useSeason(season);
         if (!rows.length) { panel.hidden = true; empty.hidden = false; empty.textContent = 'No standings available.'; return; }
         loadStandingsHistory(season);
-        el('standings-page-season').textContent = `Season ${season}`; el('standings-page-meta').textContent = `${constructors ? 'Constructors' : 'Drivers'} ${rows.length}`;
+        el('standings-page-season').replaceChildren(seasonSelector(season, value => { location.hash = `#/${constructors ? 'constructor' : 'driver'}-standings?season=${value}`; }));
+        el('standings-page-meta').textContent = `${constructors ? 'Constructors' : 'Drivers'} ${rows.length}`;
         el('view-standings').querySelector('.page-head h1').textContent = `${noun} Standings`;
         if (state.view === 'standings') el('workspace-title').textContent = `${noun} Standings`;
         const fullModel = standingsModel(constructors), leader = fullModel.records[0], preference = standingsPreference(season, constructors);
@@ -1017,7 +1025,7 @@
         }
         root.replaceChildren();
         const heading = node("header", "season-heading racing-page-head");
-        heading.append(node("h1", "", `${seasonYear(meetings)} F1 Season Results`), node("span", "season-badge", `赛季 ${seasonYear(meetings)}`));
+        heading.append(node("h1", "", `${seasonYear(meetings)} F1 Season Results`), seasonSelector(seasonYear(meetings), value => { location.hash = `#/results?season=${value}`; }));
         root.append(heading);
         const controls = node("div", "season-controls");
         controls.append(node("span", "", "SEASON STATS"));
@@ -1029,7 +1037,7 @@
             button.onclick = () => { seasonResults.mode = value; renderSeasonResults(); };
             modes.append(button);
         }
-        controls.append(modes); heading.append(controls); heading.querySelector(".season-badge").remove();
+        controls.append(modes); heading.append(controls); heading.querySelector(".season-badge")?.remove();
         root.append(node("p", "season-load-status", seasonResults.loading ? "Loading season results…" : `${seasonResults.entries.filter(e => e.sessions.race?.rows.length).length} races with results · Synced data only${seasonResults.failed ? " · Could not load some results. Refresh to retry." : ""}${seasonResults.entries.some(e => Object.values(e.sessions).some(s => s.meta?.stale)) ? " · Includes stale data" : ""}`));
         const entries = seasonResults.entries.filter(entry => Object.values(entry.sessions).some(session => (session.rows || []).length > 0));
         const types = seasonResults.mode === "combined" ? ["race", "sprint"] : [seasonResults.mode];
@@ -1378,14 +1386,18 @@
         select.onchange = () => onchange(select.value); wrapper.append(select); return wrapper;
     }
 
+    // One season switcher for every tab: the choice lives in the URL so moving
+    // between tabs keeps the year, and every tab offers the same list.
+    function seasonSelector(season, onchange, label = 'Season') {
+        return driverSelector(label, season, seasonYears().map(year => [year, year]), onchange);
+    }
+
     function driverPageHead(root, title, data, detail = false) {
         const head = node('header', 'page-head racing-page-head'), filters = node('div', 'racing-page-filters');
         const heading = node('div', 'racing-title');
         if (detail) { const back = node('a', 'driver-back', '← Drivers'); back.href = driverPageHref('drivers'); heading.append(back); }
         heading.append(node('h1', '', title)); head.append(heading, filters); root.append(head);
-        const latest = Number(state.driversStandings[0]?.season) || new Date().getFullYear();
-        const years = [...new Set([driverPages.season, ...Array.from({ length: 7 }, (_, i) => latest - i)])].sort((a, b) => b - a);
-        filters.append(driverSelector('Season', driverPages.season, years.map(y => [y, y]), value => {
+        filters.append(driverSelector('Season', driverPages.season, seasonYears().map(y => [y, y]), value => {
             const route = state.view === 'driver-stats' ? `drivers/${encodeURIComponent(driverPages.driver)}` : state.view;
             location.hash = driverPageHref(route, { season: value, ...(state.view === 'head-to-head' ? { team: driverPages.team, driver1: driverPages.first, driver2: driverPages.second } : state.view === 'consistency' ? { excludeDnf: driverPages.excludeDnf ? '1' : '0' } : {}) });
         }));
@@ -1895,9 +1907,7 @@
     function engineeringHead(root, title, view, season) {
         const head = node('header', 'page-head racing-page-head'), filters = node('div', 'racing-page-filters engineering-filters');
         head.append(node('h1', '', title), filters); root.append(head);
-        const latest = Math.max(new Date().getFullYear(), Number(state.driversStandings[0]?.season) || 0);
-        const years = [...new Set([season, ...Array.from({ length: 6 }, (_, i) => Math.max(FIRST_SEASON, latest - i))])].sort((a, b) => b - a);
-        filters.append(driverSelector('Season', season, years.map(y => [y, y]), value => { location.hash = `#/${view}?season=${value}`; })); return filters;
+        filters.append(driverSelector('Season', season, seasonYears().map(y => [y, y]), value => { location.hash = `#/${view}?season=${value}`; })); return filters;
     }
     function engineeringStatus(root, data, view) {
         const unavailable = data.error || (view === 'tech-updates' ? data.meta.unavailable : view === 'destructors-championship' ? data.meta.sections?.incidents?.unavailable : Object.values(data.meta.sections || {}).every(meta => meta.unavailable));

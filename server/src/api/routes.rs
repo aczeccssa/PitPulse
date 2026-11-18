@@ -395,6 +395,14 @@ fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiErro
             error: "season must be between 1950 and 9999".to_string(),
         });
     }
+    // Seasons before the product range were removed from the archive. Refusing
+    // them here also stops the on-demand refresh from importing them again.
+    if season.is_some_and(|year| year < crate::services::FIRST_SEASON) {
+        return Err(ApiError::NotOffered {
+            section: "season".to_string(),
+            first_season: crate::services::FIRST_SEASON,
+        });
+    }
     Ok(season)
 }
 

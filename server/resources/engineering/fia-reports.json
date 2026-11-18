@@ -1,27 +1,5 @@
 [
   {
-    "season": 2021,
-    "round": 22,
-    "country": "UAE",
-    "kind": "usage",
-    "expectedTeams": 10,
-    "publishedAt": null,
-    "documentDate": "2021-12-09",
-    "documentLocalTime": "13:30",
-    "url": "https://www.fia.com/sites/default/files/doc_2_-_2021_abu_dhabi_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf"
-  },
-  {
-    "season": 2022,
-    "round": 22,
-    "country": "UAE",
-    "kind": "usage",
-    "expectedTeams": 10,
-    "publishedAt": null,
-    "documentDate": "2022-11-18",
-    "documentLocalTime": "10:00",
-    "url": "https://www.fia.com/sites/default/files/doc_5_-_2022_abu_dhabi_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf"
-  },
-  {
     "season": 2025,
     "round": 24,
     "country": "UAE",

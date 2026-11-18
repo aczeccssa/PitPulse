@@ -278,7 +278,7 @@ async fn session_context(
         .split(':')
         .next()
         .and_then(|s| s.parse::<i64>().ok())
-        .filter(|s| (2000..=2100).contains(s))
+        .filter(|s| (crate::services::FIRST_SEASON..=2100).contains(s))
         .ok_or_else(|| invalid("invalid session"))?;
     let meetings = state.database.calendar(Some(season)).await?.0;
     let (meeting, session) = meetings
@@ -436,8 +436,15 @@ pub async fn season_analysis(
     let season = query
         .get("season")
         .and_then(|s| s.parse::<i64>().ok())
-        .filter(|s| (2000..=2100).contains(s))
+        .filter(|s| (1950..=2100).contains(s))
         .ok_or_else(|| invalid("invalid season"))?;
+    if season < crate::services::FIRST_SEASON {
+        return Err(ApiError::NotOffered {
+            section: "season".to_string(),
+            first_season: crate::services::FIRST_SEASON,
+        });
+    }
+
     if !["drivers", "constructors"].contains(&kind.as_str()) {
         return Err(ApiError::NotFound);
     }

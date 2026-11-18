@@ -1,3 +1,6 @@
+/// Oldest season the archive and every seasonal endpoint still carry.
+pub const FIRST_SEASON: i64 = 2024;
+
 pub mod analysis;
 pub mod live_state;
 pub mod reconcile;

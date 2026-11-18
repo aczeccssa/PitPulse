@@ -72,26 +72,13 @@ const COUNTRIES: &[(&str, &str)] = &[
     ("sg", "SG"),
     ("sgp", "SG"),
     ("singapore", "SG"),
-    ("fr", "FR"),
-    ("fra", "FR"),
-    ("france", "FR"),
-    ("pt", "PT"),
-    ("prt", "PT"),
-    ("portugal", "PT"),
-    ("ru", "RU"),
-    ("rus", "RU"),
-    ("russia", "RU"),
-    ("tr", "TR"),
-    ("tur", "TR"),
-    ("turkey", "TR"),
-    ("turkiye", "TR"),
 ];
 
 /// Every alpha-2 code the table can return. The dashboard ships one flag per
 /// code, so a new venue needs a new entry here and a matching flag file.
 pub const ALPHA2_CODES: &[&str] = &[
-    "AE", "AT", "AU", "AZ", "BE", "BH", "BR", "CA", "CN", "ES", "FR", "GB", "HU", "IT", "JP", "MC",
-    "MX", "MY", "NL", "PT", "QA", "RU", "SA", "SG", "TR", "US",
+    "AE", "AT", "AU", "AZ", "BE", "BH", "BR", "CA", "CN", "ES", "GB", "HU", "IT", "JP", "MC", "MX",
+    "MY", "NL", "QA", "SA", "SG", "US",
 ];
 
 pub fn country_code(value: &str) -> Option<String> {
@@ -146,7 +133,6 @@ mod tests {
             ("Brazil", "BR"),
             ("Canada", "CA"),
             ("China", "CN"),
-            ("France", "FR"),
             ("Hungary", "HU"),
             ("Italy", "IT"),
             ("Japan", "JP"),
@@ -154,13 +140,10 @@ mod tests {
             ("Mexico", "MX"),
             ("Monaco", "MC"),
             ("Netherlands", "NL"),
-            ("Portugal", "PT"),
             ("Qatar", "QA"),
-            ("Russia", "RU"),
             ("Saudi Arabia", "SA"),
             ("Singapore", "SG"),
             ("Spain", "ES"),
-            ("Turkey", "TR"),
             ("UAE", "AE"),
             ("UK", "GB"),
             ("USA", "US"),

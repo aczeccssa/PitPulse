@@ -16,6 +16,13 @@ pub async fn overview(
         .and_then(|v| v.parse::<i64>().ok())
         .filter(|v| (1950..=2100).contains(v))
         .ok_or(ApiError::NotFound)?;
+    if season < crate::services::FIRST_SEASON {
+        return Err(ApiError::NotOffered {
+            section: "season".to_string(),
+            first_season: crate::services::FIRST_SEASON,
+        });
+    }
+
     let (meetings, meta) = state.database.calendar(Some(season)).await?;
     let history = state
         .database

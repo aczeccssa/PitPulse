@@ -52,7 +52,7 @@ FLAG_CDN = "https://flagcdn.com/w80"
 COUNTRY_SOURCE = REPO / "server/src/domain/country.rs"
 FLAG_DIR = REPO / "server/resources/web/motorsport"
 
-SEASONS = (2021, 2022, 2023, 2024, 2025, 2026)
+SEASONS = (2024, 2025, 2026)
 KINDS = ("driver-photo", "helmet", "car-side", "team-logo")
 
 # Official CDN artwork is season-scoped from 2024 on. Earlier seasons answer
