@@ -4,6 +4,8 @@
     "use strict";
 
     const ROUTES = ["home", "standings", "results", "drivers", "head-to-head", "consistency", "tech-updates", "pu-elements", "destructors-championship"];
+    // The dashboard only carries 2021 onward; the server never offers older seasons.
+    const FIRST_SEASON = 2021;
     const VIEW_TITLES = {
         home: "Home",
         standings: "积分榜",
@@ -1797,6 +1799,49 @@
 
     /* ---------- Technical updates and power unit allocation ---------- */
     const engineeringPages = { cache: new Map(), preferences: new Map() };
+
+    // The server states which engineering sections exist for a season. Sections
+    // it does not offer are removed from the navigation and never requested, so
+    // an older season cannot show an empty table or a zero total.
+    const SEASON_FEATURES = new Map();
+    const SECTION_FEATURE = { 'pu-elements': 'powerUnit', 'destructors-championship': 'destructors' };
+
+    function sectionFeature(view) { return SECTION_FEATURE[view] || null; }
+
+    function sectionOffered(view, season) {
+        const key = sectionFeature(view);
+        if (!key) return true;
+        const features = SEASON_FEATURES.get(Number(season));
+        return !features || features[key] !== false;
+    }
+
+    function loadFeatures(season) {
+        const year = Number(season);
+        if (SEASON_FEATURES.has(year)) return SEASON_FEATURES.get(year);
+        SEASON_FEATURES.set(year, null);
+        api(`/api/v1/features?season=${year}`).then(({ body }) => {
+            SEASON_FEATURES.set(year, body.data || {});
+        }).catch(() => {
+            SEASON_FEATURES.delete(year);
+        }).finally(() => {
+            syncSectionNav(year);
+            if (driverPages.season !== year) return;
+            if (SECTION_FEATURE[state.view]) applyRoute();
+            else if (state.view !== 'home') renderDriverPages();
+        });
+        return null;
+    }
+
+    function syncSectionNav(season = requestedSeason() || driverPages.season) {
+        if (!season) return;
+        // The navigation is the only place that knows a section exists, so it
+        // resolves the capability map even when the reader never opens it.
+        if (!SEASON_FEATURES.has(Number(season))) loadFeatures(season);
+        for (const view of Object.keys(SECTION_FEATURE)) {
+            const offered = sectionOffered(view, season);
+            for (const link of document.querySelectorAll(`[data-route="${view}"]`)) link.hidden = !offered;
+        }
+    }
     function engineeringPreference(view, season) {
         const key = `${view}:${season}`;
         if (!engineeringPages.preferences.has(key)) engineeringPages.preferences.set(key, { teams: null, types: null, reasons: null, drivers: null, elements: null, major: false });
@@ -1851,7 +1896,7 @@
         const head = node('header', 'page-head racing-page-head'), filters = node('div', 'racing-page-filters engineering-filters');
         head.append(node('h1', '', title), filters); root.append(head);
         const latest = Math.max(new Date().getFullYear(), Number(state.driversStandings[0]?.season) || 0);
-        const years = [...new Set([season, ...Array.from({ length: 7 }, (_, i) => latest - i)])].sort((a, b) => b - a);
+        const years = [...new Set([season, ...Array.from({ length: 6 }, (_, i) => Math.max(FIRST_SEASON, latest - i))])].sort((a, b) => b - a);
         filters.append(driverSelector('Season', season, years.map(y => [y, y]), value => { location.hash = `#/${view}?season=${value}`; })); return filters;
     }
     function engineeringStatus(root, data, view) {
@@ -2195,7 +2240,9 @@
             const svg = standingsSvg(180, 125, `${meeting.circuit?.name || meeting.country} circuit outline`); svg.classList.add('home-track-outline');
             const defs = chartShape(svg, 'defs', {}), gradient = chartShape(defs, 'linearGradient', { id: `track-gradient-${season}`, x1: '0%', y1: '0%', x2: '100%', y2: '0%' });
             chartShape(gradient, 'stop', { offset: '0%', 'stop-color': '#1dd6b2' }); chartShape(gradient, 'stop', { offset: '100%', 'stop-color': 'var(--red)' });
-            const coords = points.map(p => [16 + (p[0] - minX) * scale, 12 + (p[1] - minY) * scale]);
+            // Center the scaled geometry, not its top-left padding, on the rotation axis.
+            const offsetX = (180 - width * scale) / 2, offsetY = (125 - height * scale) / 2;
+            const coords = points.map(p => [offsetX + (p[0] - minX) * scale, offsetY + (p[1] - minY) * scale]);
             const closed = Math.hypot(coords[0][0] - coords.at(-1)[0], coords[0][1] - coords.at(-1)[1]) < 2;
             const pathData = `M${coords.map(([x, y]) => `${x} ${y}`).join(' L')}${closed ? ' Z' : ''}`;
             chartShape(svg, 'path', { d: pathData, fill: 'none', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'home-track-base' });
@@ -2445,6 +2492,19 @@
             driverPages.first = query.get('driver1') || '';
             driverPages.second = query.get('driver2') || '';
             if (view === 'consistency') driverPages.excludeDnf = query.get('excludeDnf') === '1';
+            syncSectionNav(driverPages.season);
+            // A section the server does not offer for this season is removed,
+            // not shown empty: wait for the capability map, then fall back to a
+            // sibling section of the same season.
+            if (sectionFeature(view)) {
+                const season = driverPages.season;
+                const features = SEASON_FEATURES.get(Number(season));
+                if (!features) { loadFeatures(season); return; }
+                if (features[sectionFeature(view)] === false) {
+                    location.hash = `#/tech-updates?season=${season}`;
+                    return;
+                }
+            }
         }
         el("workspace-title").textContent = VIEW_TITLES[view];
         document.body.dataset.view = view;

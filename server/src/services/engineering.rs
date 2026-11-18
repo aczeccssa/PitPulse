@@ -18,6 +18,32 @@ fn season(params: &HashMap<String, String>) -> Result<i64, ApiError> {
         })
 }
 
+/// Engineering archives only cover the seasons the collector actually
+/// imported. Earlier seasons are not offered at all, so clients remove the
+/// section instead of showing an empty table or a zero total.
+pub const POWER_UNIT_FIRST_SEASON: i64 = 2025;
+pub const DESTRUCTORS_FIRST_SEASON: i64 = 2026;
+
+/// Which engineering sections exist for a season. This is the single place the
+/// server states availability; the dashboard hides what is not offered.
+pub fn features(year: i64) -> Value {
+    json!({
+        "season": year,
+        "powerUnit": year >= POWER_UNIT_FIRST_SEASON,
+        "destructors": year >= DESTRUCTORS_FIRST_SEASON,
+    })
+}
+
+fn ensure_offered(section: &str, year: i64, first_season: i64) -> Result<(), ApiError> {
+    if year >= first_season {
+        return Ok(());
+    }
+    Err(ApiError::NotOffered {
+        section: section.to_string(),
+        first_season,
+    })
+}
+
 fn empty_report(resource: &str) -> Value {
     let data = if resource.starts_with("home-") {
         json!({})
@@ -112,6 +138,14 @@ async fn report(state: &AppState, resource: &str, year: i64) -> Result<Value, Ap
     Ok(select_report(fia, legacy, resource))
 }
 
+/// Capability map for one season; the dashboard hides sections it does not
+/// offer instead of rendering an empty archive.
+pub async fn season_features(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    Ok(Json(json!({"data": features(season(&params)?)})))
+}
+
 pub async fn tech(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
@@ -126,6 +160,7 @@ pub async fn power_unit(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Value>, ApiError> {
     let year = season(&params)?;
+    ensure_offered("power-unit", year, POWER_UNIT_FIRST_SEASON)?;
     let usage = report(&state, "used-elements", year).await?;
     let elements = report(&state, "elements", year).await?;
     let penalties = report(&state, "used-elements/penalties", year).await?;
@@ -142,6 +177,7 @@ pub async fn destructors(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Value>, ApiError> {
     let year = season(&params)?;
+    ensure_offered("destructors", year, DESTRUCTORS_FIRST_SEASON)?;
     let incidents = report(&state, "destructors-championship", year).await?;
     let corrections = report(&state, "destructors-championship-diffs", year).await?;
     Ok(Json(
@@ -185,6 +221,18 @@ mod tests {
             2026
         );
     }
+    #[test]
+    fn test_sections_are_not_offered_before_their_first_season() {
+        assert_eq!(features(2024)["powerUnit"], false);
+        assert_eq!(features(2025)["powerUnit"], true);
+        assert_eq!(features(2025)["destructors"], false);
+        assert_eq!(features(2026)["destructors"], true);
+        assert!(ensure_offered("power-unit", 2024, POWER_UNIT_FIRST_SEASON).is_err());
+        assert!(ensure_offered("power-unit", 2025, POWER_UNIT_FIRST_SEASON).is_ok());
+        assert!(ensure_offered("destructors", 2025, DESTRUCTORS_FIRST_SEASON).is_err());
+        assert!(ensure_offered("destructors", 2026, DESTRUCTORS_FIRST_SEASON).is_ok());
+    }
+
     #[test]
     fn missing_report_does_not_claim_zero_or_upstream_failure() {
         let report = empty_report("home-crashes");

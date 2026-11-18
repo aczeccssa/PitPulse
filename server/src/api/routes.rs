@@ -51,6 +51,10 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             get(crate::services::engineering::destructors),
         )
         .route(
+            "/api/v1/features",
+            get(crate::services::engineering::season_features),
+        )
+        .route(
             "/api/v1/results/season",
             get(crate::services::season_results::overview),
         )

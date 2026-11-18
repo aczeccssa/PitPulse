@@ -102,6 +102,11 @@ pub enum ApiError {
     #[error("resource not found")]
     NotFound,
 
+    /// A section the product does not offer for this season. It is not a
+    /// missing record: clients must hide the section instead of retrying.
+    #[error("{section} is not offered before {first_season}")]
+    NotOffered { section: String, first_season: i64 },
+
     #[error("invalid query parameter {field}: {error}")]
     InvalidQuery { field: String, error: String },
 
@@ -126,6 +131,19 @@ impl IntoResponse for ApiError {
             Self::NotFound => (
                 StatusCode::NOT_FOUND,
                 Json(json!({"error": {"code": "not_found", "message": "resource not found"}})),
+            )
+                .into_response(),
+            Self::NotOffered {
+                section,
+                first_season,
+            } => (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": {
+                    "code": "not_offered",
+                    "section": section,
+                    "firstSeason": first_season,
+                    "message": format!("{section} is offered from {first_season} on")
+                }})),
             )
                 .into_response(),
             Self::RefreshQueueFull => (
