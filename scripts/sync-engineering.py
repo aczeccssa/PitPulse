@@ -203,7 +203,7 @@ def rebuild(connection, season, now):
         selected = [r for r in reports if r["data"]["kind"] == kind]
         if not selected:
             continue
-        selected.sort(key=lambda r: (r["data"]["round"], r["meta"]["publishedAt"]))
+        selected.sort(key=lambda r: (r["data"]["round"], r["meta"].get("publishedAt") or ""))
         # Keep the latest successfully parsed document for each round.
         per_round = {r["data"]["round"]: r for r in selected}
         rows = ([row for report in per_round.values() for row in report["data"]["rows"]]
@@ -224,7 +224,8 @@ def rebuild(connection, season, now):
         if kind == "usage":
             # Usage reports define columns, not sporting allocations. Until a
             # regulation is imported, display counts without invented limits.
-            elements = [{"code": code, "name": name, "quota": None} for code, name in ELEMENTS]
+            codes = list(rows[0]["used"]) if rows else []
+            elements = [{"code": code, "name": ELEMENT_NAMES[code], "quota": None} for code in codes]
             save(connection, f"pitpulse:fia:elements:{season}", elements, {**meta, "allocationsAvailable": False})
 
 
