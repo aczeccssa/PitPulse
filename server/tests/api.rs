@@ -35,6 +35,75 @@ async fn test_health_without_required_token_returns_ok() {
     assert_eq!(response.status(), StatusCode::OK);
 }
 
+#[tokio::test]
+async fn incomplete_fia_archive_serves_complete_legacy_season_record() {
+    let (state, _temp) = test_state().await;
+    // While the FIA archive is incomplete, the reader keeps the complete
+    // legacy season record visible instead of serving an empty report.
+    state
+        .database
+        .save_analysis_cache(
+            "engineering:tech-updates:2026",
+            &serde_json::json!({"data":[{"team":"legacy season record"}],"meta":{"source":"legacy","unavailable":false}}),
+        )
+        .await
+        .unwrap();
+
+    let response = server::router(state)
+        .oneshot(get("/api/v1/tech-updates?season=2026"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    // Fallback keeps the full season visible until the FIA archive is complete.
+    assert_eq!(
+        body["data"],
+        serde_json::json!([{"team":"legacy season record"}])
+    );
+    assert_eq!(body["meta"]["unavailable"], false);
+}
+
+#[tokio::test]
+async fn engineering_authors_to_complete_fia_archive_takes_precedence() {
+    let (state, _temp) = test_state().await;
+    // Once the FIA archive reports complete coverage it is authoritative, even
+    // when a legacy season record still exists.
+    state
+        .database
+        .save_analysis_cache(
+            "pitpulse:fia:tech-updates:2026",
+            &serde_json::json!({"data":[{"team":"fia archive"}],"meta":{"coverage":{"complete":true}}}),
+        )
+        .await
+        .unwrap();
+    state
+        .database
+        .save_analysis_cache(
+            "engineering:tech-updates:2026",
+            &serde_json::json!({"data":[{"team":"legacy season record"}],"meta":{"source":"legacy"}}),
+        )
+        .await
+        .unwrap();
+
+    let response = server::router(state)
+        .oneshot(get("/api/v1/tech-updates?season=2026"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(body["data"], serde_json::json!([{"team":"fia archive"}]));
+}
+
 const SHELL_PATHS: [(&str, &str); 5] = [
     ("/", "text/html; charset=utf-8"),
     ("/app.css", "text/css; charset=utf-8"),

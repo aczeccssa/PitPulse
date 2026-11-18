@@ -35,6 +35,23 @@ pub fn build_router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/api/v1/health", get(health))
         .route("/api/v1/calendar", get(calendar))
+        .route("/api/v1/home", get(crate::services::engineering::home))
+        .route(
+            "/api/v1/tech-updates",
+            get(crate::services::engineering::tech),
+        )
+        .route(
+            "/api/v1/pu-elements",
+            get(crate::services::engineering::power_unit),
+        )
+        .route(
+            "/api/v1/destructors-championship",
+            get(crate::services::engineering::destructors),
+        )
+        .route(
+            "/api/v1/results/season",
+            get(crate::services::season_results::overview),
+        )
         .route("/api/v1/meetings/next", get(next_meeting))
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route("/api/v1/standings/drivers", get(driver_standings))

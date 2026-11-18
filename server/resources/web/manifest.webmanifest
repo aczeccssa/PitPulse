@@ -1,7 +1,7 @@
 {
     "name": "PitPulse",
     "short_name": "PitPulse",
-    "description": "自托管 F1 赛历、积分与实时计时",
+    "description": "Pit Pulse - Formula 1 Live Timing",
     "lang": "zh-CN",
     "start_url": "/",
     "scope": "/",
@@ -16,7 +16,7 @@
             "purpose": "any"
         },
         {
-            "src": "/icon-512.png",
+            "src": "/icon-512.png", 
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"

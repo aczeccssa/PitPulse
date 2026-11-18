@@ -71,6 +71,12 @@ def main() -> None:
         if dark.exists():
             save_team(dark, f"team-{team}-dark.png")
 
+    # A white silhouette preserves the existing alpha mask on McLaren orange.
+    mclaren = Image.open(OUT / "team-mclaren.png").convert("RGBA")
+    contrast = Image.new("RGBA", mclaren.size, (255, 255, 255, 0))
+    contrast.putalpha(mclaren.getchannel("A"))
+    contrast.save(OUT / "team-mclaren-dark.png", optimize=True)
+
     for source in sorted(CATALOG.glob("helmet-*-2026.imageset/image.png")):
         slug = source.parent.name[len("helmet-") : -len("-2026.imageset")]
         image = fit(trimmed(source), height=HELMET_HEIGHT)

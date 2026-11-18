@@ -1,0 +1,19 @@
+[
+  {
+    "season": 2026,
+    "round": 20,
+    "country": "Brazil",
+    "kind": "tech",
+    "expectedTeams": 11,
+    "publishedAt": "2026-11-06T10:05:00Z",
+    "url": "https://www.fia.com/system/files/decision-document/2026_sao_paulo_grand_prix_-_car_presentation_submissions.pdf"
+  },
+  {
+    "season": 2026,
+    "round": 20,
+    "country": "Brazil",
+    "kind": "usage",
+    "publishedAt": "2026-11-06T08:34:00Z",
+    "url": "https://www.fia.com/system/files/decision-document/2026_sao_paulo_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf"
+  }
+]
