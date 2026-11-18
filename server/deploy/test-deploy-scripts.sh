@@ -131,9 +131,9 @@ shell_type = {
     "/manifest.webmanifest": "application/manifest+json",
 }
 denied = (
-    '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
-    "<title>PitPulse 需要访问权限</title></head>"
-    "<body><h1>需要访问权限</h1></body></html>"
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    "<title>PitPulse · Access Required</title></head>"
+    "<body><h1>Access Required</h1></body></html>"
 ).encode("utf-8")
 
 bootstrap = (
@@ -397,7 +397,7 @@ if "-w" in args and args.index("-w") + 1 < len(args):
 elif status == "200":
     print('<!doctype html><link rel="stylesheet" href="/app.css"><script src="/app.js"></script>', end="")
 else:
-    print('<!doctype html><p>需要访问权限</p>', end="")
+    print('<!doctype html><h1>Access Required</h1>', end="")
 PY
 chmod 0700 "$BROKEN_WEB_CURL"
 if PITPULSE_CURL="$BROKEN_WEB_CURL" check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check-broken" local >/dev/null 2>&1; then

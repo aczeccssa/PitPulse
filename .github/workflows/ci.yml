@@ -50,7 +50,7 @@ jobs:
           # The shell is part of the service: refused without a browser session.
           status="$(curl -sS -o "$tmp/denied.html" -w '%{http_code}' http://127.0.0.1:38711/)"
           test "$status" = "401"
-          grep -q '需要访问权限' "$tmp/denied.html"
+          grep -q '<h1>Access Required</h1>' "$tmp/denied.html"
           ! grep -q 'app.js' "$tmp/denied.html"
           # The access link exchanges the token for a derived session cookie.
           status="$(curl -sS -c "$tmp/cookies.txt" -o /dev/null -w '%{http_code}' \

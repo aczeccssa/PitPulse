@@ -191,7 +191,7 @@ check_web_shell() {
         log "$label web shell returned HTTP $status without a session, expected 401"
         return 1
     }
-    grep -q '需要访问权限' "$work_dir/web-denied.html" || {
+    grep -q '<h1>Access Required</h1>' "$work_dir/web-denied.html" || {
         log "$label web shell refusal page is missing"
         return 1
     }
