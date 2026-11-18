@@ -277,8 +277,13 @@
     let artSeasonValue = null;
 
     function useSeason(value) { const year = Number(value); if (year) artSeasonValue = year; }
+    function requestedSeason() {
+        const value = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
+        return Number.isInteger(value) && value >= 1950 && value <= 2100 ? value : null;
+    }
+
     function artSeason() {
-        return artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || new Date().getFullYear();
+        return requestedSeason() || artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || new Date().getFullYear();
     }
     function hasAsset(season, kind, id) {
         return Boolean(id) && Object.prototype.hasOwnProperty.call(ASSETS, `${season}/${kind}/${id}`);
@@ -394,7 +399,7 @@
 
     function driverPhotoArt(driver, className = "driver-portrait") {
         const id = driverAssetId(driver?.driverId || driver?.id || driver?.driverName);
-        const season = artSeason();
+        const season = Number(driver?.season) || artSeason();
         if (!id || !hasAsset(season, "driver-photo", id)) return null;
         return artImage(className, assetSrc(season, "driver-photo", id));
     }
@@ -1327,6 +1332,14 @@
         location.hash = driverPageHref('head-to-head', { season: String(season), driver1: driver.driverId, ...(other ? { driver2: other.driverId } : { team }) });
     }
 
+    function seasonDriver(driver, entries, season) {
+        const latest = [...entries].reverse().map(entry => driverRow(entry, 'race', driver.driverId) || driverRow(entry, 'qualifying', driver.driverId)).find(Boolean);
+        return { ...driver, season, ...(latest ? {
+            constructor: latest.team || latest.constructorId || driver.constructor,
+            driverNumber: latest.driverNumber || driver.driverNumber,
+        } : {}) };
+    }
+
     function loadDriverSeason(season) {
         if (driverPages.seasons.has(season)) return driverPages.seasons.get(season);
         const data = { loading: true, drivers: [], entries: [], error: false };
@@ -1336,10 +1349,7 @@
             api(`/api/v1/results/season?season=${season}`).then(r => r.body.data || []),
         ]).then(([drivers, entries]) => {
             data.entries = entries.sort((a, b) => a.meeting.round - b.meeting.round);
-            data.drivers = drivers.map(driver => {
-                const latest = [...data.entries].reverse().map(entry => driverRow(entry, 'race', driver.driverId) || driverRow(entry, 'qualifying', driver.driverId)).find(Boolean);
-                return latest ? { ...driver, constructor: latest.team || latest.constructorId || driver.constructor } : driver;
-            }).sort((a, b) => a.position - b.position);
+            data.drivers = drivers.map(driver => seasonDriver(driver, data.entries, season)).sort((a, b) => a.position - b.position);
         }).catch(() => { data.error = true; }).finally(() => { data.loading = false; renderDriverPages(); });
         return data;
     }
@@ -2457,7 +2467,12 @@
         for (const link of document.querySelectorAll("[data-route]")) {
             const active = link.dataset.route === (view === 'driver-stats' ? 'drivers' : view) && (!link.dataset.standingsNav || link.dataset.standingsNav === state.standingsKind);
             link.classList.toggle("is-active", active);
-            if (link.dataset.standingsNav) link.href = `#/${link.dataset.standingsNav === 'constructors' ? 'constructor' : 'driver'}-standings${driverPages.season ? `?season=${driverPages.season}` : ''}`;
+            const season = requestedSeason() || driverPages.season;
+            if (link.dataset.route && !link.dataset.standingsNav) {
+                const target = link.dataset.route === 'standings' ? 'driver-standings' : link.dataset.route;
+                link.href = `#/${target}${season ? `?season=${season}` : ''}`;
+            }
+            if (link.dataset.standingsNav) link.href = `#/${link.dataset.standingsNav === 'constructors' ? 'constructor' : 'driver'}-standings${season ? `?season=${season}` : ''}`;
             if (active) link.setAttribute("aria-current", "page");
             else link.removeAttribute("aria-current");
         }
@@ -2517,7 +2532,8 @@
 
     async function boot() {
         state.unauthorized = false;
-        await Promise.allSettled([loadCalendar(), loadStandings()]);
+        const season = requestedSeason();
+        await Promise.allSettled([loadCalendar(season), loadStandings(season)]);
         if (state.unauthorized) return;
         setInterval(updateHomeCountdown, 1000);
     }

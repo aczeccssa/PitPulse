@@ -14,6 +14,7 @@ pub struct IdentityMaps {
     drivers_by_wikipedia: HashMap<String, String>,
     drivers_by_number: HashMap<i64, String>,
     drivers_by_code: HashMap<String, String>,
+    drivers_by_name: HashMap<String, String>,
     constructors_by_wikipedia: HashMap<String, String>,
     constructors_by_name: HashMap<String, String>,
 }
@@ -25,6 +26,12 @@ impl IdentityMaps {
             let Some(id) = row.get("driverId").and_then(Value::as_str) else {
                 continue;
             };
+            if let (Some(given), Some(family)) =
+                (row["givenName"].as_str(), row["familyName"].as_str())
+            {
+                maps.drivers_by_name
+                    .insert(normalize_name(&format!("{given} {family}")), id.to_owned());
+            }
             if let Some(code) = row["code"].as_str() {
                 maps.drivers_by_code
                     .insert(code.to_uppercase(), id.to_owned());
@@ -84,7 +91,26 @@ impl IdentityMaps {
             .as_str()
             .and_then(|code| self.drivers_by_code.get(&code.to_uppercase()))
             .map(String::as_str)
-            .or_else(|| self.driver_for_number(row["driver_number"].as_i64()?))
+            .or_else(|| {
+                let name = row["full_name"].as_str()?;
+                self.drivers_by_name
+                    .get(&normalize_name(name))
+                    .map(String::as_str)
+            })
+            // A supplied identity must never be overwritten by another driver's
+            // permanent number (champion numbers and substitute numbers change).
+            .or_else(|| {
+                if row["full_name"]
+                    .as_str()
+                    .is_some_and(|name| !name.trim().is_empty())
+                    || row["name_acronym"]
+                        .as_str()
+                        .is_some_and(|code| !code.trim().is_empty())
+                {
+                    return None;
+                }
+                self.driver_for_number(row["driver_number"].as_i64()?)
+            })
     }
 
     pub fn constructor_for_wikipedia(&self, url: &str) -> Option<&str> {
@@ -576,6 +602,7 @@ mod tests {
         IdentityMaps::from_ergast(
             &[serde_json::json!({
                 "driverId": "leclerc", "permanentNumber": "16",
+                "givenName": "Charles", "familyName": "Leclerc",
                 "url": "https://en.wikipedia.org/wiki/Charles_Leclerc"
             })],
             &[serde_json::json!({
@@ -583,6 +610,33 @@ mod tests {
                 "url": "https://en.wikipedia.org/wiki/Scuderia_Ferrari"
             })],
         )
+    }
+
+    #[test]
+    fn historical_roster_identity_does_not_follow_reused_numbers() {
+        let maps = IdentityMaps::from_ergast(
+            &[
+                serde_json::json!({"driverId":"max_verstappen","givenName":"Max","familyName":"Verstappen","code":"VER","permanentNumber":"3"}),
+                serde_json::json!({"driverId":"norris","givenName":"Lando","familyName":"Norris","code":"NOR","permanentNumber":"1"}),
+            ],
+            &[],
+        );
+        assert_eq!(
+            maps.driver_for_roster(
+                &serde_json::json!({"full_name":"Max VERSTAPPEN","driver_number":1})
+            ),
+            Some("max_verstappen")
+        );
+        assert_eq!(
+            maps.driver_for_roster(
+                &serde_json::json!({"full_name":"Reserve DRIVER","driver_number":1})
+            ),
+            None
+        );
+        assert_eq!(
+            maps.driver_for_roster(&serde_json::json!({"name_acronym":"VER","driver_number":33})),
+            Some("max_verstappen")
+        );
     }
 
     #[test]

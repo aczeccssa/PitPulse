@@ -196,8 +196,17 @@ def build_roster(seasons) -> dict:
                             "name": f"{driver['givenName']} {driver['familyName']}",
                             "code": driver.get("code"),
                             "constructors": {},
+                            "appearances": [],
                         },
                     )
+                    appearance = {
+                        "round": int(race["round"]),
+                        "driverNumber": str(result["number"]) if result.get("number") is not None else None,
+                        "constructorId": constructor,
+                        "constructorName": result["Constructor"]["name"],
+                    }
+                    if appearance not in entry["appearances"]:
+                        entry["appearances"].append(appearance)
                     entry["constructors"][constructor] = (
                         entry["constructors"].get(constructor, 0) + 1
                     )
@@ -708,6 +717,34 @@ def scan_flags(roster: dict) -> tuple[list[dict], dict]:
     return flags, coverage
 
 
+def season_identities(roster: dict, assets: list[dict]) -> dict:
+    """Stable identity -> season -> appearances and exact-season media only."""
+    media = {(a["season"], a["kind"], a["id"]): a["file"] for a in assets if not a.get("variant")}
+    drivers, teams = {}, {}
+    for year, season in roster["seasons"].items():
+        year = int(year)
+        for driver_id, row in season["drivers"].items():
+            driver = drivers.setdefault(driver_id, {"id": driver_id, "name": row["name"], "seasons": {}})
+            appearances = sorted(row.get("appearances", []), key=lambda a: a["round"])
+            driver["seasons"][str(year)] = {
+                "name": row["name"], "code": row.get("code"),
+                "driverNumbers": sorted({a["driverNumber"] for a in appearances if a.get("driverNumber")}),
+                "constructorIds": row["constructors"], "appearances": appearances,
+                "photo": media.get((year, "driver-photo", driver_id)),
+                "helmet": media.get((year, "helmet", driver_id)),
+            }
+            for appearance in appearances:
+                team_id = appearance["constructorId"]
+                team = teams.setdefault(team_id, {"id": team_id, "seasons": {}})
+                team["seasons"][str(year)] = {
+                    "name": appearance["constructorName"],
+                    "nameSource": "Jolpica result constructor name; may omit title sponsors",
+                    "logo": media.get((year, "team-logo", team_id)),
+                    "carSide": media.get((year, "car-side", team_id)),
+                }
+    return {"drivers": drivers, "constructors": teams}
+
+
 def write_manifest(roster: dict) -> None:
     entries, gaps = scan_entries(roster)
     flags, flag_coverage = scan_flags(roster)
@@ -745,6 +782,7 @@ def write_manifest(roster: dict) -> None:
             "publication": "restricted artwork stays private to the self-hosted instance",
         },
         "assets": entries,
+        "identities": season_identities(roster, entries),
         "gaps": gaps,
         "coverage": coverage,
         "flags": flags,

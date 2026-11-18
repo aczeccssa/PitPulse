@@ -120,6 +120,11 @@ async fn import_season(state: &AppState, season: i64, resume: bool) -> Result<()
                 reason = Some("scheduled".into());
             } else if !resume
                 || existing.len() < 20
+                || existing.iter().any(|row| {
+                    let roster = json!({"full_name": row.driver_name, "driver_number": row.driver_number.as_deref().and_then(|n| n.parse::<i64>().ok())});
+                    identities.driver_for_roster(&roster).is_some_and(|id| id != row.driver_id)
+                        || identities.constructor_for_name(&row.team).is_some_and(|id| id != row.constructor_id)
+                })
                 || session.session_type == SessionType::SprintQualifying
                     && existing
                         .iter()
