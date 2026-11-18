@@ -481,9 +481,8 @@
     /* ---------- calendar helpers ---------- */
 
     function seasonMeetings() {
-        const requested = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
-        const selected = state.view === 'results' && Number.isInteger(requested) && requested >= 1950 && requested <= 2100;
-        return (selected ? state.calendarSeasons.get(requested) || [] : state.calendar)
+        const season = resultsSeason();
+        return (state.calendarSeasons.get(season) || [])
             .filter((meeting) => meeting.round != null)
             .sort((a, b) => a.round - b.round);
     }
@@ -877,9 +876,14 @@
         const meetings = seasonMeetings();
         return meetings.filter(isFinished).at(-1) || meetings[0] || null;
     }
+    function resultsSeason() {
+        const meetingYear = state.results.detail && /^(\d{4}):/.exec(state.results.meetingId)?.[1];
+        return Number(meetingYear) || requestedSeason() || driverPages.season || new Date().getFullYear();
+    }
+
 
     function renderResultsPage() {
-        if (state.results.detail && !seasonResults.key) { state.results.detail = false; renderSeasonResults(); state.results.detail = true; return; }
+        loadSeasonResults(resultsSeason());
         if (state.results.detail) renderMeetingResult(); else renderSeasonResults();
     }
     seasonPopover();
@@ -913,17 +917,25 @@
     function renderMeetingResult() {
         const root = el("season-results");
         const entry = seasonResults.entries.find(item => item.meeting.id === state.results.meetingId);
-        if (!entry) { root.replaceChildren(node("p", "empty", "Loading Grand Prix results…")); return; }
+        if (seasonResults.loading || !entry) {
+            const message = seasonResults.loading ? "Loading Grand Prix results…" : seasonResults.failed ? "Could not load Grand Prix results. Refresh to retry." : "No results are available for this Grand Prix.";
+            root.replaceChildren(node("p", "empty", message));
+            if (!seasonResults.loading) {
+                const back = node("a", "result-back", "‹ Season Results");
+                back.href = `#/results?season=${resultsSeason()}`;
+                root.append(back);
+            }
+            return;
+        }
         root.replaceChildren();
         const meeting = entry.meeting;
-        if (seasonResults.loading) { root.append(node("p", "empty", "Loading Grand Prix results…")); return; }
         const filters = node("div", "meeting-filters");
         filters.append(seasonSelector(meeting.season, value => { location.hash = `#/results?season=${value}`; }));
         const rounds = seasonResults.entries.filter(e => Object.values(e.sessions).some(s => s.rows?.length)).map(e => [e.meeting.id, e.meeting.country || e.meeting.name]);
         filters.append(driverSelector('Grand Prix', meeting.id, rounds, value => { location.hash = `#/results/${encodeURIComponent(value)}/race`; }));
         root.append(filters);
         const title = node("header", "meeting-result-heading");
-        const back = node("a", "result-back", `‹ ${meeting.season} F1 Season Results`); back.href = "#/results";
+        const back = node("a", "result-back", `‹ ${meeting.season} F1 Season Results`); back.href = `#/results?season=${meeting.season}`;
         const countryCode = meeting.countryCode ? meeting.countryCode.toLowerCase() : "";
         const resultTitle = node("h1", "", `${meeting.name || meeting.country + " Grand Prix"} ${meeting.season} Results`); resultTitle.prepend(flatFlag(meeting)); title.append(back, resultTitle); root.append(title);
         const tabs = node("div", "meeting-tabs");
@@ -1003,32 +1015,31 @@
         input.onchange = () => { const circles = [...svg.querySelectorAll("circle")], nums = circles.map(c => Number(c.dataset.seconds)).sort((a, b) => a - b), q1 = nums[Math.floor(nums.length * .25)], q3 = nums[Math.floor(nums.length * .75)], cap = q3 + 1.5 * (q3 - q1), bounded = input.checked ? nums.filter(v => v <= cap) : nums, low = Math.floor(Math.min(...bounded)), high = Math.ceil(Math.max(...bounded)); circles.forEach(c => { const v = Number(c.dataset.seconds); c.setAttribute("cx", left + (v - low) / (high - low) * inner); c.style.visibility = input.checked && v > cap ? "hidden" : "visible"; }); const texts = svg.querySelectorAll("text"); for (let i = 0; i <= 10; i++) { const value = low + i, x = left + (value - low) / (high - low) * inner; texts[i].textContent = progressLapLabel(value); texts[i].setAttribute("x", x); texts[i].style.display = value <= high ? "" : "none"; const grid = svg.querySelectorAll(".progress-vertical")[i]; grid.setAttribute("x1", x); grid.setAttribute("x2", x); grid.style.display = value <= high ? "" : "none"; } }; input.onchange(); return section;
     }
 
+    function loadSeasonResults(season) {
+        useSeason(season);
+        if (seasonResults.key === season) return;
+        const request = Symbol();
+        Object.assign(seasonResults, { key: season, request, entries: [], loading: true, failed: 0 });
+        api(`/api/v1/results/season?season=${season}`).then(({ body }) => {
+            if (seasonResults.request === request) seasonResults.entries = Array.isArray(body.data) ? body.data : [];
+        }).catch(() => {
+            if (seasonResults.request === request) seasonResults.failed = 1;
+        }).finally(() => {
+            if (seasonResults.request !== request) return;
+            seasonResults.loading = false;
+            if (state.view === "results") renderResultsPage();
+        });
+    }
+
     function renderSeasonResults() {
         const root = el("season-results");
-        if (!state.calendarLoaded) { root.replaceChildren(node("p", "empty", "Loading season results…")); return; }
-        const meetings = seasonMeetings();
-        useSeason(seasonYear(meetings));
-        const key = meetings.map(m => m.id).join("|");
-        if (seasonResults.key !== key) {
-            seasonResults.key = key;
-            seasonResults.entries = meetings.map(meeting => ({ meeting, sessions: {} }));
-            seasonResults.loading = true;
-            seasonResults.failed = 0;
-            api(`/api/v1/results/season?season=${seasonYear(meetings)}`).then(({ body }) => {
-                if (seasonResults.key !== key) return;
-                seasonResults.entries = Array.isArray(body.data) ? body.data : [];
-            }).catch(() => { seasonResults.failed++; }).finally(() => {
-                if (seasonResults.key !== key) return;
-                seasonResults.loading = false;
-                if (state.view === "results") renderResultsPage();
-            });
-        }
+        const season = seasonResults.key;
         root.replaceChildren();
         const heading = node("header", "season-heading racing-page-head");
-        heading.append(node("h1", "", `${seasonYear(meetings)} F1 Season Results`));
+        heading.append(node("h1", "", `${season} F1 Season Results`));
         root.append(heading);
         const controls = node("div", "season-controls");
-        controls.append(seasonSelector(seasonYear(meetings), value => { location.hash = `#/results?season=${value}`; }), node("span", "", "SEASON STATS"));
+        controls.append(seasonSelector(season, value => { location.hash = `#/results?season=${value}`; }), node("span", "", "SEASON STATS"));
         const modes = node("div", "segmented");
         for (const [value, label] of [["race", "Race"], ["sprint", "Sprint"], ["combined", "Combined"]]) {
             const button = node("button", value === seasonResults.mode ? "is-active" : "", label);
@@ -2571,8 +2582,10 @@
         }
         if (view === "results") {
             state.results.detail = Boolean(parts[0]);
-            if (parts[0]) state.results.meetingId = decodeURIComponent(parts[0]);
-            if (parts[1]) state.results.sessionType = parts[1];
+            state.results.meetingId = parts[0] ? decodeURIComponent(parts[0]) : null;
+            state.results.sessionType = parts[1] || "race";
+            driverPages.season = resultsSeason();
+            syncSectionNav(driverPages.season);
         }
         for (const section of document.querySelectorAll(".view")) {
             section.hidden = section.dataset.view !== (view === 'driver-stats' ? 'drivers' : view);
@@ -2580,7 +2593,7 @@
         for (const link of document.querySelectorAll("[data-route]")) {
             const active = link.dataset.route === (view === 'driver-stats' ? 'drivers' : view) && (!link.dataset.standingsNav || link.dataset.standingsNav === state.standingsKind);
             link.classList.toggle("is-active", active);
-            const season = requestedSeason() || driverPages.season;
+            const season = view === 'results' ? resultsSeason() : requestedSeason() || driverPages.season;
             if (link.dataset.route && !link.dataset.standingsNav) {
                 const target = link.dataset.route === 'standings' ? 'driver-standings' : link.dataset.route;
                 link.href = `#/${target}${season ? `?season=${season}` : ''}`;
@@ -2593,16 +2606,7 @@
         document.querySelector(".app").scrollTo({ top: 0, behavior: "instant" });
 
         if (view === "standings" && !state.driversStandings.length) loadStandings();
-        if (view === "results") {
-            const requested = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
-            if (Number.isInteger(requested) && requested >= 1950 && requested <= 2100) {
-                const cached = homePages.cache.get(requested);
-                if (cached && !cached.loading) state.calendarSeasons.set(requested, cached.calendar);
-                if (!state.calendarSeasons.has(requested)) loadCalendar(requested).then(() => renderResultsPage());
-                else renderResultsPage();
-            } else if (!state.calendarLoaded) loadCalendar().then(() => renderResultsPage());
-            else renderResultsPage();
-        }
+        if (view === "results") renderResultsPage();
         if (RACING_VIEWS.includes(view)) renderDriverPages();
     }
 
