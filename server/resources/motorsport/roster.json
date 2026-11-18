@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-18T02:18:33+00:00",
+ "generatedAt": "2026-11-18T02:58:38+00:00",
  "source": "https://api.jolpi.ca/ergast/f1/{season}/results.json",
  "seasons": {
   "2021": {
@@ -163,7 +163,30 @@
     "mercedes",
     "red_bull",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Austria",
+    "Azerbaijan",
+    "Bahrain",
+    "Belgium",
+    "Brazil",
+    "France",
+    "Hungary",
+    "Italy",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Portugal",
+    "Qatar",
+    "Russia",
+    "Saudi Arabia",
+    "Spain",
+    "Turkey",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 22
   },
   "2022": {
    "drivers": {
@@ -333,7 +356,30 @@
     "mercedes",
     "red_bull",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+    "Bahrain",
+    "Belgium",
+    "Brazil",
+    "Canada",
+    "France",
+    "Hungary",
+    "Italy",
+    "Japan",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Saudi Arabia",
+    "Singapore",
+    "Spain",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 22
   },
   "2023": {
    "drivers": {
@@ -503,7 +549,30 @@
     "mercedes",
     "red_bull",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+    "Bahrain",
+    "Belgium",
+    "Brazil",
+    "Canada",
+    "Hungary",
+    "Italy",
+    "Japan",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Qatar",
+    "Saudi Arabia",
+    "Singapore",
+    "Spain",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 22
   },
   "2024": {
    "drivers": {
@@ -688,7 +757,31 @@
     "red_bull",
     "sauber",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+    "Bahrain",
+    "Belgium",
+    "Brazil",
+    "Canada",
+    "China",
+    "Hungary",
+    "Italy",
+    "Japan",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Qatar",
+    "Saudi Arabia",
+    "Singapore",
+    "Spain",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 24
   },
   "2025": {
    "drivers": {
@@ -853,7 +946,31 @@
     "red_bull",
     "sauber",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+    "Bahrain",
+    "Belgium",
+    "Brazil",
+    "Canada",
+    "China",
+    "Hungary",
+    "Italy",
+    "Japan",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Qatar",
+    "Saudi Arabia",
+    "Singapore",
+    "Spain",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 24
   },
   "2026": {
    "drivers": {
@@ -1046,7 +1163,30 @@
     "rb",
     "red_bull",
     "williams"
-   ]
+   ],
+   "countries": [
+    "Australia",
+    "Austria",
+    "Azerbaijan",
+    "Belgium",
+    "Brazil",
+    "Canada",
+    "China",
+    "Hungary",
+    "Italy",
+    "Japan",
+    "Malaysia",
+    "Mexico",
+    "Monaco",
+    "Netherlands",
+    "Qatar",
+    "Singapore",
+    "Spain",
+    "UAE",
+    "UK",
+    "USA"
+   ],
+   "rounds": 23
   }
  }
 }

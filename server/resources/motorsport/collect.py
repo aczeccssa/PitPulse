@@ -48,6 +48,9 @@ MANIFEST = HERE / "manifest.json"
 
 CDN = "https://media.formula1.com/image/upload"
 F1_SITE = "https://www.formula1.com"
+FLAG_CDN = "https://flagcdn.com/w80"
+COUNTRY_SOURCE = REPO / "server/src/domain/country.rs"
+FLAG_DIR = REPO / "server/resources/web/motorsport"
 
 SEASONS = (2021, 2022, 2023, 2024, 2025, 2026)
 KINDS = ("driver-photo", "helmet", "car-side", "team-logo")
@@ -154,6 +157,10 @@ def fetch_json(url: str) -> dict:
     return json.loads(request(url).decode())
 
 
+def season_calendar(season: int) -> dict:
+    return fetch_json(f"https://api.jolpi.ca/ergast/f1/{season}.json?limit=100")
+
+
 def ergast_page(season: int, offset: int) -> dict:
     url = (
         f"https://api.jolpi.ca/ergast/f1/{season}/results.json"
@@ -203,13 +210,17 @@ def build_roster(seasons) -> dict:
                     entry["constructors"].items(), key=lambda kv: -kv[1]
                 )
             ]
+        calendar = season_calendar(season)["MRData"]["RaceTable"]["Races"]
+        countries = sorted({race["Circuit"]["Location"]["country"] for race in calendar})
         out[str(season)] = {
             "drivers": drivers,
             "constructors": sorted(constructors),
+            "countries": countries,
+            "rounds": len(calendar),
         }
         print(
             f"roster {season}: {len(drivers)} drivers, "
-            f"{len(constructors)} constructors",
+            f"{len(constructors)} constructors, {len(countries)} countries",
             flush=True,
         )
     return {
@@ -225,6 +236,64 @@ def load_roster(refresh: bool) -> dict:
         ROSTER.write_text(json.dumps(roster, indent=1) + "\n")
         return roster
     return json.loads(ROSTER.read_text())
+
+
+# --------------------------------------------------------------------------
+# country codes
+
+
+def country_table() -> dict[str, str]:
+    """Read the alias table the server itself uses.
+
+    Parsing the Rust table keeps the collector and the API from drifting: a
+    venue the server cannot code is a venue the dashboard cannot flag.
+    """
+    source = COUNTRY_SOURCE.read_text()
+    block = source[source.index("const COUNTRIES"):source.index("pub const ALPHA2_CODES")]
+    table = dict(re.findall(r'\("([^"]+)", "([A-Z]{2})"\)', block))
+    if len(table) < 20:
+        raise SystemExit(f"could not read the country table from {COUNTRY_SOURCE}")
+    return table
+
+
+def country_code(table: dict[str, str], value: str) -> str | None:
+    normalized = (value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized in table:
+        return table[normalized]
+    compact = re.sub(r"[ \-_]", "", normalized)
+    for alias, code in table.items():
+        if alias.replace(" ", "") == compact:
+            return code
+    return None
+
+
+def required_flags(roster: dict) -> tuple[dict[str, set[int]], list[dict]]:
+    """Every country the six calendars visit, and the seasons that visit it."""
+    table = country_table()
+    codes: dict[str, set[int]] = {}
+    unmapped: list[dict] = []
+    for season in SEASONS:
+        entry = roster["seasons"][str(season)]
+        for country in entry.get("countries", []):
+            code = country_code(table, country)
+            if not code:
+                unmapped.append({"season": season, "country": country})
+                continue
+            codes.setdefault(code, set()).add(season)
+    return codes, unmapped
+
+
+def collect_flags(codes: dict[str, set[int]]) -> None:
+    for code in sorted(codes):
+        path = FLAG_DIR / f"flag-{code.lower()}.png"
+        if path.exists():
+            continue
+        raw = request(f"{FLAG_CDN}/{code.lower()}.png")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+        print(f"flag {code} {path.stat().st_size}B", flush=True)
 
 
 # --------------------------------------------------------------------------
@@ -599,8 +668,49 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
     return entries, gaps
 
 
+def scan_flags(roster: dict) -> tuple[list[dict], dict]:
+    """Record the flag set and prove it covers every calendar country."""
+    codes, unmapped = required_flags(roster)
+    flags: list[dict] = []
+    missing: list[dict] = []
+    for code in sorted(codes):
+        path = FLAG_DIR / f"flag-{code.lower()}.png"
+        if not path.exists():
+            missing.append(
+                {
+                    "code": code,
+                    "seasons": sorted(codes[code]),
+                    "reason": "no flag file for a country the calendars visit",
+                }
+            )
+            continue
+        image = Image.open(path)
+        flags.append(
+            {
+                "code": code,
+                "file": str(path.relative_to(REPO)),
+                "bytes": path.stat().st_size,
+                "sha256": sha256(path),
+                "width": image.width,
+                "height": image.height,
+                "seasons": sorted(codes[code]),
+                "sourcePageUrl": f"https://flagcdn.com/w80/{code.lower()}.png",
+                "license": "public-domain",
+                "rightsStatus": "approved",
+            }
+        )
+    coverage = {
+        "required": len(codes),
+        "present": len(flags),
+        "missing": missing,
+        "unmappedCountries": unmapped,
+    }
+    return flags, coverage
+
+
 def write_manifest(roster: dict) -> None:
     entries, gaps = scan_entries(roster)
+    flags, flag_coverage = scan_flags(roster)
     entries.sort(key=lambda e: (e["season"], e["kind"], e["id"]))
     gaps.sort(key=lambda e: (e["season"], e["kind"], e["id"]))
     coverage: dict[str, dict[str, int]] = {}
@@ -637,9 +747,16 @@ def write_manifest(roster: dict) -> None:
         "assets": entries,
         "gaps": gaps,
         "coverage": coverage,
+        "flags": flags,
+        "flagCoverage": flag_coverage,
     }
     MANIFEST.write_text(json.dumps(manifest, indent=1) + "\n")
     print(f"manifest: {len(entries)} assets, {len(gaps)} gaps", flush=True)
+    print(
+        f"flags: {flag_coverage['present']}/{flag_coverage['required']} countries, "
+        f"{len(flag_coverage['unmappedCountries'])} unmapped",
+        flush=True,
+    )
     for season in sorted(coverage, key=int):
         summary = ", ".join(
             f"{kind}={count}" for kind, count in sorted(coverage[season].items())
@@ -689,12 +806,32 @@ def check() -> int:
         key = (gap["kind"], gap["id"], gap["season"])
         if key in present:
             problems.append(f"gap and asset overlap for {key}")
+    flag_coverage = manifest.get("flagCoverage") or {}
+    for item in flag_coverage.get("missing") or []:
+        problems.append(f"missing flag for {item['code']} (seasons {item['seasons']})")
+    for item in flag_coverage.get("unmappedCountries") or []:
+        problems.append(
+            f"country without an alpha-2 code: {item['country']} ({item['season']})"
+        )
+    recorded = {flag["file"] for flag in manifest.get("flags") or []}
+    for path in sorted(FLAG_DIR.glob("flag-*.png")):
+        rel = str(path.relative_to(REPO))
+        if rel not in recorded:
+            problems.append(f"flag not recorded in manifest: {rel}")
+    for flag in manifest.get("flags") or []:
+        path = REPO / flag["file"]
+        if not path.exists():
+            problems.append(f"missing flag file {flag['file']}")
+        elif sha256(path) != flag["sha256"]:
+            problems.append(f"flag hash mismatch for {flag['file']}")
+
     if problems:
         for problem in problems:
             print(f"FAIL {problem}")
         return 1
     print(
-        f"OK {len(manifest['assets'])} assets, {len(manifest['gaps'])} documented gaps"
+        f"OK {len(manifest['assets'])} assets, {len(manifest['gaps'])} documented gaps, "
+        f"{flag_coverage.get('present')}/{flag_coverage.get('required')} flags"
     )
     return 0
 
@@ -716,6 +853,14 @@ def main() -> int:
         return check()
 
     roster = load_roster(args.refresh_roster)
+    codes, unmapped = required_flags(roster)
+    collect_flags(codes)
+    for item in unmapped:
+        print(
+            f"warning: {item['country']} ({item['season']}) has no alpha-2 code "
+            "in server/src/domain/country.rs",
+            file=sys.stderr,
+        )
     collector = Collector(roster, force=args.force)
 
     seasons = args.season or list(SEASONS)
