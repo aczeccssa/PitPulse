@@ -75,7 +75,7 @@ test('Home records derive podiums and position gains from classified results and
     const records=homeRecords({entries:[race],summary:{drivers:[{driverNumber:7,rookie:true}]}});
     assert.deepEqual(Array.from(records,r=>r.category),['Race','Team','Driver','Rookie']);
     assert.match(records.find(r=>r.category==='Driver').title,/b gains 6 places/);
-    assert.equal(records[0].href,'#/results/2025%3A1/race?season=2025');
+    assert.equal(records[0].href,'/results/2025%3A1/race?season=2025');
     assert.equal(homeRecords({entries:[],summary:{}}).length,0);
 });
 

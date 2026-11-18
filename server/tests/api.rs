@@ -125,7 +125,7 @@ fn get_with_cookie(path: &str, cookie: &str) -> Request<Body> {
 }
 
 #[tokio::test]
-async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() {
+async fn test_web_shell_is_served_directly_with_an_issued_session_and_icons_stay_public() {
     let (mut state, _temp) = test_state().await;
     let mut config = AppConfig::default();
     config.security.require_token = true;
@@ -216,27 +216,52 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
         assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
     }
 
-    // The shell is part of the service: without a session it is not served at
-    // all, and the refusal page carries no assets, no data and no token.
-    for (path, _) in SHELL_PATHS {
+    // The shell is served directly at `/` and `/index`, and unknown browser
+    // paths fall back to it so client-side routes work as links. A visitor
+    // without a session receives the derived read-only cookie on that same
+    // response; the page never carries the bearer token.
+    for path in ["/", "/index", "/home", "/results/2025%3A1/race"] {
         let response = router.clone().oneshot(get(path)).await.unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
         assert_eq!(
             response.headers()[header::CONTENT_TYPE],
             "text/html; charset=utf-8",
             "{path}"
         );
-        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
-        assert!(response.headers().get(header::SET_COOKIE).is_none());
+        let cookie = response.headers()[header::SET_COOKIE].to_str().unwrap();
+        assert!(cookie.starts_with(&session_cookie), "{path}: {cookie}");
+        assert!(cookie.contains("; HttpOnly"), "{path}: {cookie}");
         let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
             .await
             .unwrap();
         let text = String::from_utf8_lossy(&body);
-        assert!(text.contains("Access Required"), "{path}");
-        assert!(text.contains("<html lang=\"en\">"), "{path}");
-        assert!(!text.contains("app.js"), "{path}");
+        assert!(text.contains("src=\"/app.js\""), "{path}");
         assert!(!text.contains("test-token"), "{path}");
     }
+
+    // Assets belong to the same shell and are served without a session too.
+    for (path, content_type) in SHELL_PATHS.iter().filter(|(path, _)| *path != "/") {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        assert_eq!(
+            response.headers()[header::CONTENT_TYPE],
+            *content_type,
+            "{path}"
+        );
+    }
+
+    // The public liveness endpoint needs no credential and exposes no data.
+    let response = router.clone().oneshot(get("/health")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .unwrap();
+    assert!(String::from_utf8_lossy(&body).contains("\"status\""));
+
+    // Unknown API paths stay JSON 404s instead of returning the shell.
+    let response = router.clone().oneshot(get("/api/v1/nope")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
 
     // A wrong bootstrap token is refused without issuing a cookie.
     let response = router.clone().oneshot(get("/?token=wrong")).await.unwrap();
@@ -387,14 +412,16 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
         .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-    // A stale or forged cookie is refused.
+    // A stale or forged cookie is ignored and replaced by a fresh session.
     for cookie in ["pitpulse_web=bogus", "other=value"] {
         let response = router
             .clone()
             .oneshot(get_with_cookie("/", cookie))
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{cookie}");
+        assert_eq!(response.status(), StatusCode::OK, "{cookie}");
+        let issued = response.headers()[header::SET_COOKIE].to_str().unwrap();
+        assert!(issued.starts_with(&session_cookie), "{cookie}: {issued}");
     }
 
     // Scripted and CLI callers keep full access with the bearer token.

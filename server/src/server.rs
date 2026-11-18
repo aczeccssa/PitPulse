@@ -6,7 +6,7 @@ use crate::{
     api::{
         middleware::require_bearer_token,
         routes::{self, build_router},
-        web_auth::require_web_access,
+        web_auth::issue_web_session,
     },
     app_state::AppState,
 };
@@ -17,23 +17,25 @@ pub fn router(state: AppState) -> Router {
         require_bearer_token,
     ));
 
-    // The dashboard is part of the service rather than a public document, so
-    // when a token is required the shell is served only to a browser that
-    // bootstrapped a session through `/?token=...`. Icons stay reachable
-    // without credentials because browsers and the OS fetch them that way;
-    // they contain no data.
+    // The dashboard shell is served directly at `/` and `/index`, and every
+    // unknown browser path falls back to it so client-side routes such as
+    // `/home` work as links. Serving the shell issues the derived read-only
+    // session cookie the page uses for its data calls; writes still need the
+    // bearer token.
     let shell = Router::new()
         .route("/", get(routes::index))
+        .route("/index", get(routes::index))
         .route("/app.css", get(routes::app_css))
         .route("/app.js", get(routes::app_js))
         .route("/theme.js", get(routes::theme_js))
         .route("/manifest.webmanifest", get(routes::manifest))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
-            require_web_access,
+            issue_web_session,
         ));
 
-    let public_icons = Router::new()
+    let public_routes = Router::new()
+        .route("/health", get(routes::health_public))
         .route("/apple-touch-icon.png", get(routes::apple_touch_icon))
         .route("/brand-mark.png", get(routes::brand_mark))
         .route("/icon-192.png", get(routes::icon_192))
@@ -44,7 +46,8 @@ pub fn router(state: AppState) -> Router {
 
     protected_router
         .merge(shell)
-        .merge(public_icons)
+        .merge(public_routes)
+        .fallback(routes::spa_fallback)
         .with_state(state)
 }
 

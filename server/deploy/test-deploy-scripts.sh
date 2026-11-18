@@ -190,14 +190,16 @@ elif path.startswith("/api/v1/"):
         status = "404"
         content_type = "application/json"
 elif path in shell:
-    if authorized or session:
-        body = shell[path]
-        status = "200"
-        content_type = shell_type[path]
-    else:
-        body = denied
-        status = "401"
-        content_type = "text/html; charset=utf-8"
+    # The shell is served directly and issues its own read-only session.
+    body = shell[path]
+    status = "200"
+    content_type = shell_type[path]
+    if path == "/" and cookie_jar:
+        with open(cookie_jar, "w", encoding="utf-8") as handle:
+            handle.write(
+                "# Netscape HTTP Cookie File\n\n"
+                "#HttpOnly_127.0.0.1\tFALSE\t/\tFALSE\t0\tpitpulse_web\tdrill-session\n"
+            )
 else:
     body = b'{"error":{"code":"not_found"}}'
     status = "404"
@@ -388,41 +390,36 @@ check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check" local ||
 grep -q 'href="/app.css"' "$WORK_DIR/web-check/web-index.html" ||
     fail "web shell check did not capture the dashboard document"
 [[ -s "$WORK_DIR/web-check/web-app.js" ]] || fail "web shell check did not capture app.js"
-# The public check reuses the local session from another origin, so the cookie
-# must be re-hosted instead of carrying the loopback host scope.
-check_web_shell "https://pitpulse.example" "$WORK_DIR/web-check-public" public "$WORK_DIR/web-check" ||
-    fail "web shell check could not reuse the bootstrapped session for another origin"
-grep -q '^# Netscape HTTP Cookie File$' "$WORK_DIR/web-check-public/web-cookies.txt" ||
-    fail "web shell check did not write a cookie jar for the public origin"
-grep -q $'^pitpulse.example\tFALSE\t/\tTRUE\t' "$WORK_DIR/web-check-public/web-cookies.txt" ||
-    fail "web shell check did not scope the re-hosted cookie to the public origin"
+# The shell issues its own read-only session without asking for a key.
+grep -q 'pitpulse_web' "$WORK_DIR/web-check/web-cookies.txt" ||
+    fail "web shell check did not capture the issued session cookie"
+# The same check runs against another origin (the public HTTPS path).
+check_web_shell "https://pitpulse.example" "$WORK_DIR/web-check-public" public ||
+    fail "public web shell check failed"
 
 BROKEN_WEB_CURL="$WORK_DIR/fake-curl-no-assets.py"
 cat > "$BROKEN_WEB_CURL" <<'PY'
 #!/usr/bin/env python3
-"""Issues the session cookie and serves the shell, but not its assets."""
+"""Serves the shell and issues a session, but not its assets."""
 import sys
 
 args = sys.argv[1:]
 url = args[-1] if args else ""
-bootstrap = "--get" in args or "-G" in args
-with_cookie = "-b" in args or "--cookie" in args
 asset = url.endswith(("/app.css", "/app.js"))
-if bootstrap:
-    status = "303"
-elif asset:
-    status = "401" if not with_cookie else "404"
-elif with_cookie:
-    status = "200"
-else:
-    status = "401"
+jar = ""
+if "-c" in args and args.index("-c") + 1 < len(args):
+    jar = args[args.index("-c") + 1]
 
 if "-w" in args and args.index("-w") + 1 < len(args):
-    print(status, end="")
-elif status == "200":
-    print('<!doctype html><link rel="stylesheet" href="/app.css"><script src="/app.js"></script>', end="")
+    print("404" if asset else "200", end="")
 else:
-    print('<!doctype html><h1>Access Required</h1>', end="")
+    if jar:
+        with open(jar, "w", encoding="utf-8") as handle:
+            handle.write(
+                "# Netscape HTTP Cookie File\n\n"
+                "#HttpOnly_127.0.0.1\tFALSE\t/\tFALSE\t0\tpitpulse_web\tdrill-session\n"
+            )
+    print('<!doctype html><link rel="stylesheet" href="/app.css"><script src="/app.js"></script>', end="")
 PY
 chmod 0700 "$BROKEN_WEB_CURL"
 if PITPULSE_CURL="$BROKEN_WEB_CURL" check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR/web-check-broken" local >/dev/null 2>&1; then

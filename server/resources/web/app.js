@@ -398,7 +398,7 @@
 
     function useSeason(value) { const year = Number(value); if (year) artSeasonValue = year; }
     function requestedSeason() {
-        const value = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
+        const value = Number(new URLSearchParams(location.search).get('season'));
         return Number.isInteger(value) && value >= 1950 && value <= 2100 ? value : null;
     }
 
@@ -595,7 +595,7 @@
 
     function setStandingsKind(kind) {
         state.standingsKind = kind;
-        if (state.view === "standings") history.replaceState(null, "", `#/${kind === 'constructors' ? 'constructor' : 'driver'}-standings${location.hash.includes('?') ? '?' + location.hash.split('?')[1] : ''}`);
+        if (state.view === "standings") history.replaceState(null, "", `/${kind === 'constructors' ? 'constructor' : 'driver'}-standings${location.search}`);
         for (const button of document.querySelectorAll("[data-standings]")) {
             const active = button.dataset.standings === kind;
             button.classList.toggle("is-active", active);
@@ -665,7 +665,7 @@
         document.addEventListener('pointerdown', event => { if (!event.target.closest('.standings-filter')) close(); });
         document.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.hidden) { event.preventDefault(); close(true); } });
         menu.addEventListener('focusout', event => { if (event.relatedTarget && !event.relatedTarget.closest('.standings-filter')) close(); });
-        window.addEventListener('hashchange', () => close());
+        window.addEventListener('popstate', () => close());
     }
 
     function loadStandingsHistory(season) {
@@ -854,7 +854,7 @@
         state.driversStandings = data.drivers;
         state.constructorStandings = data.constructors;
         useSeason(season);
-        el('standings-page-season').replaceChildren(seasonSelector(season, value => { location.hash = `#/${constructors ? 'constructor' : 'driver'}-standings?season=${value}`; }));
+        el('standings-page-season').replaceChildren(seasonSelector(season, value => { navigate(`/${constructors ? 'constructor' : 'driver'}-standings?season=${value}`); }));
         el('view-standings').querySelector('.page-head h1').textContent = `${noun} Standings`;
         el('workspace-title').textContent = `${noun} Standings`;
         if (rows.length) loadStandingsHistory(season);
@@ -1029,25 +1029,25 @@
             const message = seasonResults.failed ? "Could not load Grand Prix results. Refresh to retry." : "No results are available for this Grand Prix.";
             root.replaceChildren(node("p", "empty", message));
             const back = node("a", "result-back", "‹ Season Results");
-            back.href = `#/results?season=${resultsSeason()}`;
+            back.href = `/results?season=${resultsSeason()}`;
             root.append(back);
             return;
         }
         root.replaceChildren();
         const meeting = entry.meeting;
         const filters = node("div", "meeting-filters");
-        filters.append(seasonSelector(meeting.season, value => { location.hash = `#/results?season=${value}`; }));
+        filters.append(seasonSelector(meeting.season, value => { navigate(`/results?season=${value}`); }));
         const rounds = seasonResults.entries.filter(e => Object.values(e.sessions).some(s => s.rows?.length)).map(e => [e.meeting.id, e.meeting.country || e.meeting.name]);
-        filters.append(driverSelector('Grand Prix', meeting.id, rounds, value => { location.hash = `#/results/${encodeURIComponent(value)}/race`; }));
+        filters.append(driverSelector('Grand Prix', meeting.id, rounds, value => { navigate(`/results/${encodeURIComponent(value)}/race`); }));
         root.append(filters);
         const title = node("header", "meeting-result-heading");
-        const back = node("a", "result-back", `‹ ${meeting.season} F1 Season Results`); back.href = `#/results?season=${meeting.season}`;
+        const back = node("a", "result-back", `‹ ${meeting.season} F1 Season Results`); back.href = `/results?season=${meeting.season}`;
         const countryCode = meeting.countryCode ? meeting.countryCode.toLowerCase() : "";
         const resultTitle = node("h1", "", `${meeting.name || meeting.country + " Grand Prix"} ${meeting.season} Results`); resultTitle.prepend(flatFlag(meeting)); title.append(back, resultTitle); root.append(title);
         const tabs = node("div", "meeting-tabs");
         const order = [["fp1", "Practice 1"], ["fp2", "Practice 2"], ["fp3", "Practice 3"], ["qualifying", "Qualifying"], ["sprintQualifying", "Sprint Qualifying"], ["sprint", "Sprint"], ["startingGrid", "Starting Grid"], ["race", "Race"], ["progress", "↗  Progress"]].filter(([value]) => value === "progress" || entry.sessions[value] || (value === "startingGrid" && entry.sessions.race?.rows.some(r => r.gridPosition)));
         order.sort((a, b) => { const time = v => v === "progress" ? Infinity : v === "startingGrid" ? new Date(meeting.sessions.find(s => s.sessionType === "race")?.startTime || 0).getTime() - 1 : new Date(meeting.sessions.find(s => s.sessionType === v)?.startTime || 0).getTime(); return time(a[0]) - time(b[0]); });
-        for (const [value, label] of order) { const b = node("button", value === state.results.sessionType ? "is-active" : "", label); b.type = "button"; b.onclick = () => { location.hash = `#/results/${encodeURIComponent(meeting.id)}/${value}`; }; tabs.append(b); }
+        for (const [value, label] of order) { const b = node("button", value === state.results.sessionType ? "is-active" : "", label); b.type = "button"; b.onclick = () => { navigate(`/results/${encodeURIComponent(meeting.id)}/${value}`); }; tabs.append(b); }
         if (state.results.sessionType === "progress") { const panel = buildProgressChart(entry); const bar = node("div", "results-titlebar"); bar.append(node("h2", "", "Progress"), tabs); panel.prepend(bar); root.append(panel); return; }
         const data = entry.sessions[state.results.sessionType];
         const rows = state.results.sessionType === "startingGrid" ? [...(entry.sessions.race?.rows || [])].filter(r => r.gridPosition).sort((a, b) => a.gridPosition - b.gridPosition) : data?.rows || [];
@@ -1145,7 +1145,7 @@
         heading.append(node("h1", "", `${season} F1 Season Results`));
         root.append(heading);
         const controls = node("div", "season-controls");
-        controls.append(seasonSelector(season, value => { location.hash = `#/results?season=${value}`; }), node("span", "", "SEASON STATS"));
+        controls.append(seasonSelector(season, value => { navigate(`/results?season=${value}`); }), node("span", "", "SEASON STATS"));
         const modes = node("div", "segmented");
         for (const [value, label] of [["race", "Race"], ["sprint", "Sprint"], ["combined", "Combined"]]) {
             const button = node("button", value === seasonResults.mode ? "is-active" : "", label);
@@ -1256,7 +1256,7 @@
             const tr = body.insertRow();
             tr.className = "gp-result-row";
             tr.tabIndex = 0;
-            const openMeeting = () => { state.results.meetingId = entry.meeting.id; state.results.sessionType = "race"; state.results.detail = true; history.replaceState(null, "", `#/results/${encodeURIComponent(entry.meeting.id)}/race`); renderResultsPage(); };
+            const openMeeting = () => { state.results.meetingId = entry.meeting.id; state.results.sessionType = "race"; state.results.detail = true; history.replaceState(null, "", `/results/${encodeURIComponent(entry.meeting.id)}/race`); renderResultsPage(); };
             tr.addEventListener("click", (event) => { if (!event.target.closest("a,button")) openMeeting(); });
             tr.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openMeeting(); } });
             const name = node("td", ""); name.append(grandPrixLabel(entry.meeting)); tr.append(name);
@@ -1264,7 +1264,7 @@
             for (const type of ["sprintQualifying", "sprint", "qualifying", "race"]) {
                 const td = node("td", "winner-cell"); td.append(seasonIdentity(entry.sessions[type]?.rows.find(r => r.position === 1), true)); tr.append(td);
             }
-            const td = node("td", ""); const link = node("a", "season-open", "›"); link.href = `#/results/${encodeURIComponent(entry.meeting.id)}/race`; link.setAttribute("aria-label", `View full ${resultsGpName(entry.meeting.name)} results`);
+            const td = node("td", ""); const link = node("a", "season-open", "›"); link.href = `/results/${encodeURIComponent(entry.meeting.id)}/race`; link.setAttribute("aria-label", `View full ${resultsGpName(entry.meeting.name)} results`);
             td.append(link); tr.append(td);
         }
         scroll.append(table); gp.append(scroll); root.append(gp);
@@ -1402,7 +1402,7 @@
         popover.addEventListener("pointerleave", () => { hideTimer = setTimeout(hide, 140); });
         document.addEventListener("focusout", hide);
         document.addEventListener("scroll", hide, true);
-        window.addEventListener("hashchange", hide);
+        window.addEventListener("popstate", hide);
         return popover;
     }
 
@@ -1428,7 +1428,7 @@
         const photo = driverPhotoArt({ driverId: id, driverName: name }, "driver-profile-photo");
         if (photo) { photo.onerror = () => photo.remove(); main.append(photo); }
         main.append(heading, metrics); const actions = node("div", "driver-profile-actions"), detail = node("div", "driver-profile-detail"); detail.hidden = true;
-        for (const [label, kind] of [["▥  Stats", "stats"], ["⚔  Head-to-head", "compare"]]) { const button = node("button", "", kind === "stats" ? "Stats" : "Head-to-head"); button.prepend(svgIcon(kind === "stats" ? "M5 20V10m7 10V4m7 16V8" : "m4 3 7 7-3 3-7-7m19-3-7 7 3 3 7-7M3 21l7-7m11 7-7-7")); button.type = "button"; button.onclick = () => { if (kind === 'stats') location.hash = driverPageHref(`drivers/${encodeURIComponent(id)}`, { season: String(standing?.season || driverPages.season || new Date().getFullYear()) }); else { const teammate = state.driversStandings.find(d => d.driverId !== id && d.constructor === standing?.constructor); openDriverComparison(standing || { driverId: id, driverName: name, constructor: team }, teammate); } }; actions.append(button); }
+        for (const [label, kind] of [["▥  Stats", "stats"], ["⚔  Head-to-head", "compare"]]) { const button = node("button", "", kind === "stats" ? "Stats" : "Head-to-head"); button.prepend(svgIcon(kind === "stats" ? "M5 20V10m7 10V4m7 16V8" : "m4 3 7 7-3 3-7-7m19-3-7 7 3 3 7-7M3 21l7-7m11 7-7-7")); button.type = "button"; button.onclick = () => { if (kind === 'stats') navigate(driverPageHref(`drivers/${encodeURIComponent(id)}`, { season: String(standing?.season || driverPages.season || new Date().getFullYear()) })); else { const teammate = state.driversStandings.find(d => d.driverId !== id && d.constructor === standing?.constructor); openDriverComparison(standing || { driverId: id, driverName: name, constructor: team }, teammate); } }; actions.append(button); }
         panel.append(main, actions, detail); return panel;
     }
 
@@ -1450,13 +1450,13 @@
 
     function driverPageHref(view, params = {}) {
         const query = new URLSearchParams({ season: String(driverPages.season || state.driversStandings[0]?.season || new Date().getFullYear()), ...params });
-        return `#/${view}?${query}`;
+        return `/${view}?${query}`;
     }
 
     function openDriverComparison(driver, other) {
         const team = teamKey(driver.constructor || driver.team);
         const season = driver.season || driverPages.season || state.driversStandings[0]?.season;
-        location.hash = driverPageHref('head-to-head', { season: String(season), driver1: driver.driverId, ...(other ? { driver2: other.driverId } : { team }) });
+        navigate(driverPageHref('head-to-head', { season: String(season), driver1: driver.driverId, ...(other ? { driver2: other.driverId } : { team }) }));
     }
 
     function seasonDriver(driver, entries, season) {
@@ -1519,9 +1519,9 @@
         heading.append(node('h1', '', title)); head.append(heading, filters); root.append(head);
         filters.append(driverSelector('Season', driverPages.season, seasonYears().map(y => [y, y]), value => {
             const route = state.view === 'driver-stats' ? `drivers/${encodeURIComponent(driverPages.driver)}` : state.view;
-            location.hash = driverPageHref(route, { season: value, ...(state.view === 'head-to-head' ? { team: driverPages.team, driver1: driverPages.first, driver2: driverPages.second } : state.view === 'consistency' ? { excludeDnf: driverPages.excludeDnf ? '1' : '0' } : {}) });
+            navigate(driverPageHref(route, { season: value, ...(state.view === 'head-to-head' ? { team: driverPages.team, driver1: driverPages.first, driver2: driverPages.second } : state.view === 'consistency' ? { excludeDnf: driverPages.excludeDnf ? '1' : '0' } : {}) }));
         }));
-        if (detail) filters.append(driverSelector('Drivers', driverPages.driver, data.drivers.map(d => [d.driverId, shortDriverName(d)]), value => { location.hash = driverPageHref(`drivers/${encodeURIComponent(value)}`); }));
+        if (detail) filters.append(driverSelector('Drivers', driverPages.driver, data.drivers.map(d => [d.driverId, shortDriverName(d)]), value => { navigate(driverPageHref(`drivers/${encodeURIComponent(value)}`)); }));
         return filters;
     }
 
@@ -1859,7 +1859,7 @@
         const filters = driverPageHead(root, 'Head To Head', data);
         if (driverLoadState(root, data)) return;
         const teams = [...new Map(data.drivers.map(d => [teamKey(d.constructor), cleanTeamName(d.constructor)])).entries()];
-        const route = (params) => { location.hash = driverPageHref('head-to-head', { team: driverPages.team, driver1: driverPages.first, driver2: driverPages.second, ...params }); };
+        const route = (params) => { navigate(driverPageHref('head-to-head', { team: driverPages.team, driver1: driverPages.first, driver2: driverPages.second, ...params })); };
         filters.append(driverSelector('Team', driverPages.team, [['', 'All teams'], ...teams], value => route({ team: value, driver1: '', driver2: '' })));
         const available = data.drivers;
         filters.append(driverSelector('Driver 1', driverPages.first, [['', 'Select'], ...available.filter(d => d.driverId !== driverPages.second).map(d => [d.driverId, shortDriverName(d)])], value => route({ driver1: value, team: '' })), driverSelector('Driver 2', driverPages.second, [['', 'Select'], ...available.filter(d => d.driverId !== driverPages.first).map(d => [d.driverId, shortDriverName(d)])], value => route({ driver2: value, team: '' })));
@@ -1937,7 +1937,7 @@
         const info = node('span', 'consistency-info', 'ⓘ'); info.title = 'Exclude DNF, DNS and DSQ results from all four charts. Results without an official numbered position are always omitted. Boxes show the 25th–75th percentiles, the line is the median, and whiskers show the best and worst positions. Drivers are sorted by median position.';
         info.tabIndex = 0; info.dataset.popover = info.title; info.setAttribute('aria-label', info.title);
         const input = node('input', ''); input.type = 'checkbox'; input.setAttribute('role', 'switch'); input.setAttribute('aria-label', 'Exclude DNF'); input.checked = driverPages.excludeDnf;
-        input.onchange = () => { location.hash = driverPageHref('consistency', { excludeDnf: input.checked ? '1' : '0' }); };
+        input.onchange = () => { navigate(driverPageHref('consistency', { excludeDnf: input.checked ? '1' : '0' })); };
         toggle.append(info, input); filters.prepend(toggle);
         if (driverLoadState(root, data)) return;
         const grid = node('div', 'consistency-grid');
@@ -2056,7 +2056,7 @@
     function engineeringHead(root, title, view, season) {
         const head = node('header', 'page-head racing-page-head'), filters = node('div', 'racing-page-filters engineering-filters');
         head.append(node('h1', '', title), filters); root.append(head);
-        filters.append(driverSelector('Season', season, seasonYears().map(y => [y, y]), value => { location.hash = `#/${view}?season=${value}`; })); return filters;
+        filters.append(driverSelector('Season', season, seasonYears().map(y => [y, y]), value => { navigate(`/${view}?season=${value}`); })); return filters;
     }
     function engineeringStatus(root, data, view) {
         const label = view === 'tech-updates' ? 'technical updates' : view === 'pu-elements' ? 'power unit reports' : 'crash reports';
@@ -2358,7 +2358,7 @@
     }
     function homeRecords(data) {
         const records = [], rookies = new Set((data.summary.drivers || []).filter(d => d.rookie).map(d => String(d.driverNumber)));
-        const add = (entry, category, title, description, type = 'race') => records.push({ category, title, description, meeting: entry.meeting, date: entry.meeting.sessions?.find(s => s.sessionType === type)?.startTime || entry.meeting.endDate, href: `#/results/${encodeURIComponent(entry.meeting.id)}/${type}?season=${driverPages.season}` });
+        const add = (entry, category, title, description, type = 'race') => records.push({ category, title, description, meeting: entry.meeting, date: entry.meeting.sessions?.find(s => s.sessionType === type)?.startTime || entry.meeting.endDate, href: `/results/${encodeURIComponent(entry.meeting.id)}/${type}?season=${driverPages.season}` });
         [...data.entries].sort((a, b) => (b.meeting.round || 0) - (a.meeting.round || 0)).forEach(entry => {
             const race = sessionRows(entry, 'race').filter(r => r.position > 0).sort((a, b) => a.position - b.position), winner = race.find(r => r.position === 1);
             if (!winner) return; const place = entry.meeting.location || entry.meeting.country;
@@ -2388,12 +2388,12 @@
         const scroll = node('div', 'home-table-scroll'), table = node('table', 'home-standings-table'), head = table.createTHead().insertRow();['POS.', constructors ? 'CONSTRUCTOR' : 'DRIVER', 'POINTS', 'EVO.'].forEach(t => head.append(node('th', '', t))); const body = table.createTBody();
         const rows = [...(constructors ? data.constructors : data.drivers)].sort((a, b) => a.position - b.position).slice(0, 10), leader = rows[0]?.points || 0;
         rows.forEach(row => {
-            const tr = body.insertRow(), who = node('td'), team = constructors ? row.name || row.constructorName || row.constructor : row.constructor, name = constructors ? cleanTeamName(team) : shortDriverName(row), identity = node('a', 'home-standing-name'); identity.href = constructors ? `#/constructor-standings?season=${season}` : driverPageHref(`drivers/${encodeURIComponent(row.driverId)}`); const logo = manufacturerLogo(team); if (logo) identity.append(logo); identity.append(node('span', '', name)); who.append(identity);
+            const tr = body.insertRow(), who = node('td'), team = constructors ? row.name || row.constructorName || row.constructor : row.constructor, name = constructors ? cleanTeamName(team) : shortDriverName(row), identity = node('a', 'home-standing-name'); identity.href = constructors ? `/constructor-standings?season=${season}` : driverPageHref(`drivers/${encodeURIComponent(row.driverId)}`); const logo = manufacturerLogo(team); if (logo) identity.append(logo); identity.append(node('span', '', name)); who.append(identity);
             const score = node('td', 'home-standing-points'); score.append(node('b', '', pointsText(row.points))); if (row.position > 1) score.append(node('small', '', `-${pointsText(leader - row.points)}`));
             const evolution = row.evolution; tr.append(node('td', '', row.position), who, score, node('td', evolution > 0 ? 'home-up' : evolution < 0 ? 'home-down' : 'home-neutral', Number.isFinite(evolution) && evolution !== 0 ? `${evolution > 0 ? '↑' : '↓'} ${Math.abs(evolution)}` : '—'));
         }); scroll.append(table); card.append(scroll);
         if (!rows.length) card.append(node('p', 'empty', data.errors.includes(constructors ? 'constructors' : 'drivers') ? 'Standings could not be loaded.' : 'No standings available for this season.'));
-        const more = node('a', 'home-full-link', `Full ${season} ${constructors ? 'Constructor' : 'Driver'} Standings →`); more.href = `#/${constructors ? 'constructor' : 'driver'}-standings?season=${season}`; card.append(more); return card;
+        const more = node('a', 'home-full-link', `Full ${season} ${constructors ? 'Constructor' : 'Driver'} Standings →`); more.href = `/${constructors ? 'constructor' : 'driver'}-standings?season=${season}`; card.append(more); return card;
     }
     function homeRecordPanel(data, season) {
         const panel = node('section', 'home-card home-records'), header = node('header', 'home-records-head'), filters = node('div', 'home-record-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Stats and records category'); header.append(node('h2', '', `${season} Stats & Records`), filters); panel.append(header);
@@ -2442,7 +2442,7 @@
         const unavailable = Object.entries(data.meta.summary?.sections || {}).filter(([, meta]) => meta.unavailable).map(([key]) => key), stale = Object.values(data.meta).some(meta => meta.stale);
 
         const schedule = homeSchedule(data.calendar, data.entries), cards = node('div', 'home-summary-grid'), summary = data.summary, unavailableSummary = key => data.errors.includes('summary') || data.meta.summary?.sections?.[key]?.unavailable;
-        const counter = node('a', 'home-card home-countdown'), active = schedule.current || schedule.next; counter.href = schedule.display ? `#/results/${encodeURIComponent(schedule.display.id)}/${active?.session.sessionType || 'race'}?season=${season}` : `#/results?season=${season}`;
+        const counter = node('a', 'home-card home-countdown'), active = schedule.current || schedule.next; counter.href = schedule.display ? `/results/${encodeURIComponent(schedule.display.id)}/${active?.session.sessionType || 'race'}?season=${season}` : `/results?season=${season}`;
         if (active) {
             const heading = node('h2', ''); heading.append(node('span', 'home-round', `R${active.meeting.round}`), node('span', '', `${active.meeting.location || active.meeting.country}: ${{ fp1: 'Practice 1', fp2: 'Practice 2', fp3: 'Practice 3', qualifying: 'Qualifying', race: 'Race', sprint: 'Sprint', sprintQualifying: 'Sprint Qualifying' }[active.session.sessionType] || active.session.sessionType}`)); counter.append(heading);
             if (schedule.current) { counter.append(node('strong', 'home-session-live', 'Session underway'), node('p', '', new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(active.start)))); }
@@ -2453,7 +2453,7 @@
         const progress = node('div', 'home-progress'), segments = node('span', 'home-progress-segments'); for (let i = 0; i < schedule.total; i++) { const segment = node('i'); if (i < schedule.completed) segment.classList.add('is-complete'); segments.append(segment); } progress.append(segments, node('b', '', `${schedule.total ? Math.round(schedule.completed / schedule.total * 100) : 0}%`)); progress.setAttribute('aria-label', `${schedule.completed} of ${schedule.total} races with results`); scheduleCard.append(progress); cards.append(scheduleCard);
         const pit = Array.isArray(summary.pitStop) ? summary.pitStop[0] : null, pitCard = homeMetric(`${season} Fastest Pit Stop`, pit && !unavailableSummary('pitStop') ? `${Number(pit.time).toFixed(2)} s` : '—', null, 'M12 8v5l3 2M9 2h6M19 5l2 2M21 13a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z');
         pitCard.querySelector('.home-metric-note').replaceChildren(); if (pit) { const note = pitCard.querySelector('.home-metric-note'), logo = manufacturerLogo(pit.team); if (logo) note.append(logo); note.append(node('span', '', `${pit.driverName} · Round ${pit.round}`), flatFlag({ country: pit.country, countryCode: engineeringCountry(pit.country) }), node('span', '', pit.country)); } pitCard.tabIndex = 0; pitCard.dataset.popover = 'Fastest recorded stationary pit stop for the selected season. Source: PitPulse timing archive.'; cards.append(pitCard);
-        cards.append(homeMetric(`${season} Crash Damage Total Costs`, !unavailableSummary('crashes') && Number.isFinite(summary.crashes?.seasonTotal) ? crashMoney(summary.crashes.seasonTotal) : '—', `#/destructors-championship?season=${season}`, 'M15 6l3-3m-1-2c3 0 1 4 5 4M18 14a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z', summary.crashes, true));
+        cards.append(homeMetric(`${season} Crash Damage Total Costs`, !unavailableSummary('crashes') && Number.isFinite(summary.crashes?.seasonTotal) ? crashMoney(summary.crashes.seasonTotal) : '—', `/destructors-championship?season=${season}`, 'M15 6l3-3m-1-2c3 0 1 4 5 4M18 14a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z', summary.crashes, true));
         const coverageNote = key => {
             const meta = data.meta.summary?.sections?.[key], rounds = meta?.coverage?.rounds || [];
             if (meta?.unavailable) return 'Data unavailable';
@@ -2461,9 +2461,9 @@
             const latest = Math.max(...rounds);
             return meta.coverage.complete ? 'Complete season archive' : `Through Round ${latest} · partial season`;
         };
-        const puMetric = homeMetric(`${season} Total PU Elements Used`, !unavailableSummary('pu') && Number.isFinite(summary.pu?.total) ? pointsText(summary.pu.total) : '—', `#/pu-elements?season=${season}`, 'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', summary.pu);
+        const puMetric = homeMetric(`${season} Total PU Elements Used`, !unavailableSummary('pu') && Number.isFinite(summary.pu?.total) ? pointsText(summary.pu.total) : '—', `/pu-elements?season=${season}`, 'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', summary.pu);
         puMetric.querySelector('.home-metric-note').textContent = coverageNote('pu'); cards.append(puMetric);
-        const techMetric = homeMetric(`${season} Total Tech Upgrades`, !unavailableSummary('tech') && Number.isFinite(summary.tech?.total) ? pointsText(summary.tech.total) : '—', `#/tech-updates?season=${season}`, 'M14 6a5 5 0 0 0-6 6L2 18l4 4 6-6a5 5 0 0 0 6-6l-4 4-4-4 4-4Z', summary.tech);
+        const techMetric = homeMetric(`${season} Total Tech Upgrades`, !unavailableSummary('tech') && Number.isFinite(summary.tech?.total) ? pointsText(summary.tech.total) : '—', `/tech-updates?season=${season}`, 'M14 6a5 5 0 0 0-6 6L2 18l4 4 6-6a5 5 0 0 0 6-6l-4 4-4-4 4-4Z', summary.tech);
         techMetric.querySelector('.home-metric-note').textContent = coverageNote('tech'); cards.append(techMetric);
         const social = node('section', 'home-card home-social'); social.append(node('p', '', 'Support PitPulse and help us build a better racing companion.')); const support = node('a', 'home-support-button', 'Support Us on GitHub'); support.href = 'https://github.com/aczeccssa/PitPulse'; support.target = '_blank'; support.rel = 'noopener noreferrer'; support.append(svgIcon('M14 5h5v5m0-5-7 7M5 7v12h12v-5')); social.append(support); cards.append(social);
         const promo = node('a', 'home-card home-app-promo'); promo.href = 'https://github.com/aczeccssa/PitPulse'; promo.target = '_blank'; promo.rel = 'noopener noreferrer';
@@ -2715,8 +2715,15 @@
 
     /* ---------- routing ---------- */
 
+    function navigate(href) {
+        const target = String(href || "/").replace(/^#/, "");
+        if (target === location.pathname + location.search) { applyRoute(); return; }
+        history.pushState(null, "", target);
+        applyRoute();
+    }
+
     function currentRoute() {
-        const parts = location.hash.replace(/^#\/?/, "").split("?")[0].split("/").filter(Boolean);
+        const parts = location.pathname.replace(/^\/+/, "").split("?")[0].split("/").filter(Boolean);
         if (parts[0] === "driver-standings" || parts[0] === "constructor-standings") return { view: "standings", parts: [parts[0] === "constructor-standings" ? "constructors" : "drivers"] };
         if (parts[0] === 'drivers' && parts[1]) return { view: 'driver-stats', parts: [decodeURIComponent(parts[1])] };
         const view = ROUTES.includes(parts[0]) ? parts[0] : "home";
@@ -2728,7 +2735,7 @@
         setLoading(null);
         state.view = view;
         if (RACING_VIEWS.includes(view)) {
-            const query = new URLSearchParams(location.hash.split('?')[1] || '');
+            const query = new URLSearchParams(location.search);
             const requestedSeason = Number(query.get('season'));
             driverPages.season = Number.isInteger(requestedSeason) && requestedSeason >= 1950 && requestedSeason <= 2100 ? requestedSeason : new Date().getFullYear();
             driverPages.driver = view === 'driver-stats' ? parts[0] : null;
@@ -2744,7 +2751,7 @@
                 const season = driverPages.season;
                 const features = SEASON_FEATURES.get(Number(season));
                 if (features?.[sectionFeature(view)] === false) {
-                    location.hash = `#/tech-updates?season=${season}`;
+                    navigate(`/tech-updates?season=${season}`);
                     return;
                 }
             }
@@ -2772,9 +2779,9 @@
             const season = view === 'results' ? resultsSeason() : requestedSeason() || driverPages.season;
             if (link.dataset.route && !link.dataset.standingsNav) {
                 const target = link.dataset.route === 'standings' ? 'driver-standings' : link.dataset.route;
-                link.href = `#/${target}${season ? `?season=${season}` : ''}`;
+                link.href = `/${target}${season ? `?season=${season}` : ''}`;
             }
-            if (link.dataset.standingsNav) link.href = `#/${link.dataset.standingsNav === 'constructors' ? 'constructor' : 'driver'}-standings${season ? `?season=${season}` : ''}`;
+            if (link.dataset.standingsNav) link.href = `/${link.dataset.standingsNav === 'constructors' ? 'constructor' : 'driver'}-standings${season ? `?season=${season}` : ''}`;
             if (active) link.setAttribute("aria-current", "page");
             else link.removeAttribute("aria-current");
         }
@@ -2829,7 +2836,20 @@
             if (button) setStandingsKind(button.dataset.standings);
         });
 
-        window.addEventListener("hashchange", applyRoute);
+        // Links are real paths now: intercept same-origin navigation so the
+        // page renders in place, and let the server serve the shell on reload.
+        document.addEventListener("click", (event) => {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const link = event.target.closest && event.target.closest("a[href]");
+            if (!link || link.target || link.hasAttribute("download")) return;
+            const url = new URL(link.getAttribute("href"), location.origin);
+            if (url.origin !== location.origin) return;
+            if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/motorsport/")) return;
+            if (/\.(png|ico|css|js|webmanifest|svg|json)$/i.test(url.pathname)) return;
+            event.preventDefault();
+            navigate(url.pathname + url.search);
+        });
+        window.addEventListener("popstate", applyRoute);
     }
 
     function init() {

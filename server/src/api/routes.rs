@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
     body::Body,
     extract::{Path, Query, State},
-    http::{HeaderValue, header},
+    http::{HeaderMap, HeaderValue, Method, StatusCode, Uri, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -257,16 +257,61 @@ pub async fn favicon_png() -> impl IntoResponse {
 }
 
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, ApiError> {
+    Ok(Json(health_body(&state).await))
+}
+
+/// Public liveness endpoint for probes and operators. It reports the same
+/// shape as the authenticated `/api/v1/health` and exposes no data.
+pub async fn health_public(State(state): State<AppState>) -> Json<HealthResponse> {
+    Json(health_body(&state).await)
+}
+
+async fn health_body(state: &AppState) -> HealthResponse {
     let database_healthy = state.database.health_check().await.is_ok();
     let live_healthy =
         state.live.current().source_status != crate::domain::live::LiveStatus::Disconnected;
 
-    Ok(Json(HealthResponse {
+    HealthResponse {
         status: if database_healthy { "ok" } else { "degraded" }.to_string(),
         database: database_healthy,
         live: live_healthy,
         version: env!("CARGO_PKG_VERSION").to_string(),
-    }))
+    }
+}
+
+/// Browser paths the shell does not route itself are client-side views, so a
+/// direct link such as `/home` or `/results/2025:1/race` returns the shell.
+/// API paths and non-GET methods keep their normal errors.
+pub async fn spa_fallback(
+    State(state): State<AppState>,
+    method: Method,
+    uri: Uri,
+    headers: HeaderMap,
+) -> Response {
+    if uri.path().starts_with("/api/")
+        || uri.path().starts_with("/motorsport")
+    {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": {"code": "not_found", "message": "unknown API path"}})),
+        )
+            .into_response();
+    }
+    if method != Method::GET && method != Method::HEAD {
+        return StatusCode::METHOD_NOT_ALLOWED.into_response();
+    }
+    let mut response = index().await;
+    if state.config.security.require_token
+        && let Some(token) = state.config.security.token.as_deref()
+        && !crate::api::web_auth::has_web_session(&headers, token)
+    {
+        crate::api::web_auth::set_session_cookie(
+            &mut response,
+            token,
+            crate::api::web_auth::forwarded_https(&headers),
+        );
+    }
+    response
 }
 
 async fn calendar(

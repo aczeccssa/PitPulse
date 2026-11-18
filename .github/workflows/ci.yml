@@ -44,23 +44,26 @@ jobs:
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for _ in $(seq 1 60); do
-            if [[ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:38711/ || true)" == "401" ]]; then break; fi
+            if [[ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:38711/ || true)" == "200" ]]; then break; fi
             sleep 1
           done
-          # The shell is part of the service: refused without a browser session.
-          status="$(curl -sS -o "$tmp/denied.html" -w '%{http_code}' http://127.0.0.1:38711/)"
-          test "$status" = "401"
-          grep -q '<h1>Access Required</h1>' "$tmp/denied.html"
-          ! grep -q 'app.js' "$tmp/denied.html"
-          # The access link exchanges the token for a derived session cookie.
-          status="$(curl -sS -c "$tmp/cookies.txt" -o /dev/null -w '%{http_code}' \
-            --get --data-urlencode "token=$token" http://127.0.0.1:38711/)"
-          test "$status" = "303"
-          curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/ -o "$tmp/index.html" ||
-            { cat "$tmp/server.log"; exit 1; }
+          # The shell is served directly and issues its own read-only session.
+          status="$(curl -sS -c "$tmp/cookies.txt" -o "$tmp/index.html" -w '%{http_code}' \
+            http://127.0.0.1:38711/ || { cat "$tmp/server.log"; exit 1; })"
+          test "$status" = "200"
           grep -q 'href="/app.css"' "$tmp/index.html"
           grep -q 'src="/app.js"' "$tmp/index.html"
           ! grep -q 'auth-dialog' "$tmp/index.html"
+          grep -q 'pitpulse_web' "$tmp/cookies.txt"
+          # Direct links and the public liveness probe resolve without a key.
+          for path in /index /home /results/2025%3A1/race /health; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:38711$path")"
+            test "$status" = "200"
+          done
+          # The explicit access link still re-issues the session on demand.
+          status="$(curl -sS -c "$tmp/link-cookies.txt" -o /dev/null -w '%{http_code}' \
+            --get --data-urlencode "token=$token" http://127.0.0.1:38711/)"
+          test "$status" = "303"
           curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/app.css -o /dev/null
           curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/app.js -o /dev/null
           curl -fsS -b "$tmp/cookies.txt" http://127.0.0.1:38711/manifest.webmanifest -o /dev/null

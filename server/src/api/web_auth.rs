@@ -1,12 +1,12 @@
 //! Browser access to the dashboard shell.
 //!
-//! The dashboard is part of the service, not a public document. When
-//! `security.require_token` is set, the shell and its assets require a browser
-//! session that the server issues itself: opening `/?token=<token>` exchanges
-//! the deployment token for a derived, read-only cookie. The page never sees
-//! or stores the bearer token, and the cookie is a different value that only
-//! admits `GET`/`HEAD` requests, so it cannot be replayed against write
-//! endpoints. Bearer callers keep full API access.
+//! The shell is served directly at `/` and `/index`. When
+//! `security.require_token` is set, serving it also issues the browser a
+//! derived, read-only session cookie; the visitor never types a key. The page
+//! never sees or stores the bearer token, and the cookie is a different value
+//! that only admits `GET`/`HEAD` requests, so it cannot be replayed against
+//! write endpoints. `/?token=<token>` still exchanges the deployment token for
+//! a fresh session on demand. Bearer callers keep full API access.
 
 use axum::{
     body::Body,
@@ -51,9 +51,12 @@ pub fn cookie_matches(headers: &HeaderMap, expected: &str) -> bool {
     })
 }
 
-/// Guards the dashboard shell and its assets. Browser requests must carry the
-/// session cookie, which is only issued by the `?token=` bootstrap below.
-pub async fn require_web_access(
+/// Serves the dashboard shell and issues the derived, read-only browser
+/// session when the visitor does not already hold one. The page never sees the
+/// bearer token; the session only admits `GET`/`HEAD`, so a copied cookie
+/// cannot write. `/?token=...` stays available to re-issue a session
+/// explicitly, for example after the token is rotated.
+pub async fn issue_web_session(
     State(state): State<AppState>,
     request: Request,
     next: Next,
@@ -69,9 +72,8 @@ pub async fn require_web_access(
         .as_ref()
         .expect("token checked during config validation");
 
-    // Bootstrap: the operator opens a link carrying the deployment token and
-    // the server issues its own browser credential. The token is compared in
-    // constant time and never echoed back into the page.
+    // Explicit access link: the token is compared in constant time, exchanged
+    // for the server's own browser credential, and never echoed into the page.
     if request.uri().path() == "/"
         && let Some(provided) = query_value(request.uri().query(), SHELL_QUERY_TOKEN)
     {
@@ -83,11 +85,25 @@ pub async fn require_web_access(
         );
     }
 
-    if bearer_matches(request.headers(), expected) || cookie_matches(request.headers(), expected) {
-        return next.run(request).await;
+    let secure = forwarded_https(request.headers());
+    let has_session = has_web_session(request.headers(), expected);
+    let mut response = next.run(request).await;
+    if !has_session && response.status().is_success() {
+        set_session_cookie(&mut response, expected, secure);
     }
+    response
+}
 
-    unauthorized_page("Open the PitPulse access link for this server to continue.")
+/// Whether the request already carries the bearer token or a valid session.
+pub fn has_web_session(headers: &HeaderMap, expected: &str) -> bool {
+    bearer_matches(headers, expected) || cookie_matches(headers, expected)
+}
+
+/// Adds the derived read-only session cookie to a shell response.
+pub fn set_session_cookie(response: &mut Response, token: &str, secure: bool) {
+    if let Ok(value) = HeaderValue::from_str(&session_cookie(token, secure)) {
+        response.headers_mut().append(header::SET_COOKIE, value);
+    }
 }
 
 /// `303 See Other` back to `/` with the session cookie set. The token is
@@ -180,7 +196,7 @@ fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
         .map(|(_, value)| value.trim().to_string())
 }
 
-fn forwarded_https(headers: &HeaderMap) -> bool {
+pub fn forwarded_https(headers: &HeaderMap) -> bool {
     let proto = headers
         .get("x-forwarded-proto")
         .and_then(|value| value.to_str().ok())
