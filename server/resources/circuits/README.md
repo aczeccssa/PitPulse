@@ -1,8 +1,8 @@
 # Circuit geometry and calibration
 
-`f1-circuits.geojson` is the unmodified `f1-circuits.geojson` from
-[bacinger/f1-circuits](https://github.com/bacinger/f1-circuits/tree/394d8fbe70ef2c0b0c8d23ff7bee61fa09606055),
-commit `394d8fbe70ef2c0b0c8d23ff7bee61fa09606055`. Its MIT license is retained in
+`f1-circuits.geojson` is the `f1-circuits.geojson` from
+[bacinger/f1-circuits](https://github.com/bacinger/f1-circuits/tree/8094e957b8d6aa8b9f4510c93968556cccd30e02),
+commit `8094e957b8d6aa8b9f4510c93968556cccd30e02`. Only trailing whitespace is normalized. Its MIT license is retained in
 `LICENSE.md`; `source.json` records the pinned source. Feature IDs describe the
 dataset and are not evidence that every year's layout has been checked.
 
