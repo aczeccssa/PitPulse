@@ -1259,7 +1259,7 @@
             const openMeeting = () => { state.results.meetingId = entry.meeting.id; state.results.sessionType = "race"; state.results.detail = true; history.replaceState(null, "", `#/results/${encodeURIComponent(entry.meeting.id)}/race`); renderResultsPage(); };
             tr.addEventListener("click", (event) => { if (!event.target.closest("a,button")) openMeeting(); });
             tr.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openMeeting(); } });
-            const name = node("td", "gp-name"); name.append(flatFlag(entry.meeting), node("span", "round-badge", `R${entry.meeting.round}`), node("span", "", resultsGpName(entry.meeting.name))); tr.append(name);
+            const name = node("td", ""); name.append(grandPrixLabel(entry.meeting)); tr.append(name);
             tr.append(node("td", "season-date", formatDateRange(entry.meeting.startDate, entry.meeting.endDate)));
             for (const type of ["sprintQualifying", "sprint", "qualifying", "race"]) {
                 const td = node("td", "winner-cell"); td.append(seasonIdentity(entry.sessions[type]?.rows.find(r => r.position === 1), true)); tr.append(td);
@@ -2480,6 +2480,12 @@
         return String(value).split(":").map(Number).reduce((a, b) => a * 60 + b, 0);
     }
 
+    function grandPrixLabel(meeting) {
+        const label = node("span", "gp-name");
+        label.append(flatFlag(meeting), node("span", "round-badge", `R${meeting.round}`), node("span", "", resultsGpName(meeting.name)));
+        return label;
+    }
+
     function renderRecordChart(entries) {
         const section = seasonSection("Grand Prix Weekend Fastest Laps vs Track Records"); section.classList.add("record-section");
         const toolbar = node("div", "record-toolbar"); const label = node("label", "", "Sort by: "); const select = node("select", "");
@@ -2487,33 +2493,31 @@
         label.append(select); const download = node("button", "record-download", "⇩"); download.type = "button"; download.setAttribute("aria-label", "Download chart as SVG"); toolbar.append(label, download); const recordBar = node("div", "results-titlebar"); recordBar.append(section.querySelector("h2"), toolbar); section.append(recordBar);
         section.append(node("p", "record-description", `Each weekend’s fastest archived lap across all sessions, compared with the best lap from earlier weekends at the same circuit in the PitPulse archive (${FIRST_SEASON} onward).`));
         const scroll = node("div", "season-scroll record-scroll"); section.append(scroll);
-        const venuesPerCountry = new Map();
-        for (const { meeting } of entries) {
-            venuesPerCountry.set(meeting.country, (venuesPerCountry.get(meeting.country) || 0) + 1);
-        }
         const rows = entries.map(({ meeting, fastestLaps }) => {
             const best = fastestLaps?.weekend, record = fastestLaps?.previous;
-            const venue = venuesPerCountry.get(meeting.country) > 1 ? meeting.location : meeting.country;
-            return { meeting, venue: venue || meeting.location || meeting.name, best, record, gap: best && record ? (best.millis - record.millis) / 1000 : null };
+            return { meeting, best, record, gap: best && record ? (best.millis - record.millis) / 1000 : null };
         });
         if (!rows.length) {
             scroll.append(node("p", "empty", "No weekend lap times are available."));
             download.disabled = true;
             return section;
         }
+        let drawnWidth = 0;
         function draw() {
             const data = [...rows].sort(select.value === "gap" ? (a, b) => (a.gap ?? Infinity) - (b.gap ?? Infinity) : (a, b) => a.meeting.round - b.meeting.round);
-            const W = 1440, top = 56, rowHeight = 36, H = top + data.length * rowHeight;
-            const zero = 805, step = 72;
+            const W = drawnWidth = Math.max(1080, scroll.clientWidth);
+            const top = 56, rowHeight = 30, H = top + data.length * rowHeight;
+            const plotLeft = 420, plotRight = W - 170;
+            const zero = (plotLeft + plotRight) / 2, step = (plotRight - plotLeft) / 10;
             const tick = Math.max(1, Math.ceil(Math.max(...rows.map(row => Math.abs(row.gap ?? 0))) / 5));
             const svg = standingsSvg(W, H, "Weekend fastest laps compared with the earlier PitPulse archive best");
             const shape = (tag, attrs, value) => chartShape(svg, tag, attrs, value);
-            const text = (x, y, value, extra = {}) => shape("text", { x, y, fill: "var(--text)", "font-size": 14, ...extra }, value);
+            const text = (x, y, value, extra = {}) => shape("text", { x, y, fill: "var(--text)", "font-size": 12, ...extra }, value);
             const signed = (n, digits) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
             const muted = { fill: "var(--muted)" };
 
             function lapLabel(x, y, anchor, lap, value, note) {
-                const label = text(x, y, null, { "text-anchor": anchor, "font-weight": 700 });
+                const label = text(x, y, null, { "text-anchor": anchor, "font-weight": 650 });
                 const color = lap.team ? standingsLineColor(lap.team) : "var(--text)";
                 chartShape(label, "tspan", { fill: color }, driverCode(lap));
                 chartShape(label, "tspan", {}, ` ${value}`);
@@ -2525,7 +2529,7 @@
                 if (i % 2 === 0) shape("rect", { x: 0, y, width: W, height: rowHeight, fill: "var(--tint-2)", class: "record-grid" });
                 shape("line", { x1: 0, y1: y, x2: W, y2: y, stroke: "var(--line)", class: "record-grid" });
             }
-            text(19, 43, "GRAND PRIX", { ...muted, "font-weight": 650 });
+            text(6, 43, "GRAND PRIX", { ...muted, "font-weight": 650 });
             text(zero, 18, "Gap to earlier archive best (seconds)", { ...muted, "text-anchor": "middle", "font-weight": 650 });
             for (let mark = -10; mark <= 10; mark++) {
                 const x = zero + mark * step / 2;
@@ -2533,13 +2537,13 @@
                 shape("line", { x1: x, y1: 50, x2: x, y2: H, stroke: mark === 0 ? "var(--line-strong)" : "var(--line)", class: "record-grid", ...(minor ? { "stroke-dasharray": "4 3" } : {}) });
                 if (!minor) text(x, 43, signed(mark * tick / 2, 1), { ...muted, "text-anchor": "middle", "font-weight": 650 });
             }
-            for (const [i, { meeting, venue, best, record, gap }] of data.entries()) {
-                const y = top + (i + .5) * rowHeight;
-                shape("rect", { x: 19, y: y - 10, width: 37, height: 20, rx: 4, fill: "none", stroke: "var(--line-strong)" });
-                text(37.5, y + 4.5, `R${meeting.round}`, { "text-anchor": "middle", "font-size": 13, "font-weight": 650 });
-                chartFlag(svg, meeting, 80, y - 10, 30);
-                shape("rect", { x: 65, y: y - 10, width: 30, height: 20, rx: 3, fill: "none", stroke: "var(--line-strong)" });
-                text(104, y + 5, venue === "UK" ? "Great Britain" : venue, { "font-size": 15, "font-weight": 650 });
+            for (const [i, { meeting, best, record, gap }] of data.entries()) {
+                const rowTop = top + i * rowHeight;
+                const y = rowTop + rowHeight / 2;
+                const slot = shape("foreignObject", { x: 6, y: rowTop, width: 265, height: rowHeight });
+                const label = node("div", "record-meeting-label");
+                label.append(grandPrixLabel(meeting));
+                slot.append(label);
 
                 if (!best) {
                     text(zero + 16, y + 5, "No timed lap available", muted);
@@ -2549,7 +2553,7 @@
                 const detail = `${best.driverName} · ${best.time} · ${sessionTypeLabel(best.sessionType)}`;
                 if (!record) {
                     lapLabel(zero - 14, y + 5, "end", best, best.time, `(${best.year})`);
-                    chartTip(shape("circle", { cx: zero, cy: y, r: 5.5, fill: "var(--text)", stroke: "#0aad83", "stroke-width": 4.5 }), `${detail} · First archived benchmark for this circuit`);
+                    chartTip(shape("circle", { cx: zero, cy: y, r: 4.5, fill: "var(--text)", stroke: "#0aad83", "stroke-width": 3 }), `${detail} · First archived benchmark for this circuit`);
                     text(zero + 15, y + 5, "First archived benchmark", muted);
                     continue;
                 }
@@ -2558,9 +2562,9 @@
                 const faster = gap < 0;
                 const ring = faster ? "#0aad83" : gap > 0 ? "#ea4f71" : "var(--muted)";
                 lapLabel(zero + (faster ? 14 : -14), y + 5, faster ? "start" : "end", record, record.time, `(${record.year})`);
-                shape("line", { x1: zero, y1: y, x2: end, y2: y, stroke: "var(--text)", "stroke-opacity": .78, "stroke-width": 3.5, "stroke-linecap": "round" });
-                shape("circle", { cx: zero, cy: y, r: 3.5, fill: "var(--text)" });
-                const marker = shape("circle", { cx: end, cy: y, r: 5.5, fill: "var(--text)", stroke: ring, "stroke-width": 4.5 });
+                shape("line", { x1: zero, y1: y, x2: end, y2: y, stroke: "var(--text)", "stroke-opacity": .78, "stroke-width": 2.5, "stroke-linecap": "round" });
+                shape("circle", { cx: zero, cy: y, r: 2.5, fill: "var(--text)" });
+                const marker = shape("circle", { cx: end, cy: y, r: 4.5, fill: "var(--text)", stroke: ring, "stroke-width": 3 });
                 const delta = `${signed(gap, 3)}s`;
                 const percent = `(${signed((best.millis - record.millis) / record.millis * 100, 2)}%)`;
                 chartTip(marker, `${detail} · ${delta} ${percent}`);
@@ -2569,8 +2573,34 @@
             scroll.replaceChildren(svg);
             installSeasonPopovers(scroll);
         }
-        select.onchange = draw; draw();
-        download.onclick = () => { const svg = scroll.querySelector("svg").cloneNode(true); svg.setAttribute("xmlns", "http://www.w3.org/2000/svg"); svg.setAttribute("style", "--text:#080e1c;--muted:#64748b;--line:#e8edf3;--line-strong:#ccd5df;--tint-2:#f6f8fa;background:white;font-family:Arial,sans-serif"); const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" })); const a = node("a", ""); a.href = url; a.download = "weekend-fastest-laps.svg"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+        select.onchange = draw;
+        draw();
+        const resize = new ResizeObserver(() => {
+            if (!scroll.isConnected) resize.disconnect();
+            else if (Math.max(1080, scroll.clientWidth) !== drawnWidth) draw();
+        });
+        resize.observe(scroll);
+        download.onclick = () => {
+            const chart = scroll.querySelector("svg");
+            const copy = chart.cloneNode(true);
+            const { width, height } = chart.viewBox.baseVal;
+            copy.setAttribute("width", width);
+            copy.setAttribute("height", height);
+            copy.setAttribute("style", "--text:#080e1c;--muted:#64748b;--line:#e8edf3;--line-strong:#ccd5df;--tint-2:#f6f8fa;background:white;font-family:Arial,sans-serif");
+            const styles = chartShape(copy, "style", {}, `
+                .record-meeting-label { display: flex; align-items: center; height: 100%; font-size: 12px; }
+                .gp-name { white-space: nowrap; font-weight: 600; }
+                .flat-flag { display: inline-block; height: 1em; width: 1.5em; margin: 0 7px; vertical-align: -.1em; border-radius: 2px; }
+                .round-badge { display: inline-block; border: 1px solid var(--line-strong); border-radius: 4px; padding: 2px 5px; margin-right: 10px; font-size: 10px; }
+            `);
+            copy.prepend(styles);
+            const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)], { type: "image/svg+xml" }));
+            const link = node("a", "");
+            link.href = url;
+            link.download = "weekend-fastest-laps.svg";
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
         section.append(node("div", "record-legend", "●  Earlier archive best     ◉  Weekend fastest lap · Green marks a faster lap or a first archived benchmark")); return section;
     }
 

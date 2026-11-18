@@ -293,7 +293,9 @@ input {
         animation: workspace-spin .75s linear infinite;
     }
     @keyframes workspace-spin {
-        to { transform: rotate(1turn); }
+        to {
+            transform: rotate(1turn);
+        }
     }
     .topnav a, .tabbar a, .segmented button {
         transition: background-color 160ms ease, color 160ms ease;
@@ -3330,8 +3332,16 @@ body[data-live-phase="loading"] .live {
 .record-scroll svg {
     display: block;
     width: 100%;
-    min-width: 1100px;
+    min-width: 1080px;
+    max-height: none;
     font-family: var(--sans);
+}
+.record-meeting-label {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: var(--text);
+    font-size: 12px;
 }
 .record-legend {
     border-top: 1px solid var(--line);
