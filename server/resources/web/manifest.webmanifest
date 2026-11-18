@@ -2,7 +2,7 @@
     "name": "PitPulse",
     "short_name": "PitPulse",
     "description": "Pit Pulse - Formula 1 Live Timing",
-    "lang": "zh-CN",
+    "lang": "en",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

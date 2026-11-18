@@ -36,8 +36,7 @@
     --danger-tint: rgba(255, 69, 58, 0.14);
     --radius: 20px;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
-        "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 }
 
 :root[data-theme="light"] {
@@ -267,6 +266,38 @@ input {
 
 .view[hidden] {
     display: none;
+}
+
+.workspace-loader {
+    position: absolute;
+    inset: 64px 0 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 12px;
+    padding: 20px;
+    color: var(--muted-strong);
+    font-size: 13px;
+    pointer-events: none;
+}
+.workspace-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--red-bright);
+    border-right-color: var(--red-bright);
+    border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .workspace-spinner {
+        animation: workspace-spin .75s linear infinite;
+    }
+    @keyframes workspace-spin {
+        to { transform: rotate(1turn); }
+    }
+    .topnav a, .tabbar a, .segmented button {
+        transition: background-color 160ms ease, color 160ms ease;
+    }
 }
 
 .shell {
@@ -2118,7 +2149,7 @@ input {
 }
 
 /* A five-session weekend does not fit on a phone as one line of
-   "周五 08:30"; stack the weekday over the clock so the strip stays inside
+   "Fri 08:30"; stack the weekday over the clock so the strip stays inside
    the card instead of clipping the race. */
 
 @media (max-width: 640px) {
@@ -2574,12 +2605,13 @@ body[data-live-phase="loading"] .live {
 }
 @media (min-width: 1101px) {
     body {
-        grid-template-columns: 72px minmax(0, 1fr);
+        grid-template-columns: 56px minmax(0, 1fr);
         grid-template-rows: 64px minmax(0, 1fr);
     }
     .topbar {
-        padding: 18px 10px;
-        gap: 26px;
+        padding: 18px 8px;
+        gap: 20px;
+        overflow-y: auto;
     }
     .brand {
         justify-content: center;
@@ -2587,23 +2619,27 @@ body[data-live-phase="loading"] .live {
     }
     .brand-name {
         display: none;
+        font-size: 13px;
+        letter-spacing: .02em;
     }
     .brand-mark {
-        height: 28px;
+        height: 20px;
     }
     .topnav {
-        gap: 10px;
+        gap: 3px;
+        flex-shrink: 0;
     }
     .topnav a {
         font-size: 0;
-        padding: 13px;
+        min-height: 36px;
+        padding: 8px;
         gap: 0;
         justify-content: center;
         border-radius: 6px;
     }
     .topnav .tab-icon {
-        width: 22px;
-        height: 22px;
+        width: 17px;
+        height: 17px;
     }
     .topnav a.is-active {
         background: var(--tint-3);
@@ -2612,7 +2648,11 @@ body[data-live-phase="loading"] .live {
         display: none;
     }
     .navigation-expanded {
-        grid-template-columns: 200px minmax(0, 1fr);
+        grid-template-columns: 240px minmax(0, 1fr);
+    }
+    .navigation-expanded .brand {
+        justify-content: flex-start;
+        padding-inline: 10px;
     }
     .navigation-expanded .brand-name {
         display: inline;
@@ -2620,7 +2660,9 @@ body[data-live-phase="loading"] .live {
     .navigation-expanded .topnav a {
         justify-content: flex-start;
         font-size: 13px;
-        gap: 12px;
+        gap: 9px;
+        padding-inline: 10px;
+        white-space: nowrap;
     }
     .workspacebar {
         padding-inline: 24px;
@@ -4373,6 +4415,11 @@ body[data-live-phase="loading"] .live {
     padding: 6px 10px;
     min-width: 140px;
 }
+.results-workspace .record-download {
+    padding: 4px;
+    font-size: 18px;
+    line-height: 1;
+}
 .results-workspace .record-description {
     margin: 0 0 12px;
     font-size: 12px;
@@ -5123,9 +5170,6 @@ body[data-live-phase="loading"] .live {
 }
 .standings-sidebar .standings-card-head {
     margin-bottom: 2px;
-}
-.results-workspace .record-section {
-    padding: 16px 16px 0;
 }
 .racing-workspace .standings-chart {
     color: var(--muted-strong);
@@ -7239,6 +7283,7 @@ body[data-view="home"] {
     padding: 18px!important;
 }
 .home-app-icon {
+    align-self: flex-start;
     width: 54px;
     height: 54px;
     border-radius: 12px;

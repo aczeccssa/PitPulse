@@ -26,5 +26,11 @@ context.driver = { driverId: 'max_verstappen', season: 2021, driverNumber: '3', 
 context.entries = [{ sessions: { race: { rows: [{ driverId: 'max_verstappen', driverNumber: '33', team: 'Red Bull', constructorId: 'red_bull' }] } } }];
 context.driverRow = (e, kind, id) => e.sessions[kind]?.rows?.find(r => r.driverId === id);
 assert.equal(vm.runInContext('seasonDriver(driver, entries, 2021).driverNumber', context), '33');
-assert.match(source, /loadCalendar\(season\), loadStandings\(season\)/, 'boot must use requested season');
+// Standings now load on demand when their route renders.
+context.state.view = 'standings';
+context.el = () => ({});
+context.loadStandings = season => { context.loadedSeason = season; throw new Error('season captured'); };
+vm.runInContext(functionSource('renderStandingsPage'), context);
+assert.throws(() => vm.runInContext('renderStandingsPage()', context), /season captured/);
+assert.equal(context.loadedSeason, 2024, 'standings must load the requested season');
 console.log('PASS: requested season survives bootstrap; racing number comes from that season results');

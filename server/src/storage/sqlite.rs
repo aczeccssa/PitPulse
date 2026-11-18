@@ -84,6 +84,20 @@ impl Database {
         Ok(())
     }
 
+    pub async fn racing_seasons_before(&self, season: i64) -> Result<Vec<i64>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || -> Result<Vec<i64>, rusqlite::Error> {
+            let connection = connection.blocking_lock();
+            let mut statement = connection.prepare(
+                "SELECT DISTINCT season FROM meetings WHERE round IS NOT NULL AND season >= ?1 AND season < ?2 ORDER BY season",
+            )?;
+            statement
+                .query_map([crate::services::FIRST_SEASON, season], |row| row.get(0))?
+                .collect()
+        })
+        .await??)
+    }
+
     pub async fn analysis_cache(
         &self,
         key: &str,

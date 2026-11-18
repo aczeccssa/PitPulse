@@ -15,7 +15,7 @@
     }
     const VIEW_TITLES = {
         home: "Home",
-        standings: "积分榜",
+        standings: "Standings",
         results: "Results",
         drivers: "Drivers",
         "driver-stats": "Driver Stats",
@@ -26,41 +26,41 @@
         "destructors-championship": "Destructors Championship",
     };
     const SESSION_LABELS = {
-        fp1: "一练",
-        fp2: "二练",
-        fp3: "三练",
-        sprintQualifying: "冲刺排位",
-        sprint: "冲刺赛",
-        qualifying: "排位赛",
-        race: "正赛",
+        fp1: "Practice 1",
+        fp2: "Practice 2",
+        fp3: "Practice 3",
+        sprintQualifying: "Sprint Qualifying",
+        sprint: "Sprint",
+        qualifying: "Qualifying",
+        race: "Race",
     };
     const SESSION_NAME_LABELS = {
-        race: "正赛",
-        qualifying: "排位赛",
-        sprint: "冲刺赛",
-        "sprint qualifying": "冲刺排位",
-        "sprint shootout": "冲刺排位",
-        "practice 1": "一练",
-        "practice 2": "二练",
-        "practice 3": "三练",
-        "first practice": "一练",
-        "second practice": "二练",
-        "third practice": "三练",
+        race: "Race",
+        qualifying: "Qualifying",
+        sprint: "Sprint",
+        "sprint qualifying": "Sprint Qualifying",
+        "sprint shootout": "Sprint Qualifying",
+        "practice 1": "Practice 1",
+        "practice 2": "Practice 2",
+        "practice 3": "Practice 3",
+        "first practice": "Practice 1",
+        "second practice": "Practice 2",
+        "third practice": "Practice 3",
     };
     // Upstream sends both "All clear" and "AllClear"; normalise before lookup.
     const TRACK_STATUS = {
-        allclear: { label: "赛道畅通", tone: "green" },
-        green: { label: "赛道畅通", tone: "green" },
-        yellow: { label: "黄旗", tone: "yellow" },
-        yellowflag: { label: "黄旗", tone: "yellow" },
-        safetycar: { label: "安全车", tone: "yellow" },
-        sc: { label: "安全车", tone: "yellow" },
-        vsc: { label: "虚拟安全车", tone: "yellow" },
-        virtualsafetycar: { label: "虚拟安全车", tone: "yellow" },
-        virtualsafetycarending: { label: "虚拟安全车结束", tone: "yellow" },
-        red: { label: "红旗", tone: "red" },
-        redflag: { label: "红旗", tone: "red" },
-        chequered: { label: "方格旗", tone: "green" },
+        allclear: { label: "Track clear", tone: "green" },
+        green: { label: "Track clear", tone: "green" },
+        yellow: { label: "Yellow flag", tone: "yellow" },
+        yellowflag: { label: "Yellow flag", tone: "yellow" },
+        safetycar: { label: "Safety Car", tone: "yellow" },
+        sc: { label: "Safety Car", tone: "yellow" },
+        vsc: { label: "Virtual Safety Car", tone: "yellow" },
+        virtualsafetycar: { label: "Virtual Safety Car", tone: "yellow" },
+        virtualsafetycarending: { label: "Virtual Safety Car ending", tone: "yellow" },
+        red: { label: "Red flag", tone: "red" },
+        redflag: { label: "Red flag", tone: "red" },
+        chequered: { label: "Chequered flag", tone: "green" },
     };
 
     function trackInfo(value) {
@@ -68,30 +68,30 @@
         return TRACK_STATUS[String(value).toLowerCase().replace(/[^a-z]/g, "")] || null;
     }
     const STATUS_REASONS = {
-        not_connected: "实时数据源未连接，比赛开始时自动重连。",
-        upstream_silent: "上游数据暂无更新，等待下一次同步。",
-        data_stale: "实时数据已过期，正在等待上游恢复。",
-        replay_finished: "回放已结束。",
+        not_connected: "Live timing is disconnected. It will reconnect when the session starts.",
+        upstream_silent: "Waiting for the next live timing update.",
+        data_stale: "Live timing data is stale. Waiting for the feed to recover.",
+        replay_finished: "Replay ended.",
     };
     const CLASS_LABELS = {
-        retired: "退赛",
-        dnf: "退赛",
-        "did not finish": "未完赛",
-        disqualified: "取消资格",
-        dsq: "取消资格",
-        "did not start": "未发车",
-        dns: "未发车",
-        "did not qualify": "未通过排位",
-        dnq: "未通过排位",
-        "not classified": "未分类",
-        nc: "未分类",
-        withdrawn: "退出",
+        retired: "Retired",
+        dnf: "Retired",
+        "did not finish": "Did not finish",
+        disqualified: "Disqualified",
+        dsq: "Disqualified",
+        "did not start": "Did not start",
+        dns: "Did not start",
+        "did not qualify": "Did not qualify",
+        dnq: "Did not qualify",
+        "not classified": "Not classified",
+        nc: "Not classified",
+        withdrawn: "Withdrawn",
     };
     const QUALITY_LABELS = {
-        pending: "待同步",
-        partial: "部分完整",
-        complete: "完整",
-        full: "完整",
+        pending: "Pending",
+        partial: "Partial",
+        complete: "Complete",
+        full: "Complete",
     };
     const TEAM_COLORS = [
         [/red bull/i, "#3671c6"],
@@ -107,38 +107,9 @@
         [/cadillac/i, "#c9b037"],
         [/audi/i, "#f50537"],
     ];
-    const GP_NAMES = [
-        [/australian/i, "澳大利亚大奖赛"],
-        [/chinese/i, "中国大奖赛"],
-        [/japanese/i, "日本大奖赛"],
-        [/bahrain/i, "巴林大奖赛"],
-        [/saudi/i, "沙特阿拉伯大奖赛"],
-        [/miami/i, "迈阿密大奖赛"],
-        [/canadian/i, "加拿大大奖赛"],
-        [/monaco/i, "摩纳哥大奖赛"],
-        [/barcelona|spanish/i, "西班牙大奖赛"],
-        [/austrian/i, "奥地利大奖赛"],
-        [/british/i, "英国大奖赛"],
-        [/belgian/i, "比利时大奖赛"],
-        [/hungarian/i, "匈牙利大奖赛"],
-        [/dutch/i, "荷兰大奖赛"],
-        [/italian/i, "意大利大奖赛"],
-        [/azerbaijan/i, "阿塞拜疆大奖赛"],
-        [/singapore/i, "新加坡大奖赛"],
-        [/united states|us grand prix/i, "美国大奖赛"],
-        [/mexico/i, "墨西哥城大奖赛"],
-        [/brazilian|são paulo|sao paulo/i, "巴西大奖赛"],
-        [/las vegas/i, "拉斯维加斯大奖赛"],
-        [/qatar/i, "卡塔尔大奖赛"],
-        [/abu dhabi/i, "阿布扎比大奖赛"],
-    ];
-
     const el = (id) => document.getElementById(id);
     const state = {
         view: "home",
-        calendar: [],
-        calendarSeasons: new Map(),
-        calendarLoaded: false,
         driversStandings: [],
         constructorStandings: [],
         standingsKind: "drivers",
@@ -158,16 +129,25 @@
         state.unauthorized = true;
         const toast = el("toast");
         if (!toast) return;
-        toast.textContent = "访问会话已失效，请重新打开服务端生成的访问链接。";
+        toast.textContent = "Your session expired. Open the latest PitPulse access link.";
         toast.hidden = false;
     }
 
     /* ---------- api ---------- */
 
-    async function api(path) {
+    const pendingRequests = new Map();
+
+    function api(path) {
+        if (pendingRequests.has(path)) return pendingRequests.get(path);
+        const request = fetchApi(path).finally(() => pendingRequests.delete(path));
+        pendingRequests.set(path, request);
+        return request;
+    }
+
+    async function fetchApi(path) {
         const started = performance.now();
         const response = await fetch(path, {
-            headers: { Accept: "application/json" },
+            headers: { Accept: "application/json", "X-PitPulse-Dashboard": "1" },
             cache: "no-store",
             credentials: "same-origin",
         });
@@ -180,6 +160,142 @@
         return { body, latency: Math.round(performance.now() - started) };
     }
 
+    function setLoading(label) {
+        const loader = el("workspace-loader");
+        if (label) el("workspace-loading-label").textContent = label;
+        loader.hidden = !label;
+        document.querySelector(".view:not([hidden])")?.setAttribute("aria-busy", String(Boolean(label)));
+    }
+
+    function animateChart(svg) {
+        let index = 0;
+        for (const mark of svg.querySelectorAll("path, polyline, polygon, line, rect, circle")) {
+            if (mark.closest("defs") || mark.matches(".progress-grid, .progress-row-highlight, .record-grid, [pathLength]")) continue;
+            const stroke = mark.getAttribute("stroke"), fill = mark.getAttribute("fill");
+            if (fill === "transparent" || stroke === "transparent" || Number(mark.getAttribute("opacity") ?? 1) <= .3) continue;
+
+            let from, to, duration;
+            const dash = mark.getAttribute("stroke-dasharray");
+            if (mark.matches("circle") && dash) {
+                const [segment, gap] = dash.split(/\s+/).map(Number);
+                if (!(segment > 0 && gap > 0)) continue;
+                from = { strokeDasharray: `0 ${gap}` };
+                to = { strokeDasharray: dash };
+                duration = 560;
+            } else if (mark.matches("path, polyline, line") && !dash && (stroke || mark.matches(".home-track-base"))) {
+                const length = mark.getTotalLength();
+                if (!length) continue;
+                const pattern = `${length} ${length}`;
+                from = { strokeDasharray: pattern, strokeDashoffset: length };
+                to = { strokeDasharray: pattern, strokeDashoffset: 0 };
+                duration = 540;
+            } else if (mark.matches("circle")) {
+                from = { opacity: 0, scale: ".35", transformBox: "fill-box", transformOrigin: "center" };
+                to = { ...from, opacity: mark.getAttribute("opacity") ?? 1, scale: "1" };
+                duration = 300;
+            } else if (mark.matches("rect, polygon, path") && fill !== "none") {
+                const tall = mark.matches("rect") && Number(mark.getAttribute("height")) > Number(mark.getAttribute("width"));
+                from = { opacity: 0, scale: tall ? "1 .03" : ".03 1", transformBox: "fill-box", transformOrigin: tall ? "center bottom" : "left center" };
+                to = { ...from, opacity: mark.getAttribute("opacity") ?? 1, scale: "1" };
+                duration = 450;
+            } else {
+                continue;
+            }
+            mark.animate([from, to], {
+                id: "chart-enter", duration, delay: Math.min(index++ * 7, 110),
+                easing: "cubic-bezier(.2,.7,.25,1)", fill: "backwards",
+            });
+        }
+    }
+
+    function wireContentMotion() {
+        const workspace = el("workspace");
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const charts = "svg[role=img]";
+        const bars = ".mileage-bar, .home-progress-segments .is-complete";
+        const sections = `.racing-workspace > :not(#season-results), #season-results > *, #standings-panel > *, ${charts}, .standings-card, .home-card`;
+        const numbers = "strong, b, td, .num, .heat, .mileage-bar, .standings-leader > span, svg[role=img] text";
+        const format = /^([+−-]?[$£€]?)(\d[\d,]*)(\.\d+)?(\s*(?:%|pts|points?|s|laps?|wins?|km|[kKmM])?)$/;
+        const seen = new WeakSet();
+        const rolling = new Map();
+        let frame = 0;
+
+        function count(now) {
+            for (const [cell, { final, prefix, target, digits, suffix, grouped, start }] of rolling) {
+                if (!cell.isConnected) { rolling.delete(cell); continue; }
+                const progress = Math.min(1, (now - start) / 420);
+                if (progress >= 1 || reduced.matches) {
+                    cell.textContent = final;
+                    rolling.delete(cell);
+                    continue;
+                }
+                const value = target * (1 - (1 - progress) ** 3);
+                cell.textContent = prefix + (grouped ? value.toLocaleString("en-GB", {
+                    minimumFractionDigits: digits, maximumFractionDigits: digits,
+                }) : value.toFixed(digits)) + suffix;
+            }
+            frame = rolling.size ? requestAnimationFrame(count) : 0;
+        }
+
+        const visible = new IntersectionObserver(entries => {
+            for (const { target: item, isIntersecting } of entries) {
+                if (!isIntersecting && item.isConnected) continue;
+                visible.unobserve(item);
+                if (!isIntersecting || reduced.matches) continue;
+                if (item.matches(charts)) animateChart(item);
+                if (item.matches(bars)) {
+                    item.animate([
+                        { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0)" },
+                    ], { id: "chart-enter", duration: 450, easing: "ease-out" });
+                }
+                if (item.matches(sections)) {
+                    item.animate([
+                        { opacity: 0, transform: "translateY(8px)" },
+                        { opacity: 1, transform: "translateY(0)" },
+                    ], { duration: 250, easing: "cubic-bezier(.2,.75,.25,1)" });
+                }
+                if (!item.matches(numbers) || item.childElementCount || item.closest("[data-home-countdown]")) continue;
+                const final = item.textContent;
+                const metric = format.exec(final);
+                if (!metric) continue;
+                const [, prefix, integer, decimal = "", suffix] = metric;
+                const target = Number(integer.replaceAll(",", "") + decimal);
+                if (!Number.isFinite(target)) continue;
+                item.animate([
+                    { opacity: 0.25, translate: "0 .45em" },
+                    { opacity: 1, translate: "0 0" },
+                ], { duration: 240, easing: "ease-out" });
+                // Keep chart labels stable for tooltips and SVG downloads.
+                if (!target || item instanceof SVGElement) continue;
+                rolling.set(item, { final, prefix, target, suffix, digits: decimal ? decimal.length - 1 : 0, grouped: integer.includes(","), start: performance.now() });
+                if (!frame) frame = requestAnimationFrame(count);
+            }
+        }, { root: workspace });
+
+        reduced.addEventListener("change", () => {
+            if (reduced.matches) {
+                for (const animation of workspace.getAnimations({ subtree: true })) {
+                    if (animation.id === "chart-enter") animation.cancel();
+                }
+            }
+        });
+        const selector = `${sections}, ${numbers}, ${bars}`;
+        function watch(element) {
+            if (seen.has(element)) return;
+            if (!element.matches(`${sections}, ${bars}`) && (element.childElementCount || !format.test(element.textContent))) return;
+            seen.add(element);
+            visible.observe(element);
+        }
+        new MutationObserver(changes => {
+            if (reduced.matches) return;
+            for (const change of changes) for (const item of change.addedNodes) {
+                if (!(item instanceof Element) || !item.closest(".view")) continue;
+                if (item.matches(selector)) watch(item);
+                for (const child of item.querySelectorAll(selector)) watch(child);
+            }
+        }).observe(workspace, { childList: true, subtree: true });
+    }
+
     /* ---------- formatting ---------- */
 
     const pad = (value) => String(value).padStart(2, "0");
@@ -190,17 +306,17 @@
         return Number.isNaN(date.getTime()) ? null : date;
     }
 
-    const localTime = new Intl.DateTimeFormat("zh-CN", {
+    const localTime = new Intl.DateTimeFormat("en-GB", {
         weekday: "short",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
     });
-    const localDate = new Intl.DateTimeFormat("zh-CN", {
+    const localDate = new Intl.DateTimeFormat("en-GB", {
         month: "numeric",
         day: "numeric",
     });
-    const localDateTime = new Intl.DateTimeFormat("zh-CN", {
+    const localDateTime = new Intl.DateTimeFormat("en-GB", {
         month: "numeric",
         day: "numeric",
         hour: "2-digit",
@@ -210,16 +326,16 @@
 
     function formatTime(value) {
         const date = parseDate(value);
-        return date ? localTime.format(date) : "待定";
+        return date ? localTime.format(date) : "TBD";
     }
 
-    // Session times read as a schedule ("周五 08:30"), so the weekday and the
+    // Session times read as a schedule ("Fri 08:30"), so the weekday and the
     // clock are split so a narrow screen can stack them.
-    const SHORT_WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    const SHORT_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     function sessionTimeParts(value) {
         const date = parseDate(value);
-        if (!date) return { day: "待定", clock: "" };
+        if (!date) return { day: "TBD", clock: "" };
         return {
             day: SHORT_WEEKDAYS[date.getDay()],
             clock: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
@@ -251,11 +367,6 @@
         if (!from) return "";
         if (!to || from.toDateString() === to.toDateString()) return localDate.format(from);
         return `${localDate.format(from)} – ${localDate.format(to)}`;
-    }
-
-    function gpName(name) {
-        const match = GP_NAMES.find(([pattern]) => pattern.test(name || ""));
-        return match ? match[1] : name || "";
     }
 
     function meetingPlace(meeting) {
@@ -480,29 +591,6 @@
 
     /* ---------- calendar helpers ---------- */
 
-    function seasonMeetings() {
-        const season = resultsSeason();
-        return (state.calendarSeasons.get(season) || [])
-            .filter((meeting) => meeting.round != null)
-            .sort((a, b) => a.round - b.round);
-    }
-
-    function isFinished(meeting) {
-        const end = parseDate(meeting?.endDate);
-        return Boolean(end && end.getTime() < Date.now());
-    }
-
-    function seasonYear(meetings) {
-        const first = meetings[0];
-        const requested = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
-        return (
-            first?.season ||
-            Number(String(first?.id || "").split(":")[0]) ||
-            (Number.isInteger(requested) && requested >= 1950 && requested <= 2100 ? requested : null) ||
-            new Date().getFullYear()
-        );
-    }
-
     /* ---------- standings page ---------- */
 
     function setStandingsKind(kind) {
@@ -517,6 +605,7 @@
     }
 
     const standingsHistory = { season: null, entries: [], loading: false, error: false, previous: {} };
+    const standingsBySeason = new Map();
     const standingsPreferences = new Map();
 
     function standingsPreference(season, constructors) {
@@ -581,16 +670,23 @@
 
     function loadStandingsHistory(season) {
         if (standingsHistory.season === season) return;
-        Object.assign(standingsHistory, { season, entries: [], loading: true, error: false, previous: {} });
+        const request = Symbol();
+        Object.assign(standingsHistory, { season, request, entries: [], loading: true, error: false, previous: {} });
         Promise.all([
             api(`/api/v1/results/season?season=${season}`).then(r => r.body.data || []),
             api(`/api/v1/standings/drivers?season=${season - 1}`).then(r => r.body.data || []).catch(() => []),
             api(`/api/v1/standings/constructors?season=${season - 1}`).then(r => r.body.data || []).catch(() => []),
         ]).then(([entries, drivers, constructors]) => {
-            if (standingsHistory.season !== season) return;
+            if (standingsHistory.request !== request) return;
             standingsHistory.entries = entries.filter(e => e.sessions.race?.rows?.length).sort((a, b) => a.meeting.round - b.meeting.round);
             standingsHistory.previous = { drivers: drivers.find(r => r.position === 1), constructors: constructors.find(r => r.position === 1) };
-        }).catch(() => { standingsHistory.error = true; }).finally(() => { standingsHistory.loading = false; renderStandingsPage(); });
+        }).catch(() => {
+            if (standingsHistory.request === request) standingsHistory.error = true;
+        }).finally(() => {
+            if (standingsHistory.request !== request) return;
+            standingsHistory.loading = false;
+            renderStandingsPage();
+        });
     }
 
     function standingsModel(constructors) {
@@ -749,17 +845,29 @@
     }
 
     function renderStandingsPage() {
+        if (state.view !== 'standings') return;
         const panel = el('standings-panel'), empty = el('standings-page-empty');
-        if (!state.driversStandings.length && !state.constructorStandings.length) { panel.hidden = true; empty.hidden = false; empty.textContent = 'Loading standings…'; return; }
-        panel.hidden = false; empty.hidden = true;
-        const constructors = state.standingsKind === 'constructors', noun = constructors ? 'Constructor' : 'Driver', rows = constructors ? state.constructorStandings : state.driversStandings, season = rows[0]?.season || new Date().getFullYear();
+        const constructors = state.standingsKind === 'constructors', noun = constructors ? 'Constructor' : 'Driver';
+        const season = requestedSeason() || new Date().getFullYear();
+        const data = loadStandings(season);
+        const rows = constructors ? data.constructors : data.drivers;
+        state.driversStandings = data.drivers;
+        state.constructorStandings = data.constructors;
         useSeason(season);
-        if (!rows.length) { panel.hidden = true; empty.hidden = false; empty.textContent = 'No standings available.'; return; }
-        loadStandingsHistory(season);
         el('standings-page-season').replaceChildren(seasonSelector(season, value => { location.hash = `#/${constructors ? 'constructor' : 'driver'}-standings?season=${value}`; }));
-        el('standings-page-meta').textContent = `${constructors ? 'Constructors' : 'Drivers'} ${rows.length}`;
         el('view-standings').querySelector('.page-head h1').textContent = `${noun} Standings`;
-        if (state.view === 'standings') el('workspace-title').textContent = `${noun} Standings`;
+        el('workspace-title').textContent = `${noun} Standings`;
+        if (rows.length) loadStandingsHistory(season);
+        const loading = data.loading || (rows.length > 0 && standingsHistory.loading);
+        setLoading(loading ? 'Loading standings…' : null);
+        panel.hidden = loading || !rows.length;
+        empty.hidden = loading || !!rows.length;
+        el('standings-page-meta').hidden = panel.hidden;
+        if (panel.hidden) {
+            empty.textContent = data.errors.includes(constructors ? 'constructors' : 'drivers') ? 'Could not load standings. Refresh to retry.' : 'No standings available.';
+            return;
+        }
+        el('standings-page-meta').textContent = `${constructors ? 'Constructors' : 'Drivers'} ${rows.length}`;
         const fullModel = standingsModel(constructors), leader = fullModel.records[0], preference = standingsPreference(season, constructors);
         renderStandingsFilter(fullModel.records, constructors, preference);
         const model = { ...fullModel, totalRecords: fullModel.records.length, preference, records: fullModel.records.filter(r => preference.selected === null || preference.selected.has(r.id)) }; panel.replaceChildren();
@@ -780,7 +888,6 @@
         else { const message = `No ${constructors ? 'constructors' : 'drivers'} selected. Use the selection menu to show standings and charts.`; const row = body.insertRow(), cell = row.insertCell(); cell.colSpan = 4; cell.className = 'standings-selection-empty'; cell.textContent = message; const empty = node('p', 'standings-card standings-selection-empty', message); empty.setAttribute('role', 'status'); charts.append(empty); }
         tableSection.querySelector('.standings-download').disabled = !model.records.length;
         panel.append(charts);
-        if (standingsHistory.loading) panel.prepend(node('p', 'standings-data-status', 'Loading race history…'));
         if (standingsHistory.error) panel.prepend(node('p', 'standings-data-status', 'Race history could not be loaded. Standings remain available.'));
     }
 
@@ -790,12 +897,12 @@
         table.dataset.kind = "drivers";
         const head = node("div", "dt-head");
         for (const [label, className] of [
-            ["名次", ""],
+            ["Position", ""],
             ["", "col-code"],
-            ["车手", "col-team"],
-            ["积分占比", "col-bar"],
-            ["胜场", "col-wins num"],
-            ["积分", "num"],
+            ["Driver", "col-team"],
+            ["Points share", "col-bar"],
+            ["Wins", "col-wins num"],
+            ["Points", "num"],
         ]) {
             head.append(node("span", className, label));
         }
@@ -803,7 +910,7 @@
         for (const row of rows) {
             const item = node("div", "dt-row");
             item.style.setProperty("--team", teamColor(row.constructor));
-            item.title = [row.driverName, row.constructor, `${row.wins ?? 0} 胜`].filter(Boolean).join(" · ");
+            item.title = [row.driverName, row.constructor, `${row.wins ?? 0} wins`].filter(Boolean).join(" · ");
             const who = node("div", "who");
             const helmet = helmetImage(artSeason(), row.driverId, row.driverName);
             if (helmet) who.append(helmet);
@@ -831,11 +938,11 @@
         table.dataset.kind = "constructors";
         const head = node("div", "dt-head");
         for (const [label, className] of [
-            ["名次", ""],
-            ["车队", ""],
-            ["积分占比", "col-bar"],
-            ["胜场", "col-wins num"],
-            ["积分", "num"],
+            ["Position", ""],
+            ["Constructor", ""],
+            ["Points share", "col-bar"],
+            ["Wins", "col-wins num"],
+            ["Points", "num"],
         ]) {
             head.append(node("span", className, label));
         }
@@ -872,10 +979,6 @@
             .sort((a, b) => order.indexOf(a.sessionType) - order.indexOf(b.sessionType));
     }
 
-    function defaultResultsMeeting() {
-        const meetings = seasonMeetings();
-        return meetings.filter(isFinished).at(-1) || meetings[0] || null;
-    }
     function resultsSeason() {
         const meetingYear = state.results.detail && /^(\d{4}):/.exec(state.results.meetingId)?.[1];
         return Number(meetingYear) || requestedSeason() || driverPages.season || new Date().getFullYear();
@@ -884,6 +987,11 @@
 
     function renderResultsPage() {
         loadSeasonResults(resultsSeason());
+        setLoading(seasonResults.loading ? 'Loading results…' : null);
+        if (seasonResults.loading) {
+            el('season-results').replaceChildren();
+            return;
+        }
         if (state.results.detail) renderMeetingResult(); else renderSeasonResults();
     }
     seasonPopover();
@@ -917,14 +1025,12 @@
     function renderMeetingResult() {
         const root = el("season-results");
         const entry = seasonResults.entries.find(item => item.meeting.id === state.results.meetingId);
-        if (seasonResults.loading || !entry) {
-            const message = seasonResults.loading ? "Loading Grand Prix results…" : seasonResults.failed ? "Could not load Grand Prix results. Refresh to retry." : "No results are available for this Grand Prix.";
+        if (!entry) {
+            const message = seasonResults.failed ? "Could not load Grand Prix results. Refresh to retry." : "No results are available for this Grand Prix.";
             root.replaceChildren(node("p", "empty", message));
-            if (!seasonResults.loading) {
-                const back = node("a", "result-back", "‹ Season Results");
-                back.href = `#/results?season=${resultsSeason()}`;
-                root.append(back);
-            }
+            const back = node("a", "result-back", "‹ Season Results");
+            back.href = `#/results?season=${resultsSeason()}`;
+            root.append(back);
             return;
         }
         root.replaceChildren();
@@ -1049,7 +1155,7 @@
             modes.append(button);
         }
         controls.append(modes); heading.append(controls); heading.querySelector(".season-badge")?.remove();
-        root.append(node("p", "season-load-status", seasonResults.loading ? "Loading season results…" : `${seasonResults.entries.filter(e => e.sessions.race?.rows.length).length} races with results · Synced data only${seasonResults.failed ? " · Could not load some results. Refresh to retry." : ""}${seasonResults.entries.some(e => Object.values(e.sessions).some(s => s.meta?.stale)) ? " · Includes stale data" : ""}`));
+        root.append(node("p", "season-load-status", seasonResults.failed ? "Could not load season results. Refresh to retry." : `${seasonResults.entries.filter(e => e.sessions.race?.rows.length).length} races with results · Synced data only${seasonResults.entries.some(e => Object.values(e.sessions).some(s => s.meta?.stale)) ? " · Includes stale data" : ""}`));
         const entries = seasonResults.entries.filter(entry => Object.values(entry.sessions).some(session => (session.rows || []).length > 0));
         const types = seasonResults.mode === "combined" ? ["race", "sprint"] : [seasonResults.mode];
         const drivers = new Map(), teams = new Map();
@@ -1158,7 +1264,7 @@
             for (const type of ["sprintQualifying", "sprint", "qualifying", "race"]) {
                 const td = node("td", "winner-cell"); td.append(seasonIdentity(entry.sessions[type]?.rows.find(r => r.position === 1), true)); tr.append(td);
             }
-            const td = node("td", ""); const link = node("a", "season-open", "›"); link.href = `#/results/${encodeURIComponent(entry.meeting.id)}/race`; link.setAttribute("aria-label", `查看${resultsGpName(entry.meeting.name)}完整赛果`);
+            const td = node("td", ""); const link = node("a", "season-open", "›"); link.href = `#/results/${encodeURIComponent(entry.meeting.id)}/race`; link.setAttribute("aria-label", `View full ${resultsGpName(entry.meeting.name)} results`);
             td.append(link); tr.append(td);
         }
         scroll.append(table); gp.append(scroll); root.append(gp);
@@ -1369,9 +1475,12 @@
             api(`/api/v1/standings/drivers?season=${season}`).then(r => r.body.data || []),
             api(`/api/v1/results/season?season=${season}`).then(r => r.body.data || []),
         ]).then(([drivers, entries]) => {
-            data.entries = entries.sort((a, b) => a.meeting.round - b.meeting.round);
+            data.entries = [...entries].sort((a, b) => a.meeting.round - b.meeting.round);
             data.drivers = drivers.map(driver => seasonDriver(driver, data.entries, season)).sort((a, b) => a.position - b.position);
-        }).catch(() => { data.error = true; }).finally(() => { data.loading = false; renderDriverPages(); });
+        }).catch(() => { data.error = true; }).finally(() => {
+            data.loading = false;
+            if (driverPages.season === season || (state.view === 'driver-stats' && driverPages.season === season + 1)) renderDriverPages();
+        });
         return data;
     }
 
@@ -1417,9 +1526,10 @@
     }
 
     function driverLoadState(root, data) {
-        if (!data.loading && !data.error && data.drivers.length) return false;
+        if (data.loading) { setLoading('Loading season data…'); return true; }
+        if (!data.error && data.drivers.length) return false;
         const box = node('div', 'driver-page-message'); box.setAttribute('role', 'status');
-        box.append(node('p', '', data.loading ? 'Loading season data…' : data.error ? 'Season data could not be loaded.' : 'No driver standings are available for this season.'));
+        box.append(node('p', '', data.error ? 'Season data could not be loaded.' : 'No driver standings are available for this season.'));
         if (data.error) { const retry = node('button', 'workspace-button', 'Try again'); retry.onclick = () => { driverPages.seasons.delete(driverPages.season); renderDriverPages(); }; box.append(retry); }
         root.append(box); return true;
     }
@@ -1837,6 +1947,8 @@
 
     function renderDriverPages() {
         if (!RACING_VIEWS.includes(state.view)) return;
+        if (sectionFeature(state.view) && !SEASON_FEATURES.get(driverPages.season)) return;
+        setLoading(null);
         delete document.body.dataset.seasonEmpty;
         const view = state.view === 'driver-stats' ? 'drivers' : state.view, root = el(`view-${view}`).querySelector('.racing-workspace'); root.replaceChildren();
         useSeason(driverPages.season);
@@ -1872,12 +1984,11 @@
         api(`/api/v1/features?season=${year}`).then(({ body }) => {
             SEASON_FEATURES.set(year, body.data || {});
         }).catch(() => {
-            SEASON_FEATURES.delete(year);
+            SEASON_FEATURES.set(year, {});
         }).finally(() => {
             syncSectionNav(year);
             if (driverPages.season !== year) return;
             if (SECTION_FEATURE[state.view]) applyRoute();
-            else if (state.view !== 'home') renderDriverPages();
         });
         return null;
     }
@@ -1950,7 +2061,8 @@
     function engineeringStatus(root, data, view) {
         const label = view === 'tech-updates' ? 'technical updates' : view === 'pu-elements' ? 'power unit reports' : 'crash reports';
         if (data.loading) {
-            const message = node('div', 'driver-page-message'); message.setAttribute('role', 'status'); message.append(node('p', '', `Loading ${label}…`)); root.append(message); return true;
+            setLoading(`Loading ${label}…`);
+            return true;
         }
         if (data.error) {
             const message = node('div', 'driver-page-message'); message.setAttribute('role', 'status');
@@ -2325,7 +2437,7 @@
     }
     function renderHome(root) {
         const season = driverPages.season, data = homeData(season), filters = engineeringHead(root, 'Home', 'home', season); filters.parentElement.classList.add('home-page-head');
-        if (data.loading) { root.append(node('p', 'home-status', 'Loading season overview…')); return; }
+        if (data.loading) { setLoading('Loading season overview…'); return; }
         const retry = () => { homePages.cache.delete(season); renderDriverPages(); };
         const unavailable = Object.entries(data.meta.summary?.sections || {}).filter(([, meta]) => meta.unavailable).map(([key]) => key), stale = Object.values(data.meta).some(meta => meta.stale);
 
@@ -2353,7 +2465,7 @@
         puMetric.querySelector('.home-metric-note').textContent = coverageNote('pu'); cards.append(puMetric);
         const techMetric = homeMetric(`${season} Total Tech Upgrades`, !unavailableSummary('tech') && Number.isFinite(summary.tech?.total) ? pointsText(summary.tech.total) : '—', `#/tech-updates?season=${season}`, 'M14 6a5 5 0 0 0-6 6L2 18l4 4 6-6a5 5 0 0 0 6-6l-4 4-4-4 4-4Z', summary.tech);
         techMetric.querySelector('.home-metric-note').textContent = coverageNote('tech'); cards.append(techMetric);
-        const social = node('section', 'home-card home-social'); social.append(node('p', '', 'Support PitPulse and help us build a better racing companion.')); const support = node('a', 'home-support-button', 'Support us on GitHub'); support.href = 'https://github.com/aczeccssa/PitPulse'; support.target = '_blank'; support.rel = 'noopener noreferrer'; support.append(svgIcon('M14 5h5v5m0-5-7 7M5 7v12h12v-5')); social.append(support); cards.append(social);
+        const social = node('section', 'home-card home-social'); social.append(node('p', '', 'Support PitPulse and help us build a better racing companion.')); const support = node('a', 'home-support-button', 'Support Us on GitHub'); support.href = 'https://github.com/aczeccssa/PitPulse'; support.target = '_blank'; support.rel = 'noopener noreferrer'; support.append(svgIcon('M14 5h5v5m0-5-7 7M5 7v12h12v-5')); social.append(support); cards.append(social);
         const promo = node('a', 'home-card home-app-promo'); promo.href = 'https://github.com/aczeccssa/PitPulse'; promo.target = '_blank'; promo.rel = 'noopener noreferrer';
         const appIcon = artImage('home-app-icon', '/icon-192.png'); appIcon.alt = ''; const promoCopy = node('div', 'home-app-copy'); promoCopy.append(node('span', 'home-app-platforms', 'macOS · iOS'), node('h2', '', 'PitPulse'), node('p', '', 'Your race. Always in reach.'), node('span', 'home-app-cta', 'Explore the App ↗')); promo.append(appIcon, promoCopy); cards.append(promo); root.append(cards);
         const lower = node('div', 'home-detail-grid'); lower.append(homeStandings(data, false, season), homeStandings(data, true, season), homeRecordPanel(data, season)); root.append(lower); homeTrackOutline(scheduleCard, schedule.display, season); updateHomeCountdown(); installSeasonPopovers(root);
@@ -2373,51 +2485,102 @@
         const toolbar = node("div", "record-toolbar"); const label = node("label", "", "Sort by: "); const select = node("select", "");
         for (const [value, text] of [["round", "Grand Prix"], ["gap", "Gap to record"]]) { const option = node("option", "", text); option.value = value; select.append(option); }
         label.append(select); const download = node("button", "record-download", "⇩"); download.type = "button"; download.setAttribute("aria-label", "Download chart as SVG"); toolbar.append(label, download); const recordBar = node("div", "results-titlebar"); recordBar.append(section.querySelector("h2"), toolbar); section.append(recordBar);
-        section.append(node("p", "record-description", "The fastest lap from every session of each Grand Prix weekend (including practice, qualifying, sprint, and race) compared with the all-time Formula 1 track record for the same track layout that stood before the weekend."));
+        section.append(node("p", "record-description", `Each weekend’s fastest archived lap across all sessions, compared with the best lap from earlier weekends at the same circuit in the PitPulse archive (${FIRST_SEASON} onward).`));
         const scroll = node("div", "season-scroll record-scroll"); section.append(scroll);
-        const rows = entries.map(entry => {
-            const candidates = Object.values(entry.sessions).flatMap(data => data.rows.flatMap(row => [row.bestLap, row.q1, row.q2, row.q3].map(time => ({ row, time })))).filter(r => lapSeconds(r.time) < Infinity).sort((a, b) => lapSeconds(a.time) - lapSeconds(b.time));
-            const best = candidates[0], record = entry.meeting.circuit?.previousTrackRecord;
-            return { entry, best, record, gap: best && record ? lapSeconds(best.time) - lapSeconds(record.time) : null };
+        const venuesPerCountry = new Map();
+        for (const { meeting } of entries) {
+            venuesPerCountry.set(meeting.country, (venuesPerCountry.get(meeting.country) || 0) + 1);
+        }
+        const rows = entries.map(({ meeting, fastestLaps }) => {
+            const best = fastestLaps?.weekend, record = fastestLaps?.previous;
+            const venue = venuesPerCountry.get(meeting.country) > 1 ? meeting.location : meeting.country;
+            return { meeting, venue: venue || meeting.location || meeting.name, best, record, gap: best && record ? (best.millis - record.millis) / 1000 : null };
         });
+        if (!rows.length) {
+            scroll.append(node("p", "empty", "No weekend lap times are available."));
+            download.disabled = true;
+            return section;
+        }
         function draw() {
-            const data = [...rows].sort(select.value === "gap" ? (a, b) => (a.gap ?? Infinity) - (b.gap ?? Infinity) : (a, b) => a.entry.meeting.round - b.entry.meeting.round);
-            const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
-            const W = 1600, H = 90 + data.length * 52, zero = 860, step = 98;
-            svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Weekend fastest laps compared with previous track records");
-            function shape(tag, attrs, text) { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); if (text != null) e.textContent = text; svg.append(e); return e; }
-            const text = (x, y, value, extra = {}) => shape("text", { x, y, fill: "var(--text)", "font-size": 15, ...extra }, value);
-            text(20, 65, "GRAND PRIX", { fill: "var(--muted)" }); text(zero, 32, "Gap to track record (seconds)", { "text-anchor": "middle", fill: "var(--muted)" });
-            for (let n = -5; n <= 5; n++) { const x = zero + n * step; shape("line", { x1: x, y1: 85, x2: x, y2: H, stroke: n === 0 ? "#aeb4bd" : "var(--line)" }); text(x, 70, n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1), { "text-anchor": "middle", fill: "var(--muted)" }); if (n < 5) shape("line", { x1: x + step / 2, y1: 85, x2: x + step / 2, y2: H, stroke: "var(--line)", "stroke-dasharray": "3 3" }); }
-            for (const [i, { entry, best, record, gap }] of data.entries()) {
-                const y = 115 + i * 52;
-                shape("line", { x1: 0, y1: y + 26, x2: W, y2: y + 26, stroke: "var(--line)" });
-                shape("image", { href: flatFlag(entry.meeting).src, x: 20, y: y - 12, width: 27, height: 18 }); shape("rect", { x: 57, y: y - 11, width: 38, height: 22, rx: 4, fill: "none", stroke: "var(--line-strong)" }); text(76, y + 5, `R${entry.meeting.round}`, { "text-anchor": "middle", "font-size": 13 }); text(105, y + 5, entry.meeting.country || resultsGpName(entry.meeting.name), { "font-size": 17 });
-                if (record && Number.isFinite(gap)) {
-                    const end = zero + Math.max(-5, Math.min(5, gap)) * step;
-                    text(zero - 14, y + 5, `${record.driverCode} ${record.time} (${record.year})`, { "text-anchor": "end" });
-                    shape("line", { x1: zero, y1: y, x2: end, y2: y, stroke: "#414650", "stroke-width": 3 });
-                    shape("circle", { cx: zero, cy: y, r: 4, fill: "#080e1c" }); shape("circle", { cx: end, cy: y, r: 8, fill: "#080e1c", stroke: gap <= 0 ? "#10b981" : "#ef4b70", "stroke-width": 4 });
-                    text(end + 16, y + 5, `${driverCode(best.row)} ${gap >= 0 ? "+" : ""}${gap.toFixed(3)}s (${gap >= 0 ? "+" : ""}${(100 * gap / lapSeconds(record.time)).toFixed(2)}%)`, { "font-weight": 600 });
-                } else {
-                    text(zero - 14, y + 5, "—", { "text-anchor": "end", fill: "var(--muted)" });
-                    text(zero + 16, y + 5, best ? `${driverCode(best.row)} ${best.time} · Record unavailable` : "—", { fill: "var(--muted)" });
+            const data = [...rows].sort(select.value === "gap" ? (a, b) => (a.gap ?? Infinity) - (b.gap ?? Infinity) : (a, b) => a.meeting.round - b.meeting.round);
+            const W = 1440, top = 56, rowHeight = 36, H = top + data.length * rowHeight;
+            const zero = 805, step = 72;
+            const tick = Math.max(1, Math.ceil(Math.max(...rows.map(row => Math.abs(row.gap ?? 0))) / 5));
+            const svg = standingsSvg(W, H, "Weekend fastest laps compared with the earlier PitPulse archive best");
+            const shape = (tag, attrs, value) => chartShape(svg, tag, attrs, value);
+            const text = (x, y, value, extra = {}) => shape("text", { x, y, fill: "var(--text)", "font-size": 14, ...extra }, value);
+            const signed = (n, digits) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
+            const muted = { fill: "var(--muted)" };
+
+            function lapLabel(x, y, anchor, lap, value, note) {
+                const label = text(x, y, null, { "text-anchor": anchor, "font-weight": 700 });
+                const color = lap.team ? standingsLineColor(lap.team) : "var(--text)";
+                chartShape(label, "tspan", { fill: color }, driverCode(lap));
+                chartShape(label, "tspan", {}, ` ${value}`);
+                chartShape(label, "tspan", { ...muted, "font-weight": 500 }, ` ${note}`);
+            }
+
+            for (let i = 0; i < data.length; i++) {
+                const y = top + i * rowHeight;
+                if (i % 2 === 0) shape("rect", { x: 0, y, width: W, height: rowHeight, fill: "var(--tint-2)", class: "record-grid" });
+                shape("line", { x1: 0, y1: y, x2: W, y2: y, stroke: "var(--line)", class: "record-grid" });
+            }
+            text(19, 43, "GRAND PRIX", { ...muted, "font-weight": 650 });
+            text(zero, 18, "Gap to earlier archive best (seconds)", { ...muted, "text-anchor": "middle", "font-weight": 650 });
+            for (let mark = -10; mark <= 10; mark++) {
+                const x = zero + mark * step / 2;
+                const minor = mark % 2 !== 0;
+                shape("line", { x1: x, y1: 50, x2: x, y2: H, stroke: mark === 0 ? "var(--line-strong)" : "var(--line)", class: "record-grid", ...(minor ? { "stroke-dasharray": "4 3" } : {}) });
+                if (!minor) text(x, 43, signed(mark * tick / 2, 1), { ...muted, "text-anchor": "middle", "font-weight": 650 });
+            }
+            for (const [i, { meeting, venue, best, record, gap }] of data.entries()) {
+                const y = top + (i + .5) * rowHeight;
+                shape("rect", { x: 19, y: y - 10, width: 37, height: 20, rx: 4, fill: "none", stroke: "var(--line-strong)" });
+                text(37.5, y + 4.5, `R${meeting.round}`, { "text-anchor": "middle", "font-size": 13, "font-weight": 650 });
+                chartFlag(svg, meeting, 80, y - 10, 30);
+                shape("rect", { x: 65, y: y - 10, width: 30, height: 20, rx: 3, fill: "none", stroke: "var(--line-strong)" });
+                text(104, y + 5, venue === "UK" ? "Great Britain" : venue, { "font-size": 15, "font-weight": 650 });
+
+                if (!best) {
+                    text(zero + 16, y + 5, "No timed lap available", muted);
+                    continue;
                 }
+
+                const detail = `${best.driverName} · ${best.time} · ${sessionTypeLabel(best.sessionType)}`;
+                if (!record) {
+                    lapLabel(zero - 14, y + 5, "end", best, best.time, `(${best.year})`);
+                    chartTip(shape("circle", { cx: zero, cy: y, r: 5.5, fill: "var(--text)", stroke: "#0aad83", "stroke-width": 4.5 }), `${detail} · First archived benchmark for this circuit`);
+                    text(zero + 15, y + 5, "First archived benchmark", muted);
+                    continue;
+                }
+
+                const end = zero + gap / tick * step;
+                const faster = gap < 0;
+                const ring = faster ? "#0aad83" : gap > 0 ? "#ea4f71" : "var(--muted)";
+                lapLabel(zero + (faster ? 14 : -14), y + 5, faster ? "start" : "end", record, record.time, `(${record.year})`);
+                shape("line", { x1: zero, y1: y, x2: end, y2: y, stroke: "var(--text)", "stroke-opacity": .78, "stroke-width": 3.5, "stroke-linecap": "round" });
+                shape("circle", { cx: zero, cy: y, r: 3.5, fill: "var(--text)" });
+                const marker = shape("circle", { cx: end, cy: y, r: 5.5, fill: "var(--text)", stroke: ring, "stroke-width": 4.5 });
+                const delta = `${signed(gap, 3)}s`;
+                const percent = `(${signed((best.millis - record.millis) / record.millis * 100, 2)}%)`;
+                chartTip(marker, `${detail} · ${delta} ${percent}`);
+                lapLabel(end + (faster ? -16 : 16), y + 5, faster ? "end" : "start", best, delta, percent);
             }
             scroll.replaceChildren(svg);
+            installSeasonPopovers(scroll);
         }
         select.onchange = draw; draw();
-        download.onclick = () => { const svg = scroll.querySelector("svg").cloneNode(true); svg.setAttribute("xmlns", "http://www.w3.org/2000/svg"); svg.setAttribute("style", "--text:#080e1c;--muted:#64748b;--line:#e8edf3;--line-strong:#ccd5df;background:white;font-family:Arial,sans-serif"); const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" })); const a = node("a", ""); a.href = url; a.download = "weekend-fastest-laps.svg"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-        section.append(node("div", "record-legend", "●  Previous track record     ◉  Grand Prix weekend fastest lap")); return section;
+        download.onclick = () => { const svg = scroll.querySelector("svg").cloneNode(true); svg.setAttribute("xmlns", "http://www.w3.org/2000/svg"); svg.setAttribute("style", "--text:#080e1c;--muted:#64748b;--line:#e8edf3;--line-strong:#ccd5df;--tint-2:#f6f8fa;background:white;font-family:Arial,sans-serif"); const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" })); const a = node("a", ""); a.href = url; a.download = "weekend-fastest-laps.svg"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+        section.append(node("div", "record-legend", "●  Earlier archive best     ◉  Weekend fastest lap · Green marks a faster lap or a first archived benchmark")); return section;
     }
 
     function describeMeta(meta) {
         if (!meta) return "";
         const parts = [];
-        if (meta.source) parts.push(`来源 ${meta.source}`);
-        if (meta.quality) parts.push(`数据${QUALITY_LABELS[meta.quality] || meta.quality}`);
-        if (meta.fetchedAt) parts.push(`更新 ${formatDateTime(meta.fetchedAt)}`);
-        if (meta.stale) parts.push("数据已标记过期");
+        if (meta.source) parts.push(`Source: ${meta.source}`);
+        if (meta.quality) parts.push(`Quality: ${QUALITY_LABELS[meta.quality] || meta.quality}`);
+        if (meta.fetchedAt) parts.push(`Updated ${formatDateTime(meta.fetchedAt)}`);
+        if (meta.stale) parts.push("Stale data");
         return parts.join(" · ");
     }
 
@@ -2428,20 +2591,20 @@
 
         const columns = timing
             ? [
-                ["名次", ""],
+                ["Position", ""],
                 ["", "col-code"],
-                ["车手", "col-team"],
+                ["Driver", "col-team"],
                 ["Q1", "num"],
                 ["Q2", "num col-laps"],
                 ["Q3", "num col-points"],
             ]
             : [
-                ["名次", ""],
+                ["Position", ""],
                 ["", "col-code"],
-                ["车手", "col-team"],
-                ["成绩", "num"],
-                ["圈数", "num col-laps"],
-                ["积分", "num col-points"],
+                ["Driver", "col-team"],
+                ["Time", "num"],
+                ["Laps", "num col-laps"],
+                ["Points", "num col-points"],
             ];
         const head = node("div", "dt-head");
         for (const [label, className] of columns) head.append(node("span", className, label));
@@ -2484,7 +2647,7 @@
             table.append(item);
         }
 
-        if (meta?.stale) table.title = "该结果已被服务端标记为过期数据";
+        if (meta?.stale) table.title = "The server marked these results as stale.";
         return table;
     }
 
@@ -2505,33 +2668,19 @@
         return promise;
     }
 
-    async function loadCalendar(season) {
-        try {
-            const { body } = await api(`/api/v1/calendar${season ? `?season=${season}` : ''}`);
-            const meetings = Array.isArray(body.data) ? body.data : [];
-            if (season) state.calendarSeasons.set(season, meetings);
-            else { state.calendar = meetings; state.calendarSeasons.set(seasonYear(meetings), meetings); }
-            state.calendarLoaded = true;
-            if (state.view === "results") renderResultsPage();
-        } catch {
-            if (state.unauthorized) return;
-            state.calendarLoaded = true;
-        }
-    }
-
-    async function loadStandings(season) {
-        try {
-            const [drivers, constructors] = await Promise.all([
-                api(`/api/v1/standings/drivers${season ? `?season=${season}` : ''}`),
-                api(`/api/v1/standings/constructors${season ? `?season=${season}` : ''}`),
-            ]);
-            state.driversStandings = Array.isArray(drivers.body.data) ? drivers.body.data : [];
-            state.constructorStandings = Array.isArray(constructors.body.data) ? constructors.body.data : [];
+    function loadStandings(season) {
+        if (standingsBySeason.has(season)) return standingsBySeason.get(season);
+        const data = { drivers: [], constructors: [], loading: true, errors: [] };
+        standingsBySeason.set(season, data);
+        Promise.allSettled(['drivers', 'constructors'].map(async kind => {
+            const { body } = await api(`/api/v1/standings/${kind}?season=${season}`);
+            data[kind] = Array.isArray(body.data) ? body.data : [];
+        })).then(results => {
+            data.errors = ['drivers', 'constructors'].filter((_, index) => results[index].status === 'rejected');
+            data.loading = false;
             renderStandingsPage();
-            renderDriverPages();
-        } catch {
-            /* the empty states explain it */
-        }
+        });
+        return data;
     }
 
     /* ---------- routing ---------- */
@@ -2546,11 +2695,12 @@
 
     function applyRoute() {
         const { view, parts } = currentRoute();
+        setLoading(null);
         state.view = view;
         if (RACING_VIEWS.includes(view)) {
             const query = new URLSearchParams(location.hash.split('?')[1] || '');
             const requestedSeason = Number(query.get('season'));
-            driverPages.season = Number.isInteger(requestedSeason) && requestedSeason >= 1950 && requestedSeason <= 2100 ? requestedSeason : Number(state.driversStandings[0]?.season) || new Date().getFullYear();
+            driverPages.season = Number.isInteger(requestedSeason) && requestedSeason >= 1950 && requestedSeason <= 2100 ? requestedSeason : new Date().getFullYear();
             driverPages.driver = view === 'driver-stats' ? parts[0] : null;
             driverPages.team = query.get('team') || '';
             driverPages.first = query.get('driver1') || '';
@@ -2563,8 +2713,7 @@
             if (sectionFeature(view)) {
                 const season = driverPages.season;
                 const features = SEASON_FEATURES.get(Number(season));
-                if (!features) { loadFeatures(season); return; }
-                if (features[sectionFeature(view)] === false) {
+                if (features?.[sectionFeature(view)] === false) {
                     location.hash = `#/tech-updates?season=${season}`;
                     return;
                 }
@@ -2573,12 +2722,9 @@
         el("workspace-title").textContent = VIEW_TITLES[view];
         document.body.dataset.view = view;
         if (view === "standings") {
-            const requested = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('season'));
-            if (Number.isInteger(requested) && requested >= 1950 && requested <= 2100 && requested !== state.driversStandings[0]?.season) {
-                const cached = homePages.cache.get(requested);
-                if (cached && !cached.loading) { state.driversStandings = cached.drivers; state.constructorStandings = cached.constructors; } else loadStandings(requested);
-            }
-            setStandingsKind(parts[0] === "constructors" ? "constructors" : "drivers");
+            state.standingsKind = parts[0] === "constructors" ? "constructors" : "drivers";
+            driverPages.season = requestedSeason() || new Date().getFullYear();
+            syncSectionNav(driverPages.season);
         }
         if (view === "results") {
             state.results.detail = Boolean(parts[0]);
@@ -2602,10 +2748,15 @@
             if (active) link.setAttribute("aria-current", "page");
             else link.removeAttribute("aria-current");
         }
-        document.title = `PitPulse · ${view === "standings" ? (state.standingsKind === "constructors" ? "Constructor Standings" : "Driver Standings") : VIEW_TITLES[view] || "F1 实时计时"}`;
+        document.title = `PitPulse · ${view === "standings" ? (state.standingsKind === "constructors" ? "Constructor Standings" : "Driver Standings") : VIEW_TITLES[view] || "F1 Live Timing"}`;
         document.querySelector(".app").scrollTo({ top: 0, behavior: "instant" });
 
-        if (view === "standings" && !state.driversStandings.length) loadStandings();
+        if (view === "standings") setStandingsKind(state.standingsKind);
+        if (sectionFeature(view) && !SEASON_FEATURES.get(driverPages.season)) {
+            el(`view-${view}`).querySelector('.racing-workspace').replaceChildren();
+            setLoading('Loading season data…');
+            return;
+        }
         if (view === "results") renderResultsPage();
         if (RACING_VIEWS.includes(view)) renderDriverPages();
     }
@@ -2616,7 +2767,7 @@
         el("navigation-toggle").addEventListener("click", () => {
             const expanded = document.body.classList.toggle("navigation-expanded");
             el("navigation-toggle").setAttribute("aria-expanded", String(expanded));
-            el("navigation-toggle").setAttribute("aria-label", expanded ? "收起导航" : "展开导航");
+            el("navigation-toggle").setAttribute("aria-label", expanded ? "Collapse navigation" : "Expand navigation");
         });
         const density = el("density-toggle");
         try { document.body.classList.toggle("is-compact", localStorage.getItem("pitpulse-density") === "compact"); } catch { }
@@ -2632,8 +2783,8 @@
         const syncFullscreen = () => {
             const active = Boolean(document.fullscreenElement);
             fullscreen.setAttribute("aria-pressed", String(active));
-            fullscreen.setAttribute("aria-label", active ? "退出全屏" : "进入全屏");
-            fullscreen.title = active ? "退出全屏" : "全屏";
+            fullscreen.setAttribute("aria-label", active ? "Exit full screen" : "Enter full screen");
+            fullscreen.title = active ? "Exit full screen" : "Full screen";
         };
         syncFullscreen();
         fullscreen.addEventListener("click", async () => {
@@ -2651,20 +2802,13 @@
         window.addEventListener("hashchange", applyRoute);
     }
 
-    async function boot() {
-        state.unauthorized = false;
-        const season = requestedSeason();
-        await Promise.allSettled([loadCalendar(season), loadStandings(season)]);
-        if (state.unauthorized) return;
-        setInterval(updateHomeCountdown, 1000);
-    }
-
     function init() {
         wireTheme();
         wireStandingsFilter();
+        wireContentMotion();
         applyRoute();
         wireChrome();
-        boot();
+        setInterval(updateHomeCountdown, 1000);
     }
 
     init();

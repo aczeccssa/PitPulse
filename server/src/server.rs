@@ -54,6 +54,7 @@ pub async fn serve(state: AppState) -> anyhow::Result<()> {
         .with_context(|| format!("failed to bind {}", state.config.server.bind))?;
 
     tracing::info!(addr = %state.config.server.bind, "HTTP server ready");
+    tokio::spawn(crate::api::dashboard_cache::warm(state.clone()));
     axum::serve(listener, router(state))
         .with_graceful_shutdown(shutdown_signal())
         .await

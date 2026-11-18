@@ -22,6 +22,7 @@ pub struct AppState {
     pub radar: crate::providers::radar::RadarProvider,
     pub radio: crate::providers::radio::RadioProvider,
     pub analysis: crate::services::analysis::AnalysisCache,
+    pub(crate) dashboard: Arc<crate::api::dashboard_cache::DashboardCache>,
     pub refresh_queue: crate::api::refresh::RefreshQueue,
     pub refresh_events: broadcast::Sender<crate::api::refresh::DataRefreshEvent>,
 }
@@ -47,6 +48,7 @@ impl AppState {
             jolpica,
             openf1,
             analysis: crate::services::analysis::AnalysisCache::default(),
+            dashboard: Arc::default(),
             refresh_queue: crate::api::refresh::RefreshQueue::default(),
             refresh_events,
         }

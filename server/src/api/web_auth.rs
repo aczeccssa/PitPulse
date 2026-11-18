@@ -78,14 +78,16 @@ pub async fn require_web_access(
         if constant_time_eq(provided.as_bytes(), expected.as_bytes()) {
             return bootstrap_response(expected, request.headers());
         }
-        return unauthorized_page("访问令牌无效。请使用最新的访问链接重新打开。");
+        return unauthorized_page(
+            "This access link is invalid. Open the latest PitPulse access link.",
+        );
     }
 
     if bearer_matches(request.headers(), expected) || cookie_matches(request.headers(), expected) {
         return next.run(request).await;
     }
 
-    unauthorized_page("此实例的仪表盘只对持有访问链接的浏览器开放。")
+    unauthorized_page("Open the PitPulse access link for this server to continue.")
 }
 
 /// `303 See Other` back to `/` with the session cookie set. The token is
@@ -105,7 +107,7 @@ fn bootstrap_response(token: &str, headers: &HeaderMap) -> Response {
         Ok(value) => {
             response_headers.insert(header::SET_COOKIE, value);
         }
-        Err(_) => return unauthorized_page("无法建立浏览器会话，请稍后重试。"),
+        Err(_) => return unauthorized_page("Could not start a browser session. Try again."),
     }
     response
 }
@@ -126,13 +128,13 @@ fn session_cookie(token: &str, secure: bool) -> String {
 
 fn unauthorized_page(message: &str) -> Response {
     let body = format!(
-        "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">\
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
-<meta name=\"robots\" content=\"noindex\"><title>PitPulse · 需要访问权限</title>\
+<meta name=\"robots\" content=\"noindex\"><title>PitPulse · Access Required</title>\
 <style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0e10;\
-color:#f2f2f4;font:15px/1.7 -apple-system,BlinkMacSystemFont,\"PingFang SC\",sans-serif}}\
+color:#f2f2f4;font:15px/1.7 -apple-system,BlinkMacSystemFont,sans-serif}}\
 main{{max-width:32rem;padding:32px 24px}}h1{{margin:0 0 12px;font-size:20px}}p{{margin:0;color:#9a9aa2}}</style>\
-</head><body><main><h1>需要访问权限</h1><p>{message}</p></main></body></html>"
+</head><body><main><h1>Access Required</h1><p>{message}</p></main></body></html>"
     );
     let mut response = Response::new(Body::from(body));
     *response.status_mut() = StatusCode::UNAUTHORIZED;

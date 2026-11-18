@@ -232,7 +232,8 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
             .await
             .unwrap();
         let text = String::from_utf8_lossy(&body);
-        assert!(text.contains("需要访问权限"), "{path}");
+        assert!(text.contains("Access Required"), "{path}");
+        assert!(text.contains("<html lang=\"en\">"), "{path}");
         assert!(!text.contains("app.js"), "{path}");
         assert!(!text.contains("test-token"), "{path}");
     }
@@ -349,6 +350,28 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK, "{path}");
     }
+    let dashboard_path = "/api/v1/features?season=2026";
+    let mut authenticated = get_with_cookie(dashboard_path, &session_cookie);
+    authenticated
+        .headers_mut()
+        .insert("x-pitpulse-dashboard", "1".parse().unwrap());
+    assert_eq!(
+        router
+            .clone()
+            .oneshot(authenticated)
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let mut anonymous = get(dashboard_path);
+    anonymous
+        .headers_mut()
+        .insert("x-pitpulse-dashboard", "1".parse().unwrap());
+    assert_eq!(
+        router.clone().oneshot(anonymous).await.unwrap().status(),
+        StatusCode::UNAUTHORIZED
+    );
     let response = router
         .clone()
         .oneshot(

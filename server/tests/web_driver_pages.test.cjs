@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const source = readFileSync(resolve(__dirname, '../resources/web/app.js'), 'utf8');
 const context = vm.createContext({
     document: {addEventListener() {}},
-    TEAM_ASSETS: [[/alpha/i, 'alpha'], [/beta/i, 'beta']],
+    teamAssetId(value) { return value === 'alpha' || value === 'beta' ? value : null; },
     lapSeconds(value) {
         if (!/^\d+:\d{2}\.\d+$/.test(value || '')) return Infinity;
         const [minutes, seconds] = value.split(':').map(Number);
@@ -19,6 +19,33 @@ const { comparisonPoints, qualifyingGaps, driverStats, selectedComparisonPairs, 
 const row = (id, team, position, extra = {}) => ({driverId:id, driverName:id, team, constructorId:team, position, classification:'classified', ...extra});
 const entry = (round, sessions) => ({meeting:{round}, sessions:Object.fromEntries(Object.entries(sessions).map(([type, rows]) => [type, {rows}]))});
 const drivers = ['a', 'b'].map((id, index) => ({driverId:id, driverName:id, constructor:'alpha', position:index+1, points:25-index*7}));
+
+test('chart entrance animates visible data marks and leaves hit targets and grid lines alone', () => {
+    const animateChart = vm.runInContext(source.slice(source.indexOf('    function animateChart'), source.indexOf('    function wireContentMotion')) + '\nanimateChart', context);
+    function mark(tag, attributes = {}) {
+        return {
+            closest: () => null,
+            matches: selector => selector.split(', ').some(value => value === tag || value === attributes.class),
+            getAttribute: key => attributes[key] ?? null,
+            getTotalLength: () => 80,
+            animate(frames, options) { this.frames = frames; this.options = options; },
+        };
+    }
+    const line = mark('path', {stroke: 'red'});
+    const bar = mark('rect', {width: 10, height: 40});
+    const dot = mark('circle');
+    const ring = mark('circle', {'stroke-dasharray': '20 60'});
+    const grid = mark('line', {class: '.progress-grid', stroke: 'grey'});
+    const hit = mark('rect', {fill: 'transparent'});
+    animateChart({querySelectorAll: () => [line, bar, dot, ring, grid, hit]});
+    assert.equal(line.frames[0].strokeDashoffset, 80);
+    assert.equal(bar.frames[0].scale, '1 .03');
+    assert.equal(dot.frames[0].scale, '.35');
+    assert.equal(ring.frames[0].strokeDasharray, '0 60');
+    assert.equal(ring.options.fill, 'backwards');
+    assert.equal(grid.frames, undefined);
+    assert.equal(hit.frames, undefined);
+});
 
 test('Home schedule excludes cancellations and finished sessions while counting actual race results', () => {
     const now=Date.parse('2026-11-17T12:00:00Z');
