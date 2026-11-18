@@ -1,0 +1,1052 @@
+{
+ "generatedAt": "2026-11-18T02:18:33+00:00",
+ "source": "https://api.jolpi.ca/ergast/f1/{season}/results.json",
+ "seasons": {
+  "2021": {
+   "drivers": {
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "bottas": {
+     "name": "Valtteri Bottas",
+     "code": "BOT",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "perez": {
+     "name": "Sergio P\u00e9rez",
+     "code": "PER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "ricciardo": {
+     "name": "Daniel Ricciardo",
+     "code": "RIC",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "raikkonen": {
+     "name": "Kimi R\u00e4ikk\u00f6nen",
+     "code": "RAI",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "giovinazzi": {
+     "name": "Antonio Giovinazzi",
+     "code": "GIO",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "vettel": {
+     "name": "Sebastian Vettel",
+     "code": "VET",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "mick_schumacher": {
+     "name": "Mick Schumacher",
+     "code": "MSC",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "latifi": {
+     "name": "Nicholas Latifi",
+     "code": "LAT",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "mazepin": {
+     "name": "Nikita Mazepin",
+     "code": "MAZ",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "kubica": {
+     "name": "Robert Kubica",
+     "code": "KUB",
+     "constructors": [
+      "alfa"
+     ]
+    }
+   },
+   "constructors": [
+    "alfa",
+    "alphatauri",
+    "alpine",
+    "aston_martin",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "red_bull",
+    "williams"
+   ]
+  },
+  "2022": {
+   "drivers": {
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "kevin_magnussen": {
+     "name": "Kevin Magnussen",
+     "code": "MAG",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "bottas": {
+     "name": "Valtteri Bottas",
+     "code": "BOT",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "zhou": {
+     "name": "Guanyu Zhou",
+     "code": "ZHO",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "mick_schumacher": {
+     "name": "Mick Schumacher",
+     "code": "MSC",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "albon": {
+     "name": "Alexander Albon",
+     "code": "ALB",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "ricciardo": {
+     "name": "Daniel Ricciardo",
+     "code": "RIC",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "latifi": {
+     "name": "Nicholas Latifi",
+     "code": "LAT",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "hulkenberg": {
+     "name": "Nico H\u00fclkenberg",
+     "code": "HUL",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "perez": {
+     "name": "Sergio P\u00e9rez",
+     "code": "PER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "vettel": {
+     "name": "Sebastian Vettel",
+     "code": "VET",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "de_vries": {
+     "name": "Nyck de Vries",
+     "code": "DEV",
+     "constructors": [
+      "williams"
+     ]
+    }
+   },
+   "constructors": [
+    "alfa",
+    "alphatauri",
+    "alpine",
+    "aston_martin",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "red_bull",
+    "williams"
+   ]
+  },
+  "2023": {
+   "drivers": {
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "perez": {
+     "name": "Sergio P\u00e9rez",
+     "code": "PER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "bottas": {
+     "name": "Valtteri Bottas",
+     "code": "BOT",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "albon": {
+     "name": "Alexander Albon",
+     "code": "ALB",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "sargeant": {
+     "name": "Logan Sargeant",
+     "code": "SAR",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "kevin_magnussen": {
+     "name": "Kevin Magnussen",
+     "code": "MAG",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "de_vries": {
+     "name": "Nyck de Vries",
+     "code": "DEV",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "hulkenberg": {
+     "name": "Nico H\u00fclkenberg",
+     "code": "HUL",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "zhou": {
+     "name": "Guanyu Zhou",
+     "code": "ZHO",
+     "constructors": [
+      "alfa"
+     ]
+    },
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "piastri": {
+     "name": "Oscar Piastri",
+     "code": "PIA",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "ricciardo": {
+     "name": "Daniel Ricciardo",
+     "code": "RIC",
+     "constructors": [
+      "alphatauri"
+     ]
+    },
+    "lawson": {
+     "name": "Liam Lawson",
+     "code": "LAW",
+     "constructors": [
+      "alphatauri"
+     ]
+    }
+   },
+   "constructors": [
+    "alfa",
+    "alphatauri",
+    "alpine",
+    "aston_martin",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "red_bull",
+    "williams"
+   ]
+  },
+  "2024": {
+   "drivers": {
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "perez": {
+     "name": "Sergio P\u00e9rez",
+     "code": "PER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "piastri": {
+     "name": "Oscar Piastri",
+     "code": "PIA",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "zhou": {
+     "name": "Guanyu Zhou",
+     "code": "ZHO",
+     "constructors": [
+      "sauber"
+     ]
+    },
+    "kevin_magnussen": {
+     "name": "Kevin Magnussen",
+     "code": "MAG",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "ricciardo": {
+     "name": "Daniel Ricciardo",
+     "code": "RIC",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "albon": {
+     "name": "Alexander Albon",
+     "code": "ALB",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "hulkenberg": {
+     "name": "Nico H\u00fclkenberg",
+     "code": "HUL",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "bottas": {
+     "name": "Valtteri Bottas",
+     "code": "BOT",
+     "constructors": [
+      "sauber"
+     ]
+    },
+    "sargeant": {
+     "name": "Logan Sargeant",
+     "code": "SAR",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "bearman": {
+     "name": "Oliver Bearman",
+     "code": "BEA",
+     "constructors": [
+      "haas",
+      "ferrari"
+     ]
+    },
+    "colapinto": {
+     "name": "Franco Colapinto",
+     "code": "COL",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "lawson": {
+     "name": "Liam Lawson",
+     "code": "LAW",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "doohan": {
+     "name": "Jack Doohan",
+     "code": "DOO",
+     "constructors": [
+      "alpine"
+     ]
+    }
+   },
+   "constructors": [
+    "alpine",
+    "aston_martin",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "rb",
+    "red_bull",
+    "sauber",
+    "williams"
+   ]
+  },
+  "2025": {
+   "drivers": {
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "antonelli": {
+     "name": "Andrea Kimi Antonelli",
+     "code": "ANT",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "albon": {
+     "name": "Alexander Albon",
+     "code": "ALB",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "hulkenberg": {
+     "name": "Nico H\u00fclkenberg",
+     "code": "HUL",
+     "constructors": [
+      "sauber"
+     ]
+    },
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "piastri": {
+     "name": "Oscar Piastri",
+     "code": "PIA",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "red_bull",
+      "rb"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "bearman": {
+     "name": "Oliver Bearman",
+     "code": "BEA",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "lawson": {
+     "name": "Liam Lawson",
+     "code": "LAW",
+     "constructors": [
+      "rb",
+      "red_bull"
+     ]
+    },
+    "bortoleto": {
+     "name": "Gabriel Bortoleto",
+     "code": "BOR",
+     "constructors": [
+      "sauber"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "doohan": {
+     "name": "Jack Doohan",
+     "code": "DOO",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "hadjar": {
+     "name": "Isack Hadjar",
+     "code": "HAD",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "colapinto": {
+     "name": "Franco Colapinto",
+     "code": "COL",
+     "constructors": [
+      "alpine"
+     ]
+    }
+   },
+   "constructors": [
+    "alpine",
+    "aston_martin",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "rb",
+    "red_bull",
+    "sauber",
+    "williams"
+   ]
+  },
+  "2026": {
+   "drivers": {
+    "russell": {
+     "name": "George Russell",
+     "code": "RUS",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "antonelli": {
+     "name": "Andrea Kimi Antonelli",
+     "code": "ANT",
+     "constructors": [
+      "mercedes"
+     ]
+    },
+    "leclerc": {
+     "name": "Charles Leclerc",
+     "code": "LEC",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "hamilton": {
+     "name": "Lewis Hamilton",
+     "code": "HAM",
+     "constructors": [
+      "ferrari"
+     ]
+    },
+    "norris": {
+     "name": "Lando Norris",
+     "code": "NOR",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "max_verstappen": {
+     "name": "Max Verstappen",
+     "code": "VER",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "bearman": {
+     "name": "Oliver Bearman",
+     "code": "BEA",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "arvid_lindblad": {
+     "name": "Arvid Lindblad",
+     "code": "LIN",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "bortoleto": {
+     "name": "Gabriel Bortoleto",
+     "code": "BOR",
+     "constructors": [
+      "audi"
+     ]
+    },
+    "gasly": {
+     "name": "Pierre Gasly",
+     "code": "GAS",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "ocon": {
+     "name": "Esteban Ocon",
+     "code": "OCO",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "albon": {
+     "name": "Alexander Albon",
+     "code": "ALB",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "lawson": {
+     "name": "Liam Lawson",
+     "code": "LAW",
+     "constructors": [
+      "rb",
+      "red_bull"
+     ]
+    },
+    "colapinto": {
+     "name": "Franco Colapinto",
+     "code": "COL",
+     "constructors": [
+      "alpine"
+     ]
+    },
+    "sainz": {
+     "name": "Carlos Sainz",
+     "code": "SAI",
+     "constructors": [
+      "williams"
+     ]
+    },
+    "perez": {
+     "name": "Sergio P\u00e9rez",
+     "code": "PER",
+     "constructors": [
+      "cadillac"
+     ]
+    },
+    "stroll": {
+     "name": "Lance Stroll",
+     "code": "STR",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "alonso": {
+     "name": "Fernando Alonso",
+     "code": "ALO",
+     "constructors": [
+      "aston_martin"
+     ]
+    },
+    "bottas": {
+     "name": "Valtteri Bottas",
+     "code": "BOT",
+     "constructors": [
+      "cadillac"
+     ]
+    },
+    "hadjar": {
+     "name": "Isack Hadjar",
+     "code": "HAD",
+     "constructors": [
+      "red_bull"
+     ]
+    },
+    "piastri": {
+     "name": "Oscar Piastri",
+     "code": "PIA",
+     "constructors": [
+      "mclaren"
+     ]
+    },
+    "hulkenberg": {
+     "name": "Nico H\u00fclkenberg",
+     "code": "HUL",
+     "constructors": [
+      "audi"
+     ]
+    },
+    "tsunoda": {
+     "name": "Yuki Tsunoda",
+     "code": "TSU",
+     "constructors": [
+      "rb"
+     ]
+    },
+    "ryo_hirakawa": {
+     "name": "Ryo Hirakawa",
+     "code": "HIR",
+     "constructors": [
+      "haas"
+     ]
+    },
+    "rafael_camara": {
+     "name": "Rafael Camara",
+     "code": "CAM",
+     "constructors": [
+      "haas"
+     ]
+    }
+   },
+   "constructors": [
+    "alpine",
+    "aston_martin",
+    "audi",
+    "cadillac",
+    "ferrari",
+    "haas",
+    "mclaren",
+    "mercedes",
+    "rb",
+    "red_bull",
+    "williams"
+   ]
+  }
+ }
+}

@@ -23,6 +23,8 @@ const ICON_192: &[u8] = include_bytes!("../../resources/web/icon-192.png");
 const ICON_512: &[u8] = include_bytes!("../../resources/web/icon-512.png");
 
 include!(concat!(env!("OUT_DIR"), "/motorsport_assets.rs"));
+include!(concat!(env!("OUT_DIR"), "/motorsport_legacy_assets.rs"));
+include!(concat!(env!("OUT_DIR"), "/motorsport_index.rs"));
 
 /// The shell is served only to browsers holding the session cookie issued by
 /// the `/?token=` bootstrap. It contains no data; every API call it makes is
@@ -142,21 +144,51 @@ pub async fn icon_512() -> Response {
     icon_asset(ICON_512)
 }
 
-/// Bundled team logos and driver helmets, derived from the app's asset catalog.
-/// The dashboard only reads them, so they are public like the app icons.
-pub async fn motorsport_asset(Path(file): Path<String>) -> Response {
-    match MOTORSPORT_ASSETS
+/// Season artwork (`{season}/{kind}/{id}.png`), the flags that still live beside
+/// the shell, and the index that tells the page which of them exist. Public like
+/// the app icons: the dashboard only reads them.
+pub async fn motorsport_asset(Path(path): Path<String>) -> Response {
+    if path == "assets.js" {
+        return script_asset(MOTORSPORT_INDEX_JS);
+    }
+    let found = MOTORSPORT_ASSETS
         .iter()
-        .find(|(name, _)| *name == file.as_str())
-    {
+        .find(|(name, _)| *name == path.as_str())
+        .or_else(|| {
+            MOTORSPORT_LEGACY_ASSETS
+                .iter()
+                .find(|(name, _)| *name == path.as_str())
+        });
+    match found {
         Some((_, bytes)) => icon_asset(bytes),
         None => (
             axum::http::StatusCode::NOT_FOUND,
-            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            [
+                (header::CONTENT_TYPE, "text/plain; charset=utf-8"),
+                (header::CACHE_CONTROL, "public, max-age=300"),
+            ],
             "not found",
         )
             .into_response(),
     }
+}
+
+fn script_asset(body: &'static str) -> Response {
+    let mut response = body.into_response();
+    let headers = response.headers_mut();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/javascript; charset=utf-8"),
+    );
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=300"),
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response
 }
 
 fn text_asset(body: &'static str, content_type: &'static str) -> Response {
@@ -370,4 +402,57 @@ async fn current_year(state: &AppState) -> Result<i64, ApiError> {
             field: "season".to_string(),
             error: "current UTC year is unavailable".to_string(),
         })
+}
+
+#[cfg(test)]
+mod motorsport_assets_tests {
+    use super::*;
+
+    #[test]
+    fn embedded_artwork_covers_every_kind() {
+        for kind in ["driver-photo", "helmet", "car-side", "team-logo"] {
+            assert!(
+                MOTORSPORT_ASSETS
+                    .iter()
+                    .any(|(name, _)| name.contains(&format!("/{kind}/"))),
+                "no {kind} artwork is embedded"
+            );
+        }
+    }
+
+    #[test]
+    fn embedded_keys_are_relative_paths() {
+        for (name, bytes) in MOTORSPORT_ASSETS {
+            assert!(name.ends_with(".png"), "unexpected asset key {name}");
+            assert!(
+                !name.starts_with("resources/"),
+                "asset key keeps a filesystem prefix: {name}"
+            );
+            assert!(!bytes.is_empty(), "empty asset {name}");
+        }
+    }
+
+    #[test]
+    fn index_lists_every_embedded_asset() {
+        for (name, _) in MOTORSPORT_ASSETS {
+            let stem = name.strip_suffix(".png").expect("png suffix");
+            assert!(
+                MOTORSPORT_INDEX_JS.contains(&format!("\"{stem}\":1")),
+                "the browser index is missing {stem}"
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_flags_stay_on_the_flat_path() {
+        assert!(
+            MOTORSPORT_LEGACY_ASSETS
+                .iter()
+                .any(|(name, _)| *name == "flag-gb.png"),
+            "the flags moved out of the shell directory"
+        );
+        for (name, _) in MOTORSPORT_LEGACY_ASSETS {
+            assert!(!name.contains('/'), "legacy key must stay flat: {name}");
+        }
+    }
 }

@@ -40,7 +40,7 @@ pub fn router(state: AppState) -> Router {
         .route("/icon-512.png", get(routes::icon_512))
         .route("/favicon.ico", get(routes::favicon_ico))
         .route("/favicon.png", get(routes::favicon_png))
-        .route("/motorsport/{file}", get(routes::motorsport_asset));
+        .route("/motorsport/{*path}", get(routes::motorsport_asset));
 
     protected_router
         .merge(shell)

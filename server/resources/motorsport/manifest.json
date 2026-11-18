@@ -1,0 +1,5651 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-11-18T02:30:23+00:00",
+ "identifier": "{kind}/{id}/{season} -> {season}/{kind}/{id}.png",
+ "kinds": [
+  "driver-photo",
+  "helmet",
+  "car-side",
+  "team-logo"
+ ],
+ "seasons": [
+  2021,
+  2022,
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "sources": [
+  {
+   "name": "formula1-media",
+   "baseUrl": "https://media.formula1.com/image/upload",
+   "scope": "season-scoped artwork from 2024 on",
+   "rightsStatus": "restricted"
+  },
+  {
+   "name": "pitpulse-app-catalog",
+   "path": "Packages/SharedComponents/Sources/SharedComponents/Resources/PitPulseAssets.xcassets",
+   "scope": "2026 helmets",
+   "rightsStatus": "restricted"
+  }
+ ],
+ "policy": {
+  "runtimeThirdPartyAssetFetchAllowed": false,
+  "crossSeasonSubstitutionAllowed": false,
+  "publication": "restricted artwork stays private to the self-hosted instance"
+ },
+ "assets": [
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2024,
+   "file": "2024/car-side/alpine.png",
+   "bytes": 14640,
+   "sha256": "b4a0353fccbf0c1f7533d052da97691c61873822e2479f3cc895a0ff62c16a53",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2024,
+   "file": "2024/car-side/aston_martin.png",
+   "bytes": 13782,
+   "sha256": "1edb9a233da0cf82368ef940448d67c416688a19340f8352f0009c005377768d",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2024,
+   "file": "2024/car-side/ferrari.png",
+   "bytes": 15669,
+   "sha256": "cc1d9944900036144a65751992a85b051bd9745fe5d604222a26f10277d3e760",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2024,
+   "file": "2024/car-side/haas.png",
+   "bytes": 12820,
+   "sha256": "e8cd6a9736475c7f6730296b59743735802ea728ee047af8f42e27f1093190db",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2024,
+   "file": "2024/car-side/mclaren.png",
+   "bytes": 14664,
+   "sha256": "b75bec84245e0d6bc980494f377e76c898b2850e7181570cf6a83b5c9756b4df",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2024,
+   "file": "2024/car-side/mercedes.png",
+   "bytes": 13411,
+   "sha256": "6aecaea83288ef36831186e1b36191a16905b6fc8db983e6f4a7ece7c572c77e",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "rb",
+   "season": 2024,
+   "file": "2024/car-side/rb.png",
+   "bytes": 13960,
+   "sha256": "1f9672131983343540f9003151672344d8a5517d4cd20b3df35bdade0cea902c",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2024,
+   "file": "2024/car-side/red_bull.png",
+   "bytes": 15004,
+   "sha256": "caef1620256649292da7661b45837d864ed2e5f9959071f5013ee85ab63affbf",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "sauber",
+   "season": 2024,
+   "file": "2024/car-side/sauber.png",
+   "bytes": 14825,
+   "sha256": "8e80df39060b7a700cd0a97d80cc3dfd819f402a18b2107a6de7d3a4799bbc17",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2024,
+   "file": "2024/car-side/williams.png",
+   "bytes": 13504,
+   "sha256": "6ba19d48626f8e4e7e7a2dc7b5477d441c5e358cb59b03a8f2f08fdb1bee0ffa",
+   "width": 478,
+   "height": 100,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "albon",
+   "season": 2024,
+   "file": "2024/driver-photo/albon.png",
+   "bytes": 22971,
+   "sha256": "1821f3a461f266c8f18ab55b86ea6d435bf7394ad725de47aa47b74b4a5638fd",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2024,
+   "file": "2024/driver-photo/alonso.png",
+   "bytes": 26756,
+   "sha256": "cccd6a6a1be518bf2bc9f4381945985921302e96f50497df59bf8f3da26c57b3",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bearman",
+   "season": 2024,
+   "file": "2024/driver-photo/bearman.png",
+   "bytes": 29116,
+   "sha256": "6f5018cafd572e09c240216b3a3befc1760d8414ab3e868e0c60de150b66f8ef",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bottas",
+   "season": 2024,
+   "file": "2024/driver-photo/bottas.png",
+   "bytes": 27084,
+   "sha256": "13884c286bdf8992b00235dd48242394c6ddbf097f580812b053bf73b12dd422",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "colapinto",
+   "season": 2024,
+   "file": "2024/driver-photo/colapinto.png",
+   "bytes": 25432,
+   "sha256": "4f8121cd57911de72cbb2bcd3a8dd0df17c623f71b232e24768422eb313a867f",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2024,
+   "file": "2024/driver-photo/gasly.png",
+   "bytes": 27682,
+   "sha256": "64c440bd7fb2a91a0fae9b63894f5c27a98cc33d3b675b5a6287db39e4c0eb07",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2024,
+   "file": "2024/driver-photo/hamilton.png",
+   "bytes": 21934,
+   "sha256": "5cf6a86fa6e12940d5615d83446fd0a19605235eb4c159a71f93183ffee9e4c2",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hulkenberg",
+   "season": 2024,
+   "file": "2024/driver-photo/hulkenberg.png",
+   "bytes": 27643,
+   "sha256": "58c95cca912af86a125c579fcbd8f5fa594244ccff0a8c62ef06a1747ec054ee",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "kevin_magnussen",
+   "season": 2024,
+   "file": "2024/driver-photo/kevin_magnussen.png",
+   "bytes": 29212,
+   "sha256": "ef1836780f27ad3d011a28a845d031ded6f0aadd3720f8fe54a247d839c65af9",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "lawson",
+   "season": 2024,
+   "file": "2024/driver-photo/lawson.png",
+   "bytes": 25886,
+   "sha256": "800a43e6ef99dbe2b34e418c995a92980b83e0ee16c0e257bf67e707906d0c14",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2024,
+   "file": "2024/driver-photo/leclerc.png",
+   "bytes": 27422,
+   "sha256": "0997a2f7679ff7aa9435690c8bfd38f7e08a6ee236ffa9acb897fc6d8c5c93f1",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2024,
+   "file": "2024/driver-photo/max_verstappen.png",
+   "bytes": 25105,
+   "sha256": "0aac9394a6f5ed719e37e3fff5323d528032dcdc2b13e0464b1f4ebd7faf0b92",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2024,
+   "file": "2024/driver-photo/norris.png",
+   "bytes": 26314,
+   "sha256": "3603bd149ad68a36ee5785899682b89c553143ebf242a14c77cfa74a0b12e514",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2024,
+   "file": "2024/driver-photo/ocon.png",
+   "bytes": 27908,
+   "sha256": "e7952fdea1736b8b2ee9e71fa1d7ff9e7b8c1ae9472cb2543a84f0299d22a824",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "perez",
+   "season": 2024,
+   "file": "2024/driver-photo/perez.png",
+   "bytes": 29343,
+   "sha256": "1798938795439035ab018139a90b83126876227299f3687584976fa939921458",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "piastri",
+   "season": 2024,
+   "file": "2024/driver-photo/piastri.png",
+   "bytes": 27395,
+   "sha256": "c3c2e28aed25a0072533cb1314de86bb654f4da7ef587accfcf1a1d9762213d5",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ricciardo",
+   "season": 2024,
+   "file": "2024/driver-photo/ricciardo.png",
+   "bytes": 27983,
+   "sha256": "5ba85aa52330a59c42e13f326f6d6e72e47d598e974cc7aa118fc8757c218a43",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2024,
+   "file": "2024/driver-photo/russell.png",
+   "bytes": 24848,
+   "sha256": "abff5d62436a7a47952dff09a193dc77744bb51e93b58301b650b389a7b5119d",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2024,
+   "file": "2024/driver-photo/sainz.png",
+   "bytes": 30077,
+   "sha256": "976c45a12c0df635640c202247e7f5d3627aed85350ca0ee04e216e151ed3db9",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sargeant",
+   "season": 2024,
+   "file": "2024/driver-photo/sargeant.png",
+   "bytes": 24144,
+   "sha256": "30686775b009f16bc210df5d23b720895f0863063660680f973f134ee48e8225",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2024,
+   "file": "2024/driver-photo/stroll.png",
+   "bytes": 27435,
+   "sha256": "d866d80d3585569a3de685f91790b7263bf81717c902df077c5e9c47cb083dee",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2024,
+   "file": "2024/driver-photo/tsunoda.png",
+   "bytes": 28552,
+   "sha256": "94b3e4d2c9224e432bfb3a29d547f5bd840769ae57571b70c53cdb3bd41992eb",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "zhou",
+   "season": 2024,
+   "file": "2024/driver-photo/zhou.png",
+   "bytes": 23037,
+   "sha256": "e49e63d20230a7ff3bf5d62b950298e9563193b7eb93efcf67ffd17db46a35b6",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2024,
+   "file": "2024/team-logo/alpine.png",
+   "bytes": 4545,
+   "sha256": "9e5dfbcb007e7407e72e982795123e5cdbb8eecb03f50d68026f294ebb4ee680",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/alpine-contrast.png",
+   "bytes": 2670,
+   "sha256": "6ad47f229bbee903a9336d85a9d8c0412c66333c70a80c9cc173b8c7b601ee87",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "alpine"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2024,
+   "file": "2024/team-logo/aston_martin.png",
+   "bytes": 7021,
+   "sha256": "ff40106d1ab0ab69fec4721645a8093be9e8780eae7d0ef894435c29ca9984d2",
+   "width": 128,
+   "height": 33,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/aston_martin-contrast.png",
+   "bytes": 3555,
+   "sha256": "353e1716fa96334880f8f9124c2ac3b7970b3bd2dc3327c06187613128feee54",
+   "width": 128,
+   "height": 33,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-dark",
+   "season": 2024,
+   "file": "2024/team-logo/aston_martin-dark.png",
+   "bytes": 3555,
+   "sha256": "353e1716fa96334880f8f9124c2ac3b7970b3bd2dc3327c06187613128feee54",
+   "width": 128,
+   "height": 33,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2024,
+   "file": "2024/team-logo/ferrari.png",
+   "bytes": 3934,
+   "sha256": "60e6423e4a8ee3c95e5580e3dab6d7db360ac086bc1e940fdf4192ffb4c5c194",
+   "width": 97,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/ferrari-contrast.png",
+   "bytes": 2503,
+   "sha256": "98d5627f8d058aa2c79686b7944e9de0217e44aafc2b8b8ccd9eac39c81749f4",
+   "width": 97,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "ferrari"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2024,
+   "file": "2024/team-logo/haas.png",
+   "bytes": 11087,
+   "sha256": "4f0e8d7832d96722ce0d28a9b4295afeb2bada4f5aac341c30390b1f347ea1da",
+   "width": 128,
+   "height": 99,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/haas-contrast.png",
+   "bytes": 5884,
+   "sha256": "3225fac5985378a8506c451094a6fac006772df606807ed7e86349e95bbcfc96",
+   "width": 128,
+   "height": 99,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "haas"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2024,
+   "file": "2024/team-logo/mclaren.png",
+   "bytes": 3229,
+   "sha256": "c8978bf38ba3e030fa96b71373bbc2e12a6276cd95b879e7da9b45482cadd201",
+   "width": 128,
+   "height": 69,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/mclaren-contrast.png",
+   "bytes": 2345,
+   "sha256": "8ac65220e89d45b066aac1da21d72e6e86573acfb09884b7a3e03a7384effd4b",
+   "width": 128,
+   "height": 69,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mclaren"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2024,
+   "file": "2024/team-logo/mercedes.png",
+   "bytes": 18387,
+   "sha256": "c705c25747977314a7686168117c3d608122e3e88f6b729e01145c1e9a0c0bb0",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/mercedes-contrast.png",
+   "bytes": 9651,
+   "sha256": "db72c6a105045a81a610bbf6330ae8d9d0e40ac5905a9081559fefa836d4895c",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-dark",
+   "season": 2024,
+   "file": "2024/team-logo/mercedes-dark.png",
+   "bytes": 9651,
+   "sha256": "db72c6a105045a81a610bbf6330ae8d9d0e40ac5905a9081559fefa836d4895c",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb",
+   "season": 2024,
+   "file": "2024/team-logo/rb.png",
+   "bytes": 13536,
+   "sha256": "30c0900d7186e41a7a94e0a05201dd30c4e42af4d80817dbf1bbc32b37758f84",
+   "width": 90,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/rb-contrast.png",
+   "bytes": 7707,
+   "sha256": "f41012e6097e26a6cab5aa72775be49d01bce12ac96d4cfacccd74ff8f26f03a",
+   "width": 90,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "rb"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2024,
+   "file": "2024/team-logo/red_bull.png",
+   "bytes": 8276,
+   "sha256": "e7657749dd6b0a75f0ca6cd75cae7f27c1f5d4b612663879cffabd72bc22630f",
+   "width": 128,
+   "height": 51,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/red_bull-contrast.png",
+   "bytes": 4176,
+   "sha256": "acfd6ebcfc85290ced71b62dd2e032a4ecfb84acbffc3caab12dc00184e4a3e0",
+   "width": 128,
+   "height": 51,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "red_bull"
+  },
+  {
+   "kind": "team-logo",
+   "id": "sauber",
+   "season": 2024,
+   "file": "2024/team-logo/sauber.png",
+   "bytes": 5967,
+   "sha256": "ded30de4b678dc1fe28f34e3ba0e0f6ebf99e9dc92f220d9731101f1bbc3b29b",
+   "width": 87,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "sauber-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/sauber-contrast.png",
+   "bytes": 3261,
+   "sha256": "e0c1ce1a64835358e80b3ac117bd591853ebc7cb11220712cbcef50e51c86612",
+   "width": 87,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "sauber"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2024,
+   "file": "2024/team-logo/williams.png",
+   "bytes": 7892,
+   "sha256": "f5758d9a65454ef0bf3a69a2a9008f1035d184615d028c06b706d6623224023d",
+   "width": 128,
+   "height": 95,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams-contrast",
+   "season": 2024,
+   "file": "2024/team-logo/williams-contrast.png",
+   "bytes": 4431,
+   "sha256": "5301f57a6a021ea0199eddf2e0aa6799e6e51e19ff498536ff8271b08e8f01ef",
+   "width": 128,
+   "height": 95,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "williams"
+  },
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2025,
+   "file": "2025/car-side/alpine.png",
+   "bytes": 15164,
+   "sha256": "14378cb77bfc70dba26361e3097a11f335f36d76104415e0bb82ac8815b8a9e3",
+   "width": 477,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2025,
+   "file": "2025/car-side/aston_martin.png",
+   "bytes": 15504,
+   "sha256": "36b2490881d0dab0b6f14c7386be04a22868920ad8afe57f34951372ddd04e78",
+   "width": 478,
+   "height": 106,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2025,
+   "file": "2025/car-side/ferrari.png",
+   "bytes": 15713,
+   "sha256": "8c0370c86b5c3ef385ed584d5f8bbee79934d06a2d8ddbe74b9b2d903b06961a",
+   "width": 476,
+   "height": 102,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2025,
+   "file": "2025/car-side/haas.png",
+   "bytes": 14865,
+   "sha256": "28974dffdaa65dbd7ba22e60ceaab9d92da9d37fd26ff0079c4c036a6ae057a5",
+   "width": 478,
+   "height": 101,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2025,
+   "file": "2025/car-side/mclaren.png",
+   "bytes": 15424,
+   "sha256": "065895f56d3d7f971c23cccd338306a7f87e590b8d5c470fd40572ae2c1137c6",
+   "width": 477,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2025,
+   "file": "2025/car-side/mercedes.png",
+   "bytes": 13563,
+   "sha256": "c26c46f91d8a03fd91a6e3ba6ea0841e667d0ad6a8b98563ea361a4bf3f86c30",
+   "width": 477,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "rb",
+   "season": 2025,
+   "file": "2025/car-side/rb.png",
+   "bytes": 16166,
+   "sha256": "70e07f01f56d8873d014875e06c3e0012d02402332515e30742e2272036954b4",
+   "width": 478,
+   "height": 106,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2025,
+   "file": "2025/car-side/red_bull.png",
+   "bytes": 15231,
+   "sha256": "b1cff18cf3124e4e020f9977077cf61eafc3941513df4f6ed71618e2580d1fab",
+   "width": 478,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "sauber",
+   "season": 2025,
+   "file": "2025/car-side/sauber.png",
+   "bytes": 12550,
+   "sha256": "3ef0d709a2ad7ba38834be54f6172cd25dbdf57e20d43bbe4ffa095bda185e33",
+   "width": 477,
+   "height": 102,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2025,
+   "file": "2025/car-side/williams.png",
+   "bytes": 15073,
+   "sha256": "069616ea96a891046b5ebb4317517184f592cc14d3d7e9363cd0306b75f34509",
+   "width": 478,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "albon",
+   "season": 2025,
+   "file": "2025/driver-photo/albon.png",
+   "bytes": 23549,
+   "sha256": "ea831fb61b0c1228eabd570ca7bc3623010cd4c9fbd4b441cc365ab4743aaba9",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2025,
+   "file": "2025/driver-photo/alonso.png",
+   "bytes": 27821,
+   "sha256": "34fe252929ba0963c70fba725c3ec1c3ae5cb0cd4f7db284987f780361cf835a",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "antonelli",
+   "season": 2025,
+   "file": "2025/driver-photo/antonelli.png",
+   "bytes": 26135,
+   "sha256": "4aa54bf0db091b4ae964f0522c5522e487a414a28bfbbba4e5a8c451bd831339",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bearman",
+   "season": 2025,
+   "file": "2025/driver-photo/bearman.png",
+   "bytes": 22887,
+   "sha256": "fc30886c040edd0d1df378a435c5eb02768f45bce97b60c8b0e6256846b4d8c9",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bortoleto",
+   "season": 2025,
+   "file": "2025/driver-photo/bortoleto.png",
+   "bytes": 25726,
+   "sha256": "ef4a9b83b3bb78509112c8832622a405cc7e5c745e60a842c3491dae1e83a7d2",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "colapinto",
+   "season": 2025,
+   "file": "2025/driver-photo/colapinto.png",
+   "bytes": 27911,
+   "sha256": "e65052e7794720ef695cbda49238e5a8cfd6c7af49f8590b86cdfc1171a2d1e2",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "doohan",
+   "season": 2025,
+   "file": "2025/driver-photo/doohan.png",
+   "bytes": 29926,
+   "sha256": "03a1cdc952fe85cd7d0cb4a1a2e297153e6783eaf4d47be9f95696babac27004",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2025,
+   "file": "2025/driver-photo/gasly.png",
+   "bytes": 27023,
+   "sha256": "ddbf03a585554ad3a62269fefcd43c506668dd67fe576d1481b520d5a63e3504",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hadjar",
+   "season": 2025,
+   "file": "2025/driver-photo/hadjar.png",
+   "bytes": 25723,
+   "sha256": "bb15d50721ef973ea36514a5d8888246a04a26ae9235a5c2a7e2cae679553bef",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2025,
+   "file": "2025/driver-photo/hamilton.png",
+   "bytes": 24507,
+   "sha256": "810d6213d5261fa5025b055eb26c04d422197986781b92d104388088d4160051",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hulkenberg",
+   "season": 2025,
+   "file": "2025/driver-photo/hulkenberg.png",
+   "bytes": 24172,
+   "sha256": "db59f5240d0c491056166658bde2b9d76ec8cd3bbcea85459963807552934f25",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "lawson",
+   "season": 2025,
+   "file": "2025/driver-photo/lawson.png",
+   "bytes": 27877,
+   "sha256": "9b9bc728302669ea7286f3ea03a6fa5aace88a7847069b0bd4b62100356de305",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2025,
+   "file": "2025/driver-photo/leclerc.png",
+   "bytes": 26856,
+   "sha256": "4f231f6987b06ee995db5bc1e263e12d0901f79497b1eb12103413d4297718bc",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2025,
+   "file": "2025/driver-photo/max_verstappen.png",
+   "bytes": 25207,
+   "sha256": "b771f3928f6d0995587cd5f3718187b1d0ccf373abaad969013a5e1d5bf58431",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2025,
+   "file": "2025/driver-photo/norris.png",
+   "bytes": 26962,
+   "sha256": "7d5d78853f7c95b15df5a91788efde20b62716e7c2856a12cabac58b9cc14821",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2025,
+   "file": "2025/driver-photo/ocon.png",
+   "bytes": 25092,
+   "sha256": "6a744acba356c48dc0bd0d4c4e805797cd0396da6ef0d7c3a321770409afaef8",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "piastri",
+   "season": 2025,
+   "file": "2025/driver-photo/piastri.png",
+   "bytes": 28271,
+   "sha256": "079ed3f80f3cdca4e4d5ba77779a660d11a5bfc4ed0079b4999fe5a83b7a6f01",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2025,
+   "file": "2025/driver-photo/russell.png",
+   "bytes": 24536,
+   "sha256": "32c16017086aa8bb3c94b1fdbc90fe9a5b68d76c01d7dda2f4ef8490ca4a96ac",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2025,
+   "file": "2025/driver-photo/sainz.png",
+   "bytes": 23098,
+   "sha256": "9aea6a6673990fddcbd79d45c06b8df3934f06f3d68ca1fcb0537f0fd0053105",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2025,
+   "file": "2025/driver-photo/stroll.png",
+   "bytes": 27104,
+   "sha256": "a3648f4882b66f882fdc1919a5d86cdcd9ffe59f79287e0c25d7e0feee44faad",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2025,
+   "file": "2025/driver-photo/tsunoda.png",
+   "bytes": 26766,
+   "sha256": "8fc193ce12fbe38eefd6528cc965a4c30adb65c028aa487594b503f17dec6450",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2025,
+   "file": "2025/team-logo/alpine.png",
+   "bytes": 4294,
+   "sha256": "d73e05c7d4e176c3630ecb5911f73477dcd7b587f594da0dd37938b5bdbc30ba",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/alpine-contrast.png",
+   "bytes": 2541,
+   "sha256": "ba4781cbf3cf161b323391d44218945b48af27884dbf88f83492f7a31b277ab1",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "alpine"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2025,
+   "file": "2025/team-logo/aston_martin.png",
+   "bytes": 3161,
+   "sha256": "15c009a8f7e03b1b4e89541376a369f3b622a42a4f468a0d78140d11d46917cc",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/aston_martin-contrast.png",
+   "bytes": 3394,
+   "sha256": "230ca180a06dd3f5eb2f4a3e546aa729e2affe2e46e2724e46fa89f2592e42e9",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-dark",
+   "season": 2025,
+   "file": "2025/team-logo/aston_martin-dark.png",
+   "bytes": 3394,
+   "sha256": "230ca180a06dd3f5eb2f4a3e546aa729e2affe2e46e2724e46fa89f2592e42e9",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2025,
+   "file": "2025/team-logo/ferrari.png",
+   "bytes": 16186,
+   "sha256": "f125eb57a7c2f7be40b23feb4566fd128f97f12d120e82d4383d9771628883f2",
+   "width": 95,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/ferrari-contrast.png",
+   "bytes": 2386,
+   "sha256": "e11df575184a332b5bf02c1b31de2938728124bda03b21fdeaa6986a465255d9",
+   "width": 95,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "ferrari"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2025,
+   "file": "2025/team-logo/haas.png",
+   "bytes": 9433,
+   "sha256": "f1d4f4ecbeaee160701c814702ac53a9b4b9b5709bcac2f613fe117adbe221fd",
+   "width": 128,
+   "height": 113,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/haas-contrast.png",
+   "bytes": 5769,
+   "sha256": "9b3e6bb8c575f9c14138a9c63870e0dd6ae25d1a270e5cb1016f468b577b4592",
+   "width": 128,
+   "height": 113,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "haas"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2025,
+   "file": "2025/team-logo/mclaren.png",
+   "bytes": 3203,
+   "sha256": "7522cdf31f5b36bda9ed689badb852ae64d8ca3cbfc273eedd2506d49c5733f6",
+   "width": 128,
+   "height": 71,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/mclaren-contrast.png",
+   "bytes": 2358,
+   "sha256": "ce827a42aa86daa7c4c9d16b7ce3edd1ffb6640c18a24ee7b6905e3592d6d2a3",
+   "width": 128,
+   "height": 71,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mclaren"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2025,
+   "file": "2025/team-logo/mercedes.png",
+   "bytes": 15144,
+   "sha256": "767a2b97c5a0312a5c353645188cbc8471987df0b319c8ddae99828033c8ad9e",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/mercedes-contrast.png",
+   "bytes": 8762,
+   "sha256": "b2f26092f144618505303f643dc1d1c7957d7a61fef3e5b3e5fa01d0bbe6b475",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-dark",
+   "season": 2025,
+   "file": "2025/team-logo/mercedes-dark.png",
+   "bytes": 8762,
+   "sha256": "b2f26092f144618505303f643dc1d1c7957d7a61fef3e5b3e5fa01d0bbe6b475",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb",
+   "season": 2025,
+   "file": "2025/team-logo/rb.png",
+   "bytes": 13388,
+   "sha256": "64a77fbb0d73d92cc8644b89406cb99c104bf46dd5062b0c558e353b22ec6aa0",
+   "width": 128,
+   "height": 108,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/rb-contrast.png",
+   "bytes": 6992,
+   "sha256": "a1985328c96f961cafbf7cbab3edc4406b2dc3fa95effbac7206b4fd3e43ff3a",
+   "width": 128,
+   "height": 108,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "rb"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2025,
+   "file": "2025/team-logo/red_bull.png",
+   "bytes": 8290,
+   "sha256": "efd153b50d0fe36b5a9ed5a8db65ab61f846993dbf9a85ba3f24fcff8d0a29ab",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/red_bull-contrast.png",
+   "bytes": 2827,
+   "sha256": "f7e4a07b46e81a0742b30bc4135cdfb784a5a684c1b44cc9768c3bfad22b4569",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "red_bull"
+  },
+  {
+   "kind": "team-logo",
+   "id": "sauber",
+   "season": 2025,
+   "file": "2025/team-logo/sauber.png",
+   "bytes": 6162,
+   "sha256": "abdbedc0e0c12993824790c8a8ffb3d454e709b422868851a6416ceb0fa70327",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "sauber-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/sauber-contrast.png",
+   "bytes": 3004,
+   "sha256": "2b837bbb80e422ceadae1594c6542347a140a49bc1da1fb241e51fa39adb7b64",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "sauber"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2025,
+   "file": "2025/team-logo/williams.png",
+   "bytes": 7977,
+   "sha256": "23e12e3673cb21492309384032d1236882a3b8ffb8fb63bddaffa72dbe4c3c9d",
+   "width": 128,
+   "height": 93,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams-contrast",
+   "season": 2025,
+   "file": "2025/team-logo/williams-contrast.png",
+   "bytes": 4303,
+   "sha256": "e4d7379b13f95df67383536014c4db41c3395b86d73d67654841fe61fa6f8bf1",
+   "width": 128,
+   "height": 93,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2025,
+    "designSeason": 2025,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "williams"
+  },
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2026,
+   "file": "2026/car-side/alpine.png",
+   "bytes": 16831,
+   "sha256": "a165c3e8dafe18d238df119399d90371384c3436243836dbb08c8eb0bec456cf",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2026,
+   "file": "2026/car-side/aston_martin.png",
+   "bytes": 14601,
+   "sha256": "86384a77ff3240c1d176287e13ccba3625b7b5d395fe77556050273d66d309d9",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "audi",
+   "season": 2026,
+   "file": "2026/car-side/audi.png",
+   "bytes": 13704,
+   "sha256": "474f8875af06160c9730a511ad00cdc1a7e3581ef6124a7f0c35940e93a63c9d",
+   "width": 468,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "cadillac",
+   "season": 2026,
+   "file": "2026/car-side/cadillac.png",
+   "bytes": 12154,
+   "sha256": "93fd3ed951540036dd0223bdef3dd758fbb3d775e26c8aac8bef85ad32e5397c",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2026,
+   "file": "2026/car-side/ferrari.png",
+   "bytes": 16008,
+   "sha256": "f00930e0105763281b377008e0a1e23d1b301dc3724e2cc95e4f4dbb7b0dce94",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2026,
+   "file": "2026/car-side/haas.png",
+   "bytes": 12843,
+   "sha256": "db2c6fccebb274a65543847bd9c31e5365672b5d23d46ebddcca256fb0f6292f",
+   "width": 462,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2026,
+   "file": "2026/car-side/mclaren.png",
+   "bytes": 14406,
+   "sha256": "a9329773f7935e001b0241c40aedb64d94bb6ead186a354e200a4c360f37f1a0",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2026,
+   "file": "2026/car-side/mercedes.png",
+   "bytes": 14346,
+   "sha256": "7304f63aea9323d8a1fc8cbf1374b55bdcdd6c58764819a0f5b2740d876fc18f",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "rb",
+   "season": 2026,
+   "file": "2026/car-side/rb.png",
+   "bytes": 16044,
+   "sha256": "0b5d693a9de9e7dc22c76e183034078f0bd2928376f19230fd02b932f560b1e1",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2026,
+   "file": "2026/car-side/red_bull.png",
+   "bytes": 16824,
+   "sha256": "82d96f089607d8b02eafeed8c7b8f3741b84125d1f3da40abd460c9e80ddf72c",
+   "width": 472,
+   "height": 105,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2026,
+   "file": "2026/car-side/williams.png",
+   "bytes": 16155,
+   "sha256": "42142f505abd139db62e8682f21b2ccc19aa8ec6ce8b6aab9d42c633817e0a8e",
+   "width": 464,
+   "height": 104,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "albon",
+   "season": 2026,
+   "file": "2026/driver-photo/albon.png",
+   "bytes": 19845,
+   "sha256": "89b6c592e4fe483347b8744937c87babc7d9311056057bfd226199a425f2723e",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2026,
+   "file": "2026/driver-photo/alonso.png",
+   "bytes": 28859,
+   "sha256": "635a84a94b7139b3e2f460d683d47517feeb9c679b54b83159b477080074b03f",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "antonelli",
+   "season": 2026,
+   "file": "2026/driver-photo/antonelli.png",
+   "bytes": 21930,
+   "sha256": "e6b3f2427f3d372ea724182aeba62864ee65eb85cf61890e9bd2f05491dfa832",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "arvid_lindblad",
+   "season": 2026,
+   "file": "2026/driver-photo/arvid_lindblad.png",
+   "bytes": 25205,
+   "sha256": "11e60f3a22f8d42509d7e42a7702eb6d457e2c4c4ff72432479ccddf8812ea6f",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bearman",
+   "season": 2026,
+   "file": "2026/driver-photo/bearman.png",
+   "bytes": 22551,
+   "sha256": "31559996cefcc19d5f496e79de0bb56d76be74fb8534d5f34444302cbdc0cbf7",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bortoleto",
+   "season": 2026,
+   "file": "2026/driver-photo/bortoleto.png",
+   "bytes": 22879,
+   "sha256": "01aa6da24ffcf56c80756dad7138a689d5caf1ddabb49c1752b7a3355b680d61",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bottas",
+   "season": 2026,
+   "file": "2026/driver-photo/bottas.png",
+   "bytes": 21090,
+   "sha256": "8537f60053a17b0e111df5a918ccc194e0911044fae2b36ad9f9698a20a810f0",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "colapinto",
+   "season": 2026,
+   "file": "2026/driver-photo/colapinto.png",
+   "bytes": 25983,
+   "sha256": "68612631dc12fdad4749c84a3821929d28cedda450921580227c7981cf573c13",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2026,
+   "file": "2026/driver-photo/gasly.png",
+   "bytes": 24231,
+   "sha256": "aa5fb4102f530dc34afe51d6b34911c4336fd6adfcff3677866593eabc80c2f6",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hadjar",
+   "season": 2026,
+   "file": "2026/driver-photo/hadjar.png",
+   "bytes": 27204,
+   "sha256": "02de7154bfc0ad075490f1f8eafe14895a9e35069acc89846e16d50897df61fe",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2026,
+   "file": "2026/driver-photo/hamilton.png",
+   "bytes": 26202,
+   "sha256": "ce45723ac178eb3cc31b4f319e3d6ff401910ce89a077de9f20ec6dff7644e90",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hulkenberg",
+   "season": 2026,
+   "file": "2026/driver-photo/hulkenberg.png",
+   "bytes": 22003,
+   "sha256": "032b56c730d4a497367f0bd0b9e9a201ae8ce82ae14e85302cfacfd7e649d8af",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "lawson",
+   "season": 2026,
+   "file": "2026/driver-photo/lawson.png",
+   "bytes": 25793,
+   "sha256": "d05e6e6e695b3de73e337d51c49e5640020f47f68a36b4cd527d86ed5ba368d1",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2026,
+   "file": "2026/driver-photo/leclerc.png",
+   "bytes": 25947,
+   "sha256": "83b3a9462a9aa9b051b8b06de20ff852a54d75bd965aadfa157695b4061d5370",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2026,
+   "file": "2026/driver-photo/max_verstappen.png",
+   "bytes": 26324,
+   "sha256": "80a176d16f3ac16fb62c7ea52efbd0c7c10a485934b933d02174926da1c00b1a",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2026,
+   "file": "2026/driver-photo/norris.png",
+   "bytes": 23710,
+   "sha256": "3f8c6e66990b75c18655c19472a7a829d12c5a6b78bb4407bdcd97a4f0030a11",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2026,
+   "file": "2026/driver-photo/ocon.png",
+   "bytes": 24846,
+   "sha256": "4c1141aa1b4aa91fa4888e07a6c4489ec0b76cea5b165a10f4d7733ef1ee318c",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "perez",
+   "season": 2026,
+   "file": "2026/driver-photo/perez.png",
+   "bytes": 18939,
+   "sha256": "f3ce9be838dad77e156921eaa5fa7a684f2d49a313c8c5b21e21c8158d87eeed",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "piastri",
+   "season": 2026,
+   "file": "2026/driver-photo/piastri.png",
+   "bytes": 25037,
+   "sha256": "6e1c40ed003cb7a9f6b8c896a3ab9a18e0f35612bfede294e114a9c4d56f8a1c",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "rafael_camara",
+   "season": 2026,
+   "file": "2026/driver-photo/rafael_camara.png",
+   "bytes": 23187,
+   "sha256": "991c04c6adb72719190146455411b31a310f2a289ed5b3505378ad0e2e4af61d",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2026,
+   "file": "2026/driver-photo/russell.png",
+   "bytes": 21954,
+   "sha256": "a59d55965bd5940c39b5e7ef71958d575337deb37c95a7a7564b1a9405be4362",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ryo_hirakawa",
+   "season": 2026,
+   "file": "2026/driver-photo/ryo_hirakawa.png",
+   "bytes": 20221,
+   "sha256": "4e8994ca14347badad8571f6fa360306e073c6d5c8027cc7c1aa2f3712347f1b",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2026,
+   "file": "2026/driver-photo/sainz.png",
+   "bytes": 18689,
+   "sha256": "8c56f9639795cf08bb03651161030074d0ed21d592e60c9de3f316e0894cd4a3",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2026,
+   "file": "2026/driver-photo/stroll.png",
+   "bytes": 26088,
+   "sha256": "2af4f38852b5bf32e35a0cfbcc22188374b9a029050eaf0c50225cdab33a491b",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2026,
+   "file": "2026/driver-photo/tsunoda.png",
+   "bytes": 31511,
+   "sha256": "7d19f2dd069ee3706d532e7f539dc843fda8e62ca5b922dc09063d786e610eeb",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "albon",
+   "season": 2026,
+   "file": "2026/helmet/albon.png",
+   "bytes": 4362,
+   "sha256": "246582b56898efaa4d33ac7f4adb5a5f129b0919c5a455bd966797e267d87962",
+   "width": 80,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2026,
+   "file": "2026/helmet/alonso.png",
+   "bytes": 5129,
+   "sha256": "c45ca87a48ef2f2b0c50603161a7e6bb4d5f63334f806d421553263f0c8eac79",
+   "width": 85,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "antonelli",
+   "season": 2026,
+   "file": "2026/helmet/antonelli.png",
+   "bytes": 5174,
+   "sha256": "882eb5df12b4d3112b2a68f05568a46f528227b3cab84b6f0e8fe7bf082a1a55",
+   "width": 85,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "arvid_lindblad",
+   "season": 2026,
+   "file": "2026/helmet/arvid_lindblad.png",
+   "bytes": 4704,
+   "sha256": "75071eb41d921d706d9ea6ed0b7e65c44bf8c2eff0bc7093fe36380c9cd0bd39",
+   "width": 75,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "bearman",
+   "season": 2026,
+   "file": "2026/helmet/bearman.png",
+   "bytes": 4829,
+   "sha256": "afcfa7a0d40ef6f39a22917ff528228588662ed14b03f527392a493f7da24e62",
+   "width": 80,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "bortoleto",
+   "season": 2026,
+   "file": "2026/helmet/bortoleto.png",
+   "bytes": 5052,
+   "sha256": "4f6831b1689dc50a986c3f26aed405c1ee0c21b18497cd84da598d13adb534f2",
+   "width": 83,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "bottas",
+   "season": 2026,
+   "file": "2026/helmet/bottas.png",
+   "bytes": 4594,
+   "sha256": "585a5be24a4b8a33cde2c3c04a98b16ed3c7608fb9bcd0c77f15e1ee261d3157",
+   "width": 83,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "colapinto",
+   "season": 2026,
+   "file": "2026/helmet/colapinto.png",
+   "bytes": 4749,
+   "sha256": "bea4b5848f92bd13a7b452954caba8f08e455bc0c7e197c29a804199ba418430",
+   "width": 85,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2026,
+   "file": "2026/helmet/gasly.png",
+   "bytes": 4599,
+   "sha256": "fd90ceb5c92d3a29d173640159a78e8aeddda82f00f9222741a4970a611820e8",
+   "width": 82,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "hadjar",
+   "season": 2026,
+   "file": "2026/helmet/hadjar.png",
+   "bytes": 4988,
+   "sha256": "8d7b3a660d453890efc690300337fb8bc84dc9f0e302d37d66d7df45b74d751d",
+   "width": 77,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2026,
+   "file": "2026/helmet/hamilton.png",
+   "bytes": 4414,
+   "sha256": "5fb13c16f6831e72a3a2aef57d78e4fc2048f027b4f733c9184e857eb9615ea1",
+   "width": 71,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2026,
+   "file": "2026/helmet/hulkenberg.png",
+   "bytes": 4118,
+   "sha256": "d99d5b56cc117730cfcd0426706722d9335c5e9f49910c61b0aa47ccc2548e7f",
+   "width": 71,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "lawson",
+   "season": 2026,
+   "file": "2026/helmet/lawson.png",
+   "bytes": 5180,
+   "sha256": "7d1fca4e9f59aba98687856c1df6793840904dfc897c1a578b470678bc23ada2",
+   "width": 84,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2026,
+   "file": "2026/helmet/leclerc.png",
+   "bytes": 4678,
+   "sha256": "f28685b2ffe8a9809b80cae90170bc97a64cdd2739cdcdb40a532184f976b936",
+   "width": 81,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2026,
+   "file": "2026/helmet/max_verstappen.png",
+   "bytes": 4707,
+   "sha256": "37d5dad6a713e2eca93ed49b8355ca70592c19b81a0436df97f7953929cfacc7",
+   "width": 74,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2026,
+   "file": "2026/helmet/norris.png",
+   "bytes": 4889,
+   "sha256": "e21c9440524538de6f77515b658082bc1023bcffb8ea55539e7fd22bd295cae3",
+   "width": 74,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2026,
+   "file": "2026/helmet/ocon.png",
+   "bytes": 4907,
+   "sha256": "b8a45f5c123d8ff54f90312a34ec38b087ad3d9690cb6cf7049848c5b77641ee",
+   "width": 82,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "perez",
+   "season": 2026,
+   "file": "2026/helmet/perez.png",
+   "bytes": 4758,
+   "sha256": "d9e6e8e987b72d78793883508f6090d50f191de50b83ff69d990ff73e26b18d1",
+   "width": 83,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "piastri",
+   "season": 2026,
+   "file": "2026/helmet/piastri.png",
+   "bytes": 4796,
+   "sha256": "cd1c075c7f672618eee9bc21ca4022bdffb4a5aba858449589c8e9f5afa58282",
+   "width": 80,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2026,
+   "file": "2026/helmet/russell.png",
+   "bytes": 4840,
+   "sha256": "974d0f6ea7eec558f1879d5d48c300485b3bb83914505e5978bd720dfcd9b141",
+   "width": 83,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2026,
+   "file": "2026/helmet/sainz.png",
+   "bytes": 4252,
+   "sha256": "c1b6a090f31aecde5199c178c1fe92f3ff347fa6e7f4c809e57bcd82a9643fa2",
+   "width": 71,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2026,
+   "file": "2026/helmet/stroll.png",
+   "bytes": 3807,
+   "sha256": "6bb1ee79c8cfeb38f1c45d148be492f19cade9f40734cae4140bfbc606b16ca7",
+   "width": 81,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2026,
+   "file": "2026/team-logo/alpine.png",
+   "bytes": 4294,
+   "sha256": "d73e05c7d4e176c3630ecb5911f73477dcd7b587f594da0dd37938b5bdbc30ba",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/alpine-contrast.png",
+   "bytes": 2541,
+   "sha256": "ba4781cbf3cf161b323391d44218945b48af27884dbf88f83492f7a31b277ab1",
+   "width": 128,
+   "height": 65,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "alpine"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2026,
+   "file": "2026/team-logo/aston_martin.png",
+   "bytes": 3161,
+   "sha256": "15c009a8f7e03b1b4e89541376a369f3b622a42a4f468a0d78140d11d46917cc",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/aston_martin-contrast.png",
+   "bytes": 3394,
+   "sha256": "230ca180a06dd3f5eb2f4a3e546aa729e2affe2e46e2724e46fa89f2592e42e9",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin-dark",
+   "season": 2026,
+   "file": "2026/team-logo/aston_martin-dark.png",
+   "bytes": 3394,
+   "sha256": "230ca180a06dd3f5eb2f4a3e546aa729e2affe2e46e2724e46fa89f2592e42e9",
+   "width": 128,
+   "height": 30,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "aston_martin"
+  },
+  {
+   "kind": "team-logo",
+   "id": "audi",
+   "season": 2026,
+   "file": "2026/team-logo/audi.png",
+   "bytes": 3719,
+   "sha256": "745fb6fbea61dfe84e98afbab4d79cc5ca0138dbf09e327b8270345e8022ef98",
+   "width": 128,
+   "height": 44,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "audi-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/audi-contrast.png",
+   "bytes": 3996,
+   "sha256": "f39ea26ceb81298764c1443ad84ecf2ba2ded2fd1b9ed95c42a5d2ef93e73cb0",
+   "width": 128,
+   "height": 44,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "audi"
+  },
+  {
+   "kind": "team-logo",
+   "id": "audi-dark",
+   "season": 2026,
+   "file": "2026/team-logo/audi-dark.png",
+   "bytes": 3996,
+   "sha256": "f39ea26ceb81298764c1443ad84ecf2ba2ded2fd1b9ed95c42a5d2ef93e73cb0",
+   "width": 128,
+   "height": 44,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "audi"
+  },
+  {
+   "kind": "team-logo",
+   "id": "cadillac",
+   "season": 2026,
+   "file": "2026/team-logo/cadillac.png",
+   "bytes": 3153,
+   "sha256": "a4d41c82269c7a1a39939cb3cf2c1e39c98964fc90cae7a8cf1fdd2d06f3a7c7",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "cadillac-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/cadillac-contrast.png",
+   "bytes": 3202,
+   "sha256": "d15f57cbe82e59567658b4d9aa37f0770dfe6010bea2f16c68252f958239ede5",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "cadillac"
+  },
+  {
+   "kind": "team-logo",
+   "id": "cadillac-dark",
+   "season": 2026,
+   "file": "2026/team-logo/cadillac-dark.png",
+   "bytes": 3202,
+   "sha256": "d15f57cbe82e59567658b4d9aa37f0770dfe6010bea2f16c68252f958239ede5",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "cadillac"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2026,
+   "file": "2026/team-logo/ferrari.png",
+   "bytes": 16186,
+   "sha256": "f125eb57a7c2f7be40b23feb4566fd128f97f12d120e82d4383d9771628883f2",
+   "width": 95,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/ferrari-contrast.png",
+   "bytes": 2386,
+   "sha256": "e11df575184a332b5bf02c1b31de2938728124bda03b21fdeaa6986a465255d9",
+   "width": 95,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "ferrari"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2026,
+   "file": "2026/team-logo/haas.png",
+   "bytes": 9433,
+   "sha256": "f1d4f4ecbeaee160701c814702ac53a9b4b9b5709bcac2f613fe117adbe221fd",
+   "width": 128,
+   "height": 113,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/haas-contrast.png",
+   "bytes": 5769,
+   "sha256": "9b3e6bb8c575f9c14138a9c63870e0dd6ae25d1a270e5cb1016f468b577b4592",
+   "width": 128,
+   "height": 113,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "haas"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2026,
+   "file": "2026/team-logo/mclaren.png",
+   "bytes": 3203,
+   "sha256": "7522cdf31f5b36bda9ed689badb852ae64d8ca3cbfc273eedd2506d49c5733f6",
+   "width": 128,
+   "height": 71,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/mclaren-contrast.png",
+   "bytes": 2358,
+   "sha256": "ce827a42aa86daa7c4c9d16b7ce3edd1ffb6640c18a24ee7b6905e3592d6d2a3",
+   "width": 128,
+   "height": 71,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mclaren"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2026,
+   "file": "2026/team-logo/mercedes.png",
+   "bytes": 15144,
+   "sha256": "767a2b97c5a0312a5c353645188cbc8471987df0b319c8ddae99828033c8ad9e",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/mercedes-contrast.png",
+   "bytes": 8762,
+   "sha256": "b2f26092f144618505303f643dc1d1c7957d7a61fef3e5b3e5fa01d0bbe6b475",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes-dark",
+   "season": 2026,
+   "file": "2026/team-logo/mercedes-dark.png",
+   "bytes": 8762,
+   "sha256": "b2f26092f144618505303f643dc1d1c7957d7a61fef3e5b3e5fa01d0bbe6b475",
+   "width": 128,
+   "height": 128,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "dark",
+   "baseId": "mercedes"
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb",
+   "season": 2026,
+   "file": "2026/team-logo/rb.png",
+   "bytes": 13092,
+   "sha256": "aacbda0bd9b0968dfc6fa2ab977df8aa7a8d875e57fad23be04541a6cef93b09",
+   "width": 128,
+   "height": 107,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "rb-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/rb-contrast.png",
+   "bytes": 6922,
+   "sha256": "046225868242375722947db3e9f5f0acfb93641ecf0ec81eff4339ee04aa966f",
+   "width": 128,
+   "height": 107,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "rb"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2026,
+   "file": "2026/team-logo/red_bull.png",
+   "bytes": 8290,
+   "sha256": "efd153b50d0fe36b5a9ed5a8db65ab61f846993dbf9a85ba3f24fcff8d0a29ab",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/red_bull-contrast.png",
+   "bytes": 2827,
+   "sha256": "f7e4a07b46e81a0742b30bc4135cdfb784a5a684c1b44cc9768c3bfad22b4569",
+   "width": 128,
+   "height": 49,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "red_bull"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2026,
+   "file": "2026/team-logo/williams.png",
+   "bytes": 2718,
+   "sha256": "7c4ddb63dac5015006032ceea2c83e0435e56b156b719597d0ad34f58236ddfb",
+   "width": 128,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams-contrast",
+   "season": 2026,
+   "file": "2026/team-logo/williams-contrast.png",
+   "bytes": 2022,
+   "sha256": "1a1bb6019b7cb9b62f933330cc1b38c80b0ed1bfba7d8f5e5948d08fea4df371",
+   "width": 128,
+   "height": 72,
+   "collectedAt": "2026-11-18T02:30:23+00:00",
+   "sourcePageUrl": "https://www.formula1.com/en/teams",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2026,
+    "designSeason": 2026,
+    "status": "seasonExact"
+   },
+   "variant": "contrast",
+   "baseId": "williams"
+  }
+ ],
+ "gaps": [
+  {
+   "kind": "car-side",
+   "id": "alfa",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alphatauri",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bottas",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "giovinazzi",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "kubica",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "latifi",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "mazepin",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "mick_schumacher",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "perez",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "raikkonen",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ricciardo",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "vettel",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "bottas",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "giovinazzi",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "kubica",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "latifi",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "mazepin",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "mick_schumacher",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "perez",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "raikkonen",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ricciardo",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "vettel",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alfa",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alphatauri",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2021,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alfa",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alphatauri",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "albon",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bottas",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "de_vries",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hulkenberg",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "kevin_magnussen",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "latifi",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "mick_schumacher",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "perez",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ricciardo",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "vettel",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "zhou",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "albon",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "bottas",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "de_vries",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "kevin_magnussen",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "latifi",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "mick_schumacher",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "perez",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ricciardo",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "vettel",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "zhou",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alfa",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alphatauri",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2022,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alfa",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alphatauri",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "alpine",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "aston_martin",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "ferrari",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "haas",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mclaren",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "mercedes",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "red_bull",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "car-side",
+   "id": "williams",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "albon",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "alonso",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "bottas",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "de_vries",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "gasly",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hamilton",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "hulkenberg",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "kevin_magnussen",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "lawson",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "leclerc",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "max_verstappen",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "norris",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ocon",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "perez",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "piastri",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "ricciardo",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "russell",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sainz",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "sargeant",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "stroll",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "tsunoda",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "zhou",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "albon",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "bottas",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "de_vries",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "kevin_magnussen",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "lawson",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "perez",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "piastri",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "ricciardo",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "sargeant",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "helmet",
+   "id": "zhou",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alfa",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alphatauri",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "alpine",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "aston_martin",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "ferrari",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "haas",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mclaren",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "mercedes",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "red_bull",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "team-logo",
+   "id": "williams",
+   "season": 2023,
+   "status": "missing",
+   "reason": "official CDN has no season-scoped artwork before 2024; every probed path returns 404"
+  },
+  {
+   "kind": "driver-photo",
+   "id": "doohan",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no official artwork answered for this entry"
+  },
+  {
+   "kind": "helmet",
+   "id": "albon",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "bearman",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "bottas",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "colapinto",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "doohan",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "kevin_magnussen",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "lawson",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "perez",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "piastri",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "ricciardo",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "sargeant",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "zhou",
+   "season": 2024,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "albon",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "antonelli",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "bearman",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "bortoleto",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "colapinto",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "doohan",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "hadjar",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "lawson",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "piastri",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2025,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "rafael_camara",
+   "season": 2026,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "ryo_hirakawa",
+   "season": 2026,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2026,
+   "status": "missing",
+   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+  }
+ ],
+ "coverage": {
+  "2024": {
+   "car-side": 10,
+   "driver-photo": 23,
+   "team-logo": 10
+  },
+  "2025": {
+   "car-side": 10,
+   "driver-photo": 21,
+   "team-logo": 10
+  },
+  "2026": {
+   "car-side": 11,
+   "driver-photo": 25,
+   "helmet": 22,
+   "team-logo": 11
+  }
+ }
+}

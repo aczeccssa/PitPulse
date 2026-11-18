@@ -270,17 +270,22 @@
         return parts[parts.length - 1].slice(0, 3).toUpperCase();
     }
 
-    // Artwork bundled with the apps, downscaled into resources/web/motorsport
-    // by generate.py. Drivers resolve by Jolpica id, then racing number, then
-    // surname, so live rows and standings both find their helmet.
-    const HELMETS = new Set([
-        "albon", "alonso", "antonelli", "arvid_lindblad", "bearman", "bortoleto",
-        "bottas", "colapinto", "gasly", "hadjar", "hamilton", "hulkenberg",
-        "lawson", "leclerc", "max_verstappen", "norris", "ocon", "perez",
-        "piastri", "russell", "sainz", "stroll",
-    ]);
-    const HELMET_ALIASES = { verstappen: "max_verstappen", lindblad: "arvid_lindblad" };
-    const TEAM_ASSETS = [
+    // Artwork is served per season as {kind}/{id}/{season}. The build emits an
+    // index of what actually exists, so the page never asks for a missing file
+    // and never shows another season's portrait in place of the real one.
+    const ASSETS = (typeof window !== "undefined" && window.PITPULSE_ASSETS) || {};
+    let artSeasonValue = null;
+
+    function useSeason(value) { const year = Number(value); if (year) artSeasonValue = year; }
+    function artSeason() {
+        return artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || new Date().getFullYear();
+    }
+    function hasAsset(season, kind, id) {
+        return Boolean(id) && Object.prototype.hasOwnProperty.call(ASSETS, `${season}/${kind}/${id}`);
+    }
+    function assetSrc(season, kind, id) { return `/motorsport/${season}/${kind}/${id}.png`; }
+
+    const TEAM_IDS = [
         [/red[\s_]?bull/i, "red_bull"],
         [/mercedes/i, "mercedes"],
         [/mclaren/i, "mclaren"],
@@ -290,27 +295,40 @@
         [/aston[\s_]?martin/i, "aston_martin"],
         [/alpine/i, "alpine"],
         [/haas/i, "haas"],
-        [/audi|sauber|kick/i, "audi"],
+        [/sauber|kick/i, "sauber"],
+        [/alfa/i, "alfa"],
+        [/alphatauri|scuderia alpha/i, "alphatauri"],
+        [/audi/i, "audi"],
         [/cadillac/i, "cadillac"],
     ];
+    const TEAM_IDS_BY_ID = new Set(TEAM_IDS.map(([, id]) => id));
+
+    // A display name, a Jolpica id and an old CDN slug all resolve to the one
+    // constructor id the artwork is filed under.
+    function teamAssetId(value) {
+        const raw = String(value || "").trim();
+        if (!raw) return null;
+        if (TEAM_IDS_BY_ID.has(raw)) return raw;
+        const match = TEAM_IDS.find(([pattern]) => pattern.test(raw));
+        return match ? match[1] : null;
+    }
 
     const MANUFACTURERS = {
-        red_bull: { color: "#3671c6", logo: "team-red_bull.png" },
-        mercedes: { color: "#27f4d2", logo: "team-mercedes.png" },
-        mclaren: { color: "#ff8000", logo: "team-mclaren.png", contrastLogo: "team-mclaren-dark.png" },
-        ferrari: { color: "#e8002d", logo: "team-ferrari.png" },
-        williams: { color: "#64c4ff", logo: "team-williams.png" },
-        rb: { color: "#6692ff", logo: "team-rb.png" },
-        aston_martin: { color: "#229971", logo: "team-aston_martin.png", darkLogo: "team-aston_martin-dark.png" },
-        alpine: { color: "#0093cc", logo: "team-alpine.png" },
-        haas: { color: "#b6babd", logo: "team-haas.png" },
-        audi: { color: "#f50537", logo: "team-audi.png", darkLogo: "team-audi-dark.png" },
-        cadillac: { color: "#c9b037", logo: "team-cadillac.png", darkLogo: "team-cadillac-dark.png" },
+        red_bull: { color: "#3671c6" },
+        mercedes: { color: "#27f4d2" },
+        mclaren: { color: "#ff8000" },
+        ferrari: { color: "#e8002d" },
+        williams: { color: "#64c4ff" },
+        rb: { color: "#6692ff" },
+        aston_martin: { color: "#229971" },
+        alpine: { color: "#0093cc" },
+        haas: { color: "#b6babd" },
+        sauber: { color: "#52e252" },
+        alfa: { color: "#c92d4b" },
+        alphatauri: { color: "#5e8faa" },
+        audi: { color: "#f50537" },
+        cadillac: { color: "#c9b037" },
     };
-
-    // These logos are drawn in near-black; the app's catalog carries a dark
-    // appearance variant for exactly them, so the dark theme swaps them in.
-    const DARK_LOGO_TEAMS = new Set(["aston_martin", "audi", "cadillac", "mercedes"]);
 
     function artImage(className, src) {
         const image = document.createElement("img");
@@ -322,46 +340,63 @@
         return image;
     }
 
-    function helmetSlug(value) {
-        const raw = String(value || "").trim().toLowerCase();
+    // Jolpica ids are canonical; the alias table only covers the surnames the
+    // live feed and the standings use when they carry no id.
+    const DRIVER_ALIASES = {
+        verstappen: "max_verstappen",
+        lindblad: "arvid_lindblad",
+        camara: "rafael_camara",
+        hirakawa: "ryo_hirakawa",
+        magnussen: "kevin_magnussen",
+        schumacher: "mick_schumacher",
+        vries: "de_vries",
+    };
+
+    function driverAssetId(value) {
+        const raw = String(value || "").trim();
         if (!raw) return null;
-        const key = raw
+        if (/^[a-z0-9_]+$/.test(raw)) return DRIVER_ALIASES[raw] || raw;
+        const words = raw
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_|_$/g, "");
-        const words = key.split("_").filter(Boolean);
-        for (const candidate of [key, words[words.length - 1]]) {
-            const slug = HELMET_ALIASES[candidate] || candidate;
-            if (HELMETS.has(slug)) return slug;
-        }
-        return null;
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+        const surname = (words[words.length - 1] || "").replace(/[^a-z0-9]/g, "");
+        return DRIVER_ALIASES[surname] || surname || null;
     }
 
-    function helmetImage(...values) {
+    function helmetImage(season, ...values) {
+        const year = Number(season) || artSeason();
         for (const value of values) {
-            const slug = helmetSlug(value);
-            if (slug) return artImage("avatar", `/motorsport/helmet-${slug}.png`);
+            const id = driverAssetId(value);
+            if (id && hasAsset(year, "helmet", id)) return artImage("avatar", assetSrc(year, "helmet", id));
         }
         return null;
     }
 
-    function teamLogoImage(...values) {
-        const match = TEAM_ASSETS.find(([pattern]) =>
-            values.some((value) => value && pattern.test(String(value))),
-        );
-        if (!match) return null;
-        const id = match[1];
-        const design = MANUFACTURERS[id];
-        const light = `/motorsport/${design?.logo || `team-${id}.png`}`;
+    function teamLogoImage(season, ...values) {
+        const year = Number(season) || artSeason();
+        const id = values.map(teamAssetId).find(Boolean);
+        if (!id || !hasAsset(year, "team-logo", id)) return null;
+        const light = assetSrc(year, "team-logo", id);
         const image = artImage("team-logo", light);
-        if (design?.darkLogo || design?.contrastLogo || DARK_LOGO_TEAMS.has(id)) {
+        const dark = hasAsset(year, "team-logo", `${id}-dark`) ? assetSrc(year, "team-logo", `${id}-dark`) : null;
+        const contrast = hasAsset(year, "team-logo", `${id}-contrast`) ? assetSrc(year, "team-logo", `${id}-contrast`) : null;
+        if (dark || contrast) {
             image.dataset.logoSrc = light;
-            image.dataset.darkSrc = `/motorsport/${design?.darkLogo || `team-${id}-dark.png`}`;
-            image.dataset.contrastSrc = design?.contrastLogo ? `/motorsport/${design.contrastLogo}` : image.dataset.darkSrc;
+            image.dataset.darkSrc = dark || light;
+            image.dataset.contrastSrc = contrast || dark || light;
             if (currentTheme() === "dark") image.src = image.dataset.darkSrc;
         }
         return image;
+    }
+
+    function driverPhotoArt(driver, className = "driver-portrait") {
+        const id = driverAssetId(driver?.driverId || driver?.id || driver?.driverName);
+        const season = artSeason();
+        if (!id || !hasAsset(season, "driver-photo", id)) return null;
+        return artImage(className, assetSrc(season, "driver-photo", id));
     }
 
     function syncLogoTheme(theme) {
@@ -557,7 +592,7 @@
         entries.forEach((entry, index) => {
             records.forEach(r => { r.rounds.push(0); r.totals.push(r.totals.at(-1) || 0); });
             for (const type of ['race', 'sprint']) for (const row of entry.sessions[type]?.rows || []) {
-                const record = byId.get(constructors ? (row.constructorId || TEAM_ASSETS.find(([p]) => p.test(row.team))?.[1]) : row.driverId);
+                const record = byId.get(constructors ? (row.constructorId || teamAssetId(row.team)) : row.driverId);
                 if (!record) continue;
                 record.rounds[index] += Number(row.points) || 0; record.totals[index] += Number(row.points) || 0;
                 if (type === 'race') {
@@ -568,7 +603,7 @@
                     if (row.classification && row.classification.toLowerCase() !== 'classified') record.stats[4]++;
                 }
             }
-            for (const row of entry.sessions.qualifying?.rows || []) if (row.position === 1) { const record = byId.get(constructors ? (row.constructorId || TEAM_ASSETS.find(([p]) => p.test(row.team))?.[1]) : row.driverId); if (record) record.stats[3]++; }
+            for (const row of entry.sessions.qualifying?.rows || []) if (row.position === 1) { const record = byId.get(constructors ? (row.constructorId || teamAssetId(row.team)) : row.driverId); if (record) record.stats[3]++; }
             const ranked = [...records].sort((a, b) => {
                 const diff = b.totals[index] - a.totals[index]; if (diff) return diff;
                 for (let p = 1; p <= 30; p++) { const count = r => r.finishes.filter(v => v === p).length; const delta = count(b) - count(a); if (delta) return delta; }
@@ -637,7 +672,7 @@
     function standingsLineColor(team) {
         const color = manufacturerColor(team);
         if (currentTheme() === 'dark') return color;
-        const slug = TEAM_ASSETS.find(([pattern]) => pattern.test(String(team)))?.[1];
+        const slug = teamAssetId(team);
         return ({ mercedes: '#008f80', williams: '#187db0', haas: '#727b85', cadillac: '#8d7a19' })[slug] || color;
     }
 
@@ -705,6 +740,7 @@
         if (!state.driversStandings.length && !state.constructorStandings.length) { panel.hidden = true; empty.hidden = false; empty.textContent = 'Loading standings…'; return; }
         panel.hidden = false; empty.hidden = true;
         const constructors = state.standingsKind === 'constructors', noun = constructors ? 'Constructor' : 'Driver', rows = constructors ? state.constructorStandings : state.driversStandings, season = rows[0]?.season || new Date().getFullYear();
+        useSeason(season);
         if (!rows.length) { panel.hidden = true; empty.hidden = false; empty.textContent = 'No standings available.'; return; }
         loadStandingsHistory(season);
         el('standings-page-season').textContent = `Season ${season}`; el('standings-page-meta').textContent = `${constructors ? 'Constructors' : 'Drivers'} ${rows.length}`;
@@ -715,8 +751,9 @@
         const model = { ...fullModel, totalRecords: fullModel.records.length, preference, records: fullModel.records.filter(r => preference.selected === null || preference.selected.has(r.id)) }; panel.replaceChildren();
         const side = node('aside', 'standings-sidebar'), hero = node('section', `standings-leader${constructors ? ' standings-leader-constructor' : ''}`); hero.style.setProperty('--leader', manufacturerColor(leader.team));
         hero.append(node('h2', '', constructors ? "Constructors’ Championship Leader" : "Drivers’ Championship Leader"), node('strong', '', constructors ? leader.name : leader.name.split(' ').at(-1)), node('span', '', `${leader.points} points`));
-        const slug = constructors ? TEAM_ASSETS.find(([p]) => p.test(leader.team))?.[1] : helmetSlug(leader.id);
-        if (slug) { const art = artImage(constructors ? 'standings-leader-car' : 'standings-leader-photo', `/motorsport/${constructors ? 'car' : 'driver'}-${slug}.png?v=2`); art.loading = 'eager'; hero.append(art); }
+        const slug = constructors ? teamAssetId(leader.team) : driverAssetId(leader.id);
+        const artKind = constructors ? 'car-side' : 'driver-photo';
+        if (slug && hasAsset(artSeason(), artKind, slug)) { const art = artImage(constructors ? 'standings-leader-car' : 'standings-leader-photo', assetSrc(artSeason(), artKind, slug)); art.loading = 'eager'; hero.append(art); }
         if (constructors) { const logo = manufacturerLogo(leader.team); if (logo) { logo.className = 'standings-leader-logo'; hero.append(logo); } }
         side.append(hero);
         const tableSection = standingsCard(`${season} F1 ${noun} Standings`), table = node('table', 'standings-ranking'), head = table.createTHead().insertRow();['POS.', constructors ? 'CONSTRUCTOR' : 'DRIVER', 'POINTS', 'EVO.'].forEach(t => head.append(node('th', '', t))); const body = table.createTBody();
@@ -754,7 +791,7 @@
             item.style.setProperty("--team", teamColor(row.constructor));
             item.title = [row.driverName, row.constructor, `${row.wins ?? 0} 胜`].filter(Boolean).join(" · ");
             const who = node("div", "who");
-            const helmet = helmetImage(row.driverId, row.driverName);
+            const helmet = helmetImage(artSeason(), row.driverId, row.driverName);
             if (helmet) who.append(helmet);
             who.append(node("b", "", row.driverName), node("span", "col-team", row.constructor || ""));
             const bar = node("span", "bar col-bar");
@@ -793,7 +830,7 @@
             const item = node("div", "dt-row");
             item.style.setProperty("--team", teamColor(row.constructorName));
             const who = node("div", "who");
-            const logo = teamLogoImage(row.constructorName, row.constructorId);
+            const logo = teamLogoImage(artSeason(), row.constructorName, row.constructorId);
             if (logo) who.append(logo);
             who.append(node("b", "", row.constructorName));
             const bar = node("span", "bar col-bar");
@@ -910,20 +947,19 @@
             else if (index && (racing || !qualifying) && classified) { const delta = timeSeconds(result) - timeSeconds(racing ? (leader?.raceTime || leader?.time) : (leader?.bestLap || leader?.time)); if (Number.isFinite(delta) && delta >= 0) gap = `+${delta.toFixed(3)}${racing ? "s" : ""}`; }
             if (index && previous && classified && row.laps === previous.laps) { const delta = timeSeconds(result) - timeSeconds(previous.raceTime || previous.time || previous.bestLap); if (delta >= 0 && Number.isFinite(delta)) interval = `+${delta.toFixed(3)}s`; }
             const values = [pos, row.driverNumber || "—", row.driverName || row.driverId, row.team, ...(qualifying ? [row.q1 || "—", row.q2 || "—", row.q3 || "—"] : grid ? [(entry.sessions.qualifying?.rows || []).find(r => r.driverId === row.driverId)?.q3 || (entry.sessions.qualifying?.rows || []).find(r => r.driverId === row.driverId)?.q2 || (entry.sessions.qualifying?.rows || []).find(r => r.driverId === row.driverId)?.q1 || "—"] : racing ? [result, gap, interval, row.points ?? 0, row.laps ?? "—"] : [result, gap, row.laps ?? "—"])];
-            values.forEach((value, i) => { const td = node("td", i === 1 ? "driver-number" : i === 2 ? "driver-cell" : "", String(value)); if (i === 2) { td.textContent = String(row.driverName || row.driverId).split(" ").at(-1); Object.assign(td.dataset, { popover: row.driverName, popoverType: "identity", identityDriverId: row.driverId, identityName: row.driverName, identityTeam: row.team }); } if (i === 3) { td.textContent = ""; const logo = teamLogoImage(row.team, row.constructorId); if (logo) td.append(logo); td.append(node("span", "", row.team.replace(" F1 Team", "").replace(/^Red Bull$/, "Red Bull Racing"))); } if (i === 4 && ["DNF", "DNS", "DSQ"].includes(value)) { td.replaceChildren(node("span", `result-status ${value.toLowerCase()}`, value)); } tr.append(td); });
+            values.forEach((value, i) => { const td = node("td", i === 1 ? "driver-number" : i === 2 ? "driver-cell" : "", String(value)); if (i === 2) { td.textContent = String(row.driverName || row.driverId).split(" ").at(-1); Object.assign(td.dataset, { popover: row.driverName, popoverType: "identity", identityDriverId: row.driverId, identityName: row.driverName, identityTeam: row.team }); } if (i === 3) { td.textContent = ""; const logo = teamLogoImage(artSeason(), row.team, row.constructorId); if (logo) td.append(logo); td.append(node("span", "", row.team.replace(" F1 Team", "").replace(/^Red Bull$/, "Red Bull Racing"))); } if (i === 4 && ["DNF", "DNS", "DSQ"].includes(value)) { td.replaceChildren(node("span", `result-status ${value.toLowerCase()}`, value)); } tr.append(td); });
         }
         if (!rows.length) { const td = body.insertRow().insertCell(); td.colSpan = labels.length; td.textContent = "No results available for this session."; }
         scroll.append(table); panel.append(scroll); root.append(panel);
     }
 
-    function manufacturerColor(team) { const match = TEAM_ASSETS.find(([pattern]) => pattern.test(String(team || ""))); return MANUFACTURERS[match?.[1]]?.color || teamColor(team); }
+    function manufacturerColor(team) { return MANUFACTURERS[teamAssetId(team)]?.color || teamColor(team); }
 
     function manufacturerLogo(team, contrast = false) {
-        const image = teamLogoImage(team);
-        if (image && contrast && image.dataset.logoSrc) {
-            const match = TEAM_ASSETS.find(([pattern]) => pattern.test(String(team || "")));
-            image.dataset.contrastSrc = MANUFACTURERS[match?.[1]]?.contrastLogo ? `/motorsport/${MANUFACTURERS[match[1]].contrastLogo}` : image.dataset.logoSrc;
-            image.src = image.dataset.contrastSrc; image.dataset.onTeamColor = "true";
+        const image = teamLogoImage(artSeason(), team);
+        if (image && contrast) {
+            image.dataset.onTeamColor = "true";
+            if (image.dataset.contrastSrc) image.src = image.dataset.contrastSrc;
         }
         return image;
     }
@@ -956,6 +992,7 @@
         const root = el("season-results");
         if (!state.calendarLoaded) { root.replaceChildren(node("p", "empty", "Loading season results…")); return; }
         const meetings = seasonMeetings();
+        useSeason(seasonYear(meetings));
         const key = meetings.map(m => m.id).join("|");
         if (seasonResults.key !== key) {
             seasonResults.key = key;
@@ -1014,7 +1051,7 @@
                 const value = node("div", "stat-value"); value.append(node("strong", "", best?.[metric] ? String(best[metric]) : "—"), node("span", "", unit));
                 cell.append(value);
                 if (best?.[metric]) {
-                    const art = map === drivers ? artImage("stat-portrait", `/motorsport/driver-${helmetSlug(best.row.driverId) || helmetSlug(best.row.driverName)}.png?v=2`) : teamLogoImage(best.row.team, best.row.constructorId);
+                    const art = map === drivers ? driverPhotoArt(best.row, "stat-portrait") : teamLogoImage(artSeason(), best.row.team, best.row.constructorId);
                     if (art) { art.className = "stat-portrait"; art.style.background = manufacturerColor(best.row.team); art.title = ""; if (map === drivers) { Object.assign(art.dataset, { popover: best.row.driverName, popoverType: "identity", identityDriverId: best.row.driverId, identityName: best.row.driverName, identityTeam: best.row.team }); } cell.append(art); }
                 }
                 pair.append(cell);
@@ -1202,7 +1239,7 @@
                 }
             } else if (cell) {
                 const head = node("div", "popover-score-head");
-                const helmet = helmetImage(cell.dataset.popoverDriverId, cell.dataset.popoverDriver);
+                const helmet = helmetImage(artSeason(), cell.dataset.popoverDriverId, cell.dataset.popoverDriver);
                 if (helmet) { helmet.className = "popover-helmet"; head.append(helmet); }
                 const identity = node("div", "popover-score-identity");
                 identity.append(node("b", "", cell.dataset.popoverDriver), node("span", "", cell.dataset.popoverTeam));
@@ -1251,8 +1288,8 @@
         const parts = name.split(" "), surname = parts.pop(); identity.append(document.createTextNode(parts.join(" ") + " "), node("b", "", surname), node("small", "", team)); heading.append(number, identity);
         const metrics = node("div", "driver-profile-metrics");
         for (const [label, value] of [["RANK", standing ? `P${standing.position}` : "—"], ["POINTS", standing?.points ?? "—"]]) { const m = node("div", ""); m.append(node("small", "", label), node("strong", "", String(value))); metrics.append(m); }
-        const slug = helmetSlug(id) || helmetSlug(name);
-        if (slug) { const photo = artImage("driver-profile-photo", `/motorsport/driver-${slug}.png?v=2`); photo.onerror = () => photo.remove(); main.append(photo); }
+        const photo = driverPhotoArt({ driverId: id, driverName: name }, "driver-profile-photo");
+        if (photo) { photo.onerror = () => photo.remove(); main.append(photo); }
         main.append(heading, metrics); const actions = node("div", "driver-profile-actions"), detail = node("div", "driver-profile-detail"); detail.hidden = true;
         for (const [label, kind] of [["▥  Stats", "stats"], ["⚔  Head-to-head", "compare"]]) { const button = node("button", "", kind === "stats" ? "Stats" : "Head-to-head"); button.prepend(svgIcon(kind === "stats" ? "M5 20V10m7 10V4m7 16V8" : "m4 3 7 7-3 3-7-7m19-3-7 7 3 3 7-7M3 21l7-7m11 7-7-7")); button.type = "button"; button.onclick = () => { if (kind === 'stats') location.hash = driverPageHref(`drivers/${encodeURIComponent(id)}`, { season: String(standing?.season || driverPages.season || new Date().getFullYear()) }); else { const teammate = state.driversStandings.find(d => d.driverId !== id && d.constructor === standing?.constructor); openDriverComparison(standing || { driverId: id, driverName: name, constructor: team }, teammate); } }; actions.append(button); }
         panel.append(main, actions, detail); return panel;
@@ -1265,7 +1302,7 @@
     const driverPages = { seasons: new Map(), season: null, driver: null, team: '', first: '', second: '', modes: { qualifying: 'combined', race: 'combined', gaps: 'combined', pole: 'combined' }, highlight: false, excludeDnf: false };
     const RACING_VIEWS = ['home', 'drivers', 'driver-stats', 'head-to-head', 'consistency', 'tech-updates', 'pu-elements', 'destructors-championship'];
     const shortDriverName = driver => (driver.driverName || driver.name || driver.driverId || '').split(' ').at(-1);
-    const teamKey = team => TEAM_ASSETS.find(([pattern]) => pattern.test(String(team || '')))?.[1] || String(team || '');
+    const teamKey = team => teamAssetId(team) || String(team || '');
     const cleanTeamName = team => String(team || '').replace(/ F1 Team$/, '').replace(/^Red Bull$/, 'Red Bull Racing');
     const sessionRows = (entry, type) => entry.sessions[type]?.rows || [];
     const driverRow = (entry, type, id) => sessionRows(entry, type).find(row => row.driverId === id);
@@ -1303,10 +1340,16 @@
     }
 
     function driverPhoto(driver, className = 'driver-portrait') {
-        const slug = ({ ryo_hirakawa: 'ryo_hirakawa', rafael_camara: 'rafael_camara', tsunoda: 'tsunoda' })[driver.driverId] || helmetSlug(driver.driverId) || helmetSlug(driver.driverName);
-        if (!slug) return null;
-        const photo = artImage(className, `/motorsport/driver-${slug}.png?v=2`);
-        photo.onerror = () => { const fallback = helmetImage(driver.driverId, driver.driverName); if (fallback) { fallback.className = className + ' is-helmet'; photo.replaceWith(fallback); } else photo.remove(); };
+        const photo = driverPhotoArt(driver, className);
+        if (!photo) {
+            const fallback = helmetImage(artSeason(), driver?.driverId, driver?.driverName);
+            if (fallback) fallback.className = className + ' is-helmet';
+            return fallback;
+        }
+        photo.onerror = () => {
+            const fallback = helmetImage(artSeason(), driver?.driverId, driver?.driverName);
+            if (fallback) { fallback.className = className + ' is-helmet'; photo.replaceWith(fallback); } else photo.remove();
+        };
         return photo;
     }
 
@@ -1729,6 +1772,7 @@
     function renderDriverPages() {
         if (!RACING_VIEWS.includes(state.view)) return;
         const view = state.view === 'driver-stats' ? 'drivers' : state.view, root = el(`view-${view}`).querySelector('.racing-workspace'); root.replaceChildren();
+        useSeason(driverPages.season);
         if (state.view === 'home') { renderHome(root); return; }
         if (['tech-updates', 'pu-elements', 'destructors-championship'].includes(state.view)) { renderEngineering(root); return; }
         const data = loadDriverSeason(driverPages.season);
@@ -2283,7 +2327,7 @@
             item.style.setProperty("--team", teamColor(row.team));
             const who = node("div", "who");
             const status = CLASS_LABELS[(row.classification || "").toLowerCase()] || "";
-            const logo = teamLogoImage(row.team, row.constructorId);
+            const logo = teamLogoImage(artSeason(), row.team, row.constructorId);
             if (logo) who.append(logo);
             who.append(
                 node("b", "", row.driverName || row.driverId),

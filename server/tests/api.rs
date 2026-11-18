@@ -155,17 +155,22 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
         ),
         ("/brand-mark.png", "image/png", &b"\x89PNG\r\n\x1a\n"[..]),
         (
-            "/motorsport/helmet-hamilton.png",
+            "/motorsport/2026/helmet/hamilton.png",
             "image/png",
             &b"\x89PNG\r\n\x1a\n"[..],
         ),
         (
-            "/motorsport/team-ferrari.png",
+            "/motorsport/2026/team-logo/ferrari.png",
             "image/png",
             &b"\x89PNG\r\n\x1a\n"[..],
         ),
         (
-            "/motorsport/team-mercedes-dark.png",
+            "/motorsport/2026/team-logo/mercedes-dark.png",
+            "image/png",
+            &b"\x89PNG\r\n\x1a\n"[..],
+        ),
+        (
+            "/motorsport/flag-gb.png",
             "image/png",
             &b"\x89PNG\r\n\x1a\n"[..],
         ),
@@ -184,8 +189,26 @@ async fn test_web_shell_requires_bootstrapped_session_while_icons_stay_public() 
     }
 
     // Artwork that is not part of the bundle is a plain 404, not a guess.
+    // The browser index is script, cached briefly so a new season is picked up
+    // without a hard refresh.
+    let response = router
+        .clone()
+        .oneshot(get("/motorsport/assets.js"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers()[header::CONTENT_TYPE],
+        "text/javascript; charset=utf-8"
+    );
+    assert_eq!(
+        response.headers()[header::CACHE_CONTROL],
+        "public, max-age=300"
+    );
+
     for path in [
-        "/motorsport/helmet-nobody.png",
+        "/motorsport/2026/helmet/nobody.png",
+        "/motorsport/2021/driver-photo/vettel.png",
         "/motorsport/../../Cargo.toml",
         "/motorsport/",
     ] {
