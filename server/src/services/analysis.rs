@@ -505,6 +505,40 @@ pub async fn season_analysis(
     response(&state, Job::Season { season, kind, id }, None).await
 }
 
+/// Read a persisted session bundle for read-only projections.
+///
+/// Stripped bundles only carry a reference to their immutable shared snapshot.
+/// Readers outside this module must rehydrate the shared fields before using
+/// `laps`, `pit`, `weather`, `grid`, or the other shared sections. A stripped
+/// entry whose snapshot is missing is unavailable rather than null-filled.
+pub(crate) async fn cached_session_bundle(
+    state: &AppState,
+    session_id: &str,
+) -> Result<Option<Value>, ApiError> {
+    let key = format!("session:{session_id}:bundle");
+    let Some(value) = state.analysis.read(state, &key).await? else {
+        return Ok(None);
+    };
+    if !is_shared_reference(&value) {
+        return Ok(Some(value));
+    }
+    let fingerprint = value["meta"]["bundleFingerprint"]
+        .as_str()
+        .map(str::to_owned);
+    let Some(fingerprint) = fingerprint else {
+        return Ok(None);
+    };
+    let shared_key = format!("session:{session_id}:shared:{fingerprint}");
+    let Some(shared) = state.analysis.read(state, &shared_key).await? else {
+        return Ok(None);
+    };
+    let mut restored = value;
+    let mut data = std::mem::take(&mut restored["data"]);
+    restore_shared_fields(&mut data, &shared["data"]);
+    restored["data"] = data;
+    Ok(Some(restored))
+}
+
 async fn session_bundle(
     state: &AppState,
     meeting: &crate::domain::calendar::Meeting,

@@ -117,9 +117,7 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
             let bundle = if rows.is_empty() {
                 Value::Null
             } else {
-                state
-                    .database
-                    .analysis_cache(&format!("session:{}:bundle", session.id))
+                crate::services::analysis::cached_session_bundle(state, &session.id)
                     .await?
                     .unwrap_or(Value::Null)
             };

@@ -35,7 +35,7 @@ async fn state() -> (AppState, TempDir) {
     db.replace_calendar(&[meeting], "2024-03-02T18:00:00Z")
         .await
         .unwrap();
-    let result: SessionResult = serde_json::from_value(json!({"sessionId":"2024:1:race","position":1,"classification":"classified","driverId":"leclerc","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","laps":2,"points":25.,"source":"fixture","fetchedAt":"2024-03-02T18:00:00Z","revision":1,"quality":"partial"})).unwrap();
+    let result: SessionResult = serde_json::from_value(json!({"sessionId":"2024:1:race","position":1,"classification":"classified","driverId":"leclerc","driverNumber":"16","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","laps":2,"points":25.,"source":"fixture","fetchedAt":"2024-03-02T18:00:00Z","revision":1,"quality":"partial"})).unwrap();
     db.replace_session_results(vec![result], "partial")
         .await
         .unwrap();
@@ -131,6 +131,77 @@ async fn test_analysis_authorization_validation_and_unknown_entity() {
         .0,
         StatusCode::NOT_FOUND
     );
+}
+
+#[tokio::test]
+async fn test_direct_bundle_readers_rehydrate_shared_snapshot() {
+    let (state, _temp) = state().await;
+    let shared = json!({
+        "data": {
+            "laps": [{"driverNumber":16,"lapNumber":1,"lapDuration":90.0,"isPitOutLap":false}],
+            "stints": [],
+            "pit": [{"driverNumber":16,"stopDuration":2.4}],
+            "positions": [],
+            "weather": [{
+                "date":"2024-03-02T15:00:00Z","airTemperature":27.5,
+                "trackTemperature":42.0,"humidity":40,"rainfall":0,
+                "windSpeed":2.1,"windDirection":180,"pressure":1012
+            }],
+            "raceControl": [],
+            "grid": [{"driverNumber":16,"position":2}],
+            "warnings": []
+        },
+        "meta": {"fetchedAt":"2024-03-02T18:00:00Z"}
+    });
+    state
+        .database
+        .save_analysis_cache("session:2024:1:race:shared:fixture", &shared)
+        .await
+        .unwrap();
+    let bundle = json!({
+        "data": {
+            "drivers": [{"driverNumber":16,"fullName":"Charles Leclerc","teamName":"Ferrari"}],
+            "laps": null,
+            "stints": null,
+            "pit": null,
+            "positions": null,
+            "weather": null,
+            "raceControl": null,
+            "grid": null,
+            "warnings": null
+        },
+        "meta": {
+            "schemaVersion": 1,
+            "revision": 1,
+            "quality": "partial",
+            "stale": false,
+            "source": "fixture",
+            "fetchedAt": "2024-03-02T18:00:00Z",
+            "analysisStatus": "ready",
+            "analysisCacheSchema": "pitpulse:v2:shared-reference",
+            "bundleFingerprint": "fixture"
+        }
+    });
+    state
+        .database
+        .save_analysis_cache("session:2024:1:race:bundle", &bundle)
+        .await
+        .unwrap();
+
+    let app = server::router(state);
+    let (status, season) = read(app.clone(), "/api/v1/results/season?season=2024", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        season["data"][0]["sessions"]["race"]["rows"][0]["gridPosition"],
+        2
+    );
+    let (status, home) = read(app.clone(), "/api/v1/home?season=2024", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(home["data"]["pitStop"][0]["time"], 2.4);
+    let (status, weather) = read(app, "/api/v1/meetings/2024:1/weather", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(weather["data"]["status"], "historical");
+    assert_eq!(weather["data"]["hours"].as_array().unwrap().len(), 1);
 }
 
 #[tokio::test]

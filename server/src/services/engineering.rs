@@ -80,10 +80,8 @@ async fn pit_stops(state: &AppState, year: i64) -> Result<Value, ApiError> {
             .iter()
             .filter(|s| s.session_type.as_str() == "race")
         {
-            if let Some(bundle) = state
-                .database
-                .analysis_cache(&format!("session:{}:bundle", session.id))
-                .await?
+            if let Some(bundle) =
+                crate::services::analysis::cached_session_bundle(state, &session.id).await?
                 && let Some(stop) = fastest_stop(&bundle, round, &meeting.country)
             {
                 covered.push(round);

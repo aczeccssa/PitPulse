@@ -68,9 +68,9 @@ pub async fn weather(State(state): State<AppState>, Path(id): Path<String>) -> R
         // Never query a forecast provider again for a completed weekend.
         let mut hours = Vec::new();
         for session in &meeting.sessions {
-            let bundle = state.database
-                .analysis_cache(&format!("session:{}:bundle", session.id))
-                .await.map_err(|_| "database_error")?;
+            let bundle = crate::services::analysis::cached_session_bundle(&state, &session.id)
+                .await
+                .map_err(|_| "database_error")?;
             if let Some(bundle) = bundle {
                 hours.extend(historical_weather(&bundle["data"], &session.id));
             }
