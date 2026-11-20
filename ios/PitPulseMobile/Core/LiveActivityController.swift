@@ -72,7 +72,7 @@ final class LiveActivityController {
         }
 
         guard snapshot.sourceStatus == .connected, !snapshot.drivers.isEmpty,
-              LiveIslandLogic.isStarted(snapshot.sessionStatus) || snapshot.sessionStatus?.lowercased() == "suspended",
+              LiveIslandLogic.isActive(snapshot.sessionStatus),
               let sampleDate = snapshot.updatedAt.flatMap(RFC3339.parse),
               LiveFreshness.isFresh(snapshot.updatedAt, maximumAge: 90) else { return }
 

@@ -85,11 +85,6 @@ struct SettingsScreen: View {
                                     model.preferredLiveSeries = $0
                                 }
                             }
-                            Text("Opens by default when both series are available.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 42)
-                                .padding(.bottom, 12)
                         }
 
                         Divider()

@@ -400,9 +400,9 @@ private struct SeasonResultsStatistics: View {
         .background(WebDashboardStyle.homeBackground)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
         .navigationTitle("Season Statistics")
+        .dashboardDetail()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
-        .toolbar(.hidden, for: .tabBar)
         .fullScreenCover(isPresented: $showsMatrix) {
             LandscapeCover(background: WebDashboardStyle.homeBackground) { close in
                 matrixFullscreen(close: close)
@@ -881,9 +881,9 @@ struct MeetingResultsDashboard: View {
         .transition(.opacity)
         .pulseSwap(session.id)
         .navigationTitle("Race Results")
+        .dashboardDetail()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
-        .toolbar(.hidden, for: .tabBar)
         .sheet(item: $analysis) { tool in
             NavigationStack {
                 Group {

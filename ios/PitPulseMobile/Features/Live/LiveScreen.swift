@@ -562,14 +562,14 @@ struct LiveScreen: View {
                 (draft.rowOrder.firstIndex(of: $0.number) ?? Int.max) < (draft.rowOrder.firstIndex(of: $1.number) ?? Int.max)
             }
         } ?? drivers
+        let timingAvailable = snapshot.sourceStatus == .connected
+            || (snapshot.sourceStatus == .stale && LiveIslandLogic.isSuspended(snapshot.sessionStatus))
         return Group {
             if snapshot.statusReason == "connecting", drivers.isEmpty, !model.hasActiveLive {
                 PulseSkeleton(rows: 6, label: "Loading live timing")
             } else if LiveIslandLogic.isFinished(snapshot.sessionStatus) {
                 ContentUnavailableView("Session finished", systemImage: "flag.checkered")
-            } else if snapshot.sourceStatus != .connected {
-                refreshTimingButton
-            } else if drivers.isEmpty {
+            } else if !timingAvailable || drivers.isEmpty {
                 refreshTimingButton
             } else {
                 let table = VStack(spacing: 0) {
@@ -604,7 +604,7 @@ struct LiveScreen: View {
                 }
             }
         }
-        .pulseSwap(drivers.isEmpty || snapshot.sourceStatus != .connected)
+        .pulseSwap(drivers.isEmpty || !timingAvailable)
     }
 
     private var refreshTimingButton: some View {
@@ -759,7 +759,10 @@ struct LiveClockTimeline<Content: View>: View {
     @ViewBuilder let content: (String?) -> Content
 
     var body: some View {
-        if snapshot.sourceStatus == .connected, snapshot.sessionClockLabel() != nil {
+        let suspended = snapshot.sourceStatus != .disconnected && LiveIslandLogic.isSuspended(snapshot.sessionStatus)
+        if suspended {
+            content(snapshot.prefersSessionClock ? snapshot.sessionClockLabel() : snapshot.lapCount.map { _ in snapshot.lapLabel })
+        } else if snapshot.sourceStatus == .connected, snapshot.sessionClockLabel() != nil {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 content(snapshot.sessionClockLabel(at: context.date))
             }

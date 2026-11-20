@@ -61,6 +61,7 @@ struct DriverAnalysisScreen: View {
             .background(WebDashboardStyle.homeBackground)
             .pulseSwap(analysis != nil)
             .navigationTitle("Driver Charts (\(sessionLabel))")
+            .dashboardDetail()
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { await load() }
             .task(id: model.dataContext) { await load() }

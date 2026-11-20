@@ -245,7 +245,7 @@ struct ResultsScreen<WeekendTools: View>: View {
                 .background(WebDashboardStyle.homeBackground)
                 .navigationTitle("Lap Time Comparison")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar(.hidden, for: .tabBar)
+                .dashboardDetail()
             } label: {
                 Label("Lap Time Comparison", systemImage: "chart.bar.xaxis")
                     .font(.subheadline)

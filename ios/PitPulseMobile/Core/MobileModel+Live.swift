@@ -92,7 +92,7 @@ extension MobileModel {
         let previousAvailable = Set(liveEntries.keys)
         let currentWasAvailable = previousAvailable.contains(series)
         if let id = snapshot.sessionId {
-            if LiveIslandLogic.isStarted(snapshot.sessionStatus) || snapshot.sessionStatus?.lowercased() == "suspended" {
+            if LiveIslandLogic.isActive(snapshot.sessionStatus) {
                 liveEntries[incomingSeries] = snapshot
             } else if let prior = liveEntries[incomingSeries],
                       prior.sessionId != id || LiveIslandLogic.isFinished(snapshot.sessionStatus) {
@@ -187,7 +187,7 @@ extension MobileModel {
             meeting.sessions.compactMap { session -> NextSession? in
                 let fallbackEnd = session.startTime.addingTimeInterval(session.sessionType.liveEntryDuration)
                 guard session.status == .live || session.status == .scheduled, session.startTime <= now,
-                      now < max(session.endTime ?? fallbackEnd, fallbackEnd)
+                      session.status == .live || now < max(session.endTime ?? fallbackEnd, fallbackEnd)
                 else { return nil }
                 if let lastFinishedF1, let finishedAt = lastFinishedF1.updatedAt.flatMap(RFC3339.parse),
                    finishedAt >= session.startTime,
@@ -201,7 +201,7 @@ extension MobileModel {
             scheduledLiveSession = candidate
             refreshLiveSelection()
         }
-        for (series, entry) in liveEntries {
+        for (series, entry) in liveEntries where entry.sourceMode == .replay {
             let window: TimeInterval = series == .wec ? 26 * 3600 : 4 * 3600
             if let at = entry.updatedAt ?? entry.lastTransportAt,
                !LiveFreshness.isFresh(at, now: now, maximumAge: window) {

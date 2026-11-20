@@ -1,12 +1,12 @@
 import SharedComponents
 import SharedData
 import SwiftUI
+import UIKit
 
 enum DashboardTab: Int, CaseIterable, Identifiable {
     case home, results, headToHead, drivers, constructors
 
     var id: Self { self }
-    var usesEnglishPresentation: Bool { self != .drivers }
 
     var title: String {
         switch self {
@@ -35,6 +35,7 @@ struct DashboardScreen<Header: View>: View {
     let tab: DashboardTab
     let fromHome: Bool
     let header: Header
+    @Binding var showCalendar: Bool
     let openTab: (DashboardTab) -> Void
     @State private var showsDriverStandings: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -47,23 +48,26 @@ struct DashboardScreen<Header: View>: View {
         #endif
     }()
 
-    init(tab: DashboardTab, fromHome: Bool, header: Header, openTab: @escaping (DashboardTab) -> Void) {
+    init(tab: DashboardTab, fromHome: Bool, header: Header, showCalendar: Binding<Bool>,
+         openTab: @escaping (DashboardTab) -> Void) {
         self.tab = tab
         self.fromHome = fromHome
         self.header = header
+        _showCalendar = showCalendar
         self.openTab = openTab
-        _showsDriverStandings = State(initialValue: fromHome)
+        _showsDriverStandings = State(initialValue: true)
     }
 
     var body: some View {
         switch tab {
         case .home:
-            WebHomeScreen(header: header, openTab: openTab)
+            WebHomeScreen(header: header, showCalendar: $showCalendar, openTab: openTab)
         case .constructors:
             NavigationStack {
                 ChampionshipScreen(constructorsOnly: true)
                     .dashboardHeader(header)
             }
+            .environment(\.usesDashboardCardStyle, true)
         default:
             NavigationStack {
                 Group {
@@ -94,13 +98,7 @@ struct DashboardScreen<Header: View>: View {
                             }
                         }
                     case .drivers:
-                        VStack(spacing: 8) {
-                            PulseSectionPicker(sections: [(false, "车手"), (true, "积分榜")],
-                                               selection: $showsDriverStandings)
-                                .padding(.horizontal, 16)
-                            if showsDriverStandings { ChampionshipScreen(driversOnly: true) }
-                            else { DriverDirectory() }
-                        }
+                        DriversDashboard(showsStandings: $showsDriverStandings)
                     default:
                         EmptyView()
                     }
@@ -113,9 +111,153 @@ struct DashboardScreen<Header: View>: View {
 }
 
 extension View {
+    func dashboardDetail() -> some View {
+        modifier(DashboardDetail())
+    }
+
     func dashboardHeader<Header: View>(_ header: Header) -> some View {
         safeAreaInset(edge: .top, spacing: 0) { header }
             .toolbar(.hidden, for: .navigationBar)
+            .modifier(DashboardLiveBarSpace())
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var dashboardLiveBarFrame: ((CGRect) -> Void)? = nil
+    @Entry var dashboardLivePage: ((UUID?) -> Void)? = nil
+    @Entry var dashboardLiveDetailFrame: ((UUID, CGRect) -> Void)? = nil
+}
+
+private struct DashboardLiveBarSpace: ViewModifier {
+    @EnvironmentObject private var model: MobileModel
+    @Environment(\.dashboardLiveBarFrame) private var reportFrame
+    @Environment(\.dashboardLivePage) private var showPage
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 6) {
+            if model.hasActiveLive, let reportFrame {
+                Color.clear
+                    .frame(maxWidth: 640)
+                    .frame(height: 48)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { reportFrame($0) }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
+                    .allowsHitTesting(false)
+            }
+        }
+        .onAppear { showPage?(nil) }
+        .background { DashboardTabBarTransition(hidesTabBar: false) { showPage?(nil) } }
+    }
+}
+
+private struct DashboardDetail: ViewModifier {
+    @EnvironmentObject private var model: MobileModel
+    @Environment(\.dashboardLiveDetailFrame) private var reportFrame
+    @Environment(\.dashboardLivePage) private var showPage
+    @State private var id = UUID()
+
+    func body(content: Content) -> some View {
+        if let reportFrame {
+            content
+                .contentMargins(.bottom, model.hasActiveLive ? 64 : 0, for: .scrollContent)
+                .onGeometryChange(for: CGRect.self) { geometry in
+                    geometry.frame(in: .global).inset(by: geometry.safeAreaInsets)
+                } action: { frame in
+                    reportFrame(id, frame)
+                }
+                .onAppear { showPage?(id) }
+                .background { DashboardTabBarTransition(hidesTabBar: true) { showPage?(id) } }
+        } else {
+            content
+        }
+    }
+}
+
+private struct DashboardTabBarTransition: UIViewControllerRepresentable {
+    let hidesTabBar: Bool
+    let didAppear: () -> Void
+
+    func makeUIViewController(context: Context) -> Controller {
+        Controller(hidesTabBar: hidesTabBar, didAppear: didAppear)
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.didAppear = didAppear
+    }
+
+    final class Controller: UIViewController {
+        let hidesTabBar: Bool
+        var didAppear: () -> Void
+
+        init(hidesTabBar: Bool, didAppear: @escaping () -> Void) {
+            self.hidesTabBar = hidesTabBar
+            self.didAppear = didAppear
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func loadView() {
+            view = UIView()
+            view.isUserInteractionEnabled = false
+        }
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            guard let tabs = tabBarController else { return }
+            let bar = tabs.tabBar
+            let wasHidden = tabs.isTabBarHidden || bar.accessibilityElementsHidden
+            let hiddenTransform = offscreenTransform(in: tabs)
+            let coordinator = navigationController?.transitionCoordinator ?? transitionCoordinator
+
+            // UIKit drives the same animation during an interactive back swipe, including cancellation.
+            if tabs.isTabBarHidden, !hidesTabBar {
+                bar.transform = hiddenTransform
+                tabs.setTabBarHidden(false, animated: false)
+                bar.transform = hiddenTransform
+            }
+            guard wasHidden != hidesTabBar, !UIAccessibility.isReduceMotionEnabled, animated,
+                  let coordinator else {
+                applyVisibility(in: tabs, hidden: hidesTabBar)
+                return
+            }
+            let didAnimate = coordinator.animate(alongsideTransition: { _ in
+                bar.transform = self.hidesTabBar ? hiddenTransform : .identity
+            }, completion: { [weak self] context in
+                guard let self else { return }
+                self.applyVisibility(in: tabs, hidden: context.isCancelled ? wasHidden : self.hidesTabBar)
+            })
+            if !didAnimate { applyVisibility(in: tabs, hidden: hidesTabBar) }
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            guard let tabs = tabBarController else { return }
+            // Some gestures settle without a coordinator on the destination.
+            applyVisibility(in: tabs, hidden: hidesTabBar)
+            didAppear()
+        }
+
+        private func applyVisibility(in tabs: UITabBarController, hidden: Bool) {
+            if tabs.isTabBarHidden != hidden {
+                tabs.setTabBarHidden(hidden, animated: false)
+            }
+            tabs.tabBar.transform = hidden ? offscreenTransform(in: tabs) : .identity
+            tabs.tabBar.accessibilityElementsHidden = hidden
+        }
+
+        private func offscreenTransform(in tabs: UITabBarController) -> CGAffineTransform {
+            let distance = tabs.tabBar.bounds.height + tabs.view.safeAreaInsets.bottom + 24
+            return CGAffineTransform(translationX: 0, y: distance)
+        }
+    }
+}
+
+private extension CGRect {
+    func inset(by insets: EdgeInsets) -> CGRect {
+        CGRect(x: minX + insets.leading, y: minY + insets.top,
+               width: max(0, width - insets.leading - insets.trailing),
+               height: max(0, height - insets.top - insets.bottom))
     }
 }
 

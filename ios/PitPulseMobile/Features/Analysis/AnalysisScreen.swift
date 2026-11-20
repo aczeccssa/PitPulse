@@ -2,83 +2,25 @@ import Charts
 import SharedData
 import SwiftUI
 
-struct DriverDirectory: View {
-    @EnvironmentObject private var model: MobileModel
-    @Environment(\.dynamicTypeSize) private var typeSize
-    @Namespace private var driverTransition
-
-    var body: some View {
-        GeometryReader { viewport in
-            let compact = viewport.size.width <= 760 || typeSize.isAccessibilitySize
-            let count = compact ? 1 : viewport.size.width <= 1100 ? 2 : 3
-            let gap: CGFloat = compact ? 10 : 14
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                DisclosureGroup("How scores work?") {
-                    Text("SPS: 70% average race finishing percentile and 30% average qualifying percentile, using classified results. TMS: share of race and qualifying head-to-head wins against the current teammate. Ties count as half. Both scores run from 0–100. Missing results are excluded.")
-                    Text("S ≥ 90 · A ≥ 75 · B ≥ 60 · C ≥ 50 · D ≥ 35 · F < 35")
-                }
-                .font(.caption)
-                .foregroundStyle(WebDashboardStyle.homeMuted)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: count), spacing: gap) {
-                    ForEach(model.driverRoster) { driver in
-                        NavigationLink {
-                            StandingProfile(entry: StandingEntry(driver: driver))
-                                .pulseNavigationZoom(driver.id, in: driverTransition)
-                        } label: {
-                            DriverTile(driver: driver, score: score(for: driver), board: true,
-                                       ratio: compact ? 1.7 : 1.84)
-                                .matchedTransitionSource(id: driver.id, in: driverTransition)
-                        }.buttonStyle(PulsePressStyle())
-                    }
-                }
-                if model.driverRoster.isEmpty {
-                    if let error = model.rosterLoadError {
-                        ContentUnavailableView("无法读取车手", systemImage: "person.crop.circle", description: Text(error))
-                    } else { ProgressView("读取车手…") }
-                }
-            }.padding(12)
-        }
-        }
-        .background(WebDashboardStyle.homeBackground)
-        .task(id: model.dataContext) { await model.loadSeasonArchive() }
-        .refreshable {
-            async let roster: Void = model.loadF1Roster(force: true)
-            await model.loadSeasonArchive(force: true)
-            await roster
-        }
-    }
-
-    private func score(for driver: DriverStanding) -> DriverScore? {
-        guard let archive = model.seasonArchive, !archive.meta.stale else { return nil }
-        let teamID = driver.constructorIds.first
-        let teammate = model.driverRoster.filter { candidate in
-            candidate.id != driver.id &&
-                (teamID.map { candidate.constructorIds.contains($0) } ?? (candidate.constructor == driver.constructor))
-        }.max { $0.points < $1.points }
-        return DriverScore(driver: driver, teammate: teammate, weekends: archive.data)
-    }
-}
-
-private struct DriverScore {
+struct DriverScore {
     let performance: Double?
     let teammate: Double?
 
-    init(driver: DriverStanding, teammate: DriverStanding?, weekends: [SeasonResultWeekend]) {
+    init(driverID: String, teammateID: String?, weekends: [SeasonResultWeekend]) {
         var race: [Double] = []
         var qualifying: [Double] = []
         var matches: [Double] = []
         for weekend in weekends {
             for kind in ["race", "qualifying"] {
                 guard let rows = weekend.sessions[kind]?.rows, rows.count > 1,
-                      let own = rows.first(where: { $0.id == driver.id }) else { continue }
+                      let own = rows.first(where: { $0.id == driverID }) else { continue }
                 if let position = own.position, (1...rows.count).contains(position),
                    own.classification.uppercased() == "CLASSIFIED" {
                     let percentile = Double(rows.count - position) / Double(rows.count - 1)
                     if kind == "race" { race.append(percentile) }
                     else { qualifying.append(percentile) }
                 }
-                if let teammate, let rival = rows.first(where: { $0.id == teammate.id }),
+                if let teammateID, let rival = rows.first(where: { $0.id == teammateID }),
                    own.constructorId == rival.constructorId,
                    let winner = comparisonWinner(own, rival, onlyClassified: false) {
                     matches.append(winner == 0 ? 0.5 : winner > 0 ? 1 : 0)
@@ -97,9 +39,6 @@ private struct DriverScore {
 
 private struct DriverTile: View {
     let driver: DriverStanding
-    var score: DriverScore? = nil
-    var board = false
-    var ratio: CGFloat = 1.35
 
     var body: some View {
         let id = driver.constructorIds.first ?? driver.constructor
@@ -128,19 +67,9 @@ private struct DriverTile: View {
                     Text(driver.constructor).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     Text(driver.driverNumber ?? "—").font(.title3.bold()).monospacedDigit()
                 }.lineLimit(2).frame(width: width * 0.49, alignment: .leading).padding(12)
-                if board {
-                    HStack(spacing: 12) {
-                        scoreBadge("SPS", score?.performance)
-                        scoreBadge("TMS", score?.teammate)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 10).frame(minHeight: 32)
-                    .background(WebDashboardStyle.homeBackground.opacity(0.84))
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                }
             }
         }
-        .aspectRatio(ratio, contentMode: .fit)
+        .aspectRatio(1.35, contentMode: .fit)
         .background {
             PulseStyle.cardShape
                 .fill(PulseStyle.surface)
@@ -154,31 +83,6 @@ private struct DriverTile: View {
         .overlay { PulseStyle.cardShape.strokeBorder(tint.opacity(0.45)).allowsHitTesting(false) }
         .accessibilityElement(children: .combine)
     }
-
-    private func scoreBadge(_ label: String, _ value: Double?) -> some View {
-        let formatted = value.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—"
-        return HStack(spacing: 6) {
-            Text(label).font(.caption2.bold()).foregroundStyle(.secondary)
-            Text(formatted).font(.caption.bold()).monospacedDigit()
-            if let value {
-                let color: Color = value >= 75 ? .blue : value >= 60 ? .green : value >= 50 ? .gray : value >= 35 ? .orange : .red
-                Text(grade(value)).font(.caption2.bold()).foregroundStyle(color)
-                    .frame(width: 20, height: 20).background(color.opacity(0.18), in: Circle())
-            }
-        }.accessibilityElement(children: .combine)
-    }
-
-    private func grade(_ value: Double) -> String {
-        switch value {
-        case 90...: "S"
-        case 75..<90: "A"
-        case 60..<75: "B"
-        case 50..<60: "C"
-        case 35..<50: "D"
-        default: "F"
-        }
-    }
-
 }
 
 struct DriverComparison: View {
@@ -242,47 +146,19 @@ struct DriverComparison: View {
                 Text("\(name(first)) / \(name(second))").font(.headline)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
-            let teammates = popularPairs
-            if !english && teammateTeamID == nil && !teammates.isEmpty {
-                Section {
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 8) {
-                            ForEach(teammates, id: \.left.id) { pair in
-                                Button {
-                                    first = pair.left.id
-                                    second = pair.right.id
-                                } label: {
-                                    Text("\(lastName(pair.left)) / \(lastName(pair.right))").font(.caption.weight(.semibold))
-                                }
-                                .buttonStyle(.glass)
-                                .accessibilityAddTraits(first == pair.left.id && second == pair.right.id ? .isSelected : [])
-                            }
-                        }.padding(.vertical, 3)
-                    }.scrollIndicators(.hidden)
-                }.listRowBackground(Color.clear).listRowSeparator(.hidden)
-            }
             Group {
                 if english {
-                    comparisonCard("Session") {
-                        Picker("Session Type", selection: $category) {
-                            ForEach(comparisonCategoriesForPicker, id: \.0) { type, label in
-                                Text(label).tag(type)
-                            }
-                        }
-                        if combineSprint && (category == .race || category == .qualifying) {
-                            Text("Includes sprint sessions")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Divider()
-                        DisclosureGroup("Comparison Options", isExpanded: $showFilters) {
-                            if teammateTeamID == nil {
-                                picker("Driver 1", selection: $first, excluding: second)
-                                picker("Driver 2", selection: $second, excluding: first)
-                            }
-                            comparisonToggles
-                        }
-                        .tint(.primary)
-                    }
+                    PulseSectionPicker<SessionType>(
+                        sections: [(.race, "Race"), (.qualifying, "Qualifying"), (.sprint, "Sprint")],
+                        selection: Binding(
+                            get: { category == .sprintQualifying ? .sprint : category },
+                            set: { category = $0 }
+                        )
+                    )
+                    .frame(maxWidth: .infinity)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 } else {
                     Section {
                         DisclosureGroup(isExpanded: $showFilters) {
@@ -382,6 +258,25 @@ struct DriverComparison: View {
         .scrollContentBackground(.hidden)
         .background(PulseStyle.background)
         .pulseSwap(model.seasonArchive != nil)
+        .pulseSwap(comparisonCategories)
+        .dashboardDetail()
+        .toolbar {
+            if english {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        comparisonToggles
+                        if category == .sprint || category == .sprintQualifying {
+                            Picker("Sprint Session", selection: $category) {
+                                Text("Sprint Race").tag(SessionType.sprint)
+                                Text("Sprint Qualifying").tag(SessionType.sprintQualifying)
+                            }
+                        }
+                    } label: {
+                        Label("Comparison Options", systemImage: "ellipsis").labelStyle(.iconOnly)
+                    }
+                }
+            }
+        }
         .task(id: model.dataContext) { await model.loadSeasonArchive() }
         .refreshable { await model.loadSeasonArchive(force: true) }
         .onChange(of: comparisonCategories) { resetChartSelections() }
@@ -435,7 +330,7 @@ struct DriverComparison: View {
                     .lineLimit(2, reservesSpace: true)
             }
             if let driver {
-                Text(driver.constructor).font(.caption).foregroundStyle(.secondary)
+                Text(driver.seasonTeamName).font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(10)
@@ -444,12 +339,22 @@ struct DriverComparison: View {
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder private func comparisonCard<Content: View>(
+    private func comparisonCard<Content: View>(
         _ title: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        comparisonCard(title, trailing: { EmptyView() }, content: content)
+    }
+
+    @ViewBuilder private func comparisonCard<Content: View, Trailing: View>(
+        _ title: String, @ViewBuilder trailing: () -> Trailing, @ViewBuilder content: () -> Content
     ) -> some View {
         if english {
             VStack(alignment: .leading, spacing: 12) {
-                Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                HStack {
+                    Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    trailing()
+                }
                 content()
             }
             .padding(14)
@@ -458,8 +363,16 @@ struct DriverComparison: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         } else {
-            Section(title, content: content)
-                .listRowBackground(PulseStyle.surface)
+            Section {
+                content()
+            } header: {
+                HStack {
+                    Text(title)
+                    Spacer(minLength: 0)
+                    trailing()
+                }
+            }
+            .listRowBackground(PulseStyle.surface)
         }
     }
 
@@ -525,18 +438,6 @@ struct DriverComparison: View {
         }
     }
 
-    private var popularPairs: [(left: DriverStanding, right: DriverStanding)] {
-        let teams = Dictionary(grouping: model.driverRoster) { $0.constructorIds.first ?? $0.constructor }
-        return teams.values.compactMap { drivers in
-            guard drivers.count >= 2 else { return nil }
-            return (drivers[0], drivers[1])
-        }.sorted { $0.left.position < $1.left.position }
-    }
-
-    private func lastName(_ driver: DriverStanding) -> String {
-        driver.driverName.split(separator: " ").last.map(String.init) ?? driver.driverName
-    }
-
     private func finishCounts(_ positions: [Int], driver: String) -> [FinishCount] {
         Dictionary(grouping: positions, by: { $0 }).map { position, finishes in
             FinishCount(position: position, count: finishes.count, driver: driver)
@@ -580,7 +481,10 @@ struct DriverComparison: View {
                 guard let rows = weekend.sessions[type.rawValue]?.rows,
                       let firstRow = rows.first(where: { $0.driverId == first }),
                       let secondRow = rows.first(where: { $0.driverId == second }),
-                      teammateTeamID.map({ firstRow.constructorId == $0 && secondRow.constructorId == $0 }) ?? true,
+                      teammateTeamID.map({ team in
+                          MobileModel.normalizedConstructorID(firstRow.constructorId) == MobileModel.normalizedConstructorID(team)
+                              && MobileModel.normalizedConstructorID(secondRow.constructorId) == MobileModel.normalizedConstructorID(team)
+                      }) ?? true,
                       let winner = comparisonWinner(firstRow, secondRow, onlyClassified: excludeRetirements) else { return nil }
                 return ComparisonRound(id: "\(weekend.id)-\(type.rawValue)",
                                        meeting: categories.count == 1 ? weekend.meeting.name : "\(weekend.meeting.name) · \(english ? type.resultLabel : type.displayName)",
@@ -645,12 +549,25 @@ struct DriverComparison: View {
             return phases
         }
         if !dots.isEmpty {
-            comparisonCard(copy("Qualifying Phase Gaps", "排位分段差距")) {
+            comparisonCard(copy("Qualifying Phase Gaps", "排位分段差距"), trailing: {
+                Button {
+                    highlightLatestQualifying.toggle()
+                } label: {
+                    Label(copy("Highlight Latest Session", "突出最近一场"),
+                          systemImage: highlightLatestQualifying ? "clock.badge.checkmark.fill" : "clock")
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(highlightLatestQualifying ? PulseStyle.red : Color.secondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(highlightLatestQualifying ? .isSelected : [])
+                .accessibilityIdentifier("comparison.highlightLatestQualifying")
+            }) {
                 PulseSectionPicker(
                     sections: [(false, copy("By Round", "逐站")), (true, copy("Distribution", "差距分布"))],
                     selection: $showQualifyingDistribution
                 )
-                Toggle(copy("Highlight Latest Session", "突出最近一场"), isOn: $highlightLatestQualifying).font(.subheadline)
                 if showQualifyingDistribution {
                     qualifyingDistribution(dots)
                 } else {
@@ -731,6 +648,7 @@ private struct TeamPoleTrend: View {
     let weekends: [SeasonResultWeekend]
     let teamIDs: Set<String>
     let types: [SessionType]
+    var constructorPositions: [String: Int] = [:]
     @Environment(\.pulseEnglishPresentation) private var english
     @State private var selectedPoleSession: Int?
 
@@ -748,7 +666,12 @@ private struct TeamPoleTrend: View {
         let phases: [(String, KeyPath<SessionResult, String?>)] = [
             ("3", \.q3), ("2", \.q2), ("1", \.q1), ("最快圈", \.bestLap)
         ]
-        let points = teamIDs.sorted().flatMap { team -> [TeamPolePoint] in
+        let orderedTeams = teamIDs.sorted {
+            let left = MobileModel.normalizedConstructorID($0)
+            let right = MobileModel.normalizedConstructorID($1)
+            return (constructorPositions[left] ?? .max, $0) < (constructorPositions[right] ?? .max, $1)
+        }
+        let points = orderedTeams.flatMap { team -> [TeamPolePoint] in
             var run = 0
             return sessions.enumerated().compactMap { index, session in
                 guard let pole = session.rows.first(where: { $0.position == 1 && $0.classification.uppercased() == "CLASSIFIED" }),
@@ -757,7 +680,10 @@ private struct TeamPoleTrend: View {
                     run += 1
                     return nil
                 }
-                let teamRows = session.rows.filter { $0.constructorId == team && $0.classification.uppercased() == "CLASSIFIED" }
+                let teamRows = session.rows.filter {
+                    MobileModel.normalizedConstructorID($0.constructorId) == MobileModel.normalizedConstructorID(team)
+                        && $0.classification.uppercased() == "CLASSIFIED"
+                }
                 guard let sample = teamRows.compactMap({ row in
                     AnalysisMath.elapsedSeconds(row[keyPath: timing.1]).map { (row, $0) }
                 }).min(by: { $0.1 < $1.1 }), sample.1 >= poleTime else {
@@ -774,7 +700,7 @@ private struct TeamPoleTrend: View {
             if points.isEmpty {
                 ContentUnavailableView(english ? "No Matching Lap Times" : "暂无同阶段圈速可对照", systemImage: "timer")
             } else {
-                let legend = teamIDs.sorted().compactMap { team in points.first { $0.teamID == team } }
+                let legend = orderedTeams.compactMap { team in points.first { $0.teamID == team } }
                 Chart {
                     ForEach(points) { point in
                         LineMark(x: .value(english ? "Session" : "场次", point.index), y: .value(english ? "Gap to Pole" : "距杆位秒差", point.gap),
@@ -917,7 +843,10 @@ struct TeammateComparisonBoard: View {
     @State private var team: String?
     @State private var first = ""
     @State private var second = ""
-    @State private var activeFilter: FilterTarget?
+    @State private var showCustom = false
+    @State private var customMatchup: PairID?
+    @State private var pendingMatchup: PairID?
+    @State private var pickingFirst = true
     @State private var searchText = ""
     @State private var qualifyingMode = Mode.combined
     @State private var raceMode = Mode.combined
@@ -925,6 +854,7 @@ struct TeammateComparisonBoard: View {
     @State private var poleMode = Mode.combined
     @State private var highlightLatest = false
     @State private var selectedGap: [PairID: Double] = [:]
+    @State private var constructorPositions: [String: Int] = [:]
 
     private enum Mode: Hashable {
         case combined, regular, sprint
@@ -939,15 +869,20 @@ struct TeammateComparisonBoard: View {
         }
     }
 
-    private enum FilterTarget: String, Identifiable {
-        case team, first, second
-        var id: String { rawValue }
+    private struct MatchupDriver: Identifiable {
+        let id: String
+        let name: String
+        let teamID: String
+        let team: String
+        let number: String?
+        let rank: Int
     }
 
-    private struct PairID: Hashable {
+    private struct PairID: Hashable, Identifiable {
         let team: String
         let left: String
         let right: String
+        var id: Self { self }
     }
 
     private struct Pair: Identifiable {
@@ -961,7 +896,6 @@ struct TeammateComparisonBoard: View {
         var ties = 0
 
         var total: Int { wins + losses + ties }
-        var margin: Double { Double(abs(wins - losses)) / Double(total) }
 
         mutating func record(_ outcome: Int) {
             if outcome > 0 { wins += 1 }
@@ -971,16 +905,71 @@ struct TeammateComparisonBoard: View {
     }
 
     private var teams: [(key: String, value: String)] {
-        Dictionary(model.driverRoster.flatMap { driver in
-            driver.constructorIds.map { ($0, driver.constructor) }
-        }, uniquingKeysWith: { name, _ in name }).sorted { $0.value < $1.value }
+        Dictionary(currentLineup.map { ($0.teamID, $0.team) }, uniquingKeysWith: { name, _ in name })
+            .sorted { ($0.value, $0.key) < ($1.value, $1.key) }
+    }
+
+    private var currentLineup: [MatchupDriver] {
+        let archive = model.seasonArchive?.data ?? []
+        let now = Date.now
+        let meetings = model.meetings.isEmpty ? archive.map(\.meeting) : model.meetings
+        guard let meeting = meetings.filter({ $0.status == .scheduled && $0.startDate <= now })
+            .max(by: { $0.startDate < $1.startDate }) else { return [] }
+        let weekend = archive.first { $0.id == meeting.id }
+        let recent = meeting.sessions.sorted { $0.startTime > $1.startTime }.first { session in
+            session.startTime <= now && session.status != .cancelled && session.status != .postponed
+                && weekend?.sessions[session.sessionType.rawValue]?.rows.contains {
+                    $0.classification.uppercased() != "DNS"
+                } == true
+        }
+        let standings = Dictionary(model.driverRoster.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let recentRows = recent.flatMap { weekend?.sessions[$0.sessionType.rawValue]?.rows } ?? []
+        let knownDrivers = customDrivers.map { FavoriteDriver(id: $0.id, name: $0.name) }
+        if let timing = model.liveSnapshots[.f1], timing.sourceMode == .live,
+           timing.sourceStatus != .disconnected, model.season == meeting.season,
+           timing.meetingName.map(LiveIslandLogic.normalizedName) == LiveIslandLogic.normalizedName(meeting.name),
+           let label = timing.sessionType ?? timing.sessionName,
+           let session = meeting.sessions.filter({ $0.startTime <= now && LiveIslandLogic.sessionTypeMatches(label, $0.sessionType) })
+            .max(by: { $0.startTime < $1.startTime }),
+           (recent.map { session.startTime >= $0.startTime } ?? true),
+           (LiveIslandLogic.isActive(timing.sessionStatus) || LiveIslandLogic.isFinished(timing.sessionStatus)) {
+            let live = timing.drivers.compactMap { driver -> MatchupDriver? in
+                guard let id = LiveIslandLogic.rosterID(for: driver, favorites: knownDrivers),
+                      let name = driver.name, let team = driver.team,
+                      let teamID = LiveIslandLogic.teamAssetID(for: driver, isWec: false) else { return nil }
+                return MatchupDriver(id: id, name: name, teamID: teamID, team: team, number: driver.number,
+                                     rank: standings[id]?.position ?? .max)
+            }
+            if !live.isEmpty { return live }
+        }
+        return recentRows.filter { $0.classification.uppercased() != "DNS" && !$0.constructorId.isEmpty }.map { row in
+            MatchupDriver(id: row.id, name: row.driverName, teamID: MobileModel.normalizedConstructorID(row.constructorId),
+                          team: row.team, number: row.driverNumber, rank: standings[row.id]?.position ?? .max)
+        }
+    }
+
+    private var customDrivers: [MatchupDriver] {
+        var drivers: [String: MatchupDriver] = [:]
+        for weekend in (model.seasonArchive?.data ?? []).sorted(by: { $0.meeting.startDate > $1.meeting.startDate }) {
+            for session in weekend.meeting.sessions.sorted(by: { $0.startTime > $1.startTime }) {
+                for row in weekend.sessions[session.sessionType.rawValue]?.rows ?? [] where drivers[row.id] == nil {
+                    drivers[row.id] = MatchupDriver(id: row.id, name: row.driverName,
+                        teamID: MobileModel.normalizedConstructorID(row.constructorId),
+                        team: row.team, number: row.driverNumber, rank: .max)
+                }
+            }
+        }
+        for driver in model.driverRoster {
+            drivers[driver.id] = MatchupDriver(id: driver.id, name: driver.driverName, teamID: driver.seasonTeamID,
+                team: driver.seasonTeamName, number: driver.driverNumber, rank: driver.position)
+        }
+        return drivers.values.sorted { ($0.rank, $0.name, $0.id) < ($1.rank, $1.name, $1.id) }
     }
 
     var body: some View {
         GeometryReader { viewport in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    filters
                     popularComparisons
                     Group {
                         if let archive = model.seasonArchive {
@@ -1017,188 +1006,103 @@ struct TeammateComparisonBoard: View {
         .onChange(of: model.dataContext) {
             resetFilters()
             selectedGap = [:]
+            constructorPositions = [:]
         }
-        .task(id: model.dataContext) { await model.loadSeasonArchive() }
-        .refreshable { await model.loadSeasonArchive(force: true) }
-        .sheet(item: $activeFilter, onDismiss: { searchText = "" }) { target in
-            filterSheet(target)
+        .task(id: model.dataContext) { await loadStandingsAndArchive() }
+        .refreshable { await loadStandingsAndArchive(force: true) }
+        .sheet(isPresented: $showCustom, onDismiss: {
+            searchText = ""
+            if let pendingMatchup {
+                customMatchup = pendingMatchup
+                self.pendingMatchup = nil
+            }
+        }) {
+            customSheet
+        }
+        .navigationDestination(item: $customMatchup) { pair in
+            DriverComparison(firstDriverID: pair.left, secondDriverID: pair.right, combineSprint: true)
+                .navigationTitle("Driver Comparison").navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    private var filters: some View {
-        let left = model.driverRoster.first { $0.id == first }
-        let right = model.driverRoster.first { $0.id == second }
-        let teamName = team.flatMap { id in teams.first { $0.key == id }?.value } ?? "All Teams"
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 8))
-            : AnyLayout(HStackLayout(spacing: 8))
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Compare Drivers").font(.headline).accessibilityAddTraits(.isHeader)
-                Spacer()
-                if team != nil || left != nil || right != nil {
-                    Button("Reset", action: resetFilters)
-                        .font(.subheadline.weight(.semibold))
-                        .buttonStyle(.plain).foregroundStyle(PulseStyle.red)
-                        .frame(minHeight: 44)
+    private func loadStandingsAndArchive(force: Bool = false) async {
+        let context = model.dataContext
+        async let archive: Void = model.loadSeasonArchive(force: force)
+        async let roster: Void = model.loadF1Roster(force: force)
+        if let url = model.serverURL,
+           let standings = try? await APIClient(baseURL: url)
+               .constructorStandings(season: model.season, token: model.currentToken),
+           model.dataContext == context, !Task.isCancelled {
+            constructorPositions = Dictionary(standings.data.map {
+                (MobileModel.normalizedConstructorID($0.id), $0.position)
+            }, uniquingKeysWith: min)
+        }
+        _ = await (archive, roster)
+    }
+
+    private var customSheet: some View {
+        let selected = pickingFirst ? first : second
+        let excluded = pickingFirst ? second : first
+        let options = customDrivers.filter {
+            $0.id != excluded && (searchText.isEmpty || $0.name.localizedStandardContains(searchText)
+                || $0.team.localizedStandardContains(searchText)
+                || $0.number.map { "#\($0)".localizedStandardContains(searchText) } == true)
+        }
+        return NavigationStack {
+            List {
+                Section {
+                    PulseSectionPicker(sections: [(true, "Driver 1"), (false, "Driver 2")], selection: $pickingFirst)
+                    if !first.isEmpty || !second.isEmpty {
+                        let names = [first, second].map { id in customDrivers.first { $0.id == id }?.name ?? "Select Driver" }
+                        LabeledContent(names[0], value: names[1])
+                            .font(.subheadline)
+                    }
                 }
-            }
-            layout {
-                driverFilter("Driver 1", driver: left, target: .first)
-                driverFilter("Driver 2", driver: right, target: .second)
-            }
-            HStack(spacing: 8) {
-                Button { activeFilter = .team } label: {
-                    Label(teamName, systemImage: "line.3.horizontal.decrease")
-                        .font(.subheadline.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Team: \(teamName)")
-                if left != nil, right != nil {
+                ForEach(options) { driver in
                     Button {
-                        (first, second) = (second, first)
-                        selectedGap = [:]
+                        if pickingFirst {
+                            first = driver.id
+                            pickingFirst = false
+                        } else {
+                            second = driver.id
+                        }
                     } label: {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .frame(width: 44, height: 44).contentShape(.rect)
+                        HStack(spacing: 10) {
+                            AssetImage(name: MotorsportAssetName.helmetName(
+                                driverID: driver.id, name: driver.name, season: model.season
+                            )).frame(width: 38, height: 34)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(driver.name).font(.subheadline.weight(.semibold))
+                                Text(driver.number.map { "#\($0) · \(driver.team)" } ?? driver.team)
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selected == driver.id {
+                                Image(systemName: "checkmark").foregroundStyle(PulseStyle.red)
+                            }
+                        }
+                        .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Swap drivers")
+                    .accessibilityAddTraits(selected == driver.id ? .isSelected : [])
                 }
             }
-            if let left, let right {
-                NavigationLink {
-                    DriverComparison(firstDriverID: left.id, secondDriverID: right.id, combineSprint: true)
-                        .navigationTitle("Driver Comparison").navigationBarTitleDisplayMode(.inline)
-                } label: {
-                    Label("View Comparison", systemImage: "chart.bar.xaxis")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding(14)
-        .dashboardPanel(WebDashboardStyle.homePanel)
-        .pulseSwap(first.isEmpty || second.isEmpty)
-    }
-
-    private func driverFilter(_ title: String, driver: DriverStanding?, target: FilterTarget) -> some View {
-        Button { activeFilter = target } label: {
-            HStack(spacing: 7) {
-                if let driver {
-                    AssetImage(name: StandingEntry(driver: driver).asset).frame(width: 30, height: 30)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text(driver.map { shortName($0.driverName) } ?? "Select Driver").font(.subheadline.weight(.semibold))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.down").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, 10).padding(.vertical, 8)
-            .frame(minHeight: 50)
-            .background(.primary.opacity(0.045), in: PulseStyle.insetShape)
-            .contentShape(PulseStyle.insetShape)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title): \(driver?.driverName ?? "Select Driver")")
-    }
-
-    private func resetFilters() {
-        team = nil
-        first = ""
-        second = ""
-        selectedGap = [:]
-    }
-
-    private func filterSheet(_ target: FilterTarget) -> some View {
-        NavigationStack {
-            List {
-                if model.driverRoster.isEmpty {
-                    if let error = model.rosterLoadError {
-                        Text(error.pulseEnglishError).foregroundStyle(.secondary)
-                        Button("Retry") { Task { await model.loadF1Roster(force: true) } }
-                    } else {
-                        PulseSkeleton(label: "Loading drivers").listRowBackground(Color.clear)
-                    }
-                }
-                switch target {
-                case .team:
-                    if searchText.isEmpty {
-                        Button {
-                            resetFilters()
-                            activeFilter = nil
-                        } label: {
-                            selectionRow("All Teams", selected: team == nil)
-                        }.accessibilityAddTraits(team == nil ? .isSelected : [])
-                    }
-                    ForEach(teams.filter { searchText.isEmpty || $0.value.localizedCaseInsensitiveContains(searchText) }, id: \.key) { entry in
-                        Button {
-                            resetFilters()
-                            team = entry.key
-                            activeFilter = nil
-                        } label: {
-                            HStack(spacing: 10) {
-                                if let logo = DashboardArt.image(.teamLogo, id: entry.key, season: model.season) {
-                                    Image(uiImage: logo).resizable().scaledToFit().frame(width: 32, height: 26)
-                                        .accessibilityHidden(true)
-                                }
-                                selectionRow(entry.value, selected: team == entry.key)
-                            }.contentShape(.rect)
-                        }.accessibilityAddTraits(team == entry.key ? .isSelected : [])
-                    }
-                case .first, .second:
-                    if searchText.isEmpty {
-                        Button {
-                            selectDriver("", for: target)
-                        } label: {
-                            selectionRow("Any Driver", selected: (target == .first ? first : second).isEmpty)
-                        }
-                    }
-                    ForEach(driverOptions(for: target)) { driver in
-                        let selected = (target == .first ? first : second) == driver.id
-                        Button {
-                            selectDriver(driver.id, for: target)
-                        } label: {
-                            HStack(spacing: 10) {
-                                AssetImage(name: MotorsportAssetName.helmetName(
-                                    driverID: driver.id, name: driver.driverName, season: driver.season
-                                )).frame(width: 38, height: 34)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(driver.driverName).font(.subheadline.weight(.semibold))
-                                    Text(driver.driverNumber.map { "#\($0) · \(driver.constructor)" } ?? driver.constructor)
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if selected {
-                                    Image(systemName: "checkmark").foregroundStyle(PulseStyle.red)
-                                }
-                            }.contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected ? .isSelected : [])
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
             .overlay {
-                if !model.driverRoster.isEmpty && !searchText.isEmpty && !hasSearchResults(for: target) {
-                    ContentUnavailableView.search(text: searchText)
-                }
+                if options.isEmpty, !searchText.isEmpty { ContentUnavailableView.search(text: searchText) }
+                else if customDrivers.isEmpty { ContentUnavailableView("No Drivers Available", systemImage: "person.2") }
             }
-            .background(PulseStyle.background)
-            .searchable(text: $searchText, prompt: target == .team ? "Team" : "Driver, number or team")
-            .navigationTitle(filterTitle(target))
+            .searchable(text: $searchText, prompt: "Driver, number or team")
+            .navigationTitle("Custom Matchup")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { activeFilter = nil }
-                        .labelStyle(.iconOnly)
+                    Button("Close", systemImage: "xmark") { showCustom = false }.labelStyle(.iconOnly)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Compare") {
+                        pendingMatchup = PairID(team: "", left: first, right: second)
+                        showCustom = false
+                    }.disabled(first.isEmpty || second.isEmpty)
                 }
             }
         }
@@ -1206,68 +1110,69 @@ struct TeammateComparisonBoard: View {
         .presentationDragIndicator(.visible)
     }
 
-    private func selectDriver(_ id: String, for target: FilterTarget) {
-        if target == .first { first = id } else { second = id }
+    private func resetFilters() {
         team = nil
+        first = ""
+        second = ""
+        pendingMatchup = nil
         selectedGap = [:]
-        activeFilter = nil
     }
 
-    private func driverOptions(for target: FilterTarget) -> [DriverStanding] {
-        let excluded = target == .first ? second : first
-        let number = searchText.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        return model.driverRoster.filter { driver in
-            driver.id != excluded && (searchText.isEmpty
-                || driver.driverName.localizedCaseInsensitiveContains(searchText)
-                || driver.constructor.localizedCaseInsensitiveContains(searchText)
-                || (!number.isEmpty && driver.driverNumber?.localizedCaseInsensitiveContains(number) == true))
-        }
-    }
+    private var popularComparisons: some View {
+        let teams = teams
+        let currentTeam = team.flatMap { id in teams.first { $0.key == id } }
+        let groups = Dictionary(grouping: currentLineup, by: \.teamID)
+        let pairs = groups.filter { currentTeam == nil || currentTeam?.key == $0.key }.values
+            .compactMap { drivers -> (first: MatchupDriver, second: MatchupDriver)? in
+                let ranked = drivers.sorted { ($0.rank, $0.id) < ($1.rank, $1.id) }
+                guard ranked.count >= 2 else { return nil }
+                return (ranked[0], ranked[1])
+            }.sorted { ($0.first.rank, $0.first.teamID) < ($1.first.rank, $1.first.teamID) }
 
-    private func hasSearchResults(for target: FilterTarget) -> Bool {
-        if target == .team { return teams.contains { $0.value.localizedCaseInsensitiveContains(searchText) } }
-        return !driverOptions(for: target).isEmpty
-    }
-
-    private func filterTitle(_ target: FilterTarget) -> String {
-        switch target {
-        case .team: "Choose team"
-        case .first: "Choose Driver 1"
-        case .second: "Choose Driver 2"
-        }
-    }
-
-    private func selectionRow(_ title: String, selected: Bool) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            if selected { Image(systemName: "checkmark").foregroundStyle(PulseStyle.red) }
-        }.contentShape(.rect)
-    }
-
-    @ViewBuilder private var popularComparisons: some View {
-        let groups = Dictionary(grouping: model.driverRoster) { $0.constructorIds.first ?? $0.constructor }
-        let pairs = groups.values.compactMap { drivers -> (first: DriverStanding, second: DriverStanding)? in
-            let ranked = drivers.sorted { $0.position < $1.position }
-            guard ranked.count >= 2 else { return nil }
-            return (ranked[0], ranked[1])
-        }.sorted { $0.first.position < $1.first.position }
-        if !pairs.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Teammate Matchups").font(.headline)
-                    .accessibilityAddTraits(.isHeader)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Teammate Matchups").font(.headline).accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button {
+                    pickingFirst = first.isEmpty || !second.isEmpty
+                    showCustom = true
+                } label: {
+                    Label("Custom Matchup", systemImage: "person.2.badge.plus")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.glass)
+            }
+            Menu {
+                Picker("Team", selection: $team) {
+                    Text("All Teams").tag(String?.none)
+                    ForEach(teams, id: \.key) { entry in
+                        Text(entry.value).tag(Optional(entry.key))
+                    }
+                }
+            } label: {
+                Label(currentTeam?.value ?? "All Teams", systemImage: "line.3.horizontal.decrease")
+                    .font(.subheadline.weight(.medium))
+            }
+            if pairs.isEmpty {
+                if model.seasonArchive == nil, model.seasonArchiveError == nil {
+                    PulseSkeleton(rows: 2, label: "Loading weekend lineup")
+                } else {
+                    Text("No teammate lineup available for this weekend.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+            } else {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 12) {
-                        ForEach(pairs, id: \.first.id) { pair in
+                        ForEach(pairs, id: \.first.teamID) { pair in
                             NavigationLink {
                                 DriverComparison(firstDriverID: pair.first.id, secondDriverID: pair.second.id,
-                                                 teammateTeamID: pair.first.constructorIds.first, combineSprint: true)
+                                                 teammateTeamID: pair.first.teamID, combineSprint: true)
                                     .navigationTitle("Driver Comparison").navigationBarTitleDisplayMode(.inline)
                             } label: {
                                 matchupCard(pair.first, pair.second)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Compare \(pair.first.driverName) and \(pair.second.driverName)")
+                            .accessibilityLabel("Compare \(pair.first.name) and \(pair.second.name)")
                         }
                     }.scrollTargetLayout()
                 }
@@ -1275,13 +1180,15 @@ struct TeammateComparisonBoard: View {
                 .scrollIndicators(.hidden)
                 .frame(height: 135)
             }
-            .pulseReveal()
+        }
+        .onChange(of: teams.map(\.key)) { _, ids in
+            if let team, !ids.contains(team) { self.team = nil }
         }
     }
 
-    private func matchupCard(_ left: DriverStanding, _ right: DriverStanding) -> some View {
-        let leftTint = DashboardArt.teamColor(left.constructorIds.first ?? left.constructor)
-        let rightTint = DashboardArt.teamColor(right.constructorIds.first ?? right.constructor)
+    private func matchupCard(_ left: MatchupDriver, _ right: MatchupDriver) -> some View {
+        let leftTint = DashboardArt.teamColor(left.teamID)
+        let rightTint = DashboardArt.teamColor(right.teamID)
         return ZStack(alignment: .bottom) {
             LinearGradient(colors: [rightTint, rightTint.opacity(0.62)], startPoint: .topTrailing, endPoint: .bottomLeading)
             LinearGradient(colors: [leftTint, leftTint.opacity(0.62)], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -1315,9 +1222,9 @@ struct TeammateComparisonBoard: View {
                 .background(.black.opacity(0.66), in: .capsule)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack {
-                Text(shortName(left.driverName))
+                Text(shortName(left.name))
                 Spacer()
-                Text(shortName(right.driverName))
+                Text(shortName(right.name))
             }.font(.caption.weight(.medium)).padding(12)
         }
         .foregroundStyle(.white)
@@ -1328,10 +1235,13 @@ struct TeammateComparisonBoard: View {
         .accessibilityElement(children: .ignore)
     }
 
-    @ViewBuilder private func matchupPortrait(_ driver: DriverStanding) -> some View {
-        if let photo = DashboardArt.image(.driverPhoto, id: driver.id, season: driver.season) {
+    @ViewBuilder private func matchupPortrait(_ driver: MatchupDriver) -> some View {
+        if let photo = DashboardArt.image(.driverPhoto, id: driver.id, season: model.season) {
             Image(uiImage: photo).resizable().scaledToFit()
                 .frame(width: 112, height: 116, alignment: .bottom)
+        } else {
+            AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.id, name: driver.name, season: model.season))
+                .frame(width: 85, height: 90, alignment: .bottom)
         }
     }
 
@@ -1388,7 +1298,8 @@ struct TeammateComparisonBoard: View {
         let rows = summaries(types: types).compactMap { pair -> (pair: Pair, samples: [GapSample], average: Double)? in
             let samples = sessions.enumerated().flatMap { index, session -> [GapSample] in
                 guard let left = session.rows[pair.id.left], let right = session.rows[pair.id.right],
-                      pair.id.team.isEmpty || (left.constructorId == pair.id.team && right.constructorId == pair.id.team) else { return [] }
+                      MobileModel.normalizedConstructorID(left.constructorId) == pair.id.team,
+                      MobileModel.normalizedConstructorID(right.constructorId) == pair.id.team else { return [] }
                 let leftTimes = [left.q1, left.q2, left.q3]
                 let rightTimes = [right.q1, right.q2, right.q3]
                 let prefix = session.sprint ? "SQ" : "Q"
@@ -1405,7 +1316,7 @@ struct TeammateComparisonBoard: View {
             }
             guard !samples.isEmpty else { return nil }
             return (pair, samples, samples.reduce(0.0) { $0 + $1.seconds } / Double(samples.count))
-        }.sorted { $0.average < $1.average }
+        }
         let extent = max(0.25, (rows.lazy.flatMap(\.samples).map { abs($0.seconds) }.max() ?? 0) * 1.08)
         return analysisCard("Qualifying Gaps") {
             sessionModes($gapMode)
@@ -1491,12 +1402,12 @@ struct TeammateComparisonBoard: View {
     private func poleCard(_ weekends: [SeasonResultWeekend]) -> some View {
         let types = poleMode.types(for: .qualifying)
         let pairs = summaries(types: [.qualifying, .sprintQualifying, .race, .sprint])
-        let teams = Set(pairs.flatMap { [$0.leftTeamID, $0.rightTeamID] }.filter { !$0.isEmpty })
+        let teams = Set(pairs.map(\.id.team))
         return analysisCard("Team Gap to Pole") {
             sessionModes($poleMode)
             Text("Each team's fastest qualifying lap compared with the pole sitter's time in the same qualifying phase.")
                 .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
-            TeamPoleTrend(weekends: weekends, teamIDs: teams, types: types)
+            TeamPoleTrend(weekends: weekends, teamIDs: teams, types: types, constructorPositions: constructorPositions)
         }
     }
 
@@ -1532,7 +1443,6 @@ struct TeammateComparisonBoard: View {
                 HStack(spacing: 8) {
                     Text(shortName(pair.right)).font(.subheadline.weight(.medium))
                     PulseNumber(pair.losses.formatted()).font(.headline.monospacedDigit())
-                    PulseChevron()
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -1561,31 +1471,25 @@ struct TeammateComparisonBoard: View {
 
     private func summaries(types: [SessionType]) -> [Pair] {
         let weekends = model.seasonArchive?.data ?? []
+        let lineup = currentLineup
+        let driverPositions = Dictionary(lineup.map { ($0.id, $0.rank) }, uniquingKeysWith: min)
+        let currentTeams = Dictionary(lineup.map { ($0.id, $0.teamID) }, uniquingKeysWith: { first, _ in first })
         var pairs: [PairID: Pair] = [:]
-        let explicitPair = !first.isEmpty && !second.isEmpty
-        let sameTeam = explicitPair && model.driverRoster.first { $0.id == first }?.constructorIds.first
-            == model.driverRoster.first { $0.id == second }?.constructorIds.first
         for weekend in weekends {
             for type in types {
                 let rows = weekend.sessions[type.rawValue]?.rows ?? []
-                let groups = explicitPair
-                    ? [rows.filter { $0.id == first || $0.id == second }]
-                    : Array(Dictionary(grouping: rows.filter { !$0.constructorId.isEmpty && (team == nil || $0.constructorId == team) },
-                                       by: \.constructorId).values)
+                let groups = Dictionary(grouping: rows.filter { row in
+                    let id = MobileModel.normalizedConstructorID(row.constructorId)
+                    return currentTeams[row.id] == id && (team == nil || id == team)
+                }) { MobileModel.normalizedConstructorID($0.constructorId) }.values
                 for group in groups where group.count > 1 {
-                    let sorted = group.sorted { left, right in
-                        explicitPair ? left.id == first && right.id != first : left.id < right.id
+                    let sorted = group.sorted {
+                        (driverPositions[$0.id] ?? .max, $0.id) < (driverPositions[$1.id] ?? .max, $1.id)
                     }
                     for (index, left) in sorted.enumerated() {
                         for right in sorted.dropFirst(index + 1) where left.id != right.id {
-                            let selected = first.isEmpty ? second : first
-                            guard (!first.isEmpty && !second.isEmpty
-                                   ? Set([left.id, right.id]) == Set([first, second])
-                                   : selected.isEmpty || left.id == selected || right.id == selected),
-                                  !sameTeam || left.constructorId == right.constructorId,
-                                  let outcome = comparisonWinner(left, right, onlyClassified: false) else { continue }
-                            let key = PairID(team: explicitPair && !sameTeam ? "" : left.constructorId,
-                                             left: left.id, right: right.id)
+                            guard let outcome = comparisonWinner(left, right, onlyClassified: false) else { continue }
+                            let key = PairID(team: MobileModel.normalizedConstructorID(left.constructorId), left: left.id, right: right.id)
                             var pair = pairs[key] ?? Pair(id: key, left: left.driverName, right: right.driverName,
                                                          leftTeamID: left.constructorId, rightTeamID: right.constructorId)
                             pair.record(outcome)
@@ -1596,8 +1500,10 @@ struct TeammateComparisonBoard: View {
             }
         }
         return pairs.values.sorted {
-            ($0.margin, $0.total, $0.id.team, $0.id.left, $0.id.right) >
-                ($1.margin, $1.total, $1.id.team, $1.id.left, $1.id.right)
+            (constructorPositions[$0.id.team] ?? .max, $0.id.team,
+             driverPositions[$0.id.left] ?? .max, driverPositions[$0.id.right] ?? .max, $0.id.left, $0.id.right)
+                < (constructorPositions[$1.id.team] ?? .max, $1.id.team,
+                   driverPositions[$1.id.left] ?? .max, driverPositions[$1.id.right] ?? .max, $1.id.left, $1.id.right)
         }
     }
 }

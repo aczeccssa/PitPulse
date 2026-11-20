@@ -239,6 +239,9 @@ struct RootView: View {
     @State private var showLive = ProcessInfo.processInfo.environment["PITPULSE_OPEN_LIVE"] == "1"
     @State private var showCalendar = false
     @State private var opensLiveAfterSheet = false
+    @State private var liveBarFrames: [Int: CGRect] = [:]
+    @State private var liveDetailPages: [Int: UUID] = [:]
+    @State private var liveDetailFrames: [Int: LiveDetailFrame] = [:]
     @State private var returningFromBackground = false
     @State private var dashboardLandings: [DashboardTab: UUID] = [:]
     @State private var titleChange: DashboardTitleChange?
@@ -258,13 +261,25 @@ struct RootView: View {
     var body: some View {
         TabView(selection: Binding(get: { selection }, set: { selectTab($0) })) {
             ForEach(DashboardTab.allCases) { tab in
-                DashboardScreen(tab: tab, fromHome: dashboardLandings[tab] != nil, header: header(for: tab)) { destination in
+                DashboardScreen(tab: tab, fromHome: dashboardLandings[tab] != nil, header: header(for: tab),
+                                showCalendar: $showCalendar) { destination in
                     dashboardLandings[destination] = UUID()
                     selectTab(destination.rawValue)
                 }
                     .id(dashboardLandings[tab])
-                    .environment(\.pulseEnglishPresentation, tab.usesEnglishPresentation)
-                    .environment(\.locale, tab.usesEnglishPresentation ? .pulseEnglish : .autoupdatingCurrent)
+                    .environment(\.pulseEnglishPresentation, true)
+                    .environment(\.locale, .pulseEnglish)
+                    .environment(\.dashboardLiveBarFrame, { frame in
+                        if frame.width > 0 { liveBarFrames[tab.rawValue] = frame }
+                    })
+                    .environment(\.dashboardLivePage, { id in
+                        liveDetailPages[tab.rawValue] = id
+                    })
+                    .environment(\.dashboardLiveDetailFrame, { id, frame in
+                        if liveDetailPages[tab.rawValue] == id {
+                            liveDetailFrames[tab.rawValue] = LiveDetailFrame(id: id, frame: frame)
+                        }
+                    })
                     .tabItem {
                         if let icon = Self.tabIcons[tab] {
                             Image(uiImage: icon).accessibilityLabel(tab.title)
@@ -276,16 +291,20 @@ struct RootView: View {
             }
         }
         .tint(PulseStyle.red)
-        .liveBottomAccessory(isEnabled: model.hasActiveLive) {
-            Group {
-                Button {
+        .overlay {
+            DashboardLiveControl(
+                barFrame: liveBarFrames[selection],
+                isCompact: liveDetailPages[selection] != nil,
+                detailFrame: liveDetailFrames[selection].flatMap {
+                    $0.id == liveDetailPages[selection] ? $0.frame : nil
+                },
+                transitionNamespace: liveTransition,
+                open: {
                     model.startLive()
                     showLive = true
-                } label: { LiveMiniBar() }
-                    .accessibilityIdentifier("live.open")
-                    .buttonStyle(.plain)
-                    .matchedTransitionSource(id: "live-player", in: liveTransition)
-            }
+                }
+            )
+            .ignoresSafeArea(.container)
         }
         .task(id: titleChange?.start) {
             guard let change = titleChange else { return }
@@ -302,7 +321,6 @@ struct RootView: View {
             if !Task.isCancelled, model.liveNotice == notice { model.liveNotice = nil }
         }
         .sheet(isPresented: $model.settingsPresented, onDismiss: openLiveAfterSheet) { SettingsScreen() }
-        .sheet(isPresented: $showCalendar, onDismiss: openLiveAfterSheet) { CalendarScreen() }
         .fullScreenCover(isPresented: $showLive, onDismiss: MobileOrientationDelegate.endLiveRotation) {
             LiveScreen(onClose: { showLive = false })
                 .pulseNavigationZoom("live-player", in: liveTransition)
@@ -355,6 +373,7 @@ struct RootView: View {
             }
             if url.host == "calendar" {
                 showLive = false
+                selectTab(DashboardTab.home.rawValue)
                 showCalendar = true
             }
         }
@@ -366,8 +385,7 @@ struct RootView: View {
         let outgoing = titleChange.flatMap { now.timeIntervalSince($0.start) < 0.13 ? $0.outgoing : nil }
             ?? DashboardTab(rawValue: selection)?.headerTitle
         titleChange = reduceMotion ? nil : outgoing.map { DashboardTitleChange(outgoing: $0, start: now) }
-        if !reduceMotion, DashboardTab(rawValue: destination)?.usesEnglishPresentation == true,
-           DashboardTab(rawValue: selection)?.usesEnglishPresentation == true {
+        if !reduceMotion {
             withAnimation(.easeInOut(duration: 0.22)) { selection = destination }
         } else {
             selection = destination
@@ -383,10 +401,9 @@ struct RootView: View {
         model.liveNotice = nil
         guard model.availableLiveSeries.contains(notice.series) else { return }
         model.selectLiveSeries(notice.series)
-        if model.settingsPresented || showCalendar {
+        if model.settingsPresented {
             opensLiveAfterSheet = true
             model.settingsPresented = false
-            showCalendar = false
         } else {
             showLive = true
         }
@@ -613,18 +630,131 @@ private struct DashboardHeader: View {
     }
 }
 
-struct LiveMiniBar: View {
+private struct LiveDetailFrame {
+    let id: UUID
+    let frame: CGRect
+}
+
+private struct DashboardLiveControl: View {
+    let barFrame: CGRect?
+    let isCompact: Bool
+    let detailFrame: CGRect?
+    let transitionNamespace: Namespace.ID
+    let open: () -> Void
+    @EnvironmentObject private var model: MobileModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dockedOnRight = true
+    @State private var dockHeight: CGFloat = 1
+    @State private var dragPosition: CGPoint?
+    @GestureState private var isDragging = false
+    @Namespace private var dragSpace
+
+    private var animation: Animation? { reduceMotion ? nil : .smooth(duration: 0.32) }
+
+    var body: some View {
+        GeometryReader { geometry in
+            if model.hasActiveLive, let frame = barFrame ?? detailFrame {
+                let root = geometry.frame(in: .global)
+                let topInset = detailFrame.map { $0.minY - root.minY } ?? 110
+                let safeBottom = detailFrame?.maxY ?? (barFrame.map { $0.maxY + 56 } ?? root.maxY - 34)
+                let left = min(root.width / 2, geometry.safeAreaInsets.leading + 44)
+                let right = max(left, root.width - geometry.safeAreaInsets.trailing - 44)
+                let top = min(root.height / 2, max(0, topInset) + 36)
+                let bottom = max(top, min(root.height, safeBottom - root.minY) - 36)
+                let dockPoint = CGPoint(x: dockedOnRight ? right : left, y: top + dockHeight * (bottom - top))
+                let barPoint = CGPoint(x: frame.midX - root.minX, y: frame.midY - root.minY)
+
+                Button(action: open) {
+                    label(barWidth: frame.width)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(isCompact ? "live.floating" : "live.open")
+                .accessibilityLabel(isCompact ? (model.series == .wec ? "Open WEC Live" : "Open F1 Live") : model.liveMeetingName)
+                .accessibilityHint("Open live timing")
+                .accessibilityActions {
+                    if isCompact {
+                        Button("Dock Left") { dock(onRight: false, height: dockHeight) }
+                        Button("Dock Right") { dock(onRight: true, height: dockHeight) }
+                    }
+                }
+                .matchedTransitionSource(id: "live-player", in: transitionNamespace)
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 8, coordinateSpace: .named(dragSpace))
+                        .updating($isDragging) { _, active, _ in active = true }
+                        .onChanged { value in
+                            dragPosition = CGPoint(
+                                x: min(right, max(left, dockPoint.x + value.translation.width)),
+                                y: min(bottom, max(top, dockPoint.y + value.translation.height))
+                            )
+                        }
+                        .onEnded { value in
+                            let x = dockPoint.x + value.translation.width
+                            let y = min(bottom, max(top, dockPoint.y + value.translation.height))
+                            dock(onRight: x >= (left + right) / 2,
+                                 height: bottom > top ? (y - top) / (bottom - top) : dockHeight)
+                        },
+                    including: isCompact ? .all : .none
+                )
+                .position(isCompact ? (dragPosition ?? dockPoint) : barPoint)
+                .animation(animation, value: isCompact)
+                .onChange(of: isDragging) { _, active in
+                    guard !active, let point = dragPosition else { return }
+                    dock(onRight: point.x >= (left + right) / 2,
+                         height: bottom > top ? (point.y - top) / (bottom - top) : dockHeight)
+                }
+            }
+        }
+        .coordinateSpace(name: dragSpace)
+        .onChange(of: isCompact) { _, compact in
+            guard !compact else { return }
+            dockedOnRight = true
+            dockHeight = 1
+            dragPosition = nil
+        }
+    }
+
+    private func dock(onRight: Bool, height: CGFloat) {
+        // Keep the drag position displayed until the same transaction installs the new dock.
+        withAnimation(animation) {
+            dockedOnRight = onRight
+            dockHeight = height
+            dragPosition = nil
+        }
+    }
+
+    private func label(barWidth: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            LiveMiniBarDetails()
+                .padding(.leading, 86)
+                .padding(.trailing, 14)
+                .frame(width: max(56, barWidth))
+                .opacity(isCompact ? 0 : 1)
+                .accessibilityHidden(isCompact)
+
+            MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: model.series == .wec))
+                .renderingMode(.template)
+                .resizable().scaledToFit()
+                .frame(width: isCompact ? 34 : 62, height: isCompact ? 18 : 28)
+                .foregroundStyle(isCompact ? WebDashboardStyle.adaptive(dark: 0xffffff, light: 0x8e1019) : .primary)
+                .padding(.leading, isCompact ? 11 : 14)
+                .accessibilityHidden(true)
+        }
+        .frame(width: isCompact ? 56 : barWidth, height: isCompact ? 56 : 48, alignment: .leading)
+        .clipShape(.capsule)
+        .contentShape(.capsule)
+        .glassEffect(
+            (isCompact ? Glass.clear : Glass.regular).interactive(),
+            in: .capsule
+        )
+    }
+}
+
+private struct LiveMiniBarDetails: View {
     @EnvironmentObject private var model: MobileModel
 
     var body: some View {
         let snapshot = model.liveSnapshot
         HStack(spacing: 10) {
-            MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: model.series == .wec))
-                .renderingMode(.template)
-                .resizable().scaledToFit()
-                .frame(width: 62, height: 28)
-                .accessibilityHidden(true)
-
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     if let countryCode = model.liveCountryCode {
@@ -652,11 +782,6 @@ struct LiveMiniBar: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 48)
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint("Open live timing")
     }
 }
 
@@ -679,13 +804,24 @@ struct PulseSettingsButton: View {
     }
 }
 
+extension EnvironmentValues {
+    @Entry var usesDashboardCardStyle = false
+}
+
 struct PulseCard<Content: View>: View {
+    @Environment(\.usesDashboardCardStyle) private var usesDashboardCardStyle
     @ViewBuilder var content: Content
+
     var body: some View {
-        content.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .background(PulseStyle.surface, in: PulseStyle.cardShape)
-            .containerShape(PulseStyle.cardShape)
-            .pulseReveal()
+        let layout = content.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        if usesDashboardCardStyle {
+            layout.dashboardPanel(WebDashboardStyle.homePanel)
+        } else {
+            layout
+                .background(PulseStyle.surface, in: PulseStyle.cardShape)
+                .containerShape(PulseStyle.cardShape)
+                .pulseReveal()
+        }
     }
 }
 
@@ -740,19 +876,6 @@ struct PulsePressStyle: ButtonStyle {
         configuration.label.opacity(configuration.isPressed ? 0.82 : 1)
             .scaleEffect(reduceMotion ? 1 : (configuration.isPressed ? 0.98 : 1))
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func liveBottomAccessory<Content: View>(isEnabled: Bool, @ViewBuilder content: () -> Content) -> some View {
-        if #available(iOS 26.1, *) {
-            tabViewBottomAccessory(isEnabled: isEnabled, content: content)
-        } else if isEnabled {
-            tabViewBottomAccessory(content: content)
-        } else {
-            self
-        }
     }
 }
 
@@ -990,7 +1113,7 @@ extension LiveSnapshot {
         switch sessionStatus?.lowercased() {
         case "started", "green", "inprogress", "running", "live": trackCondition == .red ? "Red Flag" : "In Progress"
         case "finished", "finalised", "finalized", "ends": "Finished"
-        case "aborted": "Aborted"
+        case "aborted", "suspended": "Red Flag"
         case "inactive": "Awaiting Start"
         default: "Unknown Status"
         }

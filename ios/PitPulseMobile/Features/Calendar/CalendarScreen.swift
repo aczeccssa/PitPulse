@@ -10,6 +10,7 @@ struct WebHomeScreen<Header: View>: View {
     @State private var expandedCountdown: NextSession?
     @Namespace private var countdownTransition
     let header: Header
+    @Binding var showCalendar: Bool
     let openTab: (DashboardTab) -> Void
 
     var body: some View {
@@ -83,15 +84,31 @@ struct WebHomeScreen<Header: View>: View {
             .foregroundStyle(WebDashboardStyle.homeText)
             .background(WebDashboardStyle.homeBackground)
             .dashboardHeader(header)
+            .navigationDestination(isPresented: $showCalendar) {
+                CalendarScreen()
+            }
             .fullScreenCover(isPresented: Binding(
                 get: { expandedCountdown != nil },
                 set: { if !$0 { expandedCountdown = nil } }
             )) {
                 if let target = expandedCountdown {
-                    LandscapeCover(background: homeCountdownGradient) { close in
-                        HomeCountdownFullscreen(title: "\(place(target.meeting)): \(target.session.sessionType.webTitle)",
-                                                start: target.session.startTime, close: close)
+                    GeometryReader { geometry in
+                        let size = geometry.size
+                        let portrait = size.height > size.width
+                        HomeCountdownFullscreen(
+                            title: "\(place(target.meeting)): \(target.session.sessionType.webTitle)",
+                            start: target.session.startTime,
+                            close: { expandedCountdown = nil }
+                        )
+                        .frame(width: portrait ? size.height : size.width, height: portrait ? size.width : size.height)
+                        .rotationEffect(.degrees(portrait ? 90 : 0))
+                        .position(x: size.width / 2, y: size.height / 2)
                     }
+                    .ignoresSafeArea()
+                    .presentationBackground(homeCountdownGradient)
+                    .persistentSystemOverlays(.hidden)
+                    .statusBarHidden()
+                    .environment(\.colorScheme, .dark)
                     .pulseNavigationZoom("home-countdown", in: countdownTransition)
                 }
             }
@@ -162,11 +179,17 @@ struct WebHomeScreen<Header: View>: View {
     }
 
     private func schedulePanel(stretch: Bool) -> some View {
+        Button { showCalendar = true } label: {
+            scheduleSummary(stretch: stretch)
+        }
+        .buttonStyle(PulsePressStyle())
+        .accessibilityHint("Opens the race calendar")
+        .accessibilityIdentifier("home.schedule.open")
+    }
+
+    private func scheduleSummary(stretch: Bool) -> some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let display = schedule(at: context.date).display
-            let finished = Set((model.seasonArchive?.data ?? []).filter { $0.sessions["race"]?.rows.isEmpty == false }.map(\.id))
-            let total = meetings.count
-            let completed = meetings.count { finished.contains($0.id) }
             VStack(alignment: .leading, spacing: 12) {
                 Text("\(String(model.season)) Schedule").font(.headline)
                 HStack(spacing: 6) {
@@ -175,17 +198,6 @@ struct WebHomeScreen<Header: View>: View {
                     }
                     Text(display.map(place) ?? "No schedule").font(.system(size: 20, weight: .bold))
                 }
-                HStack(spacing: 6) {
-                    HStack(spacing: 1) {
-                        ForEach(0..<total, id: \.self) { index in
-                            Rectangle().fill(index < completed ? Color(red: 0.08, green: 0.50, blue: 0.24) : Color.gray.opacity(0.40))
-                                .frame(maxWidth: 2, maxHeight: 10)
-                        }
-                    }
-                    PulseNumber("\(total == 0 ? 0 : Int((Double(completed) / Double(total) * 100).rounded()))%")
-                        .font(.system(size: 10)).monospacedDigit().fixedSize()
-                }
-                .accessibilityLabel("\(completed) of \(total) races with results")
                 if let display {
                     CircuitOutlineView(meetingID: display.id, animated: true)
                         .id(display.id)
@@ -201,6 +213,7 @@ struct WebHomeScreen<Header: View>: View {
     private func lovedDriverPanel(stretch: Bool) -> some View {
         NavigationLink {
             FavoriteDriverScreen()
+                .dashboardDetail()
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
@@ -304,7 +317,6 @@ struct WebHomeScreen<Header: View>: View {
                     Text("\(String(model.season)) \(name) Standings")
                         .font(.headline)
                     Spacer(minLength: 8)
-                    PulseChevron()
                 }.padding(16).contentShape(.rect)
             Grid(horizontalSpacing: 10, verticalSpacing: 0) {
                 GridRow {
@@ -447,6 +459,14 @@ private struct HomeCountdownFullscreen: View {
         .animation(.snappy(duration: 0.24), value: pull == 0)
         .contentShape(Rectangle())
         .gesture(pullToDismiss)
+        .overlay(alignment: .topTrailing) {
+            Button("Close Countdown", systemImage: "xmark", action: close)
+                .labelStyle(.iconOnly)
+                .buttonStyle(.glass)
+                .tint(.white)
+                .padding(.top, 18)
+                .padding(.trailing, 62)
+        }
         .accessibilityAction(.escape, close)
     }
 
@@ -471,20 +491,20 @@ private struct CountdownFlipTile: View {
     let previous: Int
 
     var body: some View {
+        let animatesFlips = !reduceMotion && previous != value
         GeometryReader { geometry in
             let size = geometry.size
             Color.clear.keyframeAnimator(initialValue: 1.0, trigger: value) { _, phase in
-                let animating = !reduceMotion && previous != value
                 ZStack {
                     VStack(spacing: 0) {
                         face(value, top: true, size: size)
-                        face(animating && phase < 0.5 ? previous : value, top: false, size: size)
+                        face(animatesFlips && phase < 0.5 ? previous : value, top: false, size: size)
                     }
-                    if animating && phase < 0.5 {
+                    if animatesFlips && phase < 0.5 {
                         face(previous, top: true, size: size)
                             .rotation3DEffect(.degrees(-phase * 180), axis: (1, 0, 0), anchor: .bottom)
                             .frame(maxHeight: .infinity, alignment: .top)
-                    } else if animating && phase < 1 {
+                    } else if animatesFlips && phase < 1 {
                         face(previous, top: false, size: size)
                             .frame(maxHeight: .infinity, alignment: .bottom)
                         face(value, top: false, size: size)
@@ -994,74 +1014,158 @@ private struct HomeSeasonRecords: View {
 
 struct CalendarScreen: View {
     @EnvironmentObject private var model: MobileModel
-    @State private var mode = 0
     @State private var filter = 0
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
+    @State private var position = ScrollPosition(idType: Meeting.ID.self)
+    @State private var positionedCalendar = false
 
-    private var filteredMeetings: [Meeting] {
-        model.meetings.filter { meeting in
-            let matchesSearch = search.isEmpty || [meeting.name, meeting.location, meeting.country].contains {
-                $0.localizedCaseInsensitiveContains(search)
+    private func upcoming(_ meeting: Meeting, at now: Date) -> Bool {
+        meeting.status == .scheduled && !raceFinished(meeting, at: now)
+    }
+
+    private func raceFinished(_ meeting: Meeting, at now: Date) -> Bool {
+        guard let race = meeting.sessions.first(where: { $0.sessionType == .race }) else {
+            return meeting.endDate < now
+        }
+        guard race.status != .live, race.status != .cancelled, race.status != .postponed else { return false }
+        return race.status == .finished
+            || model.seasonArchive?.data.first { $0.id == meeting.id }?.sessions["race"]?.rows.isEmpty == false
+            || (race.endTime ?? meeting.endDate) < now
+    }
+
+    private func filteredMeetings(at now: Date) -> [Meeting] {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return model.meetings.filter { meeting in
+            let matchesSearch = query.isEmpty || [meeting.name, meeting.location, meeting.country].contains {
+                $0.localizedCaseInsensitiveContains(query)
             }
-            let upcoming = meeting.endDate >= .now && meeting.status != .cancelled
-            return matchesSearch && (filter == 0 || (filter == 1 ? upcoming : !upcoming))
+            return matchesSearch && (filter == 0 || (filter == 1 ? upcoming(meeting, at: now) : !upcoming(meeting, at: now)))
         }
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 10) {
-                PulseSectionPicker(sections: [(0, "Calendar"), (1, "Results")], selection: $mode)
-                    .padding(.horizontal, 20)
-                if mode == 0 { calendar } else { SeasonResultsIndex() }
-            }
+        calendar
             .background(PulseStyle.background)
-            .navigationTitle("Race")
+            .navigationTitle("Calendar")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { PulseSettingsButton() }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if mode == 0 {
-                        Menu {
-                            Picker("Calendar Range", selection: $filter) {
-                                Text("All").tag(0)
-                                Text("Upcoming").tag(1)
-                                Text("Completed").tag(2)
-                            }
-                        } label: {
-                            Label("Filter Races", systemImage: filter == 0 ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Calendar Range", selection: $filter) {
+                            Text("All").tag(0)
+                            Text("Upcoming").tag(1)
+                            Text("Completed").tag(2)
                         }
+                    } label: {
+                        Label("Filter Races", systemImage: filter == 0 ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
             }
+            .dashboardDetail()
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                searchBar
+            }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").accessibilityHidden(true)
+            TextField("Search races or locations", text: $search)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .focused($searchFocused)
+                .onSubmit { searchFocused = false }
+                .accessibilityIdentifier("calendar.search")
+            if !search.isEmpty {
+                Button("Clear Search", systemImage: "xmark.circle.fill") { search = "" }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
         }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .frame(minHeight: 48)
+        .glassEffect(.regular, in: .capsule)
+        .frame(maxWidth: 640)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 6)
     }
 
     private var calendar: some View {
-        ScrollViewReader { reader in
-            List {
-                ForEach(filteredMeetings) { meeting in row(meeting).id(meeting.id) }
-                if filteredMeetings.isEmpty {
+        let now = Date()
+        let meetings = filteredMeetings(at: now)
+        let nextIndex = meetings.firstIndex { upcoming($0, at: now) }
+        let nextID = nextIndex.map { meetings[$0].id }
+        return ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(meetings.enumerated()), id: \.element.id) { index, meeting in
+                    VStack(spacing: 0) {
+                        if filter == 0, index > 0, meeting.id == nextID {
+                            calendarDivider
+                        } else if index > 0 {
+                            Divider()
+                        }
+                        row(meeting, finished: raceFinished(meeting, at: now))
+                    }
+                    .padding(.horizontal, 20)
+                    .containerRelativeFrame(.horizontal)
+                    .id(meeting.id)
+                }
+                if meetings.isEmpty {
                     if model.loadState.isLoading { PulseSkeleton(label: "Loading schedule…") }
+                    else if !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        ContentUnavailableView.search(text: search)
+                    }
                     else { ContentUnavailableView("No Schedule Available", systemImage: "calendar", description: model.loadState.errorText.map { Text($0.pulseEnglishError) }) }
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .searchable(text: $search, prompt: "Search races or locations")
-            .onChange(of: model.meetings.map(\.id), initial: true) { _, _ in
-                if filter == 0, search.isEmpty, let next = CalendarLogic.featuredMeeting(in: model.meetings, now: .now) {
-                    reader.scrollTo(next.id, anchor: .center)
-                }
-            }
+            .scrollTargetLayout()
+        }
+        .scrollPosition($position)
+        .onChange(of: nextID ?? meetings.last?.id, initial: true) { _, target in
+            guard !positionedCalendar, filter == 0, search.isEmpty, let target else { return }
+            position.scrollTo(id: target, anchor: .center)
+            positionedCalendar = true
         }
         .refreshable { await model.loadCalendar(force: true) }
     }
 
-    private func row(_ meeting: Meeting) -> some View {
-        NavigationLink { WeekendScreen(meeting: meeting) } label: {
+    private var calendarDivider: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Completed", systemImage: "arrowtriangle.up.fill")
+            Rectangle().fill(PulseStyle.red).frame(height: 1).accessibilityHidden(true)
+            Label("Upcoming", systemImage: "arrowtriangle.down.fill")
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(PulseStyle.red)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func row(_ meeting: Meeting, finished: Bool) -> some View {
+        NavigationLink {
+            if finished, meeting.status == .scheduled,
+               let race = meeting.sessions.first(where: { $0.sessionType == .race }) {
+                if let archive = model.seasonArchive?.data.first(where: { $0.id == meeting.id }) {
+                    MeetingResultsDashboard(weekend: archive, initial: race)
+                } else {
+                    ResultsScreen(session: race, meeting: meeting)
+                        .navigationTitle("Race Results")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar(.visible, for: .navigationBar)
+                        .dashboardDetail()
+                }
+            } else {
+                WeekendScreen(meeting: meeting)
+            }
+        } label: {
             HStack(spacing: 14) {
-                Text(meeting.round.map(String.init) ?? "—").font(.system(size: 30, weight: .heavy, design: .rounded)).frame(width: 42, alignment: .leading)
+                Text(meeting.round.map(String.init) ?? "—").font(.system(size: 24, weight: .heavy, design: .rounded)).frame(width: 42, alignment: .leading)
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 5) {
                         FlagBadge(countryCode: meeting.countryCode).accessibilityHidden(true)
@@ -1072,8 +1176,13 @@ struct CalendarScreen: View {
                 }
                 Spacer(minLength: 4)
                 CircuitOutlineView(meetingID: meeting.id).frame(width: 77, height: 42).accessibilityHidden(true)
-            }.padding(.vertical, 10)
-        }.accessibilityIdentifier("meeting.\(meeting.id)").listRowBackground(PulseStyle.background).listRowSeparator(.hidden)
+            }
+            .padding(.vertical, 10)
+            .contentShape(.rect)
+        }
+        .buttonStyle(PulsePressStyle())
+        .navigationLinkIndicatorVisibility(.hidden)
+        .accessibilityIdentifier("meeting.\(meeting.id)")
     }
 }
 
@@ -1185,132 +1294,209 @@ private struct CircuitPath: Shape {
 struct WeekendScreen: View {
     @EnvironmentObject private var model: MobileModel
     let meeting: Meeting
-    @State private var section = 1
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var weather: [Int: WeekendForecast.Forecast.Hour] = [:]
 
-    private var weekendResults: [String: SeasonResultSession] {
+    private var sessions: [Session] { meeting.sessions.sorted { $0.startTime < $1.startTime } }
+    private var archivedSessions: [String: SeasonResultSession] {
         model.seasonArchive?.data.first { $0.id == meeting.id }?.sessions ?? [:]
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text(meeting.name).font(.largeTitle.bold())
-                Text("\(meeting.location), \(meeting.country)").foregroundStyle(.secondary)
-                Picker("Race Weekend", selection: $section) {
-                    Text("Overview").tag(0)
-                    Text("Schedule").tag(1)
-                    Text("Weather").tag(2)
-                    Text("Results").tag(3)
-                }.pickerStyle(.segmented)
-                switch section {
-                case 0:
-                    CircuitOutlineView(meetingID: meeting.id).frame(height: 120)
-                    LabeledContent("Circuit", value: meeting.circuit?.name ?? meeting.location)
-                    LabeledContent("Dates", value: meeting.startDate.formatted(.dateTime.year().month(.abbreviated).day().locale(.pulseEnglish)))
-                    if meeting.status != .scheduled { LabeledContent("Status", value: meeting.status.rawValue.capitalized) }
-                case 2:
-                    WeekendWeather(meetingID: meeting.id)
-                case 3:
-                    results
-                default:
-                    schedule
+            VStack(alignment: .leading, spacing: 12) {
+                overview
+                if meeting.status == .scheduled {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        if let live = sessions.first(where: { $0.status == .live }) {
+                            sessionHighlight(live, live: true, now: context.date)
+                        } else if let next = sessions.first(where: { $0.status == .scheduled && $0.startTime > context.date }) {
+                            sessionHighlight(next, live: false, now: context.date)
+                        }
+                    }
                 }
-            }.padding(20)
+                schedule
+            }
+            .frame(maxWidth: 640)
+            .padding(16)
+            .frame(maxWidth: .infinity)
         }
-        .background(PulseStyle.background)
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .background(WebDashboardStyle.homeBackground)
         .navigationTitle("Race Weekend")
         .navigationBarTitleDisplayMode(.inline)
-        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: section)
-        .task(id: model.dataContext) {
-            if meeting.startDate <= .now, meeting.season == model.season { await model.loadSeasonArchive() }
+        .toolbar(.visible, for: .navigationBar)
+        .dashboardDetail()
+        .task(id: model.dataContext + meeting.id) {
+            if meeting.startDate <= .now, meeting.season == model.season {
+                await model.loadSeasonArchive()
+            }
         }
+        .task(id: model.dataContext + meeting.id) {
+            weather = [:]
+            weather = await WeekendForecast.sessionHours(for: meeting.id, model: model)
+        }
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                FlagBadge(countryCode: meeting.countryCode).accessibilityHidden(true)
+                Text(meeting.location.isEmpty ? meeting.country : meeting.location)
+                Spacer(minLength: 4)
+                if let round = meeting.round {
+                    Text("Round \(round)").monospacedDigit()
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(WebDashboardStyle.homeMuted)
+
+            Text(meeting.name)
+                .font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
+
+            Text(meeting.startDate..<max(meeting.startDate, meeting.endDate),
+                 format: Date.IntervalFormatStyle().month(.abbreviated).day().locale(.pulseEnglish))
+                .font(.subheadline)
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+
+            if meeting.status != .scheduled {
+                Text(meeting.status.rawValue.capitalized)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PulseStyle.red)
+            }
+
+            CircuitOutlineView(meetingID: meeting.id, lineWidth: 3)
+                .frame(maxWidth: 230)
+                .frame(height: 96)
+                .frame(maxWidth: .infinity)
+
+            if let circuit = meeting.circuit, circuit.name != nil || circuit.lengthKm != nil {
+                Divider()
+                ViewThatFits(in: .horizontal) {
+                    HStack { circuitDetails }
+                    VStack(alignment: .leading, spacing: 4) { circuitDetails }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+        }
+        .webHomePanel(minHeight: 0)
+    }
+
+    @ViewBuilder private var circuitDetails: some View {
+        if let name = meeting.circuit?.name, !name.isEmpty {
+            Text(name)
+        }
+        if let length = meeting.circuit?.lengthKm {
+            Text("\(length.formatted(.number.precision(.fractionLength(0...3)))) km")
+                .monospacedDigit()
+        }
+    }
+
+    private func sessionHighlight(_ session: Session, live: Bool, now: Date) -> some View {
+        let forecast = weather[WeekendForecast.hourKey(session.startTime)]
+        return VStack(alignment: .leading, spacing: 7) {
+            Label(live ? "In Progress" : "Next Session", systemImage: live ? "dot.radiowaves.left.and.right" : "clock")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PulseStyle.red)
+            Text(session.sessionType.resultLabel).font(.headline)
+            Text(session.startTime, format: .dateTime.weekday(.wide).month(.abbreviated).day().hour().minute())
+                .font(.subheadline)
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+            if !live {
+                let remaining = HomeCountdownTime(start: session.startTime, now: now)
+                HStack(spacing: 12) {
+                    ForEach(remaining.fields, id: \.0) { unit, value in
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            PulseNumber(String(format: "%02d", value)).font(.title3.bold().monospacedDigit())
+                            Text(unit).font(.caption2).foregroundStyle(WebDashboardStyle.homeMuted)
+                        }
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(remaining.accessibilityLabel)
+            }
+            if let forecast {
+                HStack(spacing: 12) {
+                    if let rain = forecast.precipitationProbability {
+                        Label("\(rain.formatted(.number.precision(.fractionLength(0))))%", systemImage: "umbrella")
+                            .accessibilityLabel("Chance of rain \(rain.formatted(.number.precision(.fractionLength(0)))) percent")
+                    }
+                    if let temperature = forecast.airTemp {
+                        Label("\(temperature.formatted(.number.precision(.fractionLength(0))))°C", systemImage: "thermometer.medium")
+                    }
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+        }
+        .webHomePanel(minHeight: 0)
     }
 
     private var schedule: some View {
-        VStack(spacing: 16) {
-            ForEach(meeting.sessions.sorted { $0.startTime < $1.startTime }) { session in
-                if canOpenResults(session) {
-                    resultsLink(session) {
-                        timing(session)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Weekend Schedule")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.bottom, 8)
+            if sessions.isEmpty {
+                Text("Schedule to be confirmed.").font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+            ForEach(sessions) { session in
+                Divider()
+                if hasEnded(session) {
+                    NavigationLink {
+                        ResultsScreen(session: session, meeting: meeting)
+                            .navigationTitle("Results")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar(.visible, for: .navigationBar)
+                            .dashboardDetail()
+                    } label: {
+                        sessionRow(session, showsResult: true)
                     }
+                    .buttonStyle(PulsePressStyle())
+                    .navigationLinkIndicatorVisibility(.hidden)
+                    .accessibilityIdentifier("session.\(session.id)")
                 } else {
-                    timing(session)
+                    sessionRow(session, showsResult: false)
                 }
             }
         }
+        .webHomePanel(minHeight: 0)
     }
 
-    @ViewBuilder private var results: some View {
-        let finished = meeting.sessions.filter { canOpenResults($0) && result($0) != nil }
-            .sorted { $0.startTime > $1.startTime }
-        if !finished.isEmpty {
-            ForEach(finished) { session in
-                resultsLink(session) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(session.sessionType.resultLabel).font(.headline)
-                        if let leader = result(session)?.rows.first(where: { $0.position == 1 }) {
-                            Text("P1  \(leader.driverName)").font(.subheadline)
-                        }
-                        Text(statusLabel(session)).font(.caption).foregroundStyle(.secondary)
-                    }
+    private func sessionRow(_ session: Session, showsResult: Bool) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(session.sessionType.resultLabel).font(.subheadline.weight(.semibold))
+                if showsResult || session.status != .scheduled {
+                    Text(showsResult ? "Results" : session.status.rawValue.capitalized)
+                        .font(.caption)
+                        .foregroundStyle(showsResult ? WebDashboardStyle.homeMuted : PulseStyle.red)
                 }
             }
-        } else if let error = model.seasonArchiveError {
-            Text(error.pulseEnglishError).foregroundStyle(.secondary)
-            Button("Retry") { Task { await model.loadSeasonArchive(force: true) } }
-        } else if meeting.startDate <= .now && model.seasonArchive == nil {
-            PulseSkeleton(label: "Loading weekend results…")
-        } else {
-            ContentUnavailableView("No Weekend Results", systemImage: "flag.checkered")
-        }
-    }
-
-    private func timing(_ session: Session) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(session.sessionType.resultLabel).font(.headline)
-                Text(statusLabel(session)).font(.caption).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(session.startTime, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                    .font(.caption)
+                    .foregroundStyle(WebDashboardStyle.homeMuted)
+                Text(session.startTime, format: .dateTime.hour().minute())
+                    .font(.subheadline.monospacedDigit())
             }
-            Spacer()
-            Text(session.startTime, format: .dateTime.weekday().hour().minute())
-                .font(.subheadline.monospacedDigit())
+            if showsResult { PulseChevron() }
         }
+        .padding(.vertical, 8)
+        .frame(minHeight: 44)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
     }
 
-    private func resultsLink<Label: View>(_ session: Session, @ViewBuilder label: () -> Label) -> some View {
-        NavigationLink {
-            ResultsScreen(session: session, meeting: meeting)
-                .navigationTitle("Results")
-                .navigationBarTitleDisplayMode(.inline)
-        } label: {
-            HStack {
-                label()
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
-            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-        }.buttonStyle(PulsePressStyle()).accessibilityIdentifier("session.\(session.id)")
-    }
-
-    private func result(_ session: Session) -> SeasonResultSession? {
-        guard let data = weekendResults[session.sessionType.rawValue], !data.rows.isEmpty else { return nil }
-        return data
-    }
-
-    private func canOpenResults(_ session: Session) -> Bool {
-        guard session.status != .cancelled, session.status != .postponed, session.status != .live else { return false }
-        return session.status == .finished || result(session) != nil || (session.endTime ?? meeting.endDate) <= .now
-    }
-
-    private func statusLabel(_ session: Session) -> String {
-        if session.status == .cancelled || session.status == .postponed || session.status == .live {
-            return session.status.rawValue.capitalized
-        }
-        if let report = result(session) {
-            return report.meta.stale ? "Results are stale" : "Results · \(report.meta.quality.rawValue.capitalized)"
-        }
-        if canOpenResults(session) { return "Awaiting Results" }
-        return session.startTime <= .now ? "To Be Confirmed" : "Not Started"
+    private func hasEnded(_ session: Session) -> Bool {
+        guard meeting.status == .scheduled,
+              session.status != .cancelled, session.status != .postponed, session.status != .live else { return false }
+        return session.status == .finished
+            || archivedSessions[session.sessionType.rawValue]?.rows.isEmpty == false
+            || (session.endTime ?? meeting.endDate) <= .now
     }
 }
 
@@ -1321,20 +1507,12 @@ private struct HomeWeekendSchedule: View {
     let active: Session.ID?
     let now: Date
 
-    private static let clock: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "MM/dd hh:mm a"
-        return formatter
-    }()
-
     var body: some View {
         let sessions = meeting.sessions.sorted { $0.startTime < $1.startTime }
         let reached = sessions.firstIndex { $0.id == active }
-        let showTemperature = sessions.contains { weather[hourKey($0.startTime)]?.airTemp != nil }
-        let raceWeather = sessions.first { $0.sessionType == .race }.flatMap { weather[hourKey($0.startTime)] }
+        let showTemperature = sessions.contains { weather[WeekendForecast.hourKey($0.startTime)]?.airTemp != nil }
+        let raceWeather = sessions.first { $0.sessionType == .race }.flatMap { weather[WeekendForecast.hourKey($0.startTime)] }
         let showVisibility = raceWeather?.visibilityMeters != nil
-        let showRain = raceWeather?.precipitationProbability != nil
         VStack(alignment: .leading, spacing: 9) {
             Text("Weekend Schedule").font(.headline).accessibilityAddTraits(.isHeader)
             VStack(spacing: 0) {
@@ -1342,54 +1520,76 @@ private struct HomeWeekendSchedule: View {
                     let available = session.status != .cancelled && session.status != .postponed
                     let running = available && (session.status == .live || (session.id == active && session.startTime <= now))
                     let finished = available && (session.status == .finished || (!running && (session.endTime ?? session.startTime.addingTimeInterval(7200)) <= now))
-                    let forecast = weather[hourKey(session.startTime)]
-                    HStack(spacing: 5) {
-                        Text(session.sessionType.resultLabel)
-                            .font(.footnote.weight(.semibold))
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .layoutPriority(1)
-                        if showRain {
-                            detail(session.sessionType == .race ? forecast?.precipitationProbability.map { "\($0.formatted(.number.precision(.fractionLength(0))))%" } : nil,
-                                   symbol: "umbrella", label: "Chance of Rain", width: 41)
-                        }
-                        if showVisibility {
-                            detail(session.sessionType == .race ? forecast?.visibilityMeters.map { "\(($0 / 1000).formatted(.number.precision(.fractionLength(0...1)))) km" } : nil,
-                                   symbol: "eye", label: "Visibility", width: 57)
-                        }
-                        if showTemperature {
-                            detail(forecast?.airTemp.map { "\($0.formatted(.number.precision(.fractionLength(0))))°C" }, label: "Air Temperature", width: 29)
-                        }
-                        detail(Self.clock.string(from: session.startTime), width: 91)
+                    let forecast = weather[WeekendForecast.hourKey(session.startTime)]
+                    NavigationLink {
+                        ResultsScreen(session: session, meeting: meeting)
+                            .navigationTitle("Results")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar(.visible, for: .navigationBar)
+                            .dashboardDetail()
+                    } label: {
+                        sessionRow(session, forecast: forecast, showVisibility: showVisibility,
+                                   showTemperature: showTemperature)
+                            .padding(.leading, 18)
+                            .overlay(alignment: .leading) {
+                                marker(filled: running || finished, reached: index == reached,
+                                       above: index > 0 && index <= (reached ?? -1), below: index < (reached ?? -1))
+                            }
+                            .contentShape(.rect)
                     }
-                    .padding(.vertical, 5)
-                    .frame(minHeight: 33)
-                    .padding(.leading, 18)
-                    .overlay(alignment: .leading) {
-                        marker(filled: running || finished, reached: index == reached,
-                               above: index > 0 && index <= (reached ?? -1), below: index < (reached ?? -1))
-                    }
-                    .accessibilityElement(children: .combine)
+                    .buttonStyle(PulsePressStyle())
                     .accessibilityAddTraits(running ? .isSelected : [])
+                    .accessibilityIdentifier("home.session.\(session.id)")
                 }
             }
         }
         .webHomePanel(minHeight: 0)
         .task {
-            guard let url = model.serverURL else { return }
-            do {
-                let data = try await APIClient(baseURL: url).mapData(path: "/api/v1/meetings/\(meeting.id)/weather", token: model.currentToken)
-                let forecast = try JSONDecoder().decode(WeekendForecast.self, from: data)
-                guard !forecast.meta.stale else { return }
-                let parser = ISO8601DateFormatter()
-                for hour in forecast.data.hours {
-                    if let date = parser.date(from: hour.utc) { weather[hourKey(date)] = hour }
-                }
-            } catch { weather = [:] }
+            weather = await WeekendForecast.sessionHours(for: meeting.id, model: model)
         }
     }
 
-    private func hourKey(_ date: Date) -> Int { Int(floor(date.timeIntervalSince1970 / 3600)) }
+    private func sessionRow(_ session: Session, forecast: WeekendForecast.Forecast.Hour?,
+                            showVisibility: Bool, showTemperature: Bool) -> some View {
+        HStack(spacing: 5) {
+            Text(session.sessionType.resultLabel)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+            detail(forecast?.precipitationProbability.map { "\($0.formatted(.number.precision(.fractionLength(0))))%" } ?? "—",
+                   symbol: forecast?.precipitationIcon, symbolAfter: true, label: "Chance of Rain", width: 49)
+            if showVisibility {
+                detail(session.sessionType == .race ? forecast?.visibilityMeters.map { "\(($0 / 1000).formatted(.number.precision(.fractionLength(0...1)))) km" } : nil,
+                       symbol: "eye", label: "Visibility", width: 57)
+            }
+            if showTemperature {
+                detail(forecast?.airTemp.map { "\($0.formatted(.number.precision(.fractionLength(0))))°C" },
+                       symbol: "thermometer.medium", label: "Air Temperature", width: 44)
+            }
+            detail(relativeTime(session.startTime), width: 104)
+        }
+        .padding(.vertical, 2)
+        .frame(minHeight: 28.8)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
+                                           to: calendar.startOfDay(for: date)).day
+        let day: String
+        switch days {
+        case -1: day = "Yesterday"
+        case 0: day = "Today"
+        case 1: day = "Tomorrow"
+        case let offset? where abs(offset) < 7:
+            day = date.formatted(.dateTime.weekday(.abbreviated).locale(.pulseEnglish))
+        default:
+            day = date.formatted(.dateTime.month(.abbreviated).day().locale(.pulseEnglish))
+        }
+        return "\(day) \(date.formatted(.dateTime.hour().minute().locale(.pulseEnglish)))"
+    }
 
     private func marker(filled: Bool, reached: Bool, above: Bool, below: Bool) -> some View {
         let color = filled || reached ? PulseStyle.red : WebDashboardStyle.homeMuted
@@ -1405,11 +1605,12 @@ private struct HomeWeekendSchedule: View {
             .accessibilityHidden(true)
     }
 
-    private func detail(_ value: String?, symbol: String? = nil, label: String? = nil, width: CGFloat) -> some View {
+    private func detail(_ value: String?, symbol: String? = nil, symbolAfter: Bool = false, label: String? = nil, width: CGFloat) -> some View {
         HStack(spacing: 2) {
             if let value {
-                if let symbol { Image(systemName: symbol) }
+                if let symbol, !symbolAfter { Image(systemName: symbol) }
                 Text(value).lineLimit(1).minimumScaleFactor(0.75)
+                if let symbol, symbolAfter { Image(systemName: symbol) }
             }
         }
             .font(.caption2.monospacedDigit()).foregroundStyle(WebDashboardStyle.homeMuted)
@@ -1427,8 +1628,25 @@ private struct WeekendForecast: Decodable {
             let airTemp: Double?
             let precipitationProbability: Double?
             let visibilityMeters: Double?
-            let rainfall: Double?
+            let precipitation: Double?
+            let weatherCode: Int?
             let windSpeed: Double?
+
+            var precipitationIcon: String? {
+                guard let precipitation, precipitation >= 0 else { return nil }
+                switch precipitation {
+                case 0:
+                    switch weatherCode {
+                    case 0: return "sun.max"
+                    case 1, 2: return "cloud.sun"
+                    case 45, 48: return "cloud.fog"
+                    default: return "cloud"
+                    }
+                case ..<1: return "cloud.drizzle"
+                case ..<4: return "cloud.rain"
+                default: return "cloud.heavyrain"
+                }
+            }
         }
         let status: String
         let hours: [Hour]
@@ -1436,43 +1654,26 @@ private struct WeekendForecast: Decodable {
     struct Meta: Decodable { let stale: Bool }
     let data: Forecast
     let meta: Meta
-}
 
-private struct WeekendWeather: View {
-    @EnvironmentObject private var model: MobileModel
-    let meetingID: String
-    @State private var forecast: WeekendForecast?
-    @State private var error: String?
-    var body: some View {
-        PulseCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Track Weather", systemImage: "cloud.sun").font(.headline)
-                if let forecast {
-                    if forecast.data.status == "historical" {
-                        Text("Archived Observations").font(.caption).foregroundStyle(.secondary)
-                    }
-                    if forecast.meta.stale { Text("Cached Weather Is Stale").font(.caption).foregroundStyle(.orange) }
-                    if forecast.data.hours.isEmpty {
-                        Text(["past_event", "history_pending"].contains(forecast.data.status) ? "Historical weather is not available yet." : "This session is outside the forecast window.").font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    ForEach(Array(forecast.data.hours.enumerated()), id: \.offset) { _, hour in
-                        HStack {
-                            Text(ISO8601DateFormatter().date(from: hour.utc)?.formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(.pulseEnglish)) ?? hour.utc).font(.caption2)
-                            Spacer()
-                            Text(hour.airTemp.map { "\($0.formatted())°C" } ?? "—")
-                            Text(hour.rainfall.map { $0 > 0 ? "Rain" : "Dry" } ?? hour.precipitationProbability.map { "\($0.formatted())%" } ?? "—").foregroundStyle(.secondary)
-                        }.font(.caption.monospacedDigit())
-                    }
-                } else if let error { Text(error.pulseEnglishError).font(.caption).foregroundStyle(.orange) }
-                else { PulseSkeleton(label: "Loading weather…") }
+    static func hourKey(_ date: Date) -> Int {
+        Int(floor(date.timeIntervalSince1970 / 3600))
+    }
+
+    @MainActor
+    static func sessionHours(for meetingID: Meeting.ID, model: MobileModel) async -> [Int: Forecast.Hour] {
+        guard let url = model.serverURL else { return [:] }
+        let context = model.dataContext
+        let client = APIClient(baseURL: url)
+        guard let bytes = try? await client.mapData(path: "/api/v1/meetings/\(meetingID)/weather", token: model.currentToken),
+              let forecast = try? JSONDecoder().decode(Self.self, from: bytes),
+              !forecast.meta.stale, !Task.isCancelled, model.dataContext == context else { return [:] }
+        let parser = ISO8601DateFormatter()
+        var hours: [Int: Forecast.Hour] = [:]
+        for hour in forecast.data.hours {
+            if let date = parser.date(from: hour.utc) {
+                hours[hourKey(date)] = hour
             }
         }
-        .task(id: meetingID) {
-            guard let url = model.serverURL else { error = "Invalid server address"; return }
-            do {
-                let data = try await APIClient(baseURL: url).mapData(path: "/api/v1/meetings/\(meetingID)/weather", token: model.currentToken)
-                forecast = try JSONDecoder().decode(WeekendForecast.self, from: data)
-            } catch { self.error = MobileModel.message(for: error).pulseEnglishError }
-        }
+        return hours
     }
 }

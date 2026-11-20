@@ -2,6 +2,15 @@ import Foundation
 import SharedData
 
 extension MobileModel {
+    nonisolated static func normalizedConstructorID(_ id: String) -> String {
+        switch id.lowercased() {
+        case "racing_bulls", "racing-bulls", "racing bulls", "rb": "rb"
+        case "red bull", "red bull racing", "red-bull", "red_bull": "red_bull"
+        case "haas f1 team", "haas": "haas"
+        default: id
+        }
+    }
+
     var sortedDrivers: [LiveDriver] {
         liveSnapshot.drivers.sorted {
             let left = $0.position ?? $0.classPosition ?? Int.max

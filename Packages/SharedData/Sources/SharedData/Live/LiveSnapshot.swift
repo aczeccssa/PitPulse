@@ -132,14 +132,15 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
     }
 
     public var trackCondition: LiveTrackCondition {
-        sourceStatus == .connected ? LiveTrackCondition(trackStatus) : .unknown
+        if sourceStatus != .disconnected, LiveIslandLogic.isSuspended(sessionStatus) { return .red }
+        return sourceStatus == .connected ? LiveTrackCondition(trackStatus) : .unknown
     }
 
     public var sessionStateLabel: String {
         switch sessionStatus?.lowercased() {
         case "started", "green", "inprogress": return trackCondition == .red ? "红旗暂停" : "进行中"
         case "finished", "finalised", "finalized", "ends": return "已结束"
-        case "aborted": return "已中止"
+        case "aborted", "suspended": return "红旗暂停"
         case "inactive": return "等待开始"
         default: return sessionStatus ?? "状态未知"
         }

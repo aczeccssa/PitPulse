@@ -15,15 +15,13 @@ struct ChampionshipScreen: View {
     @State private var teamError: String?
     @State private var showTeams: Bool
     let constructorsOnly: Bool
-    let driversOnly: Bool
     @State private var showSeasonCharts = false
     @State private var showConstructorCharts = false
     @State private var selection: Set<String>?
     @State private var showChartFilters = false
     @State private var standingDetail: StandingEntry?
-    init(constructorsOnly: Bool = false, showTeams: Bool = false, driversOnly: Bool = false) {
+    init(constructorsOnly: Bool = false, showTeams: Bool = false) {
         self.constructorsOnly = constructorsOnly
-        self.driversOnly = driversOnly
         _showTeams = State(initialValue: showTeams)
     }
 
@@ -60,18 +58,25 @@ struct ChampionshipScreen: View {
             }
             .background(PulseStyle.background)
             .navigationTitle(copy("Constructor Season Charts", "车队赛季图表"))
+            .dashboardDetail()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showChartFilters = true } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
+                        Image(systemName: SeasonChartFilter.icon)
                     }
                     .accessibilityLabel(copy("Filter Teams", "筛选车队"))
                     .accessibilityValue(copy("\(selectedEntries.count) of \(entries.count) teams selected", "已选 \(selectedEntries.count) 支，共 \(entries.count) 支"))
                 }
             }
-            .sheet(isPresented: $showChartFilters) { constructorFilters(isPresented: $showChartFilters) }
+            .sheet(isPresented: $showChartFilters) {
+                NavigationStack {
+                    SeasonChartFilter(entries: entries, selected: $selection,
+                                      title: copy("Filter Teams", "筛选车队"),
+                                      dismiss: { showChartFilters = false })
+                }
+            }
         }
         .task(id: model.dataContext) {
             selection = nil
@@ -83,41 +88,9 @@ struct ChampionshipScreen: View {
         }
     }
 
-    private func constructorFilters(isPresented: Binding<Bool>) -> some View {
-        NavigationStack {
-            List {
-                Button(copy("Select All", "全选")) { selection = nil }
-                Button(copy("Clear", "清空")) { selection = [] }
-                ForEach(entries, id: \.id) { entry in
-                    let checked = selection?.contains(entry.id) ?? true
-                    Button {
-                        var ids = selection ?? Set(entries.map(\.id))
-                        if checked { ids.remove(entry.id) } else { ids.insert(entry.id) }
-                        selection = ids
-                    } label: {
-                        HStack {
-                            AssetImage(name: entry.asset).frame(width: 28, height: 22)
-                            Text(entry.name)
-                            Spacer()
-                            if checked { Image(systemName: "checkmark").foregroundStyle(PulseStyle.red) }
-                        }
-                    }.buttonStyle(.plain)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(PulseStyle.background)
-            .navigationTitle(copy("Filter Teams", "筛选车队"))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(copy("Done", "完成")) { isPresented.wrappedValue = false }
-                }
-            }
-        }
-    }
-
     private var championshipContent: some View {
         List {
-            if !constructorsOnly && !driversOnly {
+            if !constructorsOnly {
                 PulseSectionPicker(sections: [(false, copy("Driver", "车手")), (true, copy("Team", "车队"))], selection: $showTeams)
                     .listRowSeparator(.hidden)
             }
@@ -134,12 +107,7 @@ struct ChampionshipScreen: View {
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
 
-            if driversOnly && !showSeasonCharts, let leader = entries.first {
-                standingsTable(leader)
-                    .listRowBackground(Color.clear).listRowSeparator(.hidden)
-            }
-
-            if !showSeasonCharts && ((!constructorsOnly && !driversOnly) || entries.isEmpty) {
+            if !showSeasonCharts && (!constructorsOnly || entries.isEmpty) {
                 if !entries.isEmpty {
                     if usingTeams ? teams?.meta.stale == true : model.rosterSavedAt == .distantPast {
                         Text(copy("Standings · Stale Cache", "缓存积分 · 已过期")).foregroundStyle(.secondary)
@@ -279,8 +247,10 @@ struct ChampionshipScreen: View {
                 return earlier.ranking - later.ranking
             }
         return PulseCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(copy("\(String(model.season)) \(entity) Standings", "\(String(model.season)) \(entity)积分榜")).font(.headline)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(copy("\(String(model.season)) \(entity) Standings", "\(String(model.season)) \(entity)积分榜"))
+                    .font(.headline)
+                    .padding(.bottom, 10)
                 if usingTeams ? teams?.meta.stale == true : model.rosterSavedAt == .distantPast {
                     Text(copy("Standings · Stale Cache", "缓存积分 · 已过期")).font(.caption).foregroundStyle(.secondary)
                 }
@@ -293,7 +263,9 @@ struct ChampionshipScreen: View {
                         .accessibilityLabel(copy("Position change in the latest archived race", "最近一站归档排名变动"))
                 }.font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                     .accessibilityAddTraits(.isHeader)
+                    .padding(.vertical, 10)
                 ForEach(entries, id: \.id) { entry in
+                    Divider()
                     Button {
                         standingDetail = entry
                     } label: {
@@ -318,7 +290,7 @@ struct ChampionshipScreen: View {
                             }.monospacedDigit().frame(minWidth: 50, alignment: .trailing)
                             constructorEvolution(changes[entry.id])
                                 .frame(width: 38, alignment: .trailing)
-                        }.font(.subheadline).frame(minHeight: 44).contentShape(.rect)
+                        }.font(.subheadline).frame(minHeight: 48).contentShape(.rect)
                             .accessibilityElement(children: .combine)
                     }.buttonStyle(PulsePressStyle())
                         .accessibilityIdentifier("\(usingTeams ? "constructors" : "drivers").detail.\(entry.id)")
@@ -431,7 +403,7 @@ struct ChampionshipScreen: View {
     }
 }
 
-private struct ChampionshipSeasonCharts: View {
+struct ChampionshipSeasonCharts: View {
     @Environment(\.pulseEnglishPresentation) private var english
 
     private func copy(_ englishText: @autoclosure () -> String, _ original: @autoclosure () -> String) -> String {
@@ -443,8 +415,11 @@ private struct ChampionshipSeasonCharts: View {
     let weekends: [SeasonResultWeekend]
     let usingTeams: Bool
     var sharedSelection: Binding<Set<String>?>? = nil
+    var driversDesign = false
+    @State private var driverChart = DriverChart.trends
     @State private var showRanks = false
     @State private var selectedRound: Int?
+    @State private var selectedRankRound: Int?
     @State private var selectedDistributionRound: Int?
     @State private var distributionWeekend: SeasonResultWeekend?
     @State private var selection: Set<String>?
@@ -454,6 +429,10 @@ private struct ChampionshipSeasonCharts: View {
     @State private var championUnavailable = false
     @State private var championStale = false
     @State private var metrics = Set(ResultMetric.allCases)
+
+    private enum DriverChart: Hashable {
+        case trends, points
+    }
 
     private enum ResultMetric: String, CaseIterable, Identifiable {
         case wins = "胜场", podiums = "领奖台", points = "得分完赛", poles = "杆位", retirements = "未完赛 / 未分类"
@@ -543,74 +522,117 @@ private struct ChampionshipSeasonCharts: View {
         let shownIDs = Set(shownEntries.map(\.id))
         let visible = history.filter { shownIDs.contains($0.team.id) }
         VStack(spacing: 12) {
-            if sharedSelection == nil {
+            if driversDesign {
+                PulseSectionPicker(sections: [(.trends, "Trends"), (.points, "Points")], selection: $driverChart)
+            }
+            if sharedSelection == nil && !driversDesign {
                 Button {
                     showFilters = true
                 } label: {
                     HStack {
                         Label(usingTeams ? copy("Filter Teams", "筛选车队") : copy("Filter Drivers", "筛选车手"), systemImage: "line.3.horizontal.decrease")
                         Spacer()
-                        Text("\(shownEntries.count) / \(entries.count)").monospacedDigit()
-                    }.frame(minHeight: 28)
+                        PulseNumber("\(shownEntries.count) / \(entries.count)").monospacedDigit()
+                    }
+                    .padding(.horizontal, driversDesign ? 14 : 0)
+                    .frame(minHeight: driversDesign ? 48 : 28)
+                    .background {
+                        if driversDesign { PulseStyle.cardShape.fill(WebDashboardStyle.homePanel) }
+                    }
+                    .contentShape(.rect)
                 }
                 .buttonStyle(.glass)
+                .accessibilityIdentifier(driversDesign ? "drivers.chartFilter" : "championship.chartFilter")
                 .accessibilityValue(copy("\(shownEntries.count) of \(entries.count) selected", "已选 \(shownEntries.count) 项，共 \(entries.count) 项"))
             }
 
             if shownEntries.isEmpty {
                 ContentUnavailableView(usingTeams ? copy("Select Teams", "请选择车队") : copy("Select Drivers", "请选择车手"), systemImage: "line.3.horizontal.decrease")
             } else {
-                if sharedSelection == nil {
+                if sharedSelection == nil && (!driversDesign || driverChart == .trends) {
                     if visible.isEmpty {
                         ContentUnavailableView(copy("No Standings Trend", "暂无可计算的累计走势"), systemImage: "chart.xyaxis.line")
                     } else {
-                        trend(visible, shownEntries: shownEntries, ranks: showRanks, round: $selectedRound)
+                        if driversDesign {
+                            trend(visible, shownEntries: shownEntries, ranks: false, round: $selectedRound)
+                            trend(visible, shownEntries: shownEntries, ranks: true, round: $selectedRankRound)
+                        } else {
+                            trend(visible, shownEntries: shownEntries, ranks: showRanks, round: $selectedRound)
+                        }
                     }
                 }
-                distribution(visible, shownEntries: shownEntries)
-                if sharedSelection == nil { resultBreakdown(shownEntries) }
+                if !driversDesign || driverChart == .points {
+                    distribution(visible, shownEntries: shownEntries)
+                }
+                if sharedSelection == nil && !driversDesign {
+                    resultBreakdown(shownEntries)
+                }
+            }
+        }
+        .pulseSwap(driverChart)
+        .toolbar {
+            if driversDesign {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Filter Drivers", systemImage: SeasonChartFilter.icon) {
+                        showFilters = true
+                    }
+                    .labelStyle(.iconOnly)
+                    .accessibilityIdentifier("drivers.chartFilter")
+                    .accessibilityValue("\(shownEntries.count) of \(entries.count) selected")
+                }
             }
         }
         .sheet(isPresented: $showFilters) { filters }
         .sheet(item: $distributionWeekend) { weekend in
-            ConstructorRoundPointsSheet(weekend: weekend, season: entries.first?.season ?? model.season)
+            RoundPointsSheet(weekend: weekend, season: entries.first?.season ?? model.season,
+                             driverIDs: driversDesign ? Set(selectedEntries.map(\.id)) : nil)
         }
         .task(id: compareChampion) { await loadPreviousChampion() }
     }
 
     private var filters: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button(copy("Select All", "全选")) { selection = nil }.disabled(selectedEntries.count == entries.count)
-                    Button(copy("Clear", "清空")) { selection = [] }.disabled(selectedEntries.isEmpty)
-                }
-                ForEach(entries, id: \.id) { team in
-                    let checked = selection?.contains(team.id) ?? true
-                    Button {
-                        var ids = selection ?? Set(entries.map(\.id))
-                        if checked { ids.remove(team.id) }
-                        else { ids.insert(team.id) }
-                        selection = ids
-                    } label: {
-                        HStack {
-                            AssetImage(name: team.asset).frame(width: 28, height: 22)
-                            Text(team.name)
-                            Spacer()
-                            if checked { Image(systemName: "checkmark").foregroundStyle(PulseStyle.red) }
-                        }.contentShape(.rect)
-                    }.buttonStyle(.plain)
-                        .accessibilityAddTraits(checked ? .isSelected : [])
-                }
+            if driversDesign {
+                SeasonChartFilter(
+                    entries: entries, selected: $selection, title: "Filter Drivers", dismiss: { showFilters = false }
+                )
+            } else {
+                legacyFilters
             }
-            .scrollContentBackground(.hidden)
-            .background(PulseStyle.background)
-            .navigationTitle(usingTeams ? copy("Filter Teams", "筛选车队") : copy("Filter Drivers", "筛选车手"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(copy("Done", "完成")) { showFilters = false }
-                }
+        }
+    }
+
+    private var legacyFilters: some View {
+        List {
+            Section {
+                Button(copy("Select All", "全选")) { selection = nil }.disabled(selectedEntries.count == entries.count)
+                Button(copy("Clear", "清空")) { selection = [] }.disabled(selectedEntries.isEmpty)
+            }
+            ForEach(entries, id: \.id) { team in
+                let checked = selection?.contains(team.id) ?? true
+                Button {
+                    var ids = selection ?? Set(entries.map(\.id))
+                    if checked { ids.remove(team.id) }
+                    else { ids.insert(team.id) }
+                    selection = ids
+                } label: {
+                    HStack {
+                        AssetImage(name: team.asset).frame(width: 28, height: 22)
+                        Text(team.name)
+                        Spacer()
+                        if checked { Image(systemName: "checkmark").foregroundStyle(PulseStyle.red) }
+                    }.contentShape(.rect)
+                }.buttonStyle(.plain)
+                    .accessibilityAddTraits(checked ? .isSelected : [])
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(PulseStyle.background)
+        .navigationTitle(usingTeams ? copy("Filter Teams", "筛选车队") : copy("Filter Drivers", "筛选车手"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(copy("Done", "完成")) { showFilters = false }
             }
         }
     }
@@ -634,10 +656,29 @@ private struct ChampionshipSeasonCharts: View {
         let selectedRound = round.wrappedValue
         return PulseCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text(ranks ? copy("Rank by Round", "分站排名走势") : copy("Season Points", "赛季累计积分")).font(.headline)
-                PulseSectionPicker(sections: [(false, copy("Cumulative Points", "累计积分")), (true, copy("Rank", "排名"))], selection: $showRanks)
+                HStack {
+                    Text(driversDesign ? (ranks ? "Rank" : "Cumulative Points")
+                         : (ranks ? copy("Rank by Round", "分站排名走势") : copy("Season Points", "赛季累计积分")))
+                        .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                    if driversDesign && !ranks {
+                        Spacer()
+                        Button("Compare with Last Season's Champion",
+                               systemImage: compareChampion ? "chart.line.uptrend.xyaxis.circle.fill" : "chart.line.uptrend.xyaxis.circle") {
+                            compareChampion.toggle()
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.glass)
+                        .accessibilityAddTraits(compareChampion ? .isSelected : [])
+                    }
+                }
+                if !driversDesign {
+                    PulseSectionPicker(sections: [(false, copy("Cumulative Points", "累计积分")), (true, copy("Rank", "排名"))], selection: $showRanks)
+                }
                 if !ranks {
-                    Toggle(copy("Compare with Last Season's Champion", "显示上季冠军基准"), isOn: $compareChampion).font(.subheadline)
+                    if !driversDesign {
+                        Toggle(copy("Compare with Last Season's Champion", "显示上季冠军基准"), isOn: $compareChampion).font(.subheadline)
+                    }
                     if compareChampion {
                         if let previousChampion {
                             Label(copy("\(String(previousChampion.season)) · \(previousChampion.name) · \(previousChampion.points.formatted()) pts", "\(String(previousChampion.season)) · \(previousChampion.name) · \(previousChampion.points.formatted()) 分") + (championStale ? copy(" · Cached", " · 缓存") : ""),
@@ -690,7 +731,7 @@ private struct ChampionshipSeasonCharts: View {
         let overallPoints = overall.reduce(0) { $0 + $1.points }
         let rounded = visible.filter { sample in
             guard let points = sample.roundPoints else { return false }
-            return sharedSelection != nil || points > 0
+            return sharedSelection != nil || driversDesign || points > 0
         }
         let rounds = Set(rounded.map(\.round)).sorted()
         let meetingsByRound = Dictionary(weekends.compactMap { weekend in
@@ -734,7 +775,7 @@ private struct ChampionshipSeasonCharts: View {
         _ rounded: [Sample], rounds: [Int], meetingsByRound: [Int: Meeting], teamNames: [String], colors: [Color]
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            if sharedSelection == nil {
+            if sharedSelection == nil && !driversDesign {
                 Picker(copy("View Round", "查看分站"), selection: $selectedDistributionRound) {
                     Text(copy("Select Round", "选择分站")).tag(Int?.none)
                     ForEach(rounds, id: \.self) { round in
@@ -781,7 +822,7 @@ private struct ChampionshipSeasonCharts: View {
             .chartGesture { proxy in
                 SpatialTapGesture().onEnded { event in
                     guard let value: String = proxy.value(atY: event.location.y), let round = Int(value) else { return }
-                    if sharedSelection != nil {
+                    if sharedSelection != nil || driversDesign {
                         distributionWeekend = weekends.first { $0.meeting.round == round }
                     } else {
                         selectedDistributionRound = round
@@ -812,7 +853,7 @@ private struct ChampionshipSeasonCharts: View {
             selectedMetrics.compactMap { metric -> MetricPoint? in
                 let source = metric == .poles ? qualifying : races
                 guard !source.isEmpty else { return nil }
-                let count = source.count { $0.constructorId == team.id && metric.matches($0) }
+                let count = source.count { identifier($0) == team.id && metric.matches($0) }
                 return MetricPoint(team: team, metric: metric, count: count)
             }
         }
@@ -923,17 +964,24 @@ private struct ChampionshipSeasonCharts: View {
     }
 }
 
-private struct ConstructorRoundPointsSheet: View {
+private struct RoundPointsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let weekend: SeasonResultWeekend
     let season: Int
+    let driverIDs: Set<String>?
 
-    private struct Team: Identifiable {
+    private struct Entry: Identifiable {
         let id: String
         let results: [SessionResult]
-        var name: String { results.first?.team ?? id }
-        var points: Double? { ConstructorRoundPointsSheet.points(results) }
-        var color: Color { DashboardArt.teamColor(id) }
+        let byDriver: Bool
+        var name: String { (byDriver ? results.first?.driverName : results.first?.team) ?? id }
+        var points: Double? { RoundPointsSheet.points(results) }
+        var color: Color { DashboardArt.teamColor(results.first?.constructorId ?? id) }
+        func asset(season: Int) -> String {
+            byDriver
+                ? MotorsportAssetName.helmetName(driverID: id, name: name, season: season)
+                : MotorsportAssetName.name(kind: .teamLogo, id: id, season: season)
+        }
     }
 
     nonisolated private static func points(_ rows: [SessionResult]) -> Double? {
@@ -944,9 +992,11 @@ private struct ConstructorRoundPointsSheet: View {
     var body: some View {
         let race = weekend.sessions["race"]?.rows ?? []
         let sprint = weekend.sessions["sprint"]?.rows ?? []
-        let teams = Dictionary(grouping: race + sprint, by: \.constructorId)
-            .map { Team(id: $0.key, results: $0.value) }
-            .filter { ($0.points ?? 0) > 0 }
+        let byDriver = driverIDs != nil
+        let rows = (race + sprint).filter { driverIDs?.contains($0.driverId) ?? true }
+        let teams = Dictionary(grouping: rows) { byDriver ? $0.driverId : $0.constructorId }
+            .map { Entry(id: $0.key, results: $0.value, byDriver: byDriver) }
+            .filter { byDriver || ($0.points ?? 0) > 0 }
             .sorted { lhs, rhs in
                 let left = lhs.points ?? -1, right = rhs.points ?? -1
                 return left == right ? lhs.name < rhs.name : left > right
@@ -955,42 +1005,44 @@ private struct ConstructorRoundPointsSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    PulseCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(sprint.isEmpty ? "Race Points" : "Round Points · Including Sprint").font(.headline)
-                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-                                ForEach(teams) { team in
-                                    if let points = team.points {
-                                        GridRow(alignment: .center) {
-                                            AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: team.id, season: season))
-                                                .frame(width: 32, height: 24)
-                                                .help(team.name)
-                                            GeometryReader { geometry in
-                                                RoundedRectangle(cornerRadius: 5)
-                                                    .fill(team.color)
-                                                    .frame(width: geometry.size.width * CGFloat(points / maxPoints))
+                    if !byDriver {
+                        PulseCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(sprint.isEmpty ? "Race Points" : "Round Points · Including Sprint").font(.headline)
+                                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
+                                    ForEach(teams) { team in
+                                        if let points = team.points {
+                                            GridRow(alignment: .center) {
+                                                AssetImage(name: team.asset(season: season))
+                                                    .frame(width: 32, height: 24)
+                                                    .help(team.name)
+                                                GeometryReader { geometry in
+                                                    RoundedRectangle(cornerRadius: 5)
+                                                        .fill(team.color)
+                                                        .frame(width: geometry.size.width * CGFloat(points / maxPoints))
+                                                }
+                                                .frame(height: 24)
+                                                PulseNumber(points.formatted()).font(.caption.monospacedDigit().weight(.semibold))
+                                                    .gridColumnAlignment(.trailing)
                                             }
-                                            .frame(height: 24)
-                                            PulseNumber(points.formatted()).font(.caption.monospacedDigit().weight(.semibold))
-                                                .gridColumnAlignment(.trailing)
+                                            .accessibilityElement(children: .ignore)
+                                            .accessibilityLabel(team.name)
+                                            .accessibilityValue(pointsLabel(points))
                                         }
-                                        .accessibilityElement(children: .ignore)
-                                        .accessibilityLabel(team.name)
-                                        .accessibilityValue(pointsLabel(points))
                                     }
                                 }
                             }
                         }
                     }
                     if teams.isEmpty {
-                        Text("No archived constructor points").foregroundStyle(.secondary)
+                        Text(byDriver ? "No archived driver points" : "No archived constructor points").foregroundStyle(.secondary)
                     }
                     VStack(spacing: 10) {
                         ForEach(teams) { team in
                             PulseCard {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack(spacing: 8) {
-                                        AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: team.id, season: season))
+                                        AssetImage(name: team.asset(season: season))
                                             .frame(width: 30, height: 24).accessibilityHidden(true)
                                         Text(team.name).font(.subheadline.bold())
                                         Spacer()
@@ -1002,18 +1054,22 @@ private struct ConstructorRoundPointsSheet: View {
                                     ForEach(drivers.compactMap(\.first)) { driver in
                                         let raceResult = race.first { $0.driverId == driver.driverId && $0.constructorId == team.id }
                                         HStack(spacing: 8) {
-                                            AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.driverId, name: driver.driverName, season: season))
+                                            if !byDriver {
+                                                AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.driverId, name: driver.driverName, season: season))
                                                 .frame(width: 26, height: 23).accessibilityHidden(true)
-                                            Text(driver.driverName)
+                                            }
+                                            Text(byDriver ? driver.team : driver.driverName)
                                             Spacer(minLength: 4)
-                                            if let raceResult {
+                                            if let raceResult = byDriver ? race.first(where: { $0.driverId == driver.id }) : raceResult {
                                                 Text(raceResult.classification.uppercased() == "CLASSIFIED"
                                                      ? raceResult.position.map { "P\($0)" } ?? raceResult.classification.uppercased()
                                                      : raceResult.classification.uppercased())
                                                     .foregroundStyle(.secondary)
                                             }
-                                            PulseNumber(pointsLabel(Self.points(team.results.filter { $0.driverId == driver.driverId })))
-                                                .monospacedDigit().frame(minWidth: 42, alignment: .trailing)
+                                            if !byDriver {
+                                                PulseNumber(pointsLabel(Self.points(team.results.filter { $0.driverId == driver.driverId })))
+                                                    .monospacedDigit().frame(minWidth: 42, alignment: .trailing)
+                                            }
                                         }
                                         .font(.caption)
                                     }
@@ -1045,7 +1101,7 @@ private struct ConstructorRoundPointsSheet: View {
     }
 }
 
-private struct RoundMovement {
+struct RoundMovement {
     let round: Int
     let points: [String: Double]
     let previousRanks: [String: Int]
@@ -1109,16 +1165,18 @@ struct StandingEntry: Hashable {
     let position: Int
     let points: Double
     let wins: Int
+    let number: String?
 
     init(driver: DriverStanding) {
         id = driver.id
         name = driver.driverName
-        team = driver.constructor
-        colorID = driver.constructorIds.first ?? driver.constructor
+        team = driver.seasonTeamName
+        colorID = driver.seasonTeamID
         season = driver.season
         position = driver.position
         points = driver.points
         wins = driver.wins
+        number = driver.driverNumber
         asset = MotorsportAssetName.helmetName(driverID: driver.id, name: driver.driverName, season: driver.season)
     }
 
@@ -1131,6 +1189,7 @@ struct StandingEntry: Hashable {
         position = team.position
         points = team.points
         wins = team.wins
+        number = nil
         asset = MotorsportAssetName.name(kind: .teamLogo, id: team.id, season: team.season)
     }
 }
@@ -1251,7 +1310,12 @@ struct StandingProfile: View {
     }
 
     @EnvironmentObject private var model: MobileModel
+    @Environment(\.dynamicTypeSize) private var profileTypeSize
+    @ScaledMetric(relativeTo: .title2) private var profileHelmetSize = 22.0
     let entry: StandingEntry
+    var driversDesign = false
+    @State private var showsResults = false
+    @Namespace private var driverRoundTransition
     @State private var analysis: APIEnvelope<SeasonAnalysis>?
     @State private var priorAnalysis: SeasonAnalysis?
     @State private var comparePrevious = false
@@ -1262,6 +1326,58 @@ struct StandingProfile: View {
     @State private var error: String?
 
     var body: some View {
+        Group {
+            if driversDesign { redesignedDriver }
+            else { legacyProfile }
+        }
+        .background(driversDesign ? WebDashboardStyle.homeBackground : PulseStyle.background)
+        .navigationTitle(driversDesign ? "Driver Profile" : entry.team == nil ? entry.name : String(entry.season))
+        .dashboardDetail()
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarVisibility(driversDesign ? .visible : .automatic, for: .navigationBar)
+        .toolbar {
+            if entry.team != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    let favorite = model.favoriteDriverID == entry.id
+                    Button {
+                        model.favoriteDriverID = favorite ? nil : entry.id
+                    } label: {
+                        Label(driversDesign ? (favorite ? "Remove favorite driver" : "Set as favorite driver") : copy("Favorite driver", "收藏车手"),
+                              systemImage: driversDesign ? (favorite ? "heart.fill" : "heart") : (favorite ? "star.fill" : "star"))
+                            .foregroundStyle(driversDesign && favorite ? PulseStyle.red : .primary)
+                    }
+                    .accessibilityAddTraits(favorite ? .isSelected : [])
+                }
+            }
+        }
+        .task(id: model.dataContext) {
+            async let archive: Void = entry.team == nil ? () : model.loadSeasonArchive()
+            await load()
+            await archive
+        }
+        .task(id: "\(comparePrevious)-\(model.dataContext)") {
+            guard comparePrevious, let url = model.serverURL else { return }
+            let context = model.dataContext
+            priorAnalysis = nil
+            priorUnavailable = false
+            do {
+                let response = try await APIClient(baseURL: url).seasonAnalysis(
+                    kind: entry.team == nil ? "constructors" : "drivers",
+                    id: entry.id, season: entry.season - 1, token: model.currentToken
+                )
+                guard !Task.isCancelled, model.dataContext == context else { return }
+                priorStale = response.meta.stale
+                if !response.data.cumulativePointsByRound.isEmpty { priorAnalysis = response.data }
+                else { priorUnavailable = true }
+            } catch {
+                guard !Task.isCancelled, model.dataContext == context else { return }
+                priorUnavailable = true
+            }
+        }
+        .refreshable { await refreshProfile() }
+    }
+
+    private var legacyProfile: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 HStack(spacing: 18) {
@@ -1305,45 +1421,223 @@ struct StandingProfile: View {
                 else if analysis == nil { Group { if english { PulseSkeleton(label: "Loading season performance…", chart: true) } else { ProgressView("读取赛季表现…") } } }
             }.padding(.horizontal, 20).padding(.vertical, 20)
         }
-        .background(PulseStyle.background)
-        .navigationTitle(entry.team == nil ? entry.name : String(entry.season))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if entry.team != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        model.favoriteDriverID = model.favoriteDriverID == entry.id ? nil : entry.id
-                    } label: {
-                        Label(copy("Favorite driver", "收藏车手"), systemImage: model.favoriteDriverID == entry.id ? "star.fill" : "star")
+    }
+
+    private func refreshProfile() async {
+        async let archive: Void = driversDesign ? model.loadSeasonArchive(force: true) : ()
+        await load()
+        await archive
+    }
+
+    private var redesignedDriver: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                driverHero
+                PulseSectionPicker(sections: [(false, "Overview"), (true, "Results")], selection: $showsResults)
+                Group {
+                    if showsResults {
+                        if let analysis {
+                            profileResults(analysis.data.rounds)
+                        } else {
+                            profileStatus
+                        }
+                    } else {
+                        if let analysis {
+                            let trend = analysis.data.cumulativePointsByRound
+                            if !trend.isEmpty { profileTrend(trend) }
+                            else if !analysis.data.hasData {
+                                ContentUnavailableView("No Season Results Yet", systemImage: "flag.checkered")
+                            }
+                        } else {
+                            profileStatus
+                        }
+                        driverContext
+                        driverStatistics
+                    }
+                }
+                .transition(.opacity)
+                if let analysis, analysis.meta.stale || !analysis.data.warnings.isEmpty {
+                    Text("Some season results may be incomplete.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(16)
+        }
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .pulseSwap(showsResults)
+        .pulseSwap(analysis != nil)
+    }
+
+    private var driverHero: some View {
+        let tint = DashboardArt.teamColor(entry.colorID)
+        let identity = profileTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 14))
+        return VStack(alignment: .leading, spacing: 14) {
+            identity {
+                AssetImage(name: MotorsportAssetName.name(kind: .driverPhoto, id: entry.id, season: entry.season))
+                    .frame(width: 73, height: 78)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 6) {
+                        AssetImage(name: entry.asset).frame(width: profileHelmetSize, height: profileHelmetSize)
+                        Text(entry.name).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    HStack(spacing: 6) {
+                        if let logo = DashboardArt.image(.teamLogo, id: entry.colorID, season: entry.season) {
+                            Image(uiImage: logo).resizable().scaledToFit().frame(width: 21, height: 17)
+                                .accessibilityHidden(true)
+                        }
+                        if let team = entry.team { Text(team) }
+                        if let number = entry.number, !number.isEmpty { Text("· #\(number)").monospacedDigit() }
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Divider()
+            HStack(alignment: .top, spacing: 8) {
+                profileMetric("Championship", "P\(entry.position)")
+                profileMetric("Points", entry.points.formatted())
+                profileMetric("Wins", entry.wins.formatted())
+            }
+        }
+        .padding(16)
+        .dashboardPanel(WebDashboardStyle.homePanel, line: tint.opacity(0.4))
+    }
+
+    private func profileMetric(_ title: String, _ value: String) -> some View {
+        VStack(spacing: 3) {
+            PulseNumber(value).font(.title3.bold().monospacedDigit())
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(title).font(.caption).foregroundStyle(.secondary)
+                .lineLimit(1).minimumScaleFactor(0.55)
+        }
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+    }
+
+    private func profileTrend(_ trend: [(round: Int, points: Double)]) -> some View {
+        PulseCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Cumulative Points").font(.headline).accessibilityAddTraits(.isHeader)
+                pointsChart(trend)
+                if entry.season > 2023 {
+                    Divider()
+                    Toggle("Compare with Last Season", isOn: $comparePrevious).font(.subheadline)
+                    if comparePrevious && priorAnalysis == nil {
+                        if priorUnavailable {
+                            Text("No comparable points from last season").font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            ProgressView("Loading previous season…").font(.caption)
+                        }
                     }
                 }
             }
         }
-        .task(id: model.dataContext) {
-            async let archive: Void = entry.team == nil ? () : model.loadSeasonArchive()
-            await load()
-            await archive
+    }
+
+    @ViewBuilder private var profileStatus: some View {
+        if let error {
+            ContentUnavailableView {
+                Label("Season Results Unavailable", systemImage: "chart.xyaxis.line")
+            } description: {
+                Text(error.pulseEnglishError)
+            } actions: {
+                Button("Retry") { Task { await refreshProfile() } }.buttonStyle(.glass)
+            }
+        } else {
+            PulseSkeleton(label: "Loading season performance…", chart: !showsResults)
         }
-        .task(id: "\(comparePrevious)-\(model.dataContext)") {
-            guard comparePrevious, let url = model.serverURL else { return }
-            let context = model.dataContext
-            priorAnalysis = nil
-            priorUnavailable = false
-            do {
-                let response = try await APIClient(baseURL: url).seasonAnalysis(
-                    kind: entry.team == nil ? "constructors" : "drivers",
-                    id: entry.id, season: entry.season - 1, token: model.currentToken
-                )
-                guard !Task.isCancelled, model.dataContext == context else { return }
-                priorStale = response.meta.stale
-                if !response.data.cumulativePointsByRound.isEmpty { priorAnalysis = response.data }
-                else { priorUnavailable = true }
-            } catch {
-                guard !Task.isCancelled, model.dataContext == context else { return }
-                priorUnavailable = true
+    }
+
+    @ViewBuilder private func profileResults(_ rounds: [AnalysisRound]) -> some View {
+        let weekends = model.seasonArchive?.data ?? []
+        let weekendsByRound = Dictionary(weekends.compactMap { weekend in
+            weekend.meeting.round.map { ($0, weekend) }
+        }, uniquingKeysWith: { first, _ in first })
+        if rounds.isEmpty {
+            ContentUnavailableView("No Round Results Yet", systemImage: "flag.checkered")
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Round").frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Result / Points")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 10)
+                .accessibilityAddTraits(.isHeader)
+
+                ForEach(Array(rounds.enumerated().reversed()), id: \.offset) { index, round in
+                    Divider()
+                    let weekend = round.round.flatMap { weekendsByRound[$0] }
+                    let type = profileSessionType(round.sessionType)
+                    let title = type?.webTitle ?? "Session"
+                    if let weekend, let type,
+                       let session = weekend.meeting.sessions.first(where: { $0.sessionType == type }),
+                       weekend.sessions[type.rawValue]?.rows.isEmpty == false {
+                        NavigationLink {
+                            MeetingResultsDashboard(weekend: weekend, initial: session)
+                                .pulseNavigationZoom(index, in: driverRoundTransition)
+                        } label: {
+                            profileResultRow(round, title: title, code: weekend.meeting.countryCode, linked: true)
+                                .matchedTransitionSource(id: index, in: driverRoundTransition)
+                        }
+                        .buttonStyle(PulsePressStyle())
+                        .navigationLinkIndicatorVisibility(.hidden)
+                    } else {
+                        profileResultRow(round, title: title, code: weekend?.meeting.countryCode ?? round.country, linked: false)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 4)
+            .dashboardPanel(WebDashboardStyle.homePanel)
+        }
+    }
+
+    private func profileSessionType(_ value: String?) -> SessionType? {
+        guard let value else { return nil }
+        if value == "正赛" { return .race }
+        return SessionType.allCases.first { LiveIslandLogic.sessionTypeMatches(value, $0) }
+    }
+
+    private func profileResultRow(_ round: AnalysisRound, title: String, code: String?, linked: Bool) -> some View {
+        let result = round.entries.first { $0.driverId == entry.id } ?? round.entries.first
+        let layout = profileTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(spacing: 10))
+        return layout {
+            HStack(spacing: 10) {
+                FlagBadge(countryCode: code, width: 23).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(round.raceName ?? "Grand Prix").font(.subheadline.weight(.semibold))
+                    Text([round.round.map { "R\($0)" }, title].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            HStack(spacing: 9) {
+                VStack(alignment: .trailing, spacing: 4) {
+                    PulseNumber(result?.position.map { "P\($0)" } ?? result?.status?.pulseEnglishError ?? "—")
+                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                    PulseNumber(result?.points.map { "\($0.formatted()) pts" } ?? "—")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+                if linked {
+                    Image(systemName: "chevron.right").font(.caption2.bold()).foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
             }
         }
-        .refreshable { await load() }
+        .padding(.vertical, 9)
+        .frame(minHeight: 56)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private func driverRoundHistory(_ rounds: [AnalysisRound]) -> some View {
@@ -1502,14 +1796,25 @@ struct StandingProfile: View {
     @ViewBuilder private var driverContext: some View {
         if let team = entry.team, entry.season == model.season,
            let leader = model.driverRoster.min(by: { $0.position < $1.position }) {
-            let teammates = model.driverRoster.filter { $0.constructor == team }
+            let teammates = model.driverRoster.filter { driver in
+                driversDesign ? driver.constructorIds.contains(entry.colorID) || driver.constructor == team : driver.constructor == team
+            }
             let other = teammates.filter { $0.id != entry.id }.max { $0.points < $1.points }
-            let teamPoints = teammates.reduce(0) { $0 + $1.points }
+            let sameTeam = driversDesign ? teammates.filter { $0.constructorIds.count <= 1 } : teammates
+            let teamPoints = sameTeam.reduce(0) { $0 + $1.points }
             PulseCard {
                 VStack(alignment: .leading, spacing: 12) {
+                    if driversDesign {
+                        HStack {
+                            Text("Championship Context").font(.headline).accessibilityAddTraits(.isHeader)
+                            Spacer(minLength: 8)
+                            if let other { teammateComparisonLink(other, iconOnly: true) }
+                        }
+                    }
                     LabeledContent(copy("Gap to Leader", "距榜首"), value: entry.position == 1 ? copy("Leader", "领跑") : copy("\((leader.points - entry.points).formatted()) pts", "\((leader.points - entry.points).formatted()) 分"))
                         .font(.subheadline.monospacedDigit())
-                    if teamPoints > 0, entry.points >= 0, entry.points <= teamPoints {
+                    if sameTeam.contains(where: { $0.id == entry.id }), teamPoints > 0,
+                       entry.points >= 0, entry.points <= teamPoints {
                         let share = entry.points / teamPoints
                         VStack(alignment: .leading, spacing: 7) {
                             LabeledContent(copy("Share of Team Points", "车队车手积分占比"), value: share.formatted(.percent.precision(.fractionLength(1))))
@@ -1521,20 +1826,57 @@ struct StandingProfile: View {
                         let gap = (entry.points - other.points).formatted(.number.sign(strategy: .always()))
                         LabeledContent(copy("vs. \(other.driverName)", "对 \(other.driverName)"), value: copy("\(gap) pts", "\(gap) 分"))
                             .font(.subheadline.monospacedDigit())
-                        NavigationLink {
-                            DriverComparison(firstDriverID: entry.id, secondDriverID: other.id)
-                                .navigationTitle("Head to Head")
-                                .navigationBarTitleDisplayMode(.inline)
-                        } label: {
-                            Label(copy("View Teammate Comparison", "查看队友对比"), systemImage: "arrow.left.arrow.right")
-                        }.buttonStyle(.glass)
+                        if !driversDesign { teammateComparisonLink(other, iconOnly: false) }
                     }
                     if model.rosterSavedAt == .distantPast {
-                        Text(copy("Standings cache is stale", "积分缓存已过期")).font(.caption).foregroundStyle(.secondary)
+                        Text(driversDesign ? "Showing saved standings" : copy("Standings cache is stale", "积分缓存已过期"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            if driversDesign, let archive = model.seasonArchive, !archive.meta.stale {
+                let scores = DriverScore(driverID: entry.id, teammateID: other?.id, weekends: archive.data)
+                if scores.performance != nil || scores.teammate != nil {
+                    PulseCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Driver Scores").font(.headline).accessibilityAddTraits(.isHeader)
+                            driverScoreRow("Season Performance (SPS)", value: scores.performance)
+                            driverScoreRow("Teammate Matchup (TMS)", value: scores.teammate)
+                        }
                     }
                 }
             }
         }
+    }
+
+    private func teammateComparisonLink(_ driver: DriverStanding, iconOnly: Bool) -> some View {
+        NavigationLink {
+            DriverComparison(firstDriverID: entry.id, secondDriverID: driver.id)
+                .navigationTitle("Head to Head")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(.visible, for: .navigationBar)
+        } label: {
+            let label = Label(copy("View Teammate Comparison", "查看队友对比"), systemImage: "arrow.left.arrow.right")
+            if iconOnly {
+                label.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+            } else {
+                label
+            }
+        }
+        .buttonStyle(.glass)
+        .navigationLinkIndicatorVisibility(.hidden)
+    }
+
+    private func driverScoreRow(_ label: String, value: Double?) -> some View {
+        LabeledContent(label) {
+            if let value {
+                PulseNumber(value.formatted(.number.precision(.fractionLength(1))))
+                    .monospacedDigit().fontWeight(.semibold)
+            } else {
+                Text("—").foregroundStyle(.secondary)
+            }
+        }
+        .font(.subheadline)
     }
 
     @ViewBuilder private var driverStatistics: some View {
@@ -1613,8 +1955,9 @@ struct StandingProfile: View {
                     let positions = finishes.compactMap { $0.result.position }
                     let counts = Dictionary(grouping: positions, by: { $0 }).mapValues(\.count)
                     let notClassified = rounds.count - positions.count
+                    let unclassifiedLabel = copy(driversDesign ? "Un" : "Unclassified", "未分类")
                     let entries = counts.keys.sorted().map { (label: "P\($0)", count: counts[$0] ?? 0) }
-                        + (notClassified > 0 ? [(label: copy("Unclassified", "未分类"), count: notClassified)] : [])
+                        + (notClassified > 0 ? [(label: unclassifiedLabel, count: notClassified)] : [])
                     if let best = positions.min() {
                         let average = Double(positions.reduce(0, +)) / Double(positions.count)
                         Text(copy("Best P\(best) · Average P\(average.formatted(.number.precision(.fractionLength(1))))", "最佳 P\(best) · 平均 P\(average.formatted(.number.precision(.fractionLength(1))))"))
@@ -1622,7 +1965,8 @@ struct StandingProfile: View {
                     }
                     Chart(entries, id: \.label) { value in
                         BarMark(x: .value(copy("Session", "场次"), value.count), y: .value(copy("Position", "名次"), value.label), height: 24)
-                            .foregroundStyle(value.label == copy("Unclassified", "未分类") ? Color.secondary : PulseStyle.red)
+                            .foregroundStyle(value.label == unclassifiedLabel ? Color.secondary : PulseStyle.red)
+                            .accessibilityLabel(value.label == unclassifiedLabel ? copy("Unclassified", "未分类") : value.label)
                             .cornerRadius(3)
                             .annotation(position: .trailing) {
                                 PulseNumber(value.count.formatted()).font(.caption.monospacedDigit())
