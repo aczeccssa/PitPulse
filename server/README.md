@@ -69,6 +69,12 @@ Each JSON line reports the season, round, session, stored row count, quality and
 - 桌面端采用可展开图标侧栏、全宽数据工作区；赛果页显示所选会话前三名摘要。深浅主题始终跟随系统并响应系统外观变化，不提供手动主题切换。
 - 源文件在 `server/resources/web/`，由 `include_str!`/`include_bytes!` 嵌入二进制，部署仍是单个可执行文件。
 
+## 无凭据 Live 遥测
+
+未配置 `F1_LIVE_ACCESS_TOKEN` 时，服务端默认用第三方 Formula 1 Dashboard 中继补充官方计时。设置 `F1_COMPANION_F1_TELEMETRY_RELAY_ENABLED=false`（或 `[providers]` 的 `f1_telemetry_relay_enabled = false`）可关闭中继。
+
+中继只补充同一官方场次的车载遥测和车辆坐标，沿用 Live 快照和 SSE。计时、轮胎、会话状态仍来自官方源。SQLite 每 5 秒最多写入一份最新缓存；服务重启后，在官方确认同一场次时恢复。每辆车只保留最新样本；超过 30 秒、断线或场次结束后仍可读取，标记 `cached: true`，保留原始采样时间 `utc` 和来源 `source`。
+
 ## Mapbox、天气、雷达与 Radio
 
 在服务运行环境设置 `F1_COMPANION_MAPBOX_PUBLIC_TOKEN`（公开只读 `pk.` token），然后重启服务。该值仅通过现有鉴权保护的 `/api/v1/maps/config` 提供，不写入 TOML、源码或任务报告；`sk.` token 被拒绝。没有 token 时地点数据、计时、天气与消息仍可使用，地图显示缺失配置状态。

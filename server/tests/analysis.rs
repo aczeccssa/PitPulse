@@ -333,7 +333,7 @@ async fn test_loading_deduplicates_and_does_not_block_persisted_or_stale_cache()
 #[tokio::test]
 async fn test_analysis_archive_retains_history_and_migration_keeps_results() {
     let (state, _temp) = state().await;
-    assert_eq!(state.database.user_version().await.unwrap(), 8);
+    assert_eq!(state.database.user_version().await.unwrap(), 9);
     assert_eq!(
         state
             .database

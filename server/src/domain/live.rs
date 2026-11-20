@@ -78,6 +78,10 @@ pub struct LiveLocation {
     pub y: f64,
     pub utc: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub cached: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub received_at: Option<String>,
     pub status: Option<String>,
     pub longitude: Option<f64>,
@@ -88,6 +92,10 @@ pub struct LiveLocation {
 #[serde(rename_all = "camelCase")]
 pub struct LiveTelemetry {
     pub utc: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub cached: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub received_at: Option<String>,
     pub rpm: Option<f64>,

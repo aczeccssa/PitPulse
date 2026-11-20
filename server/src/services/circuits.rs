@@ -129,6 +129,8 @@ mod tests {
             x: 0.,
             y: 0.,
             utc: "2026-10-11T00:00:00Z".into(),
+            source: None,
+            cached: false,
             received_at: None,
             status: None,
             longitude: None,

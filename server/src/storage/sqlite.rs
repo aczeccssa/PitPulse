@@ -19,6 +19,7 @@ use crate::{
     error::StorageError,
 };
 
+const MIGRATION_0009: &str = include_str!("migrations/0009_live_snapshot_cache.sql");
 const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
 const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
@@ -79,6 +80,40 @@ impl Database {
             let connection = connection.blocking_lock();
             connection.query_row("SELECT 1", [], |_| Ok(()))?;
             Ok::<_, rusqlite::Error>(())
+        })
+        .await??;
+        Ok(())
+    }
+
+    pub async fn live_snapshot_cache(&self, series: &str) -> Result<Option<String>, StorageError> {
+        let series = series.to_owned();
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || {
+            connection
+                .blocking_lock()
+                .query_row(
+                    "SELECT snapshot_json FROM live_snapshot_cache WHERE series = ?1",
+                    [series],
+                    |row| row.get(0),
+                )
+                .optional()
+        })
+        .await??)
+    }
+
+    pub async fn save_live_snapshot_cache(
+        &self,
+        series: &str,
+        snapshot: String,
+    ) -> Result<(), StorageError> {
+        let series = series.to_owned();
+        let connection = Arc::clone(&self.connection);
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO live_snapshot_cache (series, snapshot_json) VALUES (?1, ?2)
+                 ON CONFLICT(series) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+                [series, snapshot],
+            )
         })
         .await??;
         Ok(())
@@ -987,6 +1022,10 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < 8 {
         connection.execute_batch(MIGRATION_0008)?;
+    }
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    if version < 9 {
+        connection.execute_batch(MIGRATION_0009)?;
     }
 
     Ok(())

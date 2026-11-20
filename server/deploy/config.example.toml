@@ -8,6 +8,8 @@ path = "/var/lib/f1-companion/pitpulse.sqlite"
 jolpica_enabled = true
 openf1_enabled = true
 f1_live_enabled = true
+# Supplement anonymous F1 timing with the third-party telemetry relay.
+f1_telemetry_relay_enabled = true
 user_agent = "PitPulse/0.1"
 
 [live]

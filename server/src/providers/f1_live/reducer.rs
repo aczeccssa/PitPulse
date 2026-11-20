@@ -7,7 +7,10 @@ use crate::{
     providers::f1_live::{models::TopicPatch, patches::deep_merge},
 };
 
-pub const LIVE_TOPICS: [&str; 13] = [
+const RELAY_SOURCE: &str = "formula1dashboard_relay";
+const RELAY_MAX_AGE_SECONDS: i64 = 30;
+
+pub const LIVE_TOPICS: [&str; 15] = [
     "Heartbeat",
     "SessionInfo",
     "SessionStatus",
@@ -21,6 +24,8 @@ pub const LIVE_TOPICS: [&str; 13] = [
     "WeatherData",
     "TeamRadio",
     "Stints",
+    "TimingAppData",
+    "TyreStintSeries",
 ];
 
 #[derive(Debug, Default, Clone)]
@@ -45,6 +50,10 @@ pub struct ReducedLiveUpdate {
 }
 
 impl LiveTopicReducer {
+    pub fn session_id(&self) -> Option<&str> {
+        self.session_id.as_deref()
+    }
+
     pub fn reset(&mut self) {
         self.topics.clear();
         self.session_id = None;
@@ -111,24 +120,149 @@ impl LiveTopicReducer {
         })
     }
 
+    pub fn apply_relay_telemetry(
+        &mut self,
+        session_id: &str,
+        value: &Value,
+        received_at: &str,
+    ) -> bool {
+        if self.session_id.as_deref() != Some(session_id) {
+            return false;
+        }
+        let Some(latest) = crate::scheduler::add_seconds(received_at, 5) else {
+            return false;
+        };
+        let mut patches = Vec::new();
+        collect_patches(value, &mut patches);
+        let mut changed = false;
+        for patch in patches
+            .into_iter()
+            .filter(|patch| matches!(patch.topic.as_str(), "CarData.z" | "Position.z"))
+        {
+            changed |= self.apply_compressed(&patch, received_at, true, Some(&latest));
+        }
+        changed
+    }
+
+    pub fn has_relay_telemetry(&self) -> bool {
+        self.telemetry
+            .values()
+            .any(|sample| sample.source.as_deref() == Some(RELAY_SOURCE))
+            || self
+                .locations
+                .values()
+                .any(|sample| sample.source.as_deref() == Some(RELAY_SOURCE))
+    }
+
+    pub fn restore_relay_telemetry(&mut self, cached: &LiveSnapshot) {
+        if self.session_id.is_none() || self.session_id != cached.session_id {
+            return;
+        }
+        for driver in &cached.drivers {
+            let number = &driver.number;
+            if let Some(sample) = driver.telemetry.as_ref().filter(|sample| {
+                sample.source.as_deref() == Some(RELAY_SOURCE)
+                    && self
+                        .telemetry_times
+                        .get(number)
+                        .is_none_or(|utc| utc < &sample.utc)
+            }) {
+                self.telemetry_times
+                    .insert(number.clone(), sample.utc.clone());
+                self.telemetry.insert(number.clone(), sample.clone());
+            }
+            if let Some(sample) = driver.location.as_ref().filter(|sample| {
+                sample.source.as_deref() == Some(RELAY_SOURCE)
+                    && self
+                        .position_times
+                        .get(number)
+                        .is_none_or(|utc| utc < &sample.utc)
+            }) {
+                self.position_times
+                    .insert(number.clone(), sample.utc.clone());
+                self.locations.insert(number.clone(), sample.clone());
+                self.position_decoded = self.locations.len();
+                self.position_received = self.locations.len();
+            }
+        }
+    }
+
+    pub fn relay_cache(snapshot: &LiveSnapshot) -> LiveSnapshot {
+        let drivers = snapshot
+            .drivers
+            .iter()
+            .filter_map(|driver| {
+                let telemetry = driver
+                    .telemetry
+                    .as_ref()
+                    .filter(|sample| sample.source.as_deref() == Some(RELAY_SOURCE))
+                    .cloned();
+                let location = driver
+                    .location
+                    .as_ref()
+                    .filter(|sample| sample.source.as_deref() == Some(RELAY_SOURCE))
+                    .cloned();
+                (telemetry.is_some() || location.is_some()).then(|| LiveDriver {
+                    number: driver.number.clone(),
+                    telemetry,
+                    location,
+                    ..LiveDriver::default()
+                })
+            })
+            .collect();
+        LiveSnapshot {
+            session_id: snapshot.session_id.clone(),
+            drivers,
+            ..LiveSnapshot::default()
+        }
+    }
+
     pub fn snapshot(&self, received_at: &str) -> LiveSnapshot {
         let session_info = self.topic("SessionInfo");
+        let session_status = self
+            .topic("SessionStatus")
+            .and_then(|topic| first_string(topic, &["Status"]));
+        let relay_window = session_status
+            .as_deref()
+            .filter(|status| super::telemetry_relay::is_active_status(status))
+            .and_then(|_| relay_window(received_at));
+        let location = |number| {
+            self.locations.get(number).cloned().map(|mut sample| {
+                sample.cached =
+                    is_cached_sample(sample.source.as_deref(), &sample.utc, relay_window.as_ref());
+                sample
+            })
+        };
+        let telemetry = |number| {
+            self.telemetry.get(number).cloned().map(|mut sample| {
+                sample.cached =
+                    is_cached_sample(sample.source.as_deref(), &sample.utc, relay_window.as_ref());
+                sample
+            })
+        };
         let timing_lines = self
             .topic("TimingData")
             .and_then(|topic| topic.get("Lines"))
             .and_then(Value::as_object);
         let driver_list = self.topic("DriverList").and_then(Value::as_object);
         let stints = self.topic("Stints");
+        let tyre_series = self
+            .topic("TyreStintSeries")
+            .and_then(|value| value.get("Stints"));
+        let timing_app = self
+            .topic("TimingAppData")
+            .and_then(|value| value.get("Lines"));
         let mut drivers = timing_lines
             .into_iter()
             .flat_map(|lines| lines.iter())
             .filter(|(_, line)| line.is_object())
             .map(|(number, line)| {
                 let metadata = driver_list.and_then(|list| list.get(number));
-                let (tire_compound, tire_age_laps) = stint_summary(stints, number, line);
+                let (tire_compound, tire_age_laps) =
+                    stint_summary(stints, tyre_series, timing_app, number, line);
                 LiveDriver {
-                    location: self.locations.get(number).cloned(),
-                    telemetry: self.telemetry.get(number).cloned(),
+                    location: location(number),
+                    telemetry: telemetry(number),
                     number: metadata
                         .and_then(|driver| driver.get("RacingNumber"))
                         .and_then(value_string)
@@ -166,10 +300,10 @@ impl LiveTopicReducer {
                 .filter(|(_, driver)| driver.is_object())
                 .map(|(number, driver)| {
                     let (tire_compound, tire_age_laps) =
-                        stint_summary(stints, number, &Value::Null);
+                        stint_summary(stints, tyre_series, timing_app, number, &Value::Null);
                     LiveDriver {
-                        location: self.locations.get(number).cloned(),
-                        telemetry: self.telemetry.get(number).cloned(),
+                        location: location(number),
+                        telemetry: telemetry(number),
                         number: driver
                             .get("RacingNumber")
                             .and_then(value_string)
@@ -270,9 +404,7 @@ impl LiveTopicReducer {
             source_mode: LiveSourceMode::Live,
             status_reason: None,
             session_type: session_info.and_then(|topic| first_string(topic, &["Name", "Type"])),
-            session_status: self
-                .topic("SessionStatus")
-                .and_then(|topic| first_string(topic, &["Status"])),
+            session_status,
             track_status,
             lap_count,
             total_laps: self
@@ -314,7 +446,7 @@ impl LiveTopicReducer {
 
     fn apply_patch(&mut self, patch: &TopicPatch, received_at: &str, feed_sample: bool) -> bool {
         if patch.topic.ends_with(".z") {
-            return self.apply_compressed(patch, received_at, feed_sample);
+            return self.apply_compressed(patch, received_at, feed_sample, None);
         }
         if patch.topic == "WeatherData" {
             if !patch.patch.is_object() {
@@ -375,9 +507,15 @@ impl LiveTopicReducer {
         patch: &TopicPatch,
         received_at: &str,
         feed_sample: bool,
+        relay_latest: Option<&str>,
     ) -> bool {
-        let Some(value) = super::compressed::decode(&patch.patch) else {
-            if patch.topic == "Position.z" {
+        let value = if patch.patch.is_object() && relay_latest.is_some() {
+            Some(patch.patch.clone())
+        } else {
+            super::compressed::decode(&patch.patch)
+        };
+        let Some(value) = value else {
+            if patch.topic == "Position.z" && relay_latest.is_none() {
                 self.position_received = 0;
                 self.position_decoded = 0;
                 self.position_decode_error = true;
@@ -390,7 +528,7 @@ impl LiveTopicReducer {
             ("Entries", "Utc")
         };
         let Some(frames) = value.get(key).and_then(Value::as_array) else {
-            if patch.topic == "Position.z" {
+            if patch.topic == "Position.z" && relay_latest.is_none() {
                 self.position_received = 0;
                 self.position_decoded = 0;
                 self.position_decode_error = true;
@@ -409,6 +547,9 @@ impl LiveTopicReducer {
             else {
                 continue;
             };
+            if relay_latest.is_some_and(|latest| utc.get(..19) > latest.get(..19)) {
+                continue;
+            }
             let cars = frame
                 .get(if key == "Position" { "Entries" } else { "Cars" })
                 .and_then(Value::as_object);
@@ -447,6 +588,8 @@ impl LiveTopicReducer {
                             x,
                             y,
                             utc: utc.clone(),
+                            source: relay_latest.map(|_| RELAY_SOURCE.to_string()),
+                            cached: false,
                             received_at: feed_sample.then(|| received_at.to_string()),
                             status: car
                                 .get("Status")
@@ -471,6 +614,7 @@ impl LiveTopicReducer {
                     let previous = self.telemetry.get(number).cloned();
                     let entry = self.telemetry.entry(number.clone()).or_default();
                     entry.utc = utc.clone();
+                    entry.source = relay_latest.map(|_| RELAY_SOURCE.to_string());
                     entry.received_at = feed_sample.then(|| received_at.to_string());
                     self.telemetry_times.insert(number.clone(), utc.clone());
                     for (field, channel) in [
@@ -533,6 +677,24 @@ impl LiveTopicReducer {
     }
 }
 
+fn relay_window(received_at: &str) -> Option<(String, String)> {
+    Some((
+        crate::scheduler::add_seconds(received_at, -RELAY_MAX_AGE_SECONDS)?,
+        crate::scheduler::add_seconds(received_at, 5)?,
+    ))
+}
+
+fn is_cached_sample(source: Option<&str>, utc: &str, window: Option<&(String, String)>) -> bool {
+    source == Some(RELAY_SOURCE) && !window.is_some_and(|window| relay_time_is_valid(utc, window))
+}
+
+fn relay_time_is_valid(utc: &str, (earliest, latest): &(String, String)) -> bool {
+    utc.get(..19)
+        .zip(earliest.get(..19))
+        .zip(latest.get(..19))
+        .is_some_and(|((utc, earliest), latest)| earliest <= utc && utc <= latest)
+}
+
 // Fixed precision makes mixed upstream fractional timestamps compare chronologically.
 fn canonical_utc(raw: &str) -> Option<String> {
     let raw = raw
@@ -579,7 +741,8 @@ fn project_sectors(value: &Value) -> Vec<LiveSector> {
             LiveSector {
                 value: sector
                     .and_then(|sector| sector.get("Value"))
-                    .and_then(value_string),
+                    .and_then(value_string)
+                    .filter(|value| !value.trim().is_empty()),
                 personal_fastest: sector
                     .and_then(|sector| sector.get("PersonalFastest"))
                     .and_then(Value::as_bool),
@@ -671,28 +834,60 @@ fn value_string(value: &Value) -> Option<String> {
     }
 }
 
-/// Current tyre from the `Stints` topic, with `TimingData` fields as fallback.
+/// The upstream supplies both full stint arrays and sparse patches keyed by stint number.
+fn latest_stint(stints: &Value) -> Option<&Value> {
+    if let Some(rows) = stints.as_array() {
+        return rows.iter().rev().find(|row| row.is_object());
+    }
+    stints
+        .as_object()?
+        .iter()
+        .filter(|(_, row)| row.is_object())
+        .filter_map(|(index, row)| index.parse::<u32>().ok().map(|index| (index, row)))
+        .max_by_key(|(index, _)| *index)
+        .map(|(_, row)| row)
+}
+
 fn stint_summary(
     stints: Option<&Value>,
+    tyre_series: Option<&Value>,
+    timing_app: Option<&Value>,
     number: &str,
     line: &Value,
 ) -> (Option<String>, Option<i64>) {
-    let stints = stints.and_then(|value| value.get("Stints").or(Some(value)));
-    let last = stints
-        .and_then(|stints| stints.get(number))
-        .and_then(Value::as_array)
-        .and_then(|entries| entries.iter().rev().find(|entry| entry.is_object()));
-    let compound = last
-        .and_then(|entry| first_string(entry, &["Compound"]))
-        .or_else(|| first_string(line, &["TyreCompound", "Tyre"]))
-        .map(|compound| compound.to_ascii_uppercase());
-    let age = last
-        .map(|entry| {
-            value_i64(entry.get("TotalLaps")).unwrap_or(0)
-                + value_i64(entry.get("StartLaps")).unwrap_or(0)
-        })
-        .filter(|age| *age > 0);
-    (compound, age)
+    let public_topics = [
+        timing_app
+            .and_then(|lines| lines.get(number))
+            .and_then(|line| line.get("Stints")),
+        tyre_series.and_then(|stints| stints.get(number)),
+    ];
+    let legacy = stints
+        .and_then(|value| value.get("Stints").or(Some(value)))
+        .and_then(|stints| stints.get(number));
+    let compound = |entry: &Value| {
+        first_string(entry, &["Compound", "TyreCompound", "Tyre"])
+            .map(|value| value.trim().to_ascii_uppercase())
+            .filter(|value| !value.is_empty() && value != "UNKNOWN")
+    };
+    let current = public_topics
+        .into_iter()
+        .flatten()
+        .filter_map(latest_stint)
+        .find_map(|stint| compound(stint).map(|name| (name, stint, false)))
+        .or_else(|| {
+            let stint = legacy.and_then(latest_stint)?;
+            Some((compound(stint)?, stint, true))
+        });
+    if let Some((name, stint, legacy)) = current {
+        let total = value_i64(stint.get("TotalLaps")).filter(|age| *age >= 0);
+        let start = value_i64(stint.get("StartLaps")).filter(|age| *age >= 0);
+        let age = match (legacy, total, start) {
+            (true, Some(total), Some(start)) => total.checked_add(start),
+            _ => total.or(start),
+        };
+        return (Some(name), age);
+    }
+    (compound(line), None)
 }
 
 fn value_i64(value: Option<&Value>) -> Option<i64> {
@@ -776,6 +971,100 @@ mod tests {
             .unwrap();
         json!(base64::engine::general_purpose::STANDARD.encode(writer.finish().unwrap()))
     }
+    #[test]
+    fn test_relay_keeps_same_session_car_data_and_position_and_labels_cached_samples() {
+        let mut reducer = LiveTopicReducer::default();
+        let now = "2026-11-20T01:25:08Z";
+        let initial = json!({"SessionInfo":{"Key":11413,"Name":"Practice 1"},
+            "SessionStatus":{"Status":"Started"},"DriverList":{"63":{"RacingNumber":"63"}},
+            "TimingData":{"Lines":{"63":{"Position":5}}}});
+        reducer.apply_initial_snapshot(&initial, now).unwrap();
+        let stale = json!(["CarData.z",{"Entries":[
+            {"Utc":"2026-11-20T01:24:00Z","Cars":{"63":{"Channels":{"2":999}}}}
+        ]}]);
+        assert!(reducer.apply_relay_telemetry("11413", &stale, now));
+        assert!(
+            reducer.snapshot(now).drivers[0]
+                .telemetry
+                .as_ref()
+                .unwrap()
+                .cached
+        );
+        let sample = json!({
+            "TimingData":{"Lines":{"63":{"Position":1}}},"SessionStatus":{"Status":"Finished"},
+            "CarData.z":{"Entries":[{"Utc":"2026-11-20T01:25:07Z","Cars":{"63":{"Channels":{"2":212,"3":5,"4":45,"5":0}}}}]},
+            "Position.z":{"Position":[{"Timestamp":"2026-11-20T01:25:07Z","Entries":{"63":{"X":10,"Y":20}}}]}
+        });
+        assert!(!reducer.apply_relay_telemetry("11412", &sample, now));
+        assert!(reducer.apply_relay_telemetry("11413", &sample, "2026-11-20T01:25:09Z"));
+        let projected = reducer.snapshot("2026-11-20T01:25:09Z");
+        assert_eq!(projected.updated_at.as_deref(), Some(now));
+        assert_eq!(projected.session_status.as_deref(), Some("Started"));
+        let driver = &projected.drivers[0];
+        assert_eq!(driver.position, Some(5));
+        assert_eq!(driver.telemetry.as_ref().unwrap().speed, Some(212.0));
+        assert!(!driver.telemetry.as_ref().unwrap().cached);
+        assert_eq!(
+            driver.telemetry.as_ref().unwrap().source.as_deref(),
+            Some(RELAY_SOURCE)
+        );
+        assert_eq!(driver.location.as_ref().unwrap().x, 10.0);
+        assert!(!reducer.apply_relay_telemetry("11413", &sample, "2026-11-20T01:25:10Z"));
+        let expired = reducer.snapshot("2026-11-20T01:25:40Z");
+        assert_eq!(
+            expired.drivers[0].telemetry.as_ref().unwrap().speed,
+            Some(212.0)
+        );
+        assert!(expired.drivers[0].telemetry.as_ref().unwrap().cached);
+        assert!(expired.drivers[0].location.as_ref().unwrap().cached);
+        let finished = reducer
+            .apply_batch(
+                &json!(["SessionStatus", {"Status":"Finished"}]),
+                "2026-11-20T01:25:11Z",
+            )
+            .unwrap()
+            .snapshot;
+        assert!(finished.drivers[0].telemetry.as_ref().unwrap().cached);
+        assert!(finished.drivers[0].location.as_ref().unwrap().cached);
+        let mut reconnected = LiveTopicReducer::default();
+        reconnected.apply_initial_snapshot(&initial, now).unwrap();
+        reconnected.restore_relay_telemetry(&finished);
+        assert!(!reconnected.apply_relay_telemetry("11413", &stale, now));
+        reconnected
+            .apply_batch(&json!(["SessionInfo", {"Key":11414}]), now)
+            .unwrap();
+        reconnected.restore_relay_telemetry(&finished);
+        assert!(!reconnected.has_relay_telemetry());
+    }
+
+    #[test]
+    fn test_current_tyre_stint_from_live_topics_and_sparse_patches() {
+        let mut reducer = LiveTopicReducer::default();
+        let at = "2026-11-20T01:24:00Z";
+        let snapshot = json!({"DriverList":{"44":{"RacingNumber":"44"}},
+            "TimingData":{"Lines":{"44":{"Sectors":[{"Value":""},{"Value":"25.000"}]}}},
+            "TimingAppData":{"Lines":{"44":{"Stints":[{"Compound":"SOFT","TotalLaps":3,"StartLaps":1}]}}}});
+        let initial = reducer
+            .apply_initial_snapshot(&snapshot, at)
+            .unwrap()
+            .snapshot;
+        assert_eq!(initial.drivers[0].tire_compound.as_deref(), Some("SOFT"));
+        assert_eq!(initial.drivers[0].tire_age_laps, Some(3));
+        assert_eq!(initial.drivers[0].sectors.as_ref().unwrap()[0].value, None);
+        let patch = json!(["TimingAppData",{"Lines":{"44":{"Stints":{"1":{"Compound":"MEDIUM","TotalLaps":0}}}}}]);
+        let next = reducer.apply_batch(&patch, at).unwrap().snapshot;
+        assert_eq!(next.drivers[0].tire_compound.as_deref(), Some("MEDIUM"));
+        assert_eq!(next.drivers[0].tire_age_laps, Some(0));
+        let mut reducer = LiveTopicReducer::default();
+        let series = json!({"DriverList":{"44":{"RacingNumber":"44"}},
+            "TyreStintSeries":{"Stints":{"44":{"2":{"Compound":"SOFT"},"10":{"Compound":"HARD"}}}}});
+        let projected = reducer
+            .apply_initial_snapshot(&series, at)
+            .unwrap()
+            .snapshot;
+        assert_eq!(projected.drivers[0].tire_compound.as_deref(), Some("HARD"));
+    }
+
     #[test]
     fn test_compressed_multiframe_sparse_ordering_and_session_reset() {
         let mut r = LiveTopicReducer::default();

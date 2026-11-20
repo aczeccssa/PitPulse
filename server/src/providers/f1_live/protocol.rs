@@ -11,8 +11,11 @@ use std::time::Duration;
 use axum::http::{Uri, header};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
-use tokio::sync::{mpsc, oneshot};
-use tokio_websockets::{ClientBuilder, Limits, Message};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    sync::{mpsc, oneshot},
+};
+use tokio_websockets::{ClientBuilder, Limits, Message, WebSocketStream};
 
 use super::{
     client::{F1LiveError, F1LiveUpdate, normalize_feed_arguments},
@@ -134,17 +137,26 @@ pub(super) async fn run_cookie_transport(
                 .map_err(|_| F1LiveError::HandshakeFailed)
         }
     };
-    let (mut socket, _) = tokio::time::timeout(Duration::from_secs(20), connect)
+    let (socket, _) = tokio::time::timeout(Duration::from_secs(20), connect)
         .await
         .map_err(|_| F1LiveError::ConnectTimeout)??;
-    socket
-        .send(Message::text("{\"protocol\":\"json\",\"version\":1}\u{1e}"))
-        .await
-        .map_err(|_| F1LiveError::Disconnected)?;
     tracing::info!(
         affinity_cookies = !cookies.is_empty(),
         "F1 Live cookie-aware WebSocket opened"
     );
+    run_hub(socket, &LIVE_TOPICS, updates, stop).await
+}
+
+pub(super) async fn run_hub<T: AsyncRead + AsyncWrite + Unpin>(
+    mut socket: WebSocketStream<T>,
+    topics: &[&str],
+    updates: mpsc::Sender<F1LiveUpdate>,
+    stop: &mut oneshot::Receiver<()>,
+) -> Result<(), F1LiveError> {
+    socket
+        .send(Message::text("{\"protocol\":\"json\",\"version\":1}\u{1e}"))
+        .await
+        .map_err(|_| F1LiveError::Disconnected)?;
     let deadline = tokio::time::sleep(Duration::from_secs(12));
     tokio::pin!(deadline);
     let mut handshake = false;
@@ -171,7 +183,7 @@ pub(super) async fn run_cookie_transport(
                     if !handshake {
                         if value.get("error").is_some() { return Err(F1LiveError::HandshakeFailed); }
                         handshake = true;
-                        let subscribe = json!({"type":1,"invocationId":"pitpulse-subscribe","target":"Subscribe","arguments":[LIVE_TOPICS]});
+                        let subscribe = json!({"type":1,"invocationId":"pitpulse-subscribe","target":"Subscribe","arguments":[topics]});
                         socket.send(Message::text(format!("{subscribe}\u{1e}"))).await.map_err(|_| F1LiveError::Disconnected)?;
                         continue;
                     }
@@ -292,6 +304,9 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn test_cookie_transport_negotiates_subscribes_decodes_and_closes() {
+        use crate::providers::f1_live::reducer::LiveTopicReducer;
+        use base64::{Engine, engine::general_purpose::STANDARD};
+        use std::io::Write;
         use tokio::{
             io::{AsyncReadExt, AsyncWriteExt},
             net::TcpListener,
@@ -341,7 +356,23 @@ mod tests {
                     .unwrap();
             assert_eq!(subscribe["target"], "Subscribe");
             assert_eq!(subscribe["arguments"][0], json!(LIVE_TOPICS));
-            socket.send(Message::text("{\"type\":3,\"invocationId\":\"pitpulse-subscribe\",\"result\":{\"SessionInfo\":{}}}\u{1e}{\"type\":1,\"target\":\"feed\",\"arguments\":[\"LapCount\",{\"CurrentLap\":8},\"now\"]}\u{1e}")).await.unwrap();
+            let now = "2026-11-20T01:25:00Z";
+            let telemetry = json!({"Entries": [{"Utc": now, "Cars": {
+                "63": {"Channels": {"0": 10612, "2": 212, "3": 5, "4": 52, "5": 0}}
+            }}]});
+            let mut encoder =
+                flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::fast());
+            encoder.write_all(telemetry.to_string().as_bytes()).unwrap();
+            let compressed = STANDARD.encode(encoder.finish().unwrap());
+            let initial = json!({"type":3,"invocationId":"pitpulse-subscribe","result":{
+                "SessionInfo":{"Key":11413,"Name":"Practice 1"},
+                "DriverList":{"63":{"RacingNumber":"63","FullName":"George Russell"}}
+            }});
+            let sample = json!({"type":1,"target":"feed","arguments":["CarData.z",compressed,now]});
+            socket
+                .send(Message::text(format!("{initial}\u{1e}{sample}\u{1e}")))
+                .await
+                .unwrap();
             while let Some(message) = socket.next().await {
                 if message.unwrap().is_close() {
                     return;
@@ -360,13 +391,29 @@ mod tests {
             )
             .await
         });
-        tokio::time::timeout(Duration::from_secs(5),async {
-            assert!(matches!(receiver.recv().await,Some(F1LiveUpdate::InitialSnapshot(_))));
-            assert!(matches!(receiver.recv().await,Some(F1LiveUpdate::Feed(value)) if value[1]["CurrentLap"] == 8));
+        tokio::time::timeout(Duration::from_secs(5), async {
+            let now = "2026-11-20T01:25:00Z";
+            let mut reducer = LiveTopicReducer::default();
+            let Some(F1LiveUpdate::InitialSnapshot(initial)) = receiver.recv().await else {
+                panic!("expected subscription snapshot");
+            };
+            reducer.apply_initial_snapshot(&initial, now).unwrap();
+            let Some(F1LiveUpdate::Feed(sample)) = receiver.recv().await else {
+                panic!("expected telemetry frame");
+            };
+            let snapshot = reducer.apply_batch(&sample, now).unwrap().snapshot;
+            let telemetry = snapshot.drivers[0].telemetry.as_ref().unwrap();
+            assert_eq!(telemetry.speed, Some(212.0));
+            assert_eq!(telemetry.rpm, Some(10612.0));
+            assert_eq!(telemetry.gear, Some(5.0));
+            assert_eq!(telemetry.throttle, Some(52.0));
+            assert_eq!(telemetry.brake, Some(0.0));
             stop.send(()).unwrap();
             transport.await.unwrap().unwrap();
             peer.await.unwrap();
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
     }
 
     #[test]

@@ -29,6 +29,8 @@ pub struct ProvidersConfig {
     pub jolpica_enabled: bool,
     pub openf1_enabled: bool,
     pub f1_live_enabled: bool,
+    #[serde(default = "default_f1_telemetry_relay_enabled")]
+    pub f1_telemetry_relay_enabled: bool,
     #[serde(default)]
     pub wec_live_enabled: bool,
     #[serde(default = "default_wec_live_poll_seconds")]
@@ -42,6 +44,10 @@ pub struct ProvidersConfig {
     pub f1_live_interface: Option<String>,
     #[serde(skip)]
     pub wec_live_session_id: Option<i64>,
+}
+
+const fn default_f1_telemetry_relay_enabled() -> bool {
+    true
 }
 
 const fn default_wec_live_poll_seconds() -> u64 {
@@ -88,6 +94,7 @@ impl Default for AppConfig {
                 jolpica_enabled: true,
                 openf1_enabled: true,
                 f1_live_enabled: true,
+                f1_telemetry_relay_enabled: default_f1_telemetry_relay_enabled(),
                 wec_live_enabled: false,
                 wec_live_poll_seconds: default_wec_live_poll_seconds(),
                 user_agent: "PitPulse/0.1 (+https://github.com/)".to_string(),
@@ -179,6 +186,20 @@ impl AppConfig {
             if !value.is_empty() {
                 config.providers.f1_live_interface = Some(value);
             }
+        }
+
+        if let Ok(value) = std::env::var("F1_COMPANION_F1_TELEMETRY_RELAY_ENABLED") {
+            config.providers.f1_telemetry_relay_enabled =
+                match value.trim().to_ascii_lowercase().as_str() {
+                    "1" | "true" | "yes" | "on" => true,
+                    "0" | "false" | "no" | "off" => false,
+                    _ => {
+                        return Err(ConfigError::InvalidValue {
+                            field: "providers.f1_telemetry_relay_enabled".into(),
+                            error: "expected a boolean".into(),
+                        });
+                    }
+                };
         }
 
         if let Ok(value) = std::env::var("F1_COMPANION_WEC_LIVE_ENABLED") {
