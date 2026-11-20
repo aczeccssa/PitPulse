@@ -222,7 +222,15 @@ impl LiveTopicReducer {
         let session_info = self.topic("SessionInfo");
         let session_status = self
             .topic("SessionStatus")
-            .and_then(|topic| first_string(topic, &["Status"]));
+            .and_then(|topic| first_string(topic, &["Status"]))
+            .map(|status| {
+                if status.eq_ignore_ascii_case("Aborted") {
+                    // F1 uses Aborted for a red-flag suspension and Started on resumption.
+                    "Suspended".to_string()
+                } else {
+                    status
+                }
+            });
         let relay_window = session_status
             .as_deref()
             .filter(|status| super::telemetry_relay::is_active_status(status))
@@ -781,7 +789,8 @@ fn clock_seconds(value: &str) -> Option<i64> {
     if !(0..=24).contains(&hours) || !(0..60).contains(&minutes) || !(0..60).contains(&seconds) {
         return None;
     }
-    Some(hours * 3600 + minutes * 60 + seconds)
+    let total = hours * 3600 + minutes * 60 + seconds;
+    (total <= 86_400).then_some(total)
 }
 
 fn collect_patches(value: &Value, output: &mut Vec<TopicPatch>) {
@@ -984,6 +993,36 @@ pub fn is_patch_size_allowed(value: &Value) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn test_red_flag_and_zero_clock_keep_the_same_f1_session_until_finished() {
+        let mut reducer = LiveTopicReducer::default();
+        let at = "2026-11-20T01:24:00Z";
+        let initial = json!({
+            "SessionInfo":{"Key":11413,"Name":"Practice 2"},
+            "SessionStatus":{"Status":"Started"},
+            "TimingData":{"Lines":{"44":{"Position":1}}}
+        });
+        reducer.apply_initial_snapshot(&initial, at).unwrap();
+
+        for (patch, expected) in [
+            (json!(["SessionStatus", {"Status":"Aborted"}]), "Suspended"),
+            (json!(["TrackStatus", {"Status":"5"}]), "Suspended"),
+            (json!(["TrackStatus", {"Status":"1"}]), "Suspended"),
+            (json!(["SessionStatus", {"Status":"Started"}]), "Started"),
+            (
+                json!(["ExtrapolatedClock", {"Utc":at,"Remaining":"00:00:00","Extrapolating":false}]),
+                "Started",
+            ),
+            (json!(["SessionStatus", {"Status":"Finished"}]), "Finished"),
+        ] {
+            let snapshot = reducer.apply_batch(&patch, at).unwrap().snapshot;
+            assert_eq!(snapshot.session_status.as_deref(), Some(expected));
+            assert_eq!(snapshot.session_id.as_deref(), Some("11413"));
+            assert_eq!(snapshot.drivers[0].number, "44");
+        }
+        assert_eq!(reducer.snapshot(at).time_remaining_seconds, Some(0));
+    }
+
     fn zipped(value: Value) -> Value {
         use base64::Engine;
         use std::io::Write;
