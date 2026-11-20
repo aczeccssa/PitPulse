@@ -1559,10 +1559,10 @@ private struct HomeWeekendSchedule: View {
                 .layoutPriority(1)
             detail(forecast?.precipitationProbability.map { "\($0.formatted(.number.precision(.fractionLength(0))))%" } ?? "—",
                    symbol: forecast?.precipitationIcon, symbolAfter: true, label: "Chance of Rain", width: 49)
-            if showVisibility {
-                detail(session.sessionType == .race ? forecast?.visibilityMeters.map { "\(($0 / 1000).formatted(.number.precision(.fractionLength(0...1)))) km" } : nil,
-                       symbol: "eye", label: "Visibility", width: 57)
-            }
+//            if showVisibility {
+//                detail(session.sessionType == .race ? forecast?.visibilityMeters.map { "\(($0 / 1000).formatted(.number.precision(.fractionLength(0...1)))) km" } : nil,
+//                       symbol: "eye", label: "Visibility", width: 57)
+//            }
             if showTemperature {
                 detail(forecast?.airTemp.map { "\($0.formatted(.number.precision(.fractionLength(0))))°C" },
                        symbol: "thermometer.medium", label: "Air Temperature", width: 44)
