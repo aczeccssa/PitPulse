@@ -41,7 +41,7 @@ public enum LiveIslandLogic {
     }
 
     public static func isStarted(_ status: String?) -> Bool {
-        status.map { ["started", "green", "inprogress"].contains(normalizedToken($0)) } ?? false
+        status.map { ["started", "green", "inprogress", "running", "live"].contains(normalizedToken($0)) } ?? false
     }
 
     public static func isFinished(_ status: String?) -> Bool {
@@ -115,7 +115,7 @@ public enum LiveIslandLogic {
             .joined(separator: " ")
     }
 
-    private static func sessionTypeMatches(_ value: String, _ type: SessionType) -> Bool {
+    public static func sessionTypeMatches(_ value: String, _ type: SessionType) -> Bool {
         let token = normalizedToken(value)
         return switch type {
         case .fp1: ["fp1", "practice", "practice1", "firstpractice"].contains(token)

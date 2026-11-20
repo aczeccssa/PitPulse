@@ -19,6 +19,8 @@ private final class ActivityBox: @unchecked Sendable {
 final class LiveActivityController {
     private var box: ActivityBox?
     private var lastState: PitPulseActivityAttributes.ContentState?
+    private var lastSampleDate: Date?
+    private var lastUpdate: Task<Void, Never>?
     private var positionFocus = IslandPositionFocus()
     private var positionSession: String?
     private var positionHistory: [String: Int] = [:]
@@ -28,6 +30,7 @@ final class LiveActivityController {
         if let existing = Activity<PitPulseActivityAttributes>.activities.first {
             box = ActivityBox(existing)
             lastState = existing.content.state
+            lastSampleDate = existing.content.staleDate?.addingTimeInterval(-90)
         }
     }
 
@@ -35,27 +38,46 @@ final class LiveActivityController {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
-    func update(snapshot: LiveSnapshot, mode: IslandContentMode = .overview, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = []) {
+    var activeSeries: LiveSeries? {
+        guard let activity = box?.activity, activity.activityState == .active || activity.activityState == .stale else { return nil }
+        return activity.attributes.seriesTitle == "FIA WEC" ? .wec : .f1
+    }
+
+    var activeFavoriteName: String? { lastState?.favoriteName }
+
+    func waitForLastUpdate() async { await lastUpdate?.value }
+
+    func update(snapshot: LiveSnapshot, mode: IslandContentMode = .overview, favorite: LiveDriver? = nil,
+                favoriteName: String? = nil, selectedNumbers: [String] = [], season: Int = 2026, existingOnly: Bool = false) {
         #if DEBUG
         if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" { return }
         #endif
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-
-        // A reconnect resets the store to a transient "connecting" snapshot;
-        // keep the existing activity alive through it.
-        if snapshot.sourceStatus == .disconnected, snapshot.statusReason == "connecting" {
-            return
+        if box != nil && activeSeries == nil {
+            box = nil
+            lastState = nil
+            lastSampleDate = nil
         }
 
-        if snapshot.sourceStatus == .disconnected
-            || snapshot.sessionId == nil
-            || LiveIslandLogic.isFinished(snapshot.sessionStatus) {
-            end()
-            return
-        }
-
+        guard let sessionID = snapshot.sessionId else { return }
         let expectedSeries = snapshot.isWec ? "FIA WEC" : "Formula 1"
-        if let box, box.activity.attributes.seriesTitle != expectedSeries { end() }
+        let matchesActivity = box.map {
+            $0.activity.attributes.seriesTitle == expectedSeries
+                && ($0.activity.attributes.sessionID == nil || $0.activity.attributes.sessionID == sessionID)
+        } ?? false
+        if existingOnly && !matchesActivity { return }
+        if LiveIslandLogic.isFinished(snapshot.sessionStatus) {
+            if matchesActivity { end() }
+            return
+        }
+
+        guard snapshot.sourceStatus == .connected, !snapshot.drivers.isEmpty,
+              LiveIslandLogic.isStarted(snapshot.sessionStatus) || snapshot.sessionStatus?.lowercased() == "suspended",
+              let sampleDate = snapshot.updatedAt.flatMap(RFC3339.parse),
+              LiveFreshness.isFresh(snapshot.updatedAt, maximumAge: 90) else { return }
+
+        if box != nil && !matchesActivity { end() }
+        if let lastSampleDate, sampleDate < lastSampleDate { return }
         let sessionKey = expectedSeries + String(describing: snapshot.sessionId)
         if positionSession != sessionKey {
             positionFocus = IslandPositionFocus(); positionHistory = [:]; positionArrows = [:]; positionSession = sessionKey
@@ -68,34 +90,39 @@ final class LiveActivityController {
         positionHistory = positions
         positionArrows = positionArrows.filter { now - $0.value.at < 10 && positions[$0.key] != nil }
         positionFocus.update(positions: positions, now: now)
-        let state = Self.contentState(snapshot: snapshot, mode: mode, favorite: favorite, favoriteName: favoriteName, selectedNumbers: selectedNumbers, focusedNumber: positionFocus.driverID, positionChanges: positionArrows.mapValues(\.delta))
+        let state = Self.contentState(snapshot: snapshot, mode: mode, favorite: favorite, favoriteName: favoriteName, selectedNumbers: selectedNumbers, focusedNumber: positionFocus.driverID, positionChanges: positionArrows.mapValues(\.delta), season: season)
 
-        guard state != lastState else { return }
+        let refreshDeadline = lastSampleDate.map { sampleDate.timeIntervalSince($0) >= 30 } ?? true
+        guard state != lastState || refreshDeadline else { return }
 
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(90))
+        let content = ActivityContent(state: state, staleDate: sampleDate.addingTimeInterval(90))
         if let box {
             lastState = state
-            Task { await box.activity.update(content) }
-        } else {
-            let attributes = PitPulseActivityAttributes(
-                seriesTitle: snapshot.isWec ? "FIA WEC" : "Formula 1"
-            )
+            lastSampleDate = sampleDate
+            lastUpdate?.cancel()
+            lastUpdate = Task {
+                guard !Task.isCancelled else { return }
+                await box.activity.update(content)
+            }
+        } else if !existingOnly {
+            let attributes = PitPulseActivityAttributes(seriesTitle: expectedSeries, sessionID: sessionID)
             if let created = try? Activity.request(attributes: attributes, content: content, pushType: nil) {
                 box = ActivityBox(created)
                 lastState = state
+                lastSampleDate = sampleDate
             }
         }
     }
 
     /// One projection for the system activity and the preview; opening a preview never starts an activity.
-    static func contentState(snapshot: LiveSnapshot, mode: IslandContentMode, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = [], focusedNumber: String? = nil, positionChanges: [String: Int] = [:]) -> PitPulseActivityAttributes.ContentState {
+    static func contentState(snapshot: LiveSnapshot, mode: IslandContentMode, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = [], focusedNumber: String? = nil, positionChanges: [String: Int] = [:], season: Int = 2026) -> PitPulseActivityAttributes.ContentState {
         let leader = snapshot.drivers.first { $0.position == 1 }
         let challenger = snapshot.drivers.first { $0.position == 2 }
         let battle = IslandBattleSelection.drivers(in: snapshot.drivers, selected: selectedNumbers, favorite: favorite)
         func detail(_ driver: LiveDriver) -> PitPulseActivityAttributes.Driver {
             let speed = driver.telemetry.flatMap { LiveFreshness.isFresh($0.utc) ? $0.speed : nil }
             return .init(name: driver.name ?? driver.number, position: driver.position ?? driver.classPosition,
-                asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: driver.name ?? "", season: 2026),
+                asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: driver.name ?? "", season: season),
                 gap: driver.gap, interval: driver.interval,
                 speed: speed.flatMap { $0.isFinite && $0 >= 0 && $0 < 1000 ? Int($0.rounded()) : nil },
                 tire: driver.tireLabel, lastLap: driver.lastLap,
@@ -108,25 +135,25 @@ final class LiveActivityController {
         return PitPulseActivityAttributes.ContentState(
             sessionName: snapshot.sessionName ?? snapshot.sessionType ?? "Live",
             meetingName: snapshot.meetingName ?? snapshot.circuitName ?? "PitPulse",
-            statusLabel: snapshot.sourceMode == .live ? snapshot.sessionStateLabel : snapshot.statusLabel,
-            lapLabel: snapshot.lapLabel,
+            statusLabel: snapshot.sourceMode == .live ? snapshot.englishSessionState : snapshot.englishStatus,
+            lapLabel: snapshot.prefersSessionClock ? (snapshot.sessionClockLabel() ?? "—") : snapshot.englishLap,
             leaderName: leader?.name,
             leaderGap: leader?.gap,
             challengerName: challenger?.name,
             challengerGap: challenger?.gap,
-            leaderAsset: leader.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026) },
-            challengerAsset: challenger.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026) },
-            trackLabel: snapshot.trackCondition.label,
+            leaderAsset: leader.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: season) },
+            challengerAsset: challenger.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: season) },
+            trackLabel: snapshot.trackCondition.englishLabel,
             driverCount: snapshot.drivers.count,
             isStale: snapshot.sourceStatus == .stale,
-            updatedLabel: snapshot.lastUpdatedLabel,
+            updatedLabel: snapshot.englishLastUpdated,
             presentation: mode.rawValue,
             favoriteName: favorite?.name ?? favoriteName,
             favoritePosition: favorite?.position ?? favorite?.classPosition,
             favoriteGap: favorite?.gap ?? favorite?.interval,
-            favoriteGapLabel: favorite?.gap != nil ? "距领先" : (favorite?.interval != nil ? "距前车" : nil),
-            favoriteAsset: favorite.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026) },
-            podium: mode == .overview ? snapshot.drivers.filter { (1...3).contains($0.position ?? 0) }.sorted { $0.position! < $1.position! }.map { .init(name: $0.name ?? $0.number, position: $0.position, asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026), gap: $0.gap) } : nil,
+            favoriteGapLabel: favorite?.gap != nil ? "To leader" : (favorite?.interval != nil ? "To car ahead" : nil),
+            favoriteAsset: favorite.flatMap { snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: season) },
+            podium: mode == .overview ? snapshot.drivers.filter { (1...3).contains($0.position ?? 0) }.sorted { $0.position! < $1.position! }.map { .init(name: $0.name ?? $0.number, position: $0.position, asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: season), gap: $0.gap) } : nil,
             battleDrivers: mode == .battle ? battle.map(detail) : nil, trackedDriver: mode == .favorite ? favorite.map(detail) : nil,
             battleGap: IslandBattleSelection.gap(between: battle),
             weather: mode == .overview || mode == .positionChanges ? nil : snapshot.weather.flatMap { weather in
@@ -137,7 +164,7 @@ final class LiveActivityController {
                     airTemperature: weather.airTemp.flatMap { $0.isFinite ? $0 : nil },
                     trackTemperature: weather.trackTemp.flatMap { $0.isFinite ? $0 : nil })
             },
-            positionDrivers: mode == .positionChanges ? window.map { .init(name: $0.name ?? $0.number, position: $0.position, asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: 2026), gap: $0.gap, positionChange: positionChanges[$0.number]) } : nil,
+            positionDrivers: mode == .positionChanges ? window.map { .init(name: $0.name ?? $0.number, position: $0.position, asset: snapshot.isWec ? nil : MotorsportAssetName.helmetName(name: $0.name ?? "", season: season), gap: $0.gap, positionChange: positionChanges[$0.number]) } : nil,
             positionFocus: mode == .positionChanges && sorted.indices.contains(focusIndex) ? (sorted[focusIndex].name ?? sorted[focusIndex].number) : nil,
             positionWindowStart: mode == .positionChanges ? windowStart : nil,
             countryCode: snapshot.countryCode
@@ -154,7 +181,7 @@ final class LiveActivityController {
         var state = PitPulseActivityAttributes.ContentState(
             sessionName: "Race",
             meetingName: "São Paulo Grand Prix",
-            statusLabel: "演示 · 非实时",
+            statusLabel: "Demo",
             lapLabel: "L32/71",
             leaderName: "Lando NORRIS",
             leaderGap: "LEADER",
@@ -162,10 +189,10 @@ final class LiveActivityController {
             challengerGap: "+2.418",
             leaderAsset: "helmet-norris-2026",
             challengerAsset: "helmet-max_verstappen-2026",
-            trackLabel: "绿旗 · 赛道畅通",
+            trackLabel: "Green flag · Track clear",
             driverCount: 22,
             isStale: false,
-            updatedLabel: "刚刚"
+            updatedLabel: "Just now"
         )
         let sectors: [PitPulseActivityAttributes.Sector] = [
             .init(time: "23.658", segments: [2049, 2051, 2049, 2048, 2049, 2051], personalFastest: true),
@@ -193,10 +220,13 @@ final class LiveActivityController {
     #endif
 
     func end() {
+        lastUpdate?.cancel()
+        lastUpdate = nil
         lastState = nil
+        lastSampleDate = nil
         positionFocus = IslandPositionFocus(); positionSession = nil; positionHistory = [:]; positionArrows = [:]
         guard let box else { return }
         self.box = nil
-        Task { await box.activity.end(nil, dismissalPolicy: .immediate) }
+        lastUpdate = Task { await box.activity.end(nil, dismissalPolicy: .immediate) }
     }
 }

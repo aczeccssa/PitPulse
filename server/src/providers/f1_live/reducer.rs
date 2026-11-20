@@ -7,10 +7,11 @@ use crate::{
     providers::f1_live::{models::TopicPatch, patches::deep_merge},
 };
 
-pub const LIVE_TOPICS: [&str; 13] = [
+pub const LIVE_TOPICS: [&str; 16] = [
     "Heartbeat",
     "SessionInfo",
     "SessionStatus",
+    "ExtrapolatedClock",
     "DriverList",
     "TimingData",
     "LapCount",
@@ -21,6 +22,8 @@ pub const LIVE_TOPICS: [&str; 13] = [
     "WeatherData",
     "TeamRadio",
     "Stints",
+    "TimingAppData",
+    "TyreStintSeries",
 ];
 
 #[derive(Debug, Default, Clone)]
@@ -113,19 +116,27 @@ impl LiveTopicReducer {
 
     pub fn snapshot(&self, received_at: &str) -> LiveSnapshot {
         let session_info = self.topic("SessionInfo");
+        let clock = self.topic("ExtrapolatedClock");
         let timing_lines = self
             .topic("TimingData")
             .and_then(|topic| topic.get("Lines"))
             .and_then(Value::as_object);
         let driver_list = self.topic("DriverList").and_then(Value::as_object);
         let stints = self.topic("Stints");
+        let tyre_series = self
+            .topic("TyreStintSeries")
+            .and_then(|value| value.get("Stints"));
+        let timing_app = self
+            .topic("TimingAppData")
+            .and_then(|value| value.get("Lines"));
         let mut drivers = timing_lines
             .into_iter()
             .flat_map(|lines| lines.iter())
             .filter(|(_, line)| line.is_object())
             .map(|(number, line)| {
                 let metadata = driver_list.and_then(|list| list.get(number));
-                let (tire_compound, tire_age_laps) = stint_summary(stints, number, line);
+                let (tire_compound, tire_age_laps) =
+                    stint_summary(stints, tyre_series, timing_app, number, line);
                 LiveDriver {
                     location: self.locations.get(number).cloned(),
                     telemetry: self.telemetry.get(number).cloned(),
@@ -166,7 +177,7 @@ impl LiveTopicReducer {
                 .filter(|(_, driver)| driver.is_object())
                 .map(|(number, driver)| {
                     let (tire_compound, tire_age_laps) =
-                        stint_summary(stints, number, &Value::Null);
+                        stint_summary(stints, tyre_series, timing_app, number, &Value::Null);
                     LiveDriver {
                         location: self.locations.get(number).cloned(),
                         telemetry: self.telemetry.get(number).cloned(),
@@ -288,7 +299,16 @@ impl LiveTopicReducer {
                 decoded: self.position_decoded,
                 calibrated,
             }),
-            time_remaining_seconds: None,
+            time_remaining_seconds: clock
+                .and_then(|topic| topic.get("Remaining"))
+                .and_then(Value::as_str)
+                .and_then(clock_seconds),
+            clock_sample_at: clock
+                .and_then(|topic| topic.get("Utc"))
+                .and_then(value_string),
+            clock_running: clock
+                .and_then(|topic| topic.get("Extrapolating"))
+                .and_then(Value::as_bool),
             elapsed_seconds: None,
             is_time_based: None,
         }
@@ -579,7 +599,8 @@ fn project_sectors(value: &Value) -> Vec<LiveSector> {
             LiveSector {
                 value: sector
                     .and_then(|sector| sector.get("Value"))
-                    .and_then(value_string),
+                    .and_then(value_string)
+                    .filter(|value| !value.trim().is_empty()),
                 personal_fastest: sector
                     .and_then(|sector| sector.get("PersonalFastest"))
                     .and_then(Value::as_bool),
@@ -596,6 +617,18 @@ fn project_sectors(value: &Value) -> Vec<LiveSector> {
             }
         })
         .collect()
+}
+
+fn clock_seconds(value: &str) -> Option<i64> {
+    let (hours, rest) = value.split_once(':')?;
+    let (minutes, seconds) = rest.split_once(':')?;
+    let hours: i64 = hours.parse().ok()?;
+    let minutes: i64 = minutes.parse().ok()?;
+    let seconds: i64 = seconds.split('.').next()?.parse().ok()?;
+    if !(0..=24).contains(&hours) || !(0..60).contains(&minutes) || !(0..60).contains(&seconds) {
+        return None;
+    }
+    Some(hours * 3600 + minutes * 60 + seconds)
 }
 
 fn collect_patches(value: &Value, output: &mut Vec<TopicPatch>) {
@@ -671,28 +704,63 @@ fn value_string(value: &Value) -> Option<String> {
     }
 }
 
-/// Current tyre from the `Stints` topic, with `TimingData` fields as fallback.
+/// The upstream supplies both full stint arrays and sparse patches keyed by stint number.
+fn latest_stint(stints: &Value) -> Option<&Value> {
+    if let Some(rows) = stints.as_array() {
+        return rows.iter().rev().find(|row| row.is_object());
+    }
+    stints
+        .as_object()?
+        .iter()
+        .filter(|(_, row)| row.is_object())
+        .filter_map(|(index, row)| index.parse::<u32>().ok().map(|index| (index, row)))
+        .max_by_key(|(index, _)| *index)
+        .map(|(_, row)| row)
+}
+
 fn stint_summary(
     stints: Option<&Value>,
+    tyre_series: Option<&Value>,
+    timing_app: Option<&Value>,
     number: &str,
     line: &Value,
 ) -> (Option<String>, Option<i64>) {
-    let stints = stints.and_then(|value| value.get("Stints").or(Some(value)));
-    let last = stints
-        .and_then(|stints| stints.get(number))
-        .and_then(Value::as_array)
-        .and_then(|entries| entries.iter().rev().find(|entry| entry.is_object()));
-    let compound = last
-        .and_then(|entry| first_string(entry, &["Compound"]))
-        .or_else(|| first_string(line, &["TyreCompound", "Tyre"]))
-        .map(|compound| compound.to_ascii_uppercase());
-    let age = last
-        .map(|entry| {
-            value_i64(entry.get("TotalLaps")).unwrap_or(0)
-                + value_i64(entry.get("StartLaps")).unwrap_or(0)
-        })
-        .filter(|age| *age > 0);
-    (compound, age)
+    let candidates = [
+        timing_app
+            .and_then(|lines| lines.get(number))
+            .and_then(|line| line.get("Stints"))
+            .and_then(latest_stint),
+        tyre_series
+            .and_then(|stints| stints.get(number))
+            .and_then(latest_stint),
+        stints
+            .and_then(|value| value.get("Stints").or(Some(value)))
+            .and_then(|stints| stints.get(number))
+            .and_then(latest_stint),
+    ];
+    let compound = |entry: &Value| {
+        first_string(entry, &["Compound", "TyreCompound", "Tyre"])
+            .map(|value| value.trim().to_ascii_uppercase())
+            .filter(|value| !value.is_empty() && value != "UNKNOWN")
+    };
+    if let Some((source, compound, stint)) = candidates
+        .into_iter()
+        .enumerate()
+        .filter_map(|(source, stint)| stint.map(|stint| (source, stint)))
+        .find_map(|(source, stint)| compound(stint).map(|compound| (source, compound, stint)))
+    {
+        let total = value_i64(stint.get("TotalLaps")).filter(|age| *age >= 0);
+        let start = value_i64(stint.get("StartLaps")).filter(|age| *age >= 0);
+        let age = if source == 2 && total.is_some() && start.is_some() {
+            total
+                .zip(start)
+                .and_then(|(total, start)| total.checked_add(start))
+        } else {
+            total.or(start)
+        };
+        return (Some(compound), age);
+    }
+    (compound(line), None)
 }
 
 fn value_i64(value: Option<&Value>) -> Option<i64> {
@@ -776,6 +844,58 @@ mod tests {
             .unwrap();
         json!(base64::engine::general_purpose::STANDARD.encode(writer.finish().unwrap()))
     }
+    #[test]
+    fn test_current_tyre_stint_from_live_topics_and_sparse_patches() {
+        let mut reducer = LiveTopicReducer::default();
+        let at = "2026-11-20T01:24:00Z";
+        let snapshot = json!({"DriverList":{"44":{"RacingNumber":"44"}},
+            "TimingData":{"Lines":{"44":{"Sectors":[{"Value":""},{"Value":"25.000"}]}}},
+            "TimingAppData":{"Lines":{"44":{"Stints":[{"Compound":"SOFT","TotalLaps":3,"StartLaps":1}]}}}});
+        let initial = reducer
+            .apply_initial_snapshot(&snapshot, at)
+            .unwrap()
+            .snapshot;
+        assert_eq!(initial.drivers[0].tire_compound.as_deref(), Some("SOFT"));
+        assert_eq!(initial.drivers[0].tire_age_laps, Some(3));
+        assert_eq!(initial.drivers[0].sectors.as_ref().unwrap()[0].value, None);
+        let patch = json!(["TimingAppData",{"Lines":{"44":{"Stints":{"1":{"Compound":"MEDIUM","TotalLaps":0}}}}}]);
+        let next = reducer.apply_batch(&patch, at).unwrap().snapshot;
+        assert_eq!(next.drivers[0].tire_compound.as_deref(), Some("MEDIUM"));
+        assert_eq!(next.drivers[0].tire_age_laps, Some(0));
+        let mut reducer = LiveTopicReducer::default();
+        let series = json!({"DriverList":{"44":{"RacingNumber":"44"}},
+            "TyreStintSeries":{"Stints":{"44":{"2":{"Compound":"SOFT"},"10":{"Compound":"HARD"}}}}});
+        let projected = reducer
+            .apply_initial_snapshot(&series, at)
+            .unwrap()
+            .snapshot;
+        assert_eq!(projected.drivers[0].tire_compound.as_deref(), Some("HARD"));
+    }
+
+    #[test]
+    fn test_session_clock_projects_running_and_paused_samples() {
+        let mut reducer = LiveTopicReducer::default();
+        let at = "2026-11-20T16:30:00Z";
+        let clock = json!({"SessionInfo":{"Key":1,"Name":"Practice 1"},
+            "ExtrapolatedClock":{"Utc":at,"Remaining":"01:00:00","Extrapolating":true}});
+        let running = reducer.apply_initial_snapshot(&clock, at).unwrap().snapshot;
+        assert_eq!(running.time_remaining_seconds, Some(3600));
+        assert_eq!(running.clock_sample_at.as_deref(), Some(at));
+        assert_eq!(running.clock_running, Some(true));
+        let paused = reducer
+            .apply_batch(
+                &json!(["ExtrapolatedClock",{
+                    "Utc":"2026-11-20T16:31:00Z","Remaining":"00:59:00.000","Extrapolating":false
+                }]),
+                at,
+            )
+            .unwrap()
+            .snapshot;
+        assert_eq!(paused.time_remaining_seconds, Some(3540));
+        assert_eq!(paused.clock_running, Some(false));
+        assert_eq!(clock_seconds("00:60:00"), None);
+    }
+
     #[test]
     fn test_compressed_multiframe_sparse_ordering_and_session_reset() {
         let mut r = LiveTopicReducer::default();

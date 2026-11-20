@@ -44,8 +44,8 @@ public struct UpcomingWidget: Widget {
             UpcomingWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
                 .widgetURL(WidgetDestination.calendar.url)
         }
-        .configurationDisplayName("未来三站 · Formula 1")
-        .description("小尺寸看下一站倒计时，中尺寸查看未来三站。")
+        .configurationDisplayName(widgetCopy("Upcoming Races · Formula 1", "未来三站 · Formula 1"))
+        .description(widgetCopy("See the next race countdown or the next three races.", "小尺寸看下一站倒计时，中尺寸查看未来三站。"))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -63,7 +63,7 @@ struct UpcomingWidgetView: View {
             default: content(snapshot)
             }
         } else {
-            WidgetEmpty(title: "未来赛程", icon: "calendar")
+            WidgetEmpty(title: widgetCopy("Upcoming Schedule", "未来赛程"), icon: "calendar")
         }
     }
 
@@ -73,11 +73,10 @@ struct UpcomingWidgetView: View {
         let target = race.raceStart ?? race.start
         return VStack(alignment: .leading, spacing: 5) {
             WidgetHeading(label: "UPCOMING",
-                          trailing: stale ? "缓存过期" : race.round.map { "R\($0)" },
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : race.round.map { "R\($0)" },
                           warning: stale)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(CountryFlag.emoji(for: race.countryCode) ?? "🌐")
-                    .font(.system(size: 12))
+                FlagBadge(countryCode: race.countryCode, width: 15).accessibilityHidden(true)
                 Text(race.name)
                     .font(.system(size: 14, weight: .bold)).lineLimit(2).minimumScaleFactor(0.82)
             }
@@ -89,10 +88,10 @@ struct UpcomingWidgetView: View {
                     Text("\(Int(ceil(target.timeIntervalSince(entry.date) / 86400)))")
                         .font(.system(size: 30, weight: .bold, design: .rounded)).monospacedDigit()
                         .foregroundStyle(widgetRed)
-                    Text("天后开赛").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    Text(widgetCopy("Days to Race", "天后开赛")).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                 }
             } else {
-                Text("比赛周进行中")
+                Text(widgetCopy("Race Week", "比赛周进行中"))
                     .font(.system(size: 16, weight: .bold)).foregroundStyle(widgetRed)
             }
             if let next = race.nextSessionStart, let title = race.nextSessionTitle {
@@ -110,11 +109,11 @@ struct UpcomingWidgetView: View {
             HStack(spacing: 4) {
                 Text("PITPULSE").font(.system(size: 9, weight: .heavy)).tracking(1.6).foregroundStyle(widgetRed)
                 Spacer(minLength: 0)
-                Text(stale ? "缓存过期" : roundRange(races))
+                Text(stale ? widgetCopy("Stale Cache", "缓存过期") : roundRange(races))
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(stale ? .orange : Color.primary.opacity(0.55))
             }
-            Text("未来三站").font(.system(size: 12, weight: .bold))
+            Text(widgetCopy("Upcoming Races", "未来三站")).font(.system(size: 12, weight: .bold))
             ForEach(races) { race in row(race) }
             Spacer(minLength: 0)
         }
@@ -125,8 +124,7 @@ struct UpcomingWidgetView: View {
             Text(race.round.map { "R\($0)" } ?? "—")
                 .font(.system(size: 15, weight: .heavy, design: .rounded))
                 .frame(width: 32, alignment: .leading).lineLimit(1).minimumScaleFactor(0.7)
-            Text(CountryFlag.emoji(for: race.countryCode) ?? "🌐")
-                .font(.system(size: 13)).frame(width: 18)
+            FlagBadge(countryCode: race.countryCode).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(race.name)
                     .font(.system(size: 10.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
@@ -153,9 +151,9 @@ struct UpcomingWidgetView: View {
 
     private func countdown(_ race: UpcomingRaceEntry) -> String {
         let start = race.raceStart ?? race.start
-        guard start > entry.date else { return "进行中" }
+        guard start > entry.date else { return widgetCopy("In Progress", "进行中") }
         let days = Int(ceil(start.timeIntervalSince(entry.date) / 86400))
-        return "\(days) 天"
+        return widgetCopy("\(days)  days", "\(days) 天")
     }
 
     private func roundRange(_ races: [UpcomingRaceEntry]) -> String {

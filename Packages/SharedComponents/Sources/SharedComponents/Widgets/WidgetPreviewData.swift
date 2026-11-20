@@ -5,7 +5,7 @@ import SharedData
 // Canvas-only sample data. Never reads or writes the App Group cache.
 enum WidgetPreviewData {
     static let now = Date()
-    static let sessions = zip(["FP1", "FP2", "FP3", "排位赛", "正赛"], [3600.0, 14400, 86400, 100800, 172800]).map {
+    static let sessions = zip(["FP1", "FP2", "FP3", widgetCopy("Qualifying", "排位赛"), widgetCopy("Race", "正赛")], [3600.0, 14400, 86400, 100800, 172800]).map {
         RaceWidgetSession(id: $0.0, title: $0.0, start: now.addingTimeInterval($0.1))
     }
     static let weekend = RaceWidgetSnapshot(
@@ -22,18 +22,18 @@ enum WidgetPreviewData {
     static let standings = StandingsWidgetSnapshot(season: 2026, savedAt: now, drivers: drivers)
     static let recentRaces: [FavoriteRaceEntry] = [
         .init(id: "brazil", round: 20, meeting: "São Paulo Grand Prix", date: now.addingTimeInterval(-4 * 86400),
-              position: 1, points: 25, laps: 71, fastestLap: "1:11.900", gap: "1:32:45.678", classification: "已完赛"),
+              position: 1, points: 25, laps: 71, fastestLap: "1:11.900", gap: "1:32:45.678", classification: widgetCopy("Finished", "已完赛")),
         .init(id: "mexico", round: 19, meeting: "Mexico City Grand Prix", date: now.addingTimeInterval(-11 * 86400),
-              position: 2, points: 18, laps: 71, fastestLap: "1:18.642", gap: "+2.145", classification: "已完赛"),
+              position: 2, points: 18, laps: 71, fastestLap: "1:18.642", gap: "+2.145", classification: widgetCopy("Finished", "已完赛")),
         .init(id: "austin", round: 18, meeting: "United States Grand Prix", date: now.addingTimeInterval(-18 * 86400),
-              position: 3, points: 15, laps: 56, fastestLap: "1:36.521", gap: "+8.902", classification: "已完赛")
+              position: 3, points: 15, laps: 56, fastestLap: "1:36.521", gap: "+8.902", classification: widgetCopy("Finished", "已完赛"))
     ]
     static let favorite = FavoriteDriverWidgetSnapshot(
         season: 2026, savedAt: now, favoriteID: drivers[3].driverID, driver: drivers[3],
         wins: 3, gapToBehind: 21, recentRaces: recentRaces
     )
     static let lastRace = LastRaceWidgetSnapshot(
-        meeting: "São Paulo Grand Prix", session: "正赛", season: 2026, round: 20,
+        meeting: "São Paulo Grand Prix", session: widgetCopy("Race", "正赛"), season: 2026, round: 20,
         raceDate: recentRaces[0].date, savedAt: now,
         podium: [
             .init(driverID: "leclerc", name: "Charles Leclerc", team: "Ferrari", position: 1, time: "1:32:45.678", points: 25, driverNumber: "16"),
@@ -51,7 +51,7 @@ enum WidgetPreviewData {
               start: now.addingTimeInterval(14 * 86400), end: now.addingTimeInterval(16 * 86400))
     ])
     static let timing = RaceTimingSnapshot(
-        meeting: "São Paulo Grand Prix", session: "正赛", lap: "L42 / 71", status: "绿旗", updatedAt: now, stale: false,
+        meeting: "São Paulo Grand Prix", session: widgetCopy("Race", "正赛"), lap: "L42 / 71", status: widgetCopy("Green Flag", "绿旗"), updatedAt: now, stale: false,
         drivers: [
             .init(id: "leclerc", position: 1, name: "Charles Leclerc", gap: "LEADER", tire: "M"),
             .init(id: "verstappen", position: 2, name: "Max Verstappen", gap: "+2.145", tire: "H"),

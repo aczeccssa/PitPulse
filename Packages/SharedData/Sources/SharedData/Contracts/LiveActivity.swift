@@ -134,9 +134,11 @@ public struct PitPulseActivityAttributes: ActivityAttributes {
     }
 
     public var seriesTitle: String
+    public var sessionID: String?
 
-    public init(seriesTitle: String) {
+    public init(seriesTitle: String, sessionID: String? = nil) {
         self.seriesTitle = seriesTitle
+        self.sessionID = sessionID
     }
 }
 #endif
@@ -155,7 +157,7 @@ public extension PitPulseActivityAttributes.ContentState {
     var compactLeadingText: String {
         if presentation == IslandContentMode.positionChanges.rawValue { return "P1 · " + (leaderName.map(MotorsportAssetName.abbreviation) ?? "—") }
         if presentation == IslandContentMode.favorite.rawValue || (presentation == IslandContentMode.battle.rawValue && battleDrivers?.count == 1) {
-            return (presentation == IslandContentMode.battle.rawValue ? battleDrivers?.first?.name : trackedDriver?.name ?? favoriteName).map(MotorsportAssetName.abbreviation) ?? "车手"
+            return (presentation == IslandContentMode.battle.rawValue ? battleDrivers?.first?.name : trackedDriver?.name ?? favoriteName).map(MotorsportAssetName.abbreviation) ?? "Driver"
         }
         if presentation == IslandContentMode.battle.rawValue {
             return battleDrivers.map { $0.map { $0.position.map { "P\($0)" } ?? "—" }.joined(separator: "·") } ?? "P1·P2"

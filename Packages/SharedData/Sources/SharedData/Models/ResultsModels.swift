@@ -14,6 +14,7 @@ public struct SessionResult: Codable, Identifiable, Equatable, Sendable {
     }
     public let sessionId: String
     public let position: Int?
+    public var gridPosition: Int? = nil
     public let classification: String
     public let driverId: String
     public var driverNumber: String?
@@ -63,4 +64,29 @@ public struct ConstructorStanding: Codable, Identifiable, Equatable, Sendable {
     public let source: String
     public let fetchedAt: Date
     public let revision: Int
+}
+
+public struct SeasonResultWeekend: Codable, Identifiable, Sendable {
+    public var id: String { meeting.id }
+    public let meeting: Meeting
+    public let sessions: [String: SeasonResultSession]
+    public var fastestLaps: FastestLaps? = nil
+
+    public struct FastestLaps: Codable, Sendable {
+        public let weekend: Record
+        public let previous: Record?
+
+        public struct Record: Codable, Sendable {
+            public let millis: Int
+            public let time: String
+            public let driverName: String
+            public let team: String
+            public let year: Int
+        }
+    }
+}
+
+public struct SeasonResultSession: Codable, Sendable {
+    public let rows: [SessionResult]
+    public let meta: ResponseMeta
 }

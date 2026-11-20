@@ -40,18 +40,18 @@ public struct WidgetPreviewGallery: View {
     private var page: Int { min(max(selectedPage ?? 0, 0), pages.count - 1) }
     private var kind: Int { kind(for: page) }
     private var scheme: ColorScheme { systemScheme }
-    private let titles = ["下一场 · Formula 1", "比赛周末 · Formula 1",
-                          "车手积分 · Formula 1", "上站结果 · Formula 1", "未来三站 · Formula 1",
-                          "我的车手 · Formula 1"]
+    private let titles = [widgetCopy("Next Race · Formula 1", "下一场 · Formula 1"), widgetCopy("Race Weekend · Formula 1", "比赛周末 · Formula 1"),
+                          widgetCopy("Driver Standings · Formula 1", "车手积分 · Formula 1"), widgetCopy("Last Race · Formula 1", "上站结果 · Formula 1"), widgetCopy("Upcoming Races · Formula 1", "未来三站 · Formula 1"),
+                          widgetCopy("My Driver · Formula 1", "我的车手 · Formula 1")]
     private let descriptions = [
-        "开赛倒计时、赛事信息与即将到来的比赛周末。",
-        "从最近场次到完整周末，按你的桌面空间选择。",
-        "小尺寸看榜首，中尺寸查看前五名与和榜首的差距。",
-        "中尺寸看领奖台与比赛数字，大尺寸展开完整结果。",
-        "小尺寸看下一站倒计时，中尺寸查看未来三站。",
-        "小尺寸看排名与积分，中尺寸看近期比赛，大尺寸展开近三场与赛季数据。"
+        widgetCopy("Race countdown, session details, and the upcoming weekend.", "开赛倒计时、赛事信息与即将到来的比赛周末。"),
+        widgetCopy("See the next sessions or the full weekend.", "从最近场次到完整周末，按你的桌面空间选择。"),
+        widgetCopy("See the championship leader or the top five drivers and their gaps.", "小尺寸看榜首，中尺寸查看前五名与和榜首的差距。"),
+        widgetCopy("See the podium and key stats at medium size, or the full results at large size.", "中尺寸看领奖台与比赛数字，大尺寸展开完整结果。"),
+        widgetCopy("See the next race countdown or the next three races.", "小尺寸看下一站倒计时，中尺寸查看未来三站。"),
+        widgetCopy("See your driver's standings, recent results, or season stats.", "小尺寸看排名与积分，中尺寸看近期比赛，大尺寸展开近三场与赛季数据。")
     ]
-    private let sizes = ["小尺寸", "中尺寸", "大尺寸"]
+    private let sizes = [widgetCopy("Small", "小尺寸"), widgetCopy("Medium", "中尺寸"), widgetCopy("Large", "大尺寸")]
 
     public var body: some View {
         VStack(spacing: 12) {
@@ -86,8 +86,8 @@ public struct WidgetPreviewGallery: View {
                 .scrollTargetBehavior(.viewAligned(limitBehavior: .always, anchor: .center))
                 .scrollPosition(id: $selectedPage, anchor: .center)
                 .scrollClipDisabled()
-                .accessibilityLabel("组件陈列，左右滑动浏览")
-                .accessibilityValue("第 \(page + 1) 页，共 \(pages.count) 页")
+                .accessibilityLabel(widgetCopy("Swipe to browse widget previews", "组件陈列，左右滑动浏览"))
+                .accessibilityValue(widgetCopy("Page \(page + 1) of \(pages.count)", "第 \(page + 1) 页，共 \(pages.count) 页"))
                 .accessibilityAdjustableAction { direction in
                     switch direction {
                     case .increment: select(min(page + 1, pages.count - 1))
@@ -119,18 +119,18 @@ public struct WidgetPreviewGallery: View {
             widgetBackground
             #endif
         }
-        .navigationTitle("组件预览")
+        .navigationTitle(widgetCopy("Widget Previews", "组件预览"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button { showInstructions = true } label: { Image(systemName: "info.circle") }
-                    .accessibilityLabel("如何添加小组件")
+                    .accessibilityLabel(widgetCopy("How to add widgets", "如何添加小组件"))
             }
             ToolbarItem(placement: .primaryAction) {
                 Button { dismiss() } label: { Image(systemName: "xmark") }
-                    .accessibilityLabel("关闭组件预览")
+                    .accessibilityLabel(widgetCopy("Close widget previews", "关闭组件预览"))
             }
         }
         .task(id: scenePhase) {
@@ -143,10 +143,10 @@ public struct WidgetPreviewGallery: View {
                 refresh()
             }
         }
-        .alert("添加 PitPulse 小组件", isPresented: $showInstructions) {
-            Button("知道了", role: .cancel) { }
+        .alert(widgetCopy("Add PitPulse Widgets", "添加 PitPulse 小组件"), isPresented: $showInstructions) {
+            Button(widgetCopy("Got It", "知道了"), role: .cancel) { }
         } message: {
-            Text("长按 iPhone 主屏幕空白处，选择「编辑」→「添加小组件」，搜索 PitPulse，再左右滑动选择类型与尺寸并添加。App 内预览不会直接添加桌面组件。")
+            Text(widgetCopy("Touch and hold the Home Screen, then choose Edit and Add Widget. Search for PitPulse and select a widget size.", "长按 iPhone 主屏幕空白处，选择「编辑」→「添加小组件」，搜索 PitPulse，再左右滑动选择类型与尺寸并添加。App 内预览不会直接添加桌面组件。"))
         }
     }
 
@@ -207,7 +207,7 @@ public struct WidgetPreviewGallery: View {
         .offset(y: reduceMotion ? 0 : 3)
         .environment(\.colorScheme, scheme)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(titles[kind(for: index)])，\(sizeLabel(index))预览")
+        .accessibilityLabel(widgetCopy("\(titles[kind(for: index)]), \(sizeLabel(index)) preview", "\(titles[kind(for: index)])，\(sizeLabel(index))预览"))
     }
 }
 #endif

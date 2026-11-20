@@ -15,15 +15,15 @@ struct TrackedDriverView: View {
                         Spacer(minLength: 0)
                         ActivityTrackSummary(state: state)
                     }
-                    HStack { metric("距领先", driver.gap); metric("距前车", driver.interval) }
+                    HStack { metric("To leader", driver.gap); metric("To car ahead", driver.interval) }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
             SectorStrip(sectors: driver.sectors)
             HStack {
-                Text("轮胎").foregroundStyle(.secondary)
+                Text("Tires").foregroundStyle(.secondary)
                 ActivityNumberText(driver.tire ?? "—")
                 Spacer(minLength: 4)
-                Text("上圈").foregroundStyle(.secondary)
+                Text("Last Lap").foregroundStyle(.secondary)
                 ActivityNumberText(driver.lastLap ?? "—")
             }.font(.system(size: 10, design: .monospaced)).lineLimit(1)
         }
@@ -54,7 +54,7 @@ struct BattleView: View {
                 Spacer(minLength: 0)
                 VStack(spacing: 3) {
                     ActivityNumberText((state.battleDrivers == nil ? state.challengerGap : state.battleGap) ?? "—").font(.system(size: 22, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
-                    Text("两车差距").font(.system(size: 9)).foregroundStyle(.secondary)
+                    Text("Gap Between Cars").font(.system(size: 9)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 if drivers.count > 1 { driverColumn(drivers[1]) }
@@ -72,7 +72,7 @@ struct BattleView: View {
                         Text("S\(index + 1)").font(.system(size: 9)).foregroundStyle(.secondary)
                         RoundedRectangle(cornerRadius: 2).fill(sectorColor(sector)).frame(height: 5)
                     }
-                    .accessibilityLabel("S\(index + 1)，\(sector?.time ?? "未完成")")
+                    .accessibilityLabel("S\(index + 1)，\(sector?.time ?? "Incomplete")")
                 }
             }
             ActivityNumberText(driver.tire ?? "—").font(.system(size: 9)).foregroundStyle(.secondary)

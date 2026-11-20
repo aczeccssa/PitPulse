@@ -38,8 +38,8 @@ public struct LastRaceWidget: Widget {
         StaticConfiguration(kind: RaceWidgetCache.lastRaceKind, provider: LastRaceWidgetProvider()) { entry in
             LastRaceWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
         }
-        .configurationDisplayName("上站结果 · Formula 1")
-        .description("中尺寸看领奖台与比赛数字，大尺寸展开完整结果。")
+        .configurationDisplayName(widgetCopy("Last Race · Formula 1", "上站结果 · Formula 1"))
+        .description(widgetCopy("See the podium and key stats at medium size, or the full results at large size.", "中尺寸看领奖台与比赛数字，大尺寸展开完整结果。"))
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -57,7 +57,7 @@ struct LastRaceWidgetView: View {
             default: content(snapshot)
             }
         } else {
-            WidgetEmpty(title: "上站结果", icon: "flag.checkered")
+            WidgetEmpty(title: widgetCopy("Last Race", "上站结果"), icon: "flag.checkered")
         }
     }
 
@@ -67,7 +67,7 @@ struct LastRaceWidgetView: View {
         let podium = Array(snapshot.podium.prefix(3))
         return VStack(alignment: .leading, spacing: 6) {
             WidgetHeading(label: "LAST RACE",
-                          trailing: stale ? "缓存过期" : snapshot.round.map { "F1 · R\($0)" },
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : snapshot.round.map { "F1 · R\($0)" },
                           warning: stale)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(snapshot.meeting)
@@ -84,14 +84,14 @@ struct LastRaceWidgetView: View {
             }
             Divider()
             HStack(spacing: 0) {
-                stat("最快圈", snapshot.fastestLap ?? "—", highlight: true)
+                stat(widgetCopy("Fastest Lap", "最快圈"), snapshot.fastestLap ?? "—", highlight: true)
                 Divider().frame(height: 22)
-                stat("圈数", snapshot.laps.map(String.init) ?? "—")
+                stat(widgetCopy("Laps", "圈数"), snapshot.laps.map(String.init) ?? "—")
                 Divider().frame(height: 22)
                 if let safetyCars = snapshot.safetyCars {
-                    stat("安全车", "\(safetyCars)")
+                    stat(widgetCopy("Safety Car", "安全车"), "\(safetyCars)")
                 } else {
-                    stat("冠军积分", podium.first?.points.map { "\(Int($0.rounded()))" } ?? "—")
+                    stat(widgetCopy("Winner's Points", "冠军积分"), podium.first?.points.map { "\(Int($0.rounded()))" } ?? "—")
                 }
             }
             Spacer(minLength: 0)
@@ -132,7 +132,7 @@ struct LastRaceWidgetView: View {
         let podium = Array(snapshot.podium.prefix(3))
         return VStack(alignment: .leading, spacing: 9) {
             WidgetHeading(label: "LAST RACE",
-                          trailing: stale ? "缓存过期" : snapshot.round.map { "F1 · R\($0)" },
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : snapshot.round.map { "F1 · R\($0)" },
                           warning: stale)
             Text(snapshot.meeting)
                 .font(.system(size: 22, weight: .bold)).lineLimit(2).minimumScaleFactor(0.85)
@@ -143,7 +143,7 @@ struct LastRaceWidgetView: View {
                 Text("·")
                 Text(snapshot.session)
                 Spacer(minLength: 4)
-                Text("已结束")
+                Text(widgetCopy("Completed", "已结束"))
                     .font(.system(size: 8, weight: .bold)).foregroundStyle(widgetRed)
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(widgetRed.opacity(0.12), in: Capsule())
@@ -158,24 +158,24 @@ struct LastRaceWidgetView: View {
 
             Divider()
             HStack(spacing: 0) {
-                stat("最快圈", snapshot.fastestLap ?? "—", highlight: true)
+                stat(widgetCopy("Fastest Lap", "最快圈"), snapshot.fastestLap ?? "—", highlight: true)
                 Divider().frame(height: 28)
-                stat("圈数", snapshot.laps.map(String.init) ?? "—")
+                stat(widgetCopy("Laps", "圈数"), snapshot.laps.map(String.init) ?? "—")
                 Divider().frame(height: 28)
                 if let safetyCars = snapshot.safetyCars {
-                    stat("安全车", "\(safetyCars)")
+                    stat(widgetCopy("Safety Car", "安全车"), "\(safetyCars)")
                 } else {
-                    stat("冠军积分", podium.first?.points.map { "\(Int($0.rounded()))" } ?? "—")
+                    stat(widgetCopy("Winner's Points", "冠军积分"), podium.first?.points.map { "\(Int($0.rounded()))" } ?? "—")
                 }
             }
             Spacer(minLength: 0)
             HStack {
-                Text("比赛结果")
+                Text(widgetCopy("Race Results", "比赛结果"))
                 Spacer()
                 if stale {
-                    Text("缓存数据")
+                    Text(widgetCopy("Cached Data", "缓存数据"))
                 } else {
-                    Text("更新 ")
+                    Text(widgetCopy("Updated ", "更新 "))
                     Text(snapshot.savedAt, style: .time)
                 }
             }.font(.system(size: 8)).foregroundStyle(.secondary)

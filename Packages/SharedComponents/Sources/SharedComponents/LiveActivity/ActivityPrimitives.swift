@@ -11,7 +11,7 @@ public struct ActivityStatus: View {
         self.expired = expired
     }
     public var body: some View {
-        Text(state.isStale || expired ? "数据过期" : state.statusLabel)
+        Text(state.isStale || expired ? "Open Live to refresh" : state.statusLabel)
             .font(.system(size: 10, weight: .bold)).lineLimit(1)
             .foregroundStyle(state.isStale || expired ? Color.orange : Color.secondary)
             .padding(.horizontal, 7).padding(.vertical, 4)
@@ -25,7 +25,9 @@ public struct ActivityHeader: View {
     public init(state: PitPulseActivityAttributes.ContentState) { self.state = state }
     public var body: some View {
         HStack(spacing: 5) {
-            if let flag = CountryFlag.emoji(for: state.countryCode) { Text(flag) }
+            if let countryCode = state.countryCode {
+                FlagBadge(countryCode: countryCode, width: 16).accessibilityHidden(true)
+            }
             Text(state.sessionName.uppercased()).lineLimit(1)
         }.font(.system(size: 10, weight: .semibold))
     }
@@ -35,10 +37,9 @@ struct ActivityTrackSummary: View {
     let state: PitPulseActivityAttributes.ContentState
     var body: some View {
         HStack(spacing: 4) {
-            Label(state.trackLabel ?? "等待赛道状态", systemImage: "flag.fill")
+            Label(state.trackLabel ?? "Waiting for track status", systemImage: "flag.fill")
                 .foregroundStyle(state.trackColor).lineLimit(1)
             ActivityNumberText(state.lapLabel).monospacedDigit().lineLimit(1)
-            if state.isStale { Text("过期").foregroundStyle(.orange) }
         }.font(.system(size: 9)).fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -135,7 +136,7 @@ struct SectorStrip: View {
                     }.frame(height: 4)
                 }
             }
-        }.accessibilityLabel("分段计时与进度")
+        }.accessibilityLabel("Sector timing and progress")
     }
     private func color(_ value: Int?) -> Color {
         switch value { case 2048: .yellow; case 2049: .green; case 2051: .purple; case 2064: .blue; default: .white.opacity(0.15) }
@@ -145,7 +146,7 @@ struct SectorStrip: View {
 struct DriverWeatherView: View {
     let weather: PitPulseActivityAttributes.Weather?
     private var condition: String {
-        switch weather?.rainfall { case true: "降雨"; case false: "无降雨"; case nil: "天气 —" }
+        switch weather?.rainfall { case true: "Rain"; case false: "Dry"; case nil: "Weather —" }
     }
     private var visibility: String {
         guard let meters = weather?.visibilityMeters, meters > 0 else { return "—" }
@@ -155,9 +156,9 @@ struct DriverWeatherView: View {
         VStack(alignment: .trailing, spacing: 5) {
             Label(condition, systemImage: weather?.rainfall == true ? "cloud.rain.fill" : "drop")
                 .font(.system(size: 10, weight: .medium))
-            ActivityNumberText("可见度 \(visibility)").font(.system(size: 9)).foregroundStyle(.secondary)
-            ActivityNumberText("气温 \(temperature(weather?.airTemperature))")
-            ActivityNumberText("赛道 \(temperature(weather?.trackTemperature))")
+            ActivityNumberText("Visibility \(visibility)").font(.system(size: 9)).foregroundStyle(.secondary)
+            ActivityNumberText("Air \(temperature(weather?.airTemperature))")
+            ActivityNumberText("Track \(temperature(weather?.trackTemperature))")
         }
         .font(.system(size: 10, design: .monospaced))
         .lineLimit(1).minimumScaleFactor(0.8)

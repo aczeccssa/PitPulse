@@ -27,6 +27,8 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
     public var positionStatus: String? = nil
     public var positionDiagnostics: LivePositionDiagnostics? = nil
     public var timeRemainingSeconds: Int? = nil
+    public var clockSampleAt: String? = nil
+    public var clockRunning: Bool? = nil
     public var elapsedSeconds: Int? = nil
     public var isTimeBased: Bool? = nil
 
@@ -57,6 +59,8 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
         positionStatus: String? = nil,
         positionDiagnostics: LivePositionDiagnostics? = nil,
         timeRemainingSeconds: Int? = nil,
+        clockSampleAt: String? = nil,
+        clockRunning: Bool? = nil,
         elapsedSeconds: Int? = nil,
         isTimeBased: Bool? = nil
     ) {
@@ -86,6 +90,8 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
         self.positionStatus = positionStatus
         self.positionDiagnostics = positionDiagnostics
         self.timeRemainingSeconds = timeRemainingSeconds
+        self.clockSampleAt = clockSampleAt
+        self.clockRunning = clockRunning
         self.elapsedSeconds = elapsedSeconds
         self.isTimeBased = isTimeBased
     }
@@ -146,14 +152,37 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
 
     public var isWec: Bool { series == "wec" }
 
+    public var prefersSessionClock: Bool {
+        if isWec { return isTimeBased == true || (totalLaps == nil && timeRemainingSeconds != nil) }
+        return [sessionType, sessionName].compactMap { $0 }.contains { name in
+            let token = name.lowercased().filter { $0.isLetter || $0.isNumber }
+            return token.contains("practice") || ["fp1", "fp2", "fp3"].contains(token)
+                || token.contains("qualifying") || token == "sprintshootout"
+        }
+    }
+
+    public func sessionClockLabel(at now: Date = .now) -> String? {
+        guard prefersSessionClock, let remaining = timeRemainingSeconds, (0...86_400).contains(remaining) else { return nil }
+        guard sourceMode == .live, sourceStatus == .connected, clockRunning == true,
+              LiveIslandLogic.isStarted(sessionStatus), trackCondition != .red,
+              let sampleAt = clockSampleAt.flatMap(RFC3339.parse) else {
+            return Self.formattedClock(remaining)
+        }
+        let elapsed = min(Double(remaining), max(0, now.timeIntervalSince(sampleAt)))
+        return Self.formattedClock(remaining - Int(elapsed))
+    }
+
     public var remainingLabel: String? {
         guard let timeRemainingSeconds, timeRemainingSeconds > 0 else { return nil }
-        let hours = timeRemainingSeconds / 3600
-        let minutes = (timeRemainingSeconds % 3600) / 60
-        let seconds = timeRemainingSeconds % 60
+        return Self.formattedClock(timeRemainingSeconds)
+    }
+
+    public static func formattedClock(_ seconds: Int) -> String {
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
         return hours > 0
-            ? String(format: "%d:%02d:%02d", hours, minutes, seconds)
-            : String(format: "%d:%02d", minutes, seconds)
+            ? String(format: "%d:%02d:%02d", hours, minutes, seconds % 60)
+            : String(format: "%d:%02d", minutes, seconds % 60)
     }
 
     public var lastUpdatedLabel: String? {

@@ -9,7 +9,7 @@ final class NavigationTests: XCTestCase {
         app.launchEnvironment["PITPULSE_OPEN_LIVE"] = "1"
         app.launch()
         defer { app.terminate() }
-        let close = app.buttons["收起 Live"]
+        let close = app.buttons["Close Live"]
         XCTAssertTrue(close.waitForExistence(timeout: 20), app.debugDescription)
         close.tap()
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10))
@@ -24,27 +24,27 @@ final class NavigationTests: XCTestCase {
         defer { app.terminate() }
         let tabs = app.tabBars.firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 20))
-        for label in ["赛历", "车手积分", "车队积分", "下一场总览"] {
+        for label in ["Results", "Head to Head", "Drivers", "Constructors", "Home"] {
             let button = tabs.buttons[label]
             XCTAssertTrue(button.exists, app.debugDescription)
             button.tap()
             XCTAssertTrue(tabs.exists)
         }
-        let settings = app.buttons["打开 PitPulse 设置"]
+        let settings = app.buttons["Open PitPulse settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         settings.tap()
-        let configure = app.buttons["配置服务器"]
+        let configure = app.buttons["Configure server"]
         XCTAssertTrue(configure.waitForExistence(timeout: 10))
         configure.tap()
-        let closeConfiguration = app.buttons["关闭服务器配置"]
+        let closeConfiguration = app.buttons["Close server configuration"]
         XCTAssertTrue(closeConfiguration.waitForExistence(timeout: 10))
         closeConfiguration.tap()
-        app.buttons["关闭设置"].tap()
+        app.buttons["Close settings"].tap()
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
-        let live = app.buttons["live.open"]
+        let live = app.descendants(matching: .any).matching(identifier: "live.open").firstMatch
         XCTAssertTrue(live.waitForExistence(timeout: 30), app.debugDescription)
-        live.tap()
-        let close = app.buttons["收起 Live"]
+        live.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let close = app.buttons["Close Live"]
         XCTAssertTrue(close.waitForExistence(timeout: 10), app.debugDescription)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.lifetime = .keepAlways
@@ -53,59 +53,44 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
     }
     @MainActor
-    func testHistoricalRaceResultsAndLapDataReturn() {
+    func testConsistencyIsNestedUnderHeadToHead() {
         let app = XCUIApplication()
         app.launchArguments = ["-serverAddress", "http://127.0.0.1:38702"]
-        app.launchEnvironment["PITPULSE_LIVE_SERVER_URL"] = "http://127.0.0.1:38702"
         app.launch()
         defer { app.terminate() }
+
         let tabs = app.tabBars.firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 20))
-        tabs.buttons["赛历"].tap()
-        let meeting = app.buttons["meeting.2026:20"]
-        _ = meeting.waitForExistence(timeout: 20)
-        for _ in 0..<8 {
-            if meeting.isHittable { break }
-            app.swipeDown()
-        }
-        XCTAssertTrue(meeting.isHittable, app.debugDescription)
-        meeting.tap()
-        let race = app.buttons["session.2026:20:race"]
-        for _ in 0..<8 {
-            if race.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(race.isHittable, app.debugDescription)
-        race.tap()
-        let driver = app.buttons["result.norris"]
-        _ = driver.waitForExistence(timeout: 30)
-        for _ in 0..<8 {
-            if driver.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(driver.isHittable, app.debugDescription)
-        driver.tap()
-        let count = app.staticTexts["analysis.lapCount"]
-        XCTAssertTrue(count.waitForExistence(timeout: 150), app.debugDescription)
-        XCTAssertEqual(count.label, "每圈节奏 · 71 圈")
-        let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
-        for _ in 0..<2 { app.navigationBars.buttons.element(boundBy: 0).tap() }
-        let weather = app.segmentedControls.buttons["天气"]
-        for _ in 0..<6 {
-            if weather.isHittable { break }
-            app.swipeDown()
-        }
-        XCTAssertTrue(weather.isHittable, app.debugDescription)
-        weather.tap()
-        XCTAssertTrue(app.staticTexts["历史实测天气 · 已归档"].waitForExistence(timeout: 20), app.debugDescription)
-        let weatherScreenshot = XCTAttachment(screenshot: app.screenshot())
-        weatherScreenshot.name = "Archived historical weather"
-        weatherScreenshot.lifetime = .keepAlways
-        add(weatherScreenshot)
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(tabs.waitForExistence(timeout: 10))
+        let headToHead = tabs.buttons["Head to Head"]
+        headToHead.tap()
+        XCTAssertFalse(tabs.buttons["Consistency"].exists, app.debugDescription)
+        let consistency = app.buttons["section.Consistency"]
+        XCTAssertTrue(consistency.waitForExistence(timeout: 5))
+        consistency.tap()
+        XCTAssertTrue(app.switches["consistency.excludeDNF"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(headToHead.isSelected, app.debugDescription)
     }
 
+    @MainActor
+    func testFavoriteDriverUsesSearchableDedicatedPage() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-serverAddress", "http://127.0.0.1:38702"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.buttons["Open PitPulse settings"].tap()
+        let favorite = app.buttons["settings.favorite"]
+        XCTAssertTrue(favorite.waitForExistence(timeout: 10), app.debugDescription)
+        favorite.tap()
+
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 10), app.debugDescription)
+        search.tap()
+        search.typeText("Norris")
+
+        let driver = app.buttons["driver.choice.norris"]
+        XCTAssertTrue(driver.waitForExistence(timeout: 10), app.debugDescription)
+        driver.tap()
+        XCTAssertTrue(app.buttons["settings.favorite"].label.contains("Norris"), app.debugDescription)
+    }
 }

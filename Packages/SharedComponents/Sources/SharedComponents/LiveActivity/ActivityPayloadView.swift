@@ -13,13 +13,13 @@ public struct ActivityPayloadView: View {
             if state.battleDrivers?.count == 1 { TrackedDriverView(state: state, driver: state.battleDrivers![0]) }
             else { BattleView(state: state) }
         case .favorite:
-            TrackedDriverView(state: state, driver: state.trackedDriver ?? .init(name: state.favoriteName ?? "请先收藏一位车手", position: state.favoritePosition, asset: state.favoriteAsset, gap: state.favoriteGap))
+            TrackedDriverView(state: state, driver: state.trackedDriver ?? .init(name: state.favoriteName ?? "Pick a favorite driver", position: state.favoritePosition, asset: state.favoriteAsset, gap: state.favoriteGap))
         case .overview:
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline) {
                     ActivityNumberText(state.lapLabel).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
                     Spacer()
-                    Label(state.trackLabel ?? "等待赛道状态", systemImage: "flag.fill")
+                    Label(state.trackLabel ?? "Waiting for track status", systemImage: "flag.fill")
                         .font(.caption.weight(.medium)).foregroundStyle(state.trackColor).lineLimit(1)
                 }
                 if let progress = state.lapProgress {
@@ -31,7 +31,7 @@ public struct ActivityPayloadView: View {
                     }
                     .frame(height: 4)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("比赛进度")
+                    .accessibilityLabel("Race Progress")
                     .accessibilityValue("\(Int(progress * 100))%")
                 }
                 HStack(alignment: .top, spacing: 5) {
