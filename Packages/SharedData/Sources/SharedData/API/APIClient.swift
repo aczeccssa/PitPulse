@@ -37,6 +37,15 @@ public actor APIClient {
         )
     }
 
+    public func seasonResults(season: Int, token: String?) async throws -> APIEnvelope<[SeasonResultWeekend]> {
+        try await envelope(
+            [SeasonResultWeekend].self,
+            path: "/api/v1/results/season",
+            queryItems: [URLQueryItem(name: "season", value: String(season))],
+            token: token
+        )
+    }
+
     public func sessionResults(sessionId: String, token: String?) async throws -> APIEnvelope<[SessionResult]> {
         try await envelope(
             [SessionResult].self,
@@ -87,6 +96,36 @@ public actor APIClient {
             queryItems: [URLQueryItem(name: "season", value: String(season))], token: token)
     }
 
+    public func seasonFeatures(season: Int, token: String?) async throws -> EngineeringReport<SeasonFeatures> {
+        try await engineeringReport(path: "/api/v1/features", season: season, token: token)
+    }
+
+    public func technicalUpdates(season: Int, token: String?) async throws -> EngineeringReport<[TechnicalUpdate]> {
+        try await engineeringReport(path: "/api/v1/tech-updates", season: season, token: token)
+    }
+
+    public func powerUnitReport(season: Int, token: String?) async throws -> EngineeringReport<PowerUnitReport> {
+        try await engineeringReport(path: "/api/v1/pu-elements", season: season, token: token)
+    }
+
+    public func damageReport(season: Int, token: String?) async throws -> EngineeringReport<DamageReport> {
+        try await engineeringReport(path: "/api/v1/destructors-championship", season: season, token: token)
+    }
+
+    public func homeFeatures(season: Int, token: String?) async throws -> EngineeringReport<HomeFeatures> {
+        try await engineeringReport(path: "/api/v1/home", season: season, token: token)
+    }
+
+    private func engineeringReport<Value: Codable & Sendable>(
+        path: String, season: Int, token: String?
+    ) async throws -> EngineeringReport<Value> {
+        var request = try makeRequest(path: path, queryItems: [URLQueryItem(name: "season", value: String(season))])
+        applyToken(token, to: &request)
+        let (data, response) = try await data(for: request)
+        try validate(response: response, data: data)
+        return try Self.decode(EngineeringReport<Value>.self, from: data)
+    }
+
     public func mapData(path: String, token: String?) async throws -> Data {
         var request = try makeRequest(path: path, queryItems: [])
         applyToken(token, to: &request)
@@ -96,6 +135,20 @@ public actor APIClient {
             throw APIClientError.transport("雷达瓦片已过期，请稍后重试")
         }
         return data
+    }
+
+    public func liveActivitySnapshot(token: String?, series: LiveSeries) async throws -> LiveSnapshot {
+        struct Envelope: Decodable { let data: LiveSnapshot }
+        var request = try makeRequest(path: "/api/v1/live/snapshot", queryItems: [
+            URLQueryItem(name: "series", value: series.rawValue),
+            URLQueryItem(name: "view", value: "activity")
+        ])
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 8
+        applyToken(token, to: &request)
+        let (data, response) = try await data(for: request)
+        try validate(response: response, data: data)
+        return try Self.decode(Envelope.self, from: data).data
     }
 
     public func liveStream(

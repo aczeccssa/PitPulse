@@ -99,7 +99,7 @@ struct WidgetHeading: View {
 struct WidgetEmpty: View {
     let title: String
     let icon: String
-    var message = "打开 App 同步数据"
+    var message = widgetCopy("Open the app to sync data", "打开 App 同步数据")
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             WidgetHeading(label: "FORMULA 1")

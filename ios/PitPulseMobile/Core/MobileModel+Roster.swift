@@ -2,6 +2,15 @@ import Foundation
 import SharedData
 
 extension MobileModel {
+    nonisolated static func normalizedConstructorID(_ id: String) -> String {
+        switch id.lowercased() {
+        case "racing_bulls", "racing-bulls", "racing bulls", "rb": "rb"
+        case "red bull", "red bull racing", "red-bull", "red_bull": "red_bull"
+        case "haas f1 team", "haas": "haas"
+        default: id
+        }
+    }
+
     var sortedDrivers: [LiveDriver] {
         liveSnapshot.drivers.sorted {
             let left = $0.position ?? $0.classPosition ?? Int.max
@@ -10,7 +19,7 @@ extension MobileModel {
         }
     }
     var availableLiveSeries: [LiveSeries] {
-        LiveSeries.allCases.filter { liveSnapshots[$0].map { LiveSessionAvailability.isAvailable($0) } ?? false }
+        LiveSeries.allCases.filter { liveEntries[$0] != nil || ($0 == .f1 && scheduledLiveSession != nil) }
     }
     var hasActiveLive: Bool { !availableLiveSeries.isEmpty }
     var favoriteStanding: DriverStanding? { driverRoster.first { $0.id == favoriteDriverID } }
@@ -28,7 +37,7 @@ extension MobileModel {
         return matches.count == 1 ? matches[0].id : nil
     }
     func helmetAsset(for driver: LiveDriver) -> String {
-        MotorsportAssetName.helmetName(driverID: driverID(for: driver), name: driver.name ?? "", season: season)
+        MotorsportAssetName.helmetName(driverID: driverID(for: driver), name: driver.name ?? "", season: liveArtSeason)
     }
     func loadF1Roster(force: Bool = false) async {
         guard force || driverRoster.isEmpty, let serverURL else { return }

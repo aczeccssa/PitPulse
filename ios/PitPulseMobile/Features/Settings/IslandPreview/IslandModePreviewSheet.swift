@@ -17,13 +17,16 @@ struct IslandModePreviewSheet: View {
     @State var tuningModel = false
     @State var modelPose = IslandModelPose()
 
-    var mode: IslandPreviewPage { selection ?? IslandPreviewPage(rawValue: model.islandMode.rawValue)! }
+    var onChooseBattleDrivers: (() -> Void)? = nil
+
+    var mode: IslandPreviewPage { selection ?? model.islandMode }
+    private var isCurrentMode: Bool { mode == model.islandMode }
     var descriptions: String {
         switch mode {
-        case .overview: "比赛进度、赛道旗号与前三名同屏。\n扫一眼头盔和差距，掌握前方局势。"
-        case .battle: "收藏车手与前车同屏，看清追击差距。\n在 Live 选择一至两位，跟踪分段与轮胎。"
-        case .positionChanges: "领跑者始终在侧，全场超越尽收眼底。\n追踪最前方的名次变化，每次停留至少十秒。"
-        case .favorite: "跟住你支持的车手，掌握前后差距。\n分段进度、速度和轮胎，随时看清节奏。"
+        case .overview: "Race progress, track flags, and the top three at a glance."
+        case .battle: "Compare two drivers' gaps, sectors, and tires. Select the pair in Live."
+        case .positionChanges: "Keep the leader in view and track position changes across the field."
+        case .favorite: "Follow your favorite driver's gap, speed, sectors, and tires."
         }
     }
 
@@ -31,7 +34,7 @@ struct IslandModePreviewSheet: View {
         GeometryReader { geometry in
             let stageTop = max(110, geometry.size.height * 0.16)
             ZStack(alignment: .top) {
-                Color(uiColor: .systemBackground)
+                PulseStyle.background
                 GeometryReader { background in
                     IslandPhonePreview(state: previewState(displayedMode ?? mode), expanded: islandExpanded, pose: modelPose) {
                         guard !islandExpanded, previewExpanded else { return }
@@ -57,30 +60,31 @@ struct IslandModePreviewSheet: View {
                 .allowsHitTesting(false)
                 VStack(spacing: 22) {
                     HStack {
-                        Text("灵动岛显示").font(.headline).frame(maxWidth: .infinity)
+                        Text("Dynamic Island Mode").font(.headline).frame(maxWidth: .infinity)
                     }
-                    #if DEBUG
+                    // The tuner stays available in source while its entry is hidden.
+                    /*
                     .overlay(alignment: .leading) {
                         Button { tuningModel.toggle() } label: {
                             Image(systemName: "slider.horizontal.3")
                                 .frame(width: 44, height: 44)
                                 .background(.quaternary, in: Circle())
                         }
-                        .accessibilityLabel("调整模型")
+                        .accessibilityLabel("Adjust model")
                         .accessibilityIdentifier("islandPreview.tuneModel")
                     }
-                    #endif
+                    */
                     .overlay(alignment: .trailing) {
                         Button { dismiss() } label: {
                             Image(systemName: "xmark").font(.body.weight(.medium))
                                 .frame(width: 44, height: 44)
                                 .background(.quaternary, in: Circle())
-                        }.accessibilityLabel("关闭灵动岛预览")
+                        }.accessibilityLabel("Close Dynamic Island preview")
                     }
                     Spacer(minLength: 16)
                     VStack(spacing: 12) {
                         VStack(spacing: 10) {
-                            Text(mode.title).font(.title2.weight(.medium)).foregroundStyle(.white)
+                            Text(mode.englishTitle).font(.title2.weight(.medium)).foregroundStyle(.white)
                             Text(descriptions).font(.subheadline).foregroundStyle(.white.opacity(0.82))
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -93,19 +97,37 @@ struct IslandModePreviewSheet: View {
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(candidate.title)
+                                .accessibilityLabel(candidate.englishTitle)
                                 .accessibilityAddTraits(candidate == mode ? [.isSelected] : [])
                             }
                         }
-                        Button {
-                            model.islandMode = mode
-                            dismiss()
-                        } label: {
-                            Text("使用此模式").font(.body.weight(.medium))
-                                .frame(maxWidth: .infinity).padding(.vertical, 12)
+                        if mode == .battle, let onChooseBattleDrivers {
+                            Button("Select Drivers to Compare", systemImage: "person.2") {
+                                onChooseBattleDrivers()
+                                dismiss()
+                            }
+                            .buttonStyle(.glass)
                         }
-                        .buttonStyle(.glassProminent).buttonBorderShape(.capsule)
-                        .accessibilityIdentifier("islandPreview.save")
+                        if isCurrentMode {
+                            Label("Current Mode", systemImage: "checkmark")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 58)
+                                .background(.black.opacity(0.42), in: .capsule)
+                                .overlay { Capsule().strokeBorder(.white.opacity(0.24)) }
+                                .accessibilityAddTraits(.isSelected)
+                        } else {
+                            Button {
+                                model.islandMode = mode
+                                dismiss()
+                            } label: {
+                                Text("Use This Mode").font(.body.weight(.medium))
+                                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                            }
+                            .buttonStyle(.glassProminent)
+                            .buttonBorderShape(.capsule)
+                            .accessibilityIdentifier("islandPreview.save")
+                        }
                     }
                     .padding(.bottom, 4)
 
@@ -139,10 +161,11 @@ struct IslandModePreviewSheet: View {
             .task(id: mode) { await transitionIsland(to: mode) }
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .background(PulseStyle.background.ignoresSafeArea())
+        .pulseReveal()
 
         .tint(PulseStyle.red)
-        .presentationBackground(Color(uiColor: .systemBackground))
+        .presentationBackground(PulseStyle.background)
         #if DEBUG
         .task {
             if CommandLine.arguments.contains("--island-position-preview") { selection = .positionChanges; return }
@@ -158,19 +181,19 @@ struct IslandModePreviewSheet: View {
     var modelTuner: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("调整模型").font(.headline)
+                Text("Adjust model").font(.headline)
                 Spacer()
-                Button("重置") { modelPose = IslandModelPose() }
+                Button("Reset") { modelPose = IslandModelPose() }
                 Button { tuningModel = false } label: { Image(systemName: "xmark") }
-                    .accessibilityLabel("收起模型调节")
+                    .accessibilityLabel("Close model controls")
             }
-            poseSlider("X 轴角度", value: $modelPose.xAngle, range: -45...45, step: 0.1, suffix: "°")
-            poseSlider("Y 轴角度", value: $modelPose.yAngle, range: -60...60, step: 0.1, suffix: "°")
-            poseSlider("Z 轴角度", value: $modelPose.zAngle, range: -45...45, step: 0.1, suffix: "°")
-            poseSlider("横向位置", value: $modelPose.horizontal, range: -3...3, step: 0.01, suffix: "")
-            poseSlider("纵向位置", value: $modelPose.vertical, range: -3...3, step: 0.01, suffix: "")
-            poseSlider("机身厚度", value: $modelPose.thickness, range: 0.3...1.1, step: 0.01, suffix: "")
-            Text("横向向右为正 · 纵向向下为正；仅本次预览生效")
+            poseSlider("X-axis angle", value: $modelPose.xAngle, range: -45...45, step: 0.1, suffix: "°")
+            poseSlider("Y-axis angle", value: $modelPose.yAngle, range: -60...60, step: 0.1, suffix: "°")
+            poseSlider("Z-axis angle", value: $modelPose.zAngle, range: -45...45, step: 0.1, suffix: "°")
+            poseSlider("Horizontal offset", value: $modelPose.horizontal, range: -3...3, step: 0.01, suffix: "")
+            poseSlider("Vertical offset", value: $modelPose.vertical, range: -3...3, step: 0.01, suffix: "")
+            poseSlider("Body thickness", value: $modelPose.thickness, range: 0.3...1.1, step: 0.01, suffix: "")
+            Text("Positive offsets move right or down in this preview.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(14)
@@ -231,12 +254,12 @@ struct IslandModePreviewSheet: View {
         let lando = PitPulseActivityAttributes.Driver(name: "Lando NORRIS", position: 1, asset: "helmet-norris-2026", gap: "LEADER", speed: 309, tire: "M 20", sectors: sectors)
         let charles = PitPulseActivityAttributes.Driver(name: "Charles LECLERC", position: 3, asset: "helmet-leclerc-2026", gap: "+4.216")
         return .init(sessionName: "Race", meetingName: "São Paulo Grand Prix",
-            statusLabel: "比赛进行中", lapLabel: "L32/71",
+            statusLabel: "Race in Progress", lapLabel: "L32/71",
             leaderName: "Lando NORRIS", leaderGap: "LEADER",
             challengerName: "Max VERSTAPPEN", challengerGap: "+0.842",
             leaderAsset: "helmet-norris-2026", challengerAsset: "helmet-max_verstappen-2026",
-            trackLabel: "绿旗 · 赛道畅通", driverCount: 22,
+            trackLabel: "Green flag · Track clear", driverCount: 22,
             presentation: mode.rawValue, favoriteName: "Max VERSTAPPEN",
-            favoritePosition: 2, favoriteGap: "+0.842", favoriteGapLabel: "距领先", favoriteAsset: "helmet-max_verstappen-2026", podium: [lando, max, charles], battleDrivers: [lando, max], trackedDriver: max, battleGap: "+0.842", weather: .init(rainfall: false, airTemperature: 24, trackTemperature: 37, visibilityMeters: 10000), countryCode: "BR")
+            favoritePosition: 2, favoriteGap: "+0.842", favoriteGapLabel: "To leader", favoriteAsset: "helmet-max_verstappen-2026", podium: [lando, max, charles], battleDrivers: [lando, max], trackedDriver: max, battleGap: "+0.842", weather: .init(rainfall: false, airTemperature: 24, trackTemperature: 37, visibilityMeters: 10000), countryCode: "BR")
     }
 }

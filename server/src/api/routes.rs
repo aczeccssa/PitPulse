@@ -421,7 +421,48 @@ async fn live_snapshot(
             field: "series".to_string(),
             error: "expected f1 or wec".to_string(),
         })?;
-    Ok(Json(json!({"data": live.current().clone()})))
+    let current = live.current();
+    if params.get("view").is_some_and(|view| view == "activity") {
+        return Ok(Json(json!({"data": activity_snapshot(&current)})));
+    }
+    Ok(Json(json!({"data": &*current})))
+}
+
+fn activity_snapshot(
+    current: &crate::domain::live::LiveSnapshot,
+) -> crate::domain::live::LiveSnapshot {
+    use crate::domain::live::{LiveDriver, LiveTelemetry};
+
+    let mut snapshot = current.clone();
+    snapshot.race_control = None;
+    snapshot.team_radio.clear();
+    snapshot.position_status = None;
+    snapshot.position_diagnostics = None;
+    snapshot.drivers = current
+        .drivers
+        .iter()
+        .map(|driver| LiveDriver {
+            number: driver.number.clone(),
+            name: driver.name.clone(),
+            position: driver.position,
+            class_position: driver.class_position,
+            gap: driver.gap.clone(),
+            interval: driver.interval.clone(),
+            tire_compound: driver.tire_compound.clone(),
+            tire_age_laps: driver.tire_age_laps,
+            last_lap: driver.last_lap.clone(),
+            sectors: driver.sectors.clone(),
+            telemetry: driver.telemetry.as_ref().and_then(|sample| {
+                sample.speed.map(|speed| LiveTelemetry {
+                    utc: sample.utc.clone(),
+                    speed: Some(speed),
+                    ..LiveTelemetry::default()
+                })
+            }),
+            ..LiveDriver::default()
+        })
+        .collect();
+    snapshot
 }
 
 fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiError> {

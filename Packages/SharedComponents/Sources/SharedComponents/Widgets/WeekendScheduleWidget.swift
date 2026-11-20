@@ -11,8 +11,8 @@ public struct WeekendScheduleWidget: Widget {
             WeekendScheduleWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
                 .widgetURL(WidgetDestination.calendar.url)
         }
-        .configurationDisplayName("比赛周末 · Formula 1")
-        .description("小尺寸聚焦最近两场，中尺寸按场次展开，大尺寸显示完整场次安排。")
+        .configurationDisplayName(widgetCopy("Race Weekend · Formula 1", "比赛周末 · Formula 1"))
+        .description(widgetCopy("See the next two sessions or the full weekend schedule.", "小尺寸聚焦最近两场，中尺寸按场次展开，大尺寸显示完整场次安排。"))
         .supportedFamilies(scheduleWidgetFamilies)
     }
 }
@@ -33,11 +33,11 @@ struct WeekendScheduleWidgetView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(race.meeting).font(.caption.bold()).lineLimit(1)
                     ForEach(Array(upcoming(race).prefix(2))) { row in
-                        HStack { Text(row.title); Spacer(); Text(row.start, style: .time) }.font(.caption2)
+                        HStack { Text(widgetDisplayLabel(row.title)); Spacer(); Text(row.start, style: .time) }.font(.caption2)
                     }
                 }
             }
-        } else { WidgetEmpty(title: "比赛周末", icon: "calendar") }
+        } else { WidgetEmpty(title: widgetCopy("Race Weekend", "比赛周末"), icon: "calendar") }
     }
 
     private func weekendSessions(_ race: RaceWidgetSnapshot) -> [RaceWidgetSession] {
@@ -56,7 +56,7 @@ struct WeekendScheduleWidgetView: View {
             Spacer(minLength: 0)
             ForEach(Array(upcoming(race).prefix(2))) { row in
                 HStack(alignment: .firstTextBaseline) {
-                    Text(row.title).font(.caption.bold()).foregroundStyle(row.title == race.session ? widgetRed : .primary)
+                    Text(widgetDisplayLabel(row.title)).font(.caption.bold()).foregroundStyle(row.title == race.session ? widgetRed : .primary)
                     Spacer(minLength: 3)
                     Text(row.start, style: .time).font(.caption.monospacedDigit())
                 }
@@ -72,7 +72,7 @@ struct WeekendScheduleWidgetView: View {
                 ForEach(Array((race.sessions ?? []).prefix(5))) { row in
                     VStack(alignment: .leading, spacing: 5) {
                         Capsule().fill(row.start == race.start ? .red : Color.primary.opacity(0.16)).frame(height: 3).padding(.trailing, 5)
-                        Text(row.title).font(.system(size: 10, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                        Text(widgetDisplayLabel(row.title)).font(.system(size: 10, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
                         Text(row.start, format: .dateTime.month(.twoDigits).day()).font(.system(size: 8)).foregroundStyle(.secondary)
                         Text(row.start, style: .time).font(.system(size: 10, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                     }.frame(maxWidth: .infinity, alignment: .leading)
@@ -87,7 +87,7 @@ struct WeekendScheduleWidgetView: View {
         let stale = race.isStale(at: entry.date)
         return VStack(alignment: .leading, spacing: 8) {
             WidgetHeading(label: "FULL WEEKEND",
-                          trailing: stale ? "缓存过期" : race.round.map { "F1 · R\($0)" },
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : race.round.map { "F1 · R\($0)" },
                           warning: stale)
             Text(race.meeting)
                 .font(.system(size: 22, weight: .bold))
@@ -122,7 +122,7 @@ struct WeekendScheduleWidgetView: View {
             HStack {
                 Text(race.location ?? "Formula 1")
                 Spacer()
-                Text("本地时间")
+                Text(widgetCopy("Local Time", "本地时间"))
             }.font(.system(size: 8)).foregroundStyle(.secondary)
         }
     }
@@ -135,7 +135,7 @@ struct WeekendScheduleWidgetView: View {
                 .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(isRace ? widgetRed : .secondary)
                 .frame(width: 56, alignment: .leading).lineLimit(1).minimumScaleFactor(0.75)
-            Text(row.title).font(.system(size: 13, weight: isRace ? .bold : .semibold)).lineLimit(1)
+            Text(widgetDisplayLabel(row.title)).font(.system(size: 13, weight: isRace ? .bold : .semibold)).lineLimit(1)
             if isCurrent && !isRace {
                 Circle().fill(widgetRed).frame(width: 5, height: 5)
             }

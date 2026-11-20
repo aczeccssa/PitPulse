@@ -2,6 +2,7 @@ import Foundation
 
 public enum LiveIslandLogic {
     public static func displayedSnapshot(current: LiveSnapshot, lastKnown: LiveSnapshot?, meetings: [Meeting], now: Date) -> LiveSnapshot {
+        if current.sourceStatus == .stale, isSuspended(current.sessionStatus) { return current }
         let retained = current.sourceStatus == .disconnected ? lastKnown ?? current : current
         if current.sourceMode == .live,
            let planned = currentScheduledSession(in: meetings, now: now),
@@ -41,11 +42,19 @@ public enum LiveIslandLogic {
     }
 
     public static func isStarted(_ status: String?) -> Bool {
-        status.map { ["started", "green", "inprogress"].contains(normalizedToken($0)) } ?? false
+        status.map { ["started", "green", "inprogress", "running", "live"].contains(normalizedToken($0)) } ?? false
+    }
+
+    public static func isSuspended(_ status: String?) -> Bool {
+        status.map { ["aborted", "suspended"].contains(normalizedToken($0)) } ?? false
+    }
+
+    public static func isActive(_ status: String?) -> Bool {
+        isStarted(status) || isSuspended(status)
     }
 
     public static func isFinished(_ status: String?) -> Bool {
-        status.map { ["finished", "finalised", "finalized", "ends", "aborted", "cancelled"].contains(normalizedToken($0)) } ?? false
+        status.map { ["finished", "finalised", "finalized", "ends", "cancelled", "canceled"].contains(normalizedToken($0)) } ?? false
     }
 
     public static func shouldAutomaticallyShow(
@@ -115,7 +124,7 @@ public enum LiveIslandLogic {
             .joined(separator: " ")
     }
 
-    private static func sessionTypeMatches(_ value: String, _ type: SessionType) -> Bool {
+    public static func sessionTypeMatches(_ value: String, _ type: SessionType) -> Bool {
         let token = normalizedToken(value)
         return switch type {
         case .fp1: ["fp1", "practice", "practice1", "firstpractice"].contains(token)

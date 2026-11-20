@@ -1,62 +1,822 @@
-import Charts
+import SharedComponents
 import SharedData
 import SwiftUI
 
-struct ResultsScreen: View {
+struct ResultsScreen<WeekendTools: View>: View {
     @EnvironmentObject private var model: MobileModel
+    @Environment(\.dynamicTypeSize) private var typeSize
     let session: Session
     let meeting: Meeting
-    @State private var results: [SessionResult] = []
+    var availableSessions: [Session] = []
+    var selectSession: ((Session) -> Void)?
+    @ViewBuilder var weekendTools: () -> WeekendTools
+    @State private var response: APIEnvelope<[SessionResult]>?
     @State private var error: String?
-    @State private var loading = false
-    @State private var quality: String?
+    @State private var showFinishGaps = false
+    @State private var viewportHeight: CGFloat = 0
+
+    private var isRace: Bool { session.sessionType == .race || session.sessionType == .sprint }
+    private var isQualifying: Bool { session.sessionType == .qualifying || session.sessionType == .sprintQualifying }
+    private var rows: [SessionResult] {
+        let archived = model.seasonArchive?.data.first { $0.id == meeting.id }?
+            .sessions[session.sessionType.rawValue]?.rows ?? []
+        let archiveNumbers = Dictionary(
+            archived.compactMap { row in row.resultNumber.map { (row.driverId, $0) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return (response?.data ?? [])
+            .map { row in
+                guard row.resultNumber == nil, let number = archiveNumbers[row.driverId] else { return row }
+                var result = row
+                result.driverNumber = String(number.dropFirst())
+                return result
+            }
+            .sorted { ($0.position ?? Int.max, $0.id) < ($1.position ?? Int.max, $1.id) }
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                PulseHeading(eyebrow: "Weekend Results", title: session.sessionType.displayName)
-                Text("\(meeting.name) · R\(meeting.round ?? 0)").font(.subheadline).foregroundStyle(.secondary)
-                if loading { ProgressView().frame(maxWidth: .infinity) }
-                if let quality { Text(quality).font(.caption2).foregroundStyle(.secondary) }
-                if let error { Text(error).foregroundStyle(.orange) }
-                PulseCard {
-                    VStack(spacing: 0) {
-                        HStack { Text("#   车手"); Spacer(); Text("成绩 / 最快圈") }.font(.caption2).foregroundStyle(.secondary).padding(.bottom, 12)
-                        ForEach(results) { row in
-                            NavigationLink { DriverAnalysisScreen(sessionID: session.id, driverID: row.driverId, name: row.driverName) } label: {
-                                HStack(spacing: 12) {
-                                    Text(row.position.map(String.init) ?? "—").frame(width: 22).monospacedDigit()
-                                    AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: meeting.season)).frame(width: 34, height: 30)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(MotorsportAssetName.abbreviation(row.driverName)).font(.subheadline.bold())
-                                        HStack(spacing: 4) { AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: row.constructorId, season: meeting.season)).frame(width: 15, height: 12); Text(row.team).font(.system(size: 9)).foregroundStyle(.secondary) }
-                                    }
-                                    Spacer()
-                                    VStack(alignment: .trailing, spacing: 4) {
-                                        Text(row.position == nil ? row.classificationLabel : (row.time ?? row.bestLap ?? row.gap ?? row.classificationLabel)).font(.caption.monospacedDigit())
-                                        Text(row.points.map { "\($0.formatted()) PTS" } ?? "—").font(.caption2).foregroundStyle(.secondary)
-                                    }
-                                    Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(.secondary)
-                                }.padding(.vertical, 12).contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityIdentifier("result.\(row.driverId)")
-                            Divider()
+            VStack(alignment: .leading, spacing: 14) {
+                meetingHeader
+                weekendTools()
+                sessionHeader
+                if !rows.isEmpty {
+                    if isRace { podium }
+                    classification
+                } else if response != nil {
+                    ContentUnavailableView("No Results Yet", systemImage: "flag.checkered",
+                                           description: Text("Results appear once the session ends and the server syncs them."))
+                } else if error == nil {
+                    PulseSkeleton(label: "Loading session results…")
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                }
+
+                if let error {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(error).foregroundStyle(WebDashboardStyle.homeMuted)
+                        Button("Retry") { Task { await load() } }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .dashboardPanel(WebDashboardStyle.homePanel)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .background(WebDashboardStyle.homeBackground)
+        .pulseSwap(response != nil)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+        .sheet(isPresented: $showFinishGaps) {
+            ResultFittedSheet(maximumHeight: viewportHeight) {
+                RaceFinishGaps(rows: rows, season: meeting.season)
+            }
+        }
+        .task(id: model.dataContext) {
+            error = nil
+            if let archived = model.seasonArchive?.data.first(where: { $0.id == meeting.id })?
+                .sessions[session.sessionType.rawValue], !archived.rows.isEmpty {
+                response = APIEnvelope(data: archived.rows, meta: archived.meta)
+            } else {
+                response = nil
+            }
+            await load()
+        }
+        .refreshable { await load() }
+    }
+
+    private var meetingHeader: some View {
+        let round = meeting.round.map { "R\($0) · \(meeting.season)" } ?? String(meeting.season)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                FlagBadge(countryCode: meeting.countryCode).accessibilityHidden(true)
+                Text(round).font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(PulseStyle.red)
+            }
+            Text(meeting.name).font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
+            if let name = meeting.circuit?.name, !name.isEmpty {
+                Text(name).font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .dashboardPanel(WebDashboardStyle.homePanel)
+    }
+
+    private var sessionHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let selectSession, availableSessions.count > 1 {
+                let columns = typeSize.isAccessibilitySize ? 2 : (availableSessions.count > 5
+                                                                  ? (availableSessions.count + 1) / 2 : availableSessions.count)
+                VStack(spacing: 2) {
+                    ForEach(Array(stride(from: 0, to: availableSessions.count, by: columns)), id: \.self) { start in
+                        let end = min(start + columns, availableSessions.count)
+                        SessionChoiceRow {
+                            ForEach(availableSessions[start..<end]) { choice in
+                                let active = choice.id == session.id
+                                Button {
+                                    if !active { selectSession(choice) }
+                                } label: {
+                                    Text(choice.sessionType.resultLabel)
+                                        .modifier(ResultSessionStyle(active: active))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(active ? .isSelected : [])
+                            }
                         }
-                        if results.isEmpty && !loading { Text("暂无成绩，场次结束并同步后可查看。").font(.subheadline).foregroundStyle(.secondary).padding(.vertical, 24) }
                     }
                 }
-                Text("点击车手查看圈速、分段和遥测。缺失数据保留为空。").font(.caption).foregroundStyle(.secondary)
-            }.padding(20)
-        }.background(PulseStyle.background).navigationTitle("场次成绩").navigationBarTitleDisplayMode(.inline)
-            .task { await load() }.refreshable { await load() }
-    }
-    private func load() async {
-        guard let url = model.serverURL else { error = "请检查服务器地址"; return }
-        loading = true; error = nil
-        defer { loading = false }
-        do {
-            let response = try await APIClient(baseURL: url).sessionResults(sessionId: session.id, token: model.currentToken)
-            results = response.data
-            quality = (response.meta.stale ? "缓存过期 · " : "") + response.meta.quality.displayName
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Session")
+            } else {
+                Text(session.sessionType.resultLabel).font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+            }
+
+            Text(session.startTime, format: .dateTime.month().day().hour().minute())
+                .font(.caption)
+                .foregroundStyle(WebDashboardStyle.homeMuted)
         }
-        catch { self.error = MobileModel.message(for: error) }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var podium: some View {
+        let finishers = rows.filter { (1...3).contains($0.position ?? 0) && $0.classification.uppercased() == "CLASSIFIED" }
+        if !finishers.isEmpty {
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Podium").font(.headline).accessibilityAddTraits(.isHeader)
+                layout {
+                    ForEach(finishers) { row in
+                        VStack(spacing: 6) {
+                            helmet(row).frame(width: 52, height: 43)
+                            ResultDriverName(name: row.driverName)
+                            HStack(spacing: 5) {
+                                AssetImage(name: MotorsportAssetName.name(
+                                    kind: .teamLogo, id: row.constructorId, season: meeting.season
+                                ))
+                                .frame(width: 20, height: 14)
+                                if let number = row.resultNumber {
+                                    Text(number).font(.caption.monospacedDigit())
+                                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                                }
+                            }
+                            .frame(minHeight: 17)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel([row.team, row.resultNumber].compactMap { $0 }.joined(separator: ", "))
+                            if let position = row.position {
+                                Text("P\(position)")
+                                    .font(.subheadline.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(PulseStyle.red)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .frame(maxWidth: .infinity)
+                        .background(DashboardArt.teamColor(row.constructorId).opacity(0.12),
+                                    in: .rect(cornerRadius: 12))
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+            .padding(14)
+            .dashboardPanel(WebDashboardStyle.homePanel)
+        }
+    }
+
+    private var classification: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    classificationTitle
+                    Spacer(minLength: 8)
+                    analysisLink
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    classificationTitle
+                    analysisLink
+                }
+            }
+            .padding(.bottom, 4)
+            ForEach(rows) { row in
+                Divider()
+                NavigationLink {
+                    DriverAnalysisScreen(sessionID: session.id, driver: row, season: meeting.season, sessionLabel: session.sessionType.resultLabel)
+                } label: {
+                    resultRow(row)
+                }
+                .buttonStyle(PulsePressStyle())
+                .navigationLinkIndicatorVisibility(.hidden)
+                .accessibilityIdentifier("result.\(row.driverId)")
+            }
+        }
+        .padding(14)
+        .dashboardPanel(WebDashboardStyle.homePanel)
+    }
+
+    private var classificationTitle: some View {
+        Text(isQualifying ? "Qualifying Results" : "Session Results")
+            .font(.headline)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder private var analysisLink: some View {
+        if isRace {
+            Button("Finishing Gaps", systemImage: "chart.bar.xaxis") {
+                showFinishGaps = true
+            }
+            .labelStyle(.iconOnly)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(PulseStyle.red)
+            .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
+            .contentShape(.rect)
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink {
+                ScrollView {
+                    SessionPaceChart(rows: rows, session: session, season: meeting.season)
+                        .padding(16)
+                }
+                .background(WebDashboardStyle.homeBackground)
+                .navigationTitle("Lap Time Comparison")
+                .navigationBarTitleDisplayMode(.inline)
+                .dashboardDetail()
+            } label: {
+                Label("Lap Time Comparison", systemImage: "chart.bar.xaxis")
+                    .font(.subheadline)
+                    .foregroundStyle(PulseStyle.red)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func resultRow(_ row: SessionResult) -> some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 8))
+        return VStack(alignment: .leading, spacing: 8) {
+            layout {
+                HStack(spacing: 8) {
+                    PulseNumber(row.position.map(String.init) ?? "—")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .frame(minWidth: 20, alignment: .leading)
+                    helmet(row).frame(width: 30, height: 27)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            if let number = row.resultNumber {
+                                Text(number)
+                                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                                    .fixedSize()
+                            }
+                            Text(row.driverName).font(.subheadline.weight(.semibold))
+                        }
+                        HStack(spacing: 5) {
+                            AssetImage(name: MotorsportAssetName.name(
+                                kind: .teamLogo, id: row.constructorId, season: meeting.season
+                            ))
+                            .frame(width: 15, height: 12)
+                            Text(row.team).font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
+                    Text(mainValue(row))
+                        .font(.subheadline.weight(.medium).monospacedDigit())
+                    let detail = [row.laps.map { "\($0) laps" }, isRace ? row.points.map { "\($0.formatted()) pts" } : nil]
+                        .compactMap { $0 }.joined(separator: " · ")
+                    if !detail.isEmpty {
+                        PulseNumber(detail).font(.caption.monospacedDigit())
+                            .foregroundStyle(WebDashboardStyle.homeMuted)
+                    }
+                }
+            }
+            if isQualifying {
+                let phases = [row.q1, row.q2, row.q3].enumerated().compactMap { index, value in
+                    value.map { (index, $0) }
+                }
+                if !phases.isEmpty {
+                    let phaseLayout = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                        : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+                    phaseLayout {
+                        ForEach(phases, id: \.0) { index, time in
+                            let prefix = session.sessionType == .sprintQualifying ? "SQ" : "Q"
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(prefix)\(index + 1)").foregroundStyle(WebDashboardStyle.homeMuted)
+                                Text(time)
+                            }
+                            .font(.caption2.monospacedDigit())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(8)
+                    .background(WebDashboardStyle.homeBackground, in: .rect(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(.vertical, 9)
+        .frame(minHeight: 48)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func helmet(_ row: SessionResult) -> some View {
+        AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: meeting.season))
+    }
+
+    private func mainValue(_ row: SessionResult) -> String {
+        if row.classification.uppercased() != "CLASSIFIED" { return row.classification.uppercased() }
+        if isRace {
+            if row.position == 1 { return row.raceTime ?? row.time ?? "—" }
+            if let gap = row.gap { return gap }
+            if let leader = rows.first(where: { $0.position == 1 }), let leaderLaps = leader.laps, let laps = row.laps {
+                if laps < leaderLaps { return "+\(leaderLaps - laps) laps" }
+                if laps == leaderLaps,
+                   let leadTime = AnalysisMath.elapsedSeconds(leader.raceTime ?? leader.time),
+                   let finishTime = AnalysisMath.elapsedSeconds(row.raceTime ?? row.time), finishTime >= leadTime {
+                    return "+\((finishTime - leadTime).formatted(.number.precision(.fractionLength(3)))) s"
+                }
+            }
+            return row.raceTime ?? row.time ?? "—"
+        }
+        return row.bestLap ?? row.q3 ?? row.q2 ?? row.q1 ?? row.time ?? "—"
+    }
+
+    private func load() async {
+        guard let url = model.serverURL else { error = "Check the server address"; return }
+        let context = model.dataContext
+        do {
+            let result = try await APIClient(baseURL: url).sessionResults(sessionId: session.id, token: model.currentToken)
+            guard context == model.dataContext, !Task.isCancelled else { return }
+            response = result
+            error = nil
+        } catch {
+            guard context == model.dataContext, !Task.isCancelled else { return }
+            self.error = MobileModel.message(for: error).pulseEnglishError
+        }
+    }
+}
+
+extension ResultsScreen where WeekendTools == EmptyView {
+    init(session: Session, meeting: Meeting) {
+        self.init(session: session, meeting: meeting, weekendTools: { EmptyView() })
+    }
+}
+
+extension SessionResult {
+    var resultNumber: String? {
+        guard let value = driverNumber?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else { return nil }
+        return value.hasPrefix("#") ? value : "#" + value
+    }
+}
+
+struct ResultDriverName: View {
+    let name: String
+
+    private var shortName: String {
+        let parts = name.split(whereSeparator: \.isWhitespace)
+        guard let surname = parts.last else { return name }
+        if let prefix = parts.dropLast().last, ["de", "van", "von", "da"].contains(prefix.lowercased()) {
+            return "\(prefix) \(surname)"
+        }
+        return String(surname)
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            Text(name).fixedSize(horizontal: true, vertical: false)
+            Text(shortName).lineLimit(1).minimumScaleFactor(0.65)
+        }
+        .font(.caption.weight(.semibold))
+        .accessibilityLabel(name)
+    }
+}
+
+struct ResultFittedSheet<Content: View>: View {
+    let maximumHeight: CGFloat
+    @ViewBuilder var content: () -> Content
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollView {
+            content()
+                .onGeometryChange(for: CGFloat.self) { ceil($0.size.height) } action: { contentHeight = $0 }
+        }
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .presentationDetents([contentHeight > 0 && maximumHeight > 0
+                              ? .height(min(contentHeight, maximumHeight)) : .medium])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(WebDashboardStyle.homeBackground)
+    }
+}
+
+extension SessionType {
+    var resultLabel: String {
+        switch self {
+        case .fp1, .fp2, .fp3: displayName
+        default: webTitle
+        }
+    }
+}
+
+struct ResultSessionOptions: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let frames = frames(in: proposal.width ?? .infinity, subviews: subviews)
+        return CGSize(width: frames.map(\.maxX).max() ?? 0, height: frames.map(\.maxY).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, frames(in: bounds.width, subviews: subviews)) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                          anchor: .topLeading, proposal: ProposedViewSize(frame.size))
+        }
+    }
+
+    private func frames(in width: CGFloat, subviews: Subviews) -> [CGRect] {
+        var position = CGPoint.zero
+        var rowHeight: CGFloat = 0
+        return subviews.map { subview in
+            let ideal = subview.sizeThatFits(.unspecified)
+            let size = ideal.width > width
+                ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+                : ideal
+            if position.x > 0 && position.x + size.width > width {
+                position.x = 0
+                position.y += rowHeight
+                rowHeight = 0
+            }
+            let frame = CGRect(origin: position, size: size)
+            rowHeight = max(rowHeight, size.height)
+            position.x += size.width + spacing
+            return frame
+        }
+    }
+}
+
+private struct SessionChoiceRow: Layout {
+    let spacing: CGFloat = 6
+
+    private func widths(_ proposedWidth: CGFloat?, _ subviews: Subviews) -> [CGFloat] {
+        let ideal = subviews.map { max(44, $0.sizeThatFits(.unspecified).width + 8) }
+        let total = ideal.reduce(0, +)
+        guard let proposedWidth, total > 0 else { return ideal }
+        let available = max(0, proposedWidth - spacing * CGFloat(max(0, ideal.count - 1)))
+        return ideal.map { available * $0 / total }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let widths = widths(proposal.width, subviews)
+        let height = zip(subviews, widths).map { view, width in
+            view.sizeThatFits(.init(width: width, height: nil)).height
+        }.max() ?? 0
+        return CGSize(width: proposal.width ?? widths.reduce(0, +) + spacing * CGFloat(max(0, widths.count - 1)),
+                      height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        for (view, width) in zip(subviews, widths(bounds.width, subviews)) {
+            view.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
+                       proposal: .init(width: width, height: bounds.height))
+            x += width + spacing
+        }
+    }
+}
+
+struct ResultSessionStyle: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .font(.caption.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(active ? PulseStyle.red : WebDashboardStyle.homeText)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, minHeight: 34)
+            .background(active ? PulseStyle.red.opacity(0.12) : WebDashboardStyle.homeLine,
+                        in: .rect(cornerRadius: 9))
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+    }
+}
+
+struct ResultComparisonRow<Plot: View>: View {
+    let asset: String
+    let name: String
+    let value: String
+    var detail: String?
+    var code: String?
+    @ViewBuilder var plot: Plot
+    @ScaledMetric(relativeTo: .caption) private var numberWidth = 72.0
+
+    static var codeWidth: CGFloat { 30 }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            AssetImage(name: asset).frame(width: 32, height: 28)
+            if let code {
+                Text(code)
+                    .font(.caption.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(width: Self.codeWidth, alignment: .leading)
+            }
+            plot.frame(maxWidth: .infinity)
+                .pulseChart()
+                .accessibilityHidden(true)
+            VStack(alignment: .trailing, spacing: 2) {
+                PulseNumber(value)
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                if let detail {
+                    PulseNumber(detail).font(.caption2)
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+            .frame(width: min(numberWidth, 120), alignment: .trailing)
+        }
+        .frame(minHeight: 38)
+        .contentShape(.rect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(detail.map { "\(name), \($0)" } ?? name)
+        .accessibilityValue(value)
+    }
+}
+
+struct ResultComparisonBar: View {
+    let fraction: Double
+    let color: Color
+    var height: CGFloat = 18
+
+    var body: some View {
+        GeometryReader { geometry in
+            RoundedRectangle(cornerRadius: 5)
+                .fill(color)
+                .frame(width: max(2, geometry.size.width * min(1, max(0, fraction))))
+        }
+        .frame(height: height)
+    }
+}
+
+private struct RaceFinishGaps: View {
+    let rows: [SessionResult]
+    let season: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
+    @State private var showsInterval = false
+    @ScaledMetric(relativeTo: .caption) private var gapValueWidth: CGFloat = 75
+    @ScaledMetric(relativeTo: .caption) private var numberWidth: CGFloat = 27
+    @ScaledMetric(relativeTo: .callout) private var positionWidth: CGFloat = 34
+    @ScaledMetric(relativeTo: .caption) private var rowHeight: CGFloat = 39
+
+    private struct Gap: Identifiable {
+        let row: SessionResult
+        let seconds: Double
+        var id: String { row.id }
+    }
+
+    private var gaps: [Gap] {
+        guard let leader = rows.first, leader.position == 1 else { return [] }
+        return rows.enumerated().compactMap { index, row in
+            let reference = showsInterval ? rows[max(0, index - 1)] : leader
+            guard row.classification.uppercased() == "CLASSIFIED",
+                  reference.classification.uppercased() == "CLASSIFIED",
+                  let laps = row.laps, laps == reference.laps else { return nil }
+            if index == 0 { return showsInterval ? nil : Gap(row: row, seconds: 0) }
+            if let seconds = AnalysisMath.elapsedSeconds(row.raceTime ?? row.time),
+               let prior = AnalysisMath.elapsedSeconds(reference.raceTime ?? reference.time),
+               seconds >= prior {
+                return Gap(row: row, seconds: seconds - prior)
+            }
+            if !showsInterval, let raw = row.gap {
+                let elapsed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard elapsed.hasPrefix("+") else { return nil }
+                let number = elapsed.dropFirst().trimmingCharacters(in: CharacterSet(charactersIn: " sS"))
+                if let seconds = Double(number), seconds.isFinite, seconds >= 0 {
+                    return Gap(row: row, seconds: seconds)
+                }
+            }
+            return nil
+        }
+    }
+
+    var body: some View {
+        let gaps = gaps
+        let scale = max(0.001, gaps.map(\.seconds).max() ?? 0)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
+                        showsInterval.toggle()
+                    }
+                } label: {
+                    headerIcon("arrow.left.arrow.right", color: PulseStyle.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Change gap reference")
+                .accessibilityValue(showsInterval ? "To previous car" : "To leader")
+
+                VStack(spacing: 3) {
+                    Text("Finishing Gaps")
+                        .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(showsInterval ? "To previous car" : "To leader")
+                        .font(.caption)
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                        .contentTransition(.opacity)
+                }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    dismiss()
+                } label: {
+                    headerIcon("xmark", color: WebDashboardStyle.homeText)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close")
+            }
+            .padding(.horizontal, 2)
+
+            PulseCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    if gaps.isEmpty {
+                        ContentUnavailableView("No Comparable Gaps", systemImage: "timer")
+                    } else {
+                        VStack(spacing: 2) {
+                            ForEach(gaps) { gap in
+                                gapRow(gap, fraction: gap.seconds / scale)
+                                    .transition(.opacity)
+                            }
+                        }
+                        Text("Only drivers on the same lap with a verified time gap are shown.")
+                            .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    private func headerIcon(_ symbol: String, color: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(color)
+            .frame(width: 44, height: 44)
+            .glassEffect(.regular.interactive(), in: .circle)
+    }
+
+    private func gapRow(_ gap: Gap, fraction: Double) -> some View {
+        let row = gap.row
+        let position = row.position.map { "P\($0)" } ?? "—"
+        return HStack(spacing: 6) {
+            Text(row.resultNumber ?? "")
+                .font(.caption2.weight(.medium).monospacedDigit())
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: min(numberWidth, 46), alignment: .leading)
+            AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: season))
+                .frame(width: 31, height: 27)
+            GeometryReader { geometry in
+                let reserved = min(gapValueWidth, geometry.size.width * 0.55)
+                let track = max(0, geometry.size.width - reserved - 6)
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(DashboardArt.teamColor(row.constructorId))
+                        .frame(width: max(2, track * fraction), height: 18)
+                    PulseNumber(format(gap.seconds))
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.62)
+                        .contentTransition(.numericText(value: gap.seconds))
+                        .frame(width: reserved, alignment: .leading)
+                }
+                .frame(height: geometry.size.height, alignment: .leading)
+            }
+            Text(position)
+                .font(.callout.weight(.semibold).monospacedDigit())
+                .foregroundStyle(WebDashboardStyle.homeText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: min(positionWidth, 54), height: rowHeight, alignment: .trailing)
+        }
+        .frame(height: rowHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([row.resultNumber, row.driverName, position].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityValue(format(gap.seconds))
+    }
+
+    private func format(_ seconds: Double) -> String {
+        let value = seconds.formatted(.number.precision(.fractionLength(3)))
+        return seconds == 0 ? "\(value) s" : "+\(value) s"
+    }
+}
+
+private struct SessionPaceChart: View {
+    let rows: [SessionResult]
+    let session: Session
+    let season: Int
+    @State private var selectedPhase: QualifyingPhase?
+
+    private enum QualifyingPhase: Int, CaseIterable, Identifiable {
+        case first = 1, second, third
+        var id: Self { self }
+
+        func seconds(in row: SessionResult) -> Double? {
+            switch self {
+            case .first: AnalysisMath.elapsedSeconds(row.q1)
+            case .second: AnalysisMath.elapsedSeconds(row.q2)
+            case .third: AnalysisMath.elapsedSeconds(row.q3)
+            }
+        }
+    }
+
+    private struct PacePoint: Identifiable {
+        let row: SessionResult
+        let gap: Double
+        var id: String { row.driverId }
+    }
+
+    private var isQualifying: Bool { session.sessionType == .qualifying || session.sessionType == .sprintQualifying }
+
+    private func points(phase: QualifyingPhase?) -> [PacePoint] {
+        let timed = rows.compactMap { row -> (SessionResult, Double)? in
+            let seconds: Double?
+            if let phase {
+                seconds = phase.seconds(in: row)
+            } else {
+                seconds = AnalysisMath.elapsedSeconds(row.bestLap) ?? AnalysisMath.elapsedSeconds(row.time)
+            }
+            guard let seconds else { return nil }
+            return (row, seconds)
+        }
+        guard let fastest = timed.map(\.1).min() else { return [] }
+        return timed
+            .sorted { ($0.1, $0.0.driverId) < ($1.1, $1.0.driverId) }
+            .map { row, seconds in
+                PacePoint(row: row, gap: max(0, seconds - fastest))
+            }
+    }
+
+    var body: some View {
+        let phases = isQualifying ? QualifyingPhase.allCases.filter { phase in
+            rows.contains { phase.seconds(in: $0) != nil }
+        } : []
+        let phase = selectedPhase.flatMap { phases.contains($0) ? $0 : nil } ?? phases.last
+        let points = points(phase: phase)
+        PulseCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Label(isQualifying ? "Qualifying Pace" : "Fastest Practice Laps", systemImage: "speedometer")
+                        .font(.headline)
+                    Spacer()
+                    Text("Gap to Fastest Lap")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let phase {
+                    let prefix = session.sessionType == .sprintQualifying ? "SQ" : "Q"
+                    PulseSectionPicker(
+                        sections: phases.map { ($0, "\(prefix)\($0.rawValue)") },
+                        selection: Binding(get: { phase }, set: { selectedPhase = $0 })
+                    )
+                } else if isQualifying && !points.isEmpty {
+                    Text("Using archived lap times. Sector timing is unavailable for this session.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if points.isEmpty {
+                    ContentUnavailableView("No comparable lap times", systemImage: "speedometer")
+                } else {
+                    let scale = max(0.001, points.map(\.gap).max() ?? 0)
+                    ForEach(points) { point in
+                        ResultComparisonRow(
+                            asset: MotorsportAssetName.helmetName(
+                                driverID: point.row.driverId, name: point.row.driverName, season: season
+                            ),
+                            name: point.row.driverName,
+                            value: point.gap == 0 ? "Fastest" : "+\(point.gap.formatted(.number.precision(.fractionLength(3)))) s"
+                        ) {
+                            ResultComparisonBar(fraction: point.gap / scale, color: DashboardArt.teamColor(point.row.constructorId))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -190,6 +190,10 @@ pub struct LiveSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_remaining_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_sample_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_running: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elapsed_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_time_based: Option<bool>,
@@ -225,6 +229,8 @@ impl Default for LiveSnapshot {
             position_status: None,
             position_diagnostics: None,
             time_remaining_seconds: None,
+            clock_sample_at: None,
+            clock_running: None,
             elapsed_seconds: None,
             is_time_based: None,
         }

@@ -3,6 +3,7 @@ import Foundation
 public struct CircuitLocation: Codable, Equatable, Sendable {
     public let id: String?
     public let name: String?
+    public var lengthKm: Double? = nil
     public let latitude: Double
     public let longitude: Double
 }
@@ -114,7 +115,7 @@ public struct Session: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-public enum SessionType: String, Codable, Sendable {
+public enum SessionType: String, Codable, CaseIterable, Sendable {
     case fp1
     case fp2
     case fp3

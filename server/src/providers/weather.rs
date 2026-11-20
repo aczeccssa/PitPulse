@@ -51,7 +51,7 @@ impl WeatherProvider {
             return Err("location_unavailable");
         }
         let url = format!(
-            "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m&forecast_days=16&timezone=GMT&timeformat=unixtime&wind_speed_unit=ms"
+            "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,visibility&forecast_days=16&timezone=GMT&timeformat=unixtime&wind_speed_unit=ms"
         );
         let r = self
             .cache
@@ -86,6 +86,7 @@ fn forecast_hours(value: &Value, start: i64, end: i64) -> Result<Vec<Value>, &'s
             ("precipitation", "precipitation"),
             ("weather_code", "weatherCode"),
             ("wind_speed_10m", "windSpeed"),
+            ("visibility", "visibilityMeters"),
         ] {
             hour[field] = value
                 .pointer(&format!("/hourly/{key}"))
@@ -105,10 +106,16 @@ mod tests {
     #[test]
     fn test_forecast_normalizes_utc_and_preserves_missing_values() {
         let start = parse_utc_seconds("2026-10-11T00:00:00Z").unwrap();
-        let hours=forecast_hours(&json!({"hourly":{"time":[start-7200,start,start+3600,start+10800],"temperature_2m":[20,29,null,21],"precipitation_probability":[0,60]}}),start,start+3600).unwrap();
+        let hours = forecast_hours(
+            &json!({"hourly":{"time":[start-7200,start,start+3600,start+10800],"temperature_2m":[20,29,null,21],"precipitation_probability":[0,60],"visibility":[null,10000]}}),
+            start,
+            start + 3600,
+        ).unwrap();
         assert_eq!(hours.len(), 2);
         assert_eq!(hours[0]["utc"], "2026-10-11T00:00:00Z");
         assert_eq!(hours[0]["airTemp"], 29);
+        assert_eq!(hours[0]["visibilityMeters"], 10000);
+        assert!(hours[1]["visibilityMeters"].is_null());
         assert!(hours[1]["airTemp"].is_null() && hours[1]["precipitationProbability"].is_null());
         assert!(forecast_hours(&json!({}), start, start).is_err());
     }

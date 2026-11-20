@@ -4,7 +4,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
-  developmentLanguage: zh-Hans
+  developmentLanguage: en
 packages:
   SharedData:
     path: ../Packages/SharedData
@@ -28,6 +28,16 @@ targets:
       - path: PitPulseMobile
         excludes:
           - "Info.plist"
+      - path: ../server/resources/motorsport
+        type: folder
+        buildPhase: resources
+      - path: ../server/resources/web/motorsport
+        name: Web Motorsport
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: WebAssets
       - path: ../Packages/SharedComponents/Resources/AppIcon.icon
         buildPhase: resources
     settings:

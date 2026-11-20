@@ -38,8 +38,8 @@ public struct FavoriteDriverWidget: Widget {
         StaticConfiguration(kind: RaceWidgetCache.favoriteDriverKind, provider: FavoriteDriverWidgetProvider()) { entry in
             FavoriteDriverWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
         }
-        .configurationDisplayName("我的车手 · Formula 1")
-        .description("小尺寸看排名与积分，中尺寸看近期比赛，大尺寸展开近三场与赛季数据。")
+        .configurationDisplayName(widgetCopy("My Driver · Formula 1", "我的车手 · Formula 1"))
+        .description(widgetCopy("See your driver's standings, recent results, or season stats.", "小尺寸看排名与积分，中尺寸看近期比赛，大尺寸展开近三场与赛季数据。"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -58,7 +58,7 @@ struct FavoriteDriverWidgetView: View {
             default: large(snapshot)
             }
         } else {
-            WidgetEmpty(title: "我的车手", icon: "star.fill", message: "在 App 设置中选择喜欢车手")
+            WidgetEmpty(title: widgetCopy("My Driver", "我的车手"), icon: "star.fill", message: widgetCopy("Pick a favorite driver in Settings", "在 App 设置中选择喜欢车手"))
         }
     }
 
@@ -67,7 +67,7 @@ struct FavoriteDriverWidgetView: View {
         let driver = snapshot.driver
         return VStack(alignment: .leading, spacing: 6) {
             WidgetHeading(label: "MY DRIVER",
-                          trailing: stale ? "缓存过期" : "\(snapshot.season)",
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "\(snapshot.season)",
                           warning: stale)
             HStack(spacing: 7) {
                 helmet(driver, season: snapshot.season, size: CGSize(width: 42, height: 36))
@@ -90,7 +90,7 @@ struct FavoriteDriverWidgetView: View {
                 Text("\(Int(driver.points.rounded()))")
                     .font(.system(size: 28, weight: .bold, design: .rounded)).monospacedDigit()
                     .foregroundStyle(widgetRed)
-                Text("积分").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                Text(widgetCopy("Points", "积分")).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
             }
             HStack(spacing: 3) {
                 Text(gapLabel(snapshot)).font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary)
@@ -107,7 +107,7 @@ struct FavoriteDriverWidgetView: View {
         let form = Array(snapshot.recentRaces.prefix(3))
         return VStack(alignment: .leading, spacing: 4) {
             WidgetHeading(label: "MY DRIVER",
-                          trailing: stale ? "缓存过期" : "F1 · \(snapshot.season)",
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "F1 · \(snapshot.season)",
                           warning: stale)
             HStack(spacing: 7) {
                 helmet(driver, season: snapshot.season, size: CGSize(width: 40, height: 32))
@@ -128,36 +128,36 @@ struct FavoriteDriverWidgetView: View {
                     Text("\(Int(driver.points.rounded()))")
                         .font(.system(size: 22, weight: .bold, design: .rounded)).monospacedDigit()
                         .foregroundStyle(widgetRed)
-                    Text("积分").font(.system(size: 8, weight: .semibold)).foregroundStyle(.secondary)
+                    Text(widgetCopy("Points", "积分")).font(.system(size: 8, weight: .semibold)).foregroundStyle(.secondary)
                 }
             }
             Divider()
             if let last {
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text("上站 · \(last.meeting)")
+                    Text(widgetCopy("Last race · \(last.meeting)", "上站 · \(last.meeting)"))
                         .font(.system(size: 9, weight: .semibold)).lineLimit(1)
                     Spacer(minLength: 2)
                     Text(last.date, format: .dateTime.month(.abbreviated).day())
                         .font(.system(size: 8)).foregroundStyle(.secondary)
                 }
                 HStack(spacing: 0) {
-                    raceResultStat("名次", finishText(last), highlight: true)
+                    raceResultStat(widgetCopy("Position", "名次"), finishText(last), highlight: true)
                     Divider().frame(height: 20)
-                    raceResultStat("积分", pointsText(last))
+                    raceResultStat(widgetCopy("Points", "积分"), pointsText(last))
                     Divider().frame(height: 20)
-                    raceResultStat("最快圈", last.fastestLap ?? "—")
+                    raceResultStat(widgetCopy("Fastest Lap", "最快圈"), last.fastestLap ?? "—")
                     Divider().frame(height: 20)
-                    raceResultStat("时间", last.gap ?? "—")
+                    raceResultStat(widgetCopy("Time", "时间"), last.gap ?? "—")
                 }
             } else {
-                Text("近期比赛数据将在完赛后更新")
+                Text(widgetCopy("Recent results update after the race", "近期比赛数据将在完赛后更新"))
                     .font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 6)
             }
             if form.count > 1 {
                 HStack(spacing: 4) {
-                    Text("近\(form.count)场")
+                    Text(widgetCopy("Last \(form.count) races", "近\(form.count)场"))
                         .font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary)
                     ForEach(form) { race in
                         Text(finishText(race))
@@ -167,7 +167,7 @@ struct FavoriteDriverWidgetView: View {
                             .background(Color.primary.opacity(0.06), in: Capsule())
                     }
                     Spacer(minLength: 2)
-                    Text("\(recentPoints(form)) 分")
+                    Text(widgetCopy("\(recentPoints(form)) pts", "\(recentPoints(form)) 分"))
                         .font(.system(size: 9, weight: .bold)).monospacedDigit().foregroundStyle(widgetRed)
                 }
             }
@@ -181,7 +181,7 @@ struct FavoriteDriverWidgetView: View {
         let recent = Array(snapshot.recentRaces.prefix(3))
         return VStack(alignment: .leading, spacing: 8) {
             WidgetHeading(label: "MY DRIVER",
-                          trailing: stale ? "缓存过期" : "F1 · \(snapshot.season)",
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "F1 · \(snapshot.season)",
                           warning: stale)
             HStack(alignment: .center, spacing: 12) {
                 helmet(driver, season: snapshot.season, size: CGSize(width: 80, height: 70))
@@ -205,13 +205,13 @@ struct FavoriteDriverWidgetView: View {
                     Text("\(Int(driver.points.rounded()))")
                         .font(.system(size: 30, weight: .bold, design: .rounded)).monospacedDigit()
                         .foregroundStyle(widgetRed)
-                    Text("积分").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    Text(widgetCopy("Points", "积分")).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                 }
             }
             HStack(spacing: 0) {
-                stat("分站冠军", "\(snapshot.wins)")
+                stat(widgetCopy("Race Winner", "分站冠军"), "\(snapshot.wins)")
                 Divider().frame(height: 26)
-                stat(recent.isEmpty ? "近期积分" : "近\(recent.count)场积分",
+                stat(recent.isEmpty ? widgetCopy("Recent Points", "近期积分") : widgetCopy("Points in last \(recent.count)", "近\(recent.count)场积分"),
                      recent.isEmpty ? "—" : "\(recentPoints(recent))")
                 Divider().frame(height: 26)
                 stat(gapLabel(snapshot), gapText(snapshot), highlight: driver.position != 1)
@@ -219,14 +219,14 @@ struct FavoriteDriverWidgetView: View {
             seasonProgress(driver)
             Divider().foregroundStyle(.clear)
             HStack {
-                Text("近期比赛").font(.system(size: 10, weight: .bold))
+                Text(widgetCopy("Recent Races", "近期比赛")).font(.system(size: 10, weight: .bold))
                 Spacer()
                 if !recent.isEmpty {
-                    Text("最近 \(recent.count) 场").font(.system(size: 8)).foregroundStyle(.secondary)
+                    Text(widgetCopy("Last \(recent.count) races", "最近 \(recent.count) 场")).font(.system(size: 8)).foregroundStyle(.secondary)
                 }
             }
             if recent.isEmpty {
-                Text("打开 App 同步近期比赛数据")
+                Text(widgetCopy("Open the app to sync recent results", "打开 App 同步近期比赛数据"))
                     .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
             } else {
@@ -239,12 +239,12 @@ struct FavoriteDriverWidgetView: View {
             }
             Spacer(minLength: 0)
             HStack {
-                Text("近期比赛 · \(snapshot.driver.team)")
+                Text(widgetCopy("Recent Races · \(snapshot.driver.team)", "近期比赛 · \(snapshot.driver.team)"))
                 Spacer()
                 if stale {
-                    Text("缓存数据")
+                    Text(widgetCopy("Cached Data", "缓存数据"))
                 } else {
-                    Text("更新 ")
+                    Text(widgetCopy("Updated ", "更新 "))
                     Text(snapshot.savedAt, style: .time)
                 }
             }.font(.system(size: 8)).foregroundStyle(.secondary)
@@ -256,7 +256,7 @@ struct FavoriteDriverWidgetView: View {
         let share = leaderPoints > 0 ? min(1, max(0, driver.points / leaderPoints)) : 0
         return VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Text("赛季积分")
+                Text(widgetCopy("Season Points", "赛季积分"))
                 Spacer()
                 Text("\(Int(driver.points.rounded())) / \(Int(leaderPoints.rounded()))")
             }.font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary)
@@ -279,7 +279,7 @@ struct FavoriteDriverWidgetView: View {
                     .font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
                 HStack(spacing: 4) {
                     Text(race.date, format: .dateTime.month(.abbreviated).day())
-                    if let lap = race.fastestLap { Text("· 最快圈 \(lap)") }
+                    if let lap = race.fastestLap { Text(widgetCopy("· Fastest lap \(lap)", "· 最快圈 \(lap)")) }
                 }.font(.system(size: 7.5, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 4)
@@ -340,7 +340,7 @@ struct FavoriteDriverWidgetView: View {
     }
 
     func gapLabel(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {
-        snapshot.driver.position == 1 ? "领先 P2" : "落后榜首"
+        snapshot.driver.position == 1 ? widgetCopy("Lead over P2", "领先 P2") : widgetCopy("Gap to Leader", "落后榜首")
     }
 
     func gapText(_ snapshot: FavoriteDriverWidgetSnapshot) -> String {

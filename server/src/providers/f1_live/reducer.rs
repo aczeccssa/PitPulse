@@ -10,10 +10,11 @@ use crate::{
 const RELAY_SOURCE: &str = "formula1dashboard_relay";
 const RELAY_MAX_AGE_SECONDS: i64 = 30;
 
-pub const LIVE_TOPICS: [&str; 15] = [
+pub const LIVE_TOPICS: [&str; 16] = [
     "Heartbeat",
     "SessionInfo",
     "SessionStatus",
+    "ExtrapolatedClock",
     "DriverList",
     "TimingData",
     "LapCount",
@@ -240,6 +241,7 @@ impl LiveTopicReducer {
                 sample
             })
         };
+        let clock = self.topic("ExtrapolatedClock");
         let timing_lines = self
             .topic("TimingData")
             .and_then(|topic| topic.get("Lines"))
@@ -420,7 +422,16 @@ impl LiveTopicReducer {
                 decoded: self.position_decoded,
                 calibrated,
             }),
-            time_remaining_seconds: None,
+            time_remaining_seconds: clock
+                .and_then(|topic| topic.get("Remaining"))
+                .and_then(Value::as_str)
+                .and_then(clock_seconds),
+            clock_sample_at: clock
+                .and_then(|topic| topic.get("Utc"))
+                .and_then(value_string),
+            clock_running: clock
+                .and_then(|topic| topic.get("Extrapolating"))
+                .and_then(Value::as_bool),
             elapsed_seconds: None,
             is_time_based: None,
         }
@@ -761,6 +772,18 @@ fn project_sectors(value: &Value) -> Vec<LiveSector> {
         .collect()
 }
 
+fn clock_seconds(value: &str) -> Option<i64> {
+    let (hours, rest) = value.split_once(':')?;
+    let (minutes, seconds) = rest.split_once(':')?;
+    let hours: i64 = hours.parse().ok()?;
+    let minutes: i64 = minutes.parse().ok()?;
+    let seconds: i64 = seconds.split('.').next()?.parse().ok()?;
+    if !(0..=24).contains(&hours) || !(0..60).contains(&minutes) || !(0..60).contains(&seconds) {
+        return None;
+    }
+    Some(hours * 3600 + minutes * 60 + seconds)
+}
+
 fn collect_patches(value: &Value, output: &mut Vec<TopicPatch>) {
     if let Some(object) = value.as_object() {
         for topic in LIVE_TOPICS {
@@ -1063,6 +1086,30 @@ mod tests {
             .unwrap()
             .snapshot;
         assert_eq!(projected.drivers[0].tire_compound.as_deref(), Some("HARD"));
+    }
+
+    #[test]
+    fn test_session_clock_projects_running_and_paused_samples() {
+        let mut reducer = LiveTopicReducer::default();
+        let at = "2026-11-20T16:30:00Z";
+        let clock = json!({"SessionInfo":{"Key":1,"Name":"Practice 1"},
+            "ExtrapolatedClock":{"Utc":at,"Remaining":"01:00:00","Extrapolating":true}});
+        let running = reducer.apply_initial_snapshot(&clock, at).unwrap().snapshot;
+        assert_eq!(running.time_remaining_seconds, Some(3600));
+        assert_eq!(running.clock_sample_at.as_deref(), Some(at));
+        assert_eq!(running.clock_running, Some(true));
+        let paused = reducer
+            .apply_batch(
+                &json!(["ExtrapolatedClock",{
+                    "Utc":"2026-11-20T16:31:00Z","Remaining":"00:59:00.000","Extrapolating":false
+                }]),
+                at,
+            )
+            .unwrap()
+            .snapshot;
+        assert_eq!(paused.time_remaining_seconds, Some(3540));
+        assert_eq!(paused.clock_running, Some(false));
+        assert_eq!(clock_seconds("00:60:00"), None);
     }
 
     #[test]

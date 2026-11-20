@@ -9,6 +9,7 @@ public final class LiveStore: ObservableObject {
     public var onDataRefresh: ((DataRefreshEvent) -> Void)?
     public var onStreamConnected: (() -> Void)?
     public var onSnapshot: (@MainActor (LiveSnapshot) -> Void)?
+    public var onConnectionState: (@MainActor (LiveSnapshot) -> Void)?
 
     private let logger = Logger(subsystem: "com.pitpulse.F1Companion", category: "LiveStore")
     private var generation = 0
@@ -56,6 +57,7 @@ public final class LiveStore: ObservableObject {
         connectionGeneration = 0
         baselineConnection = nil
         snapshot = .disconnected(reason: "connecting")
+        onConnectionState?(snapshot)
         return generation
     }
 
@@ -116,6 +118,7 @@ public final class LiveStore: ObservableObject {
                 guard current == generation else { return }
                 logger.error("streamDisconnected cause=unauthorized")
                 snapshot = .disconnected(reason: "unauthorized")
+                onConnectionState?(snapshot)
                 isConnecting = false
                 requiresCredentials = true
                 return
@@ -123,6 +126,7 @@ public final class LiveStore: ObservableObject {
                 guard current == generation else { return }
                 logger.error("streamDisconnected cause=server_unavailable")
                 snapshot = .disconnected(reason: "server_unavailable")
+                onConnectionState?(snapshot)
                 isConnecting = false
                 let delay: TimeInterval
                 if case let .rateLimited(retryAfter) = error, let retryAfter {
@@ -137,6 +141,7 @@ public final class LiveStore: ObservableObject {
                 guard current == generation else { return }
                 logger.error("streamDisconnected cause=server_unavailable")
                 snapshot = .disconnected(reason: "server_unavailable")
+                onConnectionState?(snapshot)
                 isConnecting = false
                 let delay = retryDelays[min(attempts, retryDelays.count - 1)]
                 attempts += 1
@@ -145,6 +150,7 @@ public final class LiveStore: ObservableObject {
             }
             guard current == generation else { return }
             snapshot = .disconnected(reason: "reconnecting")
+            onConnectionState?(snapshot)
             isConnecting = true
         }
     }
