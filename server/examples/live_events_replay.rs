@@ -15,6 +15,7 @@ use pitpulse_server::{
     services::live_state::LiveState,
     storage::sqlite::Database,
 };
+use rusqlite::{Connection, OpenFlags, params};
 use serde::Deserialize;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -48,6 +49,15 @@ async fn main() -> anyhow::Result<()> {
 
     let database = Database::open(&config.database.path).await?;
     database.migrate().await?;
+    if let Some(archive) = std::env::var_os("F1_COMPANION_REPLAY_ENGINEERING_DB") {
+        let target = config.database.path.clone();
+        let imported = tokio::task::spawn_blocking(move || {
+            seed_engineering_reports(Path::new(&archive), &target)
+        })
+        .await?
+        .context("seed replay engineering reports")?;
+        tracing::info!(imported, "replay engineering archive synced");
+    }
     let state = AppState::new(config, database);
     let background = pitpulse_server::scheduler::spawn(state.clone());
 
@@ -104,6 +114,38 @@ async fn main() -> anyhow::Result<()> {
     let _ = f1.await;
     let _ = wec.await;
     result.context("replay server stopped unexpectedly")
+}
+
+fn seed_engineering_reports(archive: &Path, target: &Path) -> anyhow::Result<usize> {
+    if archive.canonicalize()? == target.canonicalize()? {
+        return Ok(0);
+    }
+    let archive = Connection::open_with_flags(archive, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let mut reports = archive.prepare(
+        "SELECT cache_key, value_json, fetched_at FROM analysis_cache
+         WHERE cache_key GLOB 'engineering:*' OR cache_key GLOB 'pitpulse:fia:*'",
+    )?;
+    let mut rows = reports.query([])?;
+    let mut target = Connection::open(target)?;
+    target.busy_timeout(Duration::from_secs(5))?;
+    let transaction = target.transaction()?;
+    let mut updated = 0;
+    {
+        let mut copy = transaction.prepare(
+            "INSERT INTO analysis_cache (cache_key, value_json, fetched_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(cache_key) DO UPDATE SET value_json = excluded.value_json, fetched_at = excluded.fetched_at
+             WHERE excluded.fetched_at > analysis_cache.fetched_at",
+        )?;
+        while let Some(row) = rows.next()? {
+            updated += copy.execute(params![
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ])?;
+        }
+    }
+    transaction.commit()?;
+    Ok(updated)
 }
 
 async fn supervised(
@@ -221,4 +263,43 @@ fn install_tracing() {
         )
         .with(tracing_subscriber::fmt::layer().with_target(false))
         .init();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replay_imports_only_engineering_reports_and_keeps_newer_rows() -> anyhow::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let source = temp.path().join("source.sqlite");
+        let replay = temp.path().join("replay.sqlite");
+        let migration = include_str!("../src/storage/migrations/0006_analysis_cache.sql");
+        {
+            let db = Connection::open(&source)?;
+            db.execute_batch(migration)?;
+            db.execute_batch(
+                "INSERT INTO analysis_cache VALUES
+                     ('engineering:home-crashes:2026', '27', '2026-11-20T00:00:00Z'),
+                     ('engineering:home-tech:2026', '470', '2026-11-21T00:00:00Z'),
+                     ('pitpulse:fia:home-pu:2026', '643', '2026-11-20T00:00:00Z'),
+                     ('session:testing:bundle', '{}', '2026-11-20T00:00:00Z');",
+            )?;
+        }
+        let db = Connection::open(&replay)?;
+        db.execute_batch(migration)?;
+        db.execute_batch(
+            "INSERT INTO analysis_cache VALUES
+                 ('engineering:home-crashes:2026', '30', '2026-11-21T00:00:00Z'),
+                 ('engineering:home-tech:2026', '400', '2026-11-20T00:00:00Z');",
+        )?;
+        assert_eq!(seed_engineering_reports(&source, &replay)?, 2);
+        let mut read = db.prepare("SELECT value_json FROM analysis_cache ORDER BY cache_key")?;
+        let values = read
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        assert_eq!(values, ["30", "470", "643"]);
+        assert_eq!(seed_engineering_reports(&source, &replay)?, 0);
+        Ok(())
+    }
 }

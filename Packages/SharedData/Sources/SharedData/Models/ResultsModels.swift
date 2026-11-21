@@ -29,6 +29,7 @@ public struct SessionResult: Codable, Identifiable, Equatable, Sendable {
     public let raceTime: String?
     public let gap: String?
     public let laps: Int?
+    public var lapsLed: Int? = nil
     public let points: Double?
     public let source: String
     public let sourceUpdatedAt: String?
@@ -71,6 +72,12 @@ public struct SeasonResultWeekend: Codable, Identifiable, Sendable {
     public let meeting: Meeting
     public let sessions: [String: SeasonResultSession]
     public var fastestLaps: FastestLaps? = nil
+
+    public init(meeting: Meeting, sessions: [String: SeasonResultSession], fastestLaps: FastestLaps? = nil) {
+        self.meeting = meeting
+        self.sessions = sessions
+        self.fastestLaps = fastestLaps
+    }
 
     public struct FastestLaps: Codable, Sendable {
         public let weekend: Record

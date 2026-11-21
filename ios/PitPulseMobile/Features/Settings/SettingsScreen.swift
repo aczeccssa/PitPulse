@@ -3,6 +3,7 @@ import SwiftUI
 import SharedData
 
 struct SettingsScreen: View {
+    var embedded = false
     @EnvironmentObject private var model: MobileModel
     @State private var serverConfigurationPresented = false
     @State private var serverReachable: Bool?
@@ -49,20 +50,22 @@ struct SettingsScreen: View {
                     }
 
                     settingsPanel("Preferences") {
-                        Menu {
-                            Picker("Season", selection: $model.season) {
-                                ForEach(2023...max(2027, model.season), id: \.self) { year in
-                                    Text(String(year)).tag(year)
+                        if !embedded {
+                            Menu {
+                                Picker("Season", selection: $model.season) {
+                                    ForEach(2023...max(2027, model.season), id: \.self) { year in
+                                        Text(String(year)).tag(year)
+                                    }
                                 }
+                            } label: {
+                                settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
                             }
-                        } label: {
-                            settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
-                        }
-                        .tint(.primary)
-                        .accessibilityLabel("Season")
-                        .accessibilityValue(String(model.season))
+                            .tint(.primary)
+                            .accessibilityLabel("Season")
+                            .accessibilityValue(String(model.season))
 
-                        Divider()
+                            Divider()
+                        }
 
                         Menu {
                             Picker("Appearance", selection: $appearance) {
@@ -134,9 +137,11 @@ struct SettingsScreen: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .accessibilityLabel("Close settings")
+                if !embedded {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { dismiss() } label: { Image(systemName: "xmark") }
+                            .accessibilityLabel("Close settings")
+                    }
                 }
             }
             .task(id: model.dataContext) {

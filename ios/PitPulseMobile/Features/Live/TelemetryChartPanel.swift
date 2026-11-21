@@ -7,7 +7,9 @@ struct TelemetryChartPanel: View {
     let driver: LiveDriver
     var pedalHeight: CGFloat? = nil
 
-    private var compact: Bool { pedalHeight != nil }
+    var isTablet = false
+
+    private var compact: Bool { isTablet || pedalHeight != nil }
     private struct Point: Identifiable {
         let id: String
         let date: Date
@@ -24,31 +26,36 @@ struct TelemetryChartPanel: View {
     var body: some View {
         let points = self.points
         let latest = points.last?.date ?? .now
-        VStack(spacing: compact ? 8 : 20) {
+        VStack(spacing: isTablet ? 6 : compact ? 8 : 20) {
             chartCard {
                 VStack(alignment: .leading, spacing: compact ? 4 : 14) {
-                    HStack(alignment: .center) {
-                        HStack(alignment: .firstTextBaseline, spacing: 5) {
-                            PulseNumber(driver.telemetry?.speed.map { $0.formatted(.number.precision(.fractionLength(0))) } ?? "—")
-                                .font(.system(size: compact ? 25 : 46, weight: .bold, design: .rounded))
-                                .monospacedDigit()
-                                .contentTransition(.numericText())
-                            Text("km/h").font(.caption).foregroundStyle(.secondary)
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: compact ? 2 : 5) {
-                            PulseNumber(driver.telemetry?.gear.map { "GEAR \($0.formatted(.number.precision(.fractionLength(0))))" } ?? "GEAR —").font(.caption.bold())
-                            PulseNumber(driver.telemetry?.rpm.map { "\($0.formatted(.number.precision(.fractionLength(0)))) RPM" } ?? "RPM —").font(.caption2).foregroundStyle(.secondary)
+                    if isTablet {
+                        Text("Speed (km/h)").font(.caption.bold())
+                    } else {
+                        HStack(alignment: .center) {
+                            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                                PulseNumber(driver.telemetry?.speed.map { $0.formatted(.number.precision(.fractionLength(0))) } ?? "—")
+                                    .font(.system(size: compact ? 25 : 46, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .contentTransition(.numericText())
+                                Text("km/h").font(.caption).foregroundStyle(.secondary)
+                            }
+                            .fixedSize(horizontal: true, vertical: false)
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: compact ? 2 : 5) {
+                                PulseNumber(driver.telemetry?.gear.map { "GEAR \($0.formatted(.number.precision(.fractionLength(0))))" } ?? "GEAR —").font(.caption.bold())
+                                PulseNumber(driver.telemetry?.rpm.map { "\($0.formatted(.number.precision(.fractionLength(0)))) RPM" } ?? "RPM —").font(.caption2).foregroundStyle(.secondary)
+                            }
                         }
                     }
                     if points.count > 1 {
                         Chart(points) { point in
                             if let speed = point.speed { LineMark(x: .value("Seconds from latest sample", point.date.timeIntervalSince(latest)), y: .value("Speed (km/h)", speed)).foregroundStyle(PulseStyle.red).lineStyle(StrokeStyle(lineWidth: 2.5)) }
                         }.pulseChart()
-                        .chartXAxis { secondsAxis }
+                        .chartXAxis { if !isTablet { secondsAxis } }
                         .chartXScale(domain: timeDomain(for: points, endingAt: latest))
                         .chartYScale(domain: 0...max(350, points.compactMap(\.speed).max() ?? 350))
+                        .chartYAxis { AxisMarks(values: isTablet ? .automatic(desiredCount: 3) : .automatic) }
                         .frame(height: compact ? nil : 160)
                         .frame(maxHeight: compact ? .infinity : nil)
                     } else { Text("Waiting for speed data").font(.caption).foregroundStyle(.secondary).frame(height: compact ? nil : 90)
@@ -57,21 +64,32 @@ struct TelemetryChartPanel: View {
             }
             chartCard {
                 VStack(alignment: .leading, spacing: compact ? 2 : 12) {
-                    Text("Throttle / Brake").font(compact ? .caption2.bold() : .headline)
+                    HStack(spacing: 6) {
+                        Text("Throttle").foregroundStyle(isTablet ? Color.green : .primary)
+                        Text("/")
+                        Text("Brake").foregroundStyle(isTablet ? PulseStyle.red : .primary)
+                    }
+                    .font(isTablet ? .caption.bold() : compact ? .caption2.bold() : .headline)
+                    .accessibilityElement(children: .combine)
                     if points.count > 1 {
                         Chart(points) { point in
                             if let throttle = point.throttle { LineMark(x: .value("Seconds from latest sample", point.date.timeIntervalSince(latest)), y: .value("Pedal (%)", throttle)).foregroundStyle(by: .value("Pedal", "Throttle")) }
                             if let brake = point.brake { LineMark(x: .value("Seconds from latest sample", point.date.timeIntervalSince(latest)), y: .value("Pedal (%)", brake)).foregroundStyle(by: .value("Pedal", "Brake")) }
                         }.pulseChart()
-                        .chartXAxis { if !compact { secondsAxis } }
-                        .chartYAxis { if !compact { AxisMarks() } }
+                        .chartXAxis { if isTablet || !compact { secondsAxis } }
+                        .chartYAxis { if isTablet || !compact { AxisMarks(values: isTablet ? .automatic(desiredCount: 3) : .automatic) } }
                         .chartLegend(compact ? .hidden : .automatic)
                         .chartXScale(domain: timeDomain(for: points, endingAt: latest))
                         .chartForegroundStyleScale(["Throttle": Color.green, "Brake": Color.red])
                         .chartYScale(domain: 0...100)
                         .frame(height: compact ? nil : 140)
                         .frame(maxHeight: compact ? .infinity : nil)
-                    } else { Text("Waiting for throttle and brake data.").font(.caption).foregroundStyle(.secondary) }
+                    } else {
+                        Text("Waiting for throttle and brake data.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxHeight: isTablet ? .infinity : nil)
+                    }
                 }
             }
             .frame(height: pedalHeight)
@@ -81,9 +99,11 @@ struct TelemetryChartPanel: View {
     @ViewBuilder
     private func chartCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         let card = content()
-            .padding(compact ? 8 : 16)
+            .padding(isTablet ? 0 : compact ? 8 : 16)
             .frame(maxWidth: .infinity, maxHeight: compact ? .infinity : nil, alignment: .topLeading)
-        if compact {
+        if isTablet {
+            card
+        } else if compact {
             card.liveLandscapePanel(PulseStyle.surface)
         } else {
             card.dashboardPanel(PulseStyle.surface, line: .clear)

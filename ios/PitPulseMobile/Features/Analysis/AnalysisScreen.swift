@@ -649,6 +649,7 @@ private struct TeamPoleTrend: View {
     let teamIDs: Set<String>
     let types: [SessionType]
     var constructorPositions: [String: Int] = [:]
+    var tabletWebLayout = false
     @Environment(\.pulseEnglishPresentation) private var english
     @State private var selectedPoleSession: Int?
 
@@ -674,7 +675,9 @@ private struct TeamPoleTrend: View {
         let points = orderedTeams.flatMap { team -> [TeamPolePoint] in
             var run = 0
             return sessions.enumerated().compactMap { index, session in
-                guard let pole = session.rows.first(where: { $0.position == 1 && $0.classification.uppercased() == "CLASSIFIED" }),
+                guard let pole = session.rows.first(where: {
+                    $0.position == 1 && (tabletWebLayout || $0.classification.uppercased() == "CLASSIFIED")
+                }),
                       let timing = phases.first(where: { AnalysisMath.elapsedSeconds(pole[keyPath: $0.1]) != nil }),
                       let poleTime = AnalysisMath.elapsedSeconds(pole[keyPath: timing.1]) else {
                     run += 1
@@ -682,7 +685,7 @@ private struct TeamPoleTrend: View {
                 }
                 let teamRows = session.rows.filter {
                     MobileModel.normalizedConstructorID($0.constructorId) == MobileModel.normalizedConstructorID(team)
-                        && $0.classification.uppercased() == "CLASSIFIED"
+                        && (tabletWebLayout || $0.classification.uppercased() == "CLASSIFIED")
                 }
                 guard let sample = teamRows.compactMap({ row in
                     AnalysisMath.elapsedSeconds(row[keyPath: timing.1]).map { (row, $0) }
@@ -696,12 +699,18 @@ private struct TeamPoleTrend: View {
                                      driver: sample.0.driverName, phase: phase, gap: sample.1 - poleTime)
             }
         }
+        let poleAxisMaximum = max(1, ceil(points.map(\.gap).max() ?? 0))
         VStack(alignment: .leading, spacing: 8) {
             if points.isEmpty {
-                ContentUnavailableView(english ? "No Matching Lap Times" : "暂无同阶段圈速可对照", systemImage: "timer")
+                if tabletWebLayout {
+                    Text("No pole comparison lap times are available.")
+                        .font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
+                } else {
+                    ContentUnavailableView(english ? "No Matching Lap Times" : "暂无同阶段圈速可对照", systemImage: "timer")
+                }
             } else {
                 let legend = orderedTeams.compactMap { team in points.first { $0.teamID == team } }
-                Chart {
+                let chart = Chart {
                     ForEach(points) { point in
                         LineMark(x: .value(english ? "Session" : "场次", point.index), y: .value(english ? "Gap to Pole" : "距杆位秒差", point.gap),
                                  series: .value(english ? "Consecutive Sessions" : "连续场次", "\(point.teamID)-\(point.run)"))
@@ -715,16 +724,9 @@ private struct TeamPoleTrend: View {
                             .foregroundStyle(.secondary.opacity(0.58))
                     }
                 }
-                .chartForegroundStyleScale(domain: legend.map(\.name), range: legend.map { DashboardArt.teamColor($0.teamID) })
+                .chartForegroundStyleScale(domain: legend.map(\.name), range: legend.map { tabletWebLayout ? WebDashboardStyle.chartTeamColor($0.teamID) : DashboardArt.teamColor($0.teamID) })
                 .chartXScale(domain: 0...max(1, sessions.count - 1))
-                .chartXAxis {
-                    AxisMarks(values: Array(stride(from: 0, to: sessions.count, by: max(1, (sessions.count + 4) / 5)))) { value in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.18))
-                        if let index = value.as(Int.self), sessions.indices.contains(index) {
-                            AxisValueLabel(sessions[index].label)
-                        }
-                    }
-                }
+                poleAxes(chart, labels: sessions.map(\.label), maximum: poleAxisMaximum)
                 .chartXSelection(value: $selectedPoleSession)
                 .frame(height: 180)
                 .pulseChart()
@@ -744,6 +746,43 @@ private struct TeamPoleTrend: View {
         }
         .onChange(of: types) { selectedPoleSession = nil }
         .onChange(of: teamIDs) { selectedPoleSession = nil }
+    }
+
+    @ViewBuilder
+    private func poleAxes(_ chart: some View, labels: [String], maximum: Double) -> some View {
+        if tabletWebLayout {
+            chart.chartYScale(domain: 0...maximum)
+                .chartXAxis {
+                    AxisMarks(values: Array(labels.indices)) { value in
+                        if let index = value.as(Int.self), labels.indices.contains(index) {
+                            AxisValueLabel {
+                                Text(labels[index].replacingOccurrences(of: " SQ", with: " (SQ)"))
+                                    .font(.system(size: 9))
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: (0...6).map { maximum * Double($0) / 6 }) { value in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.13))
+                        AxisValueLabel {
+                            if let seconds = value.as(Double.self) {
+                                Text(seconds == 0 ? "0" : "+\(seconds.formatted(.number.precision(.fractionLength(1))))s")
+                            }
+                        }
+                    }
+                }
+        } else {
+            let ticks = Array(stride(from: 0, to: labels.count, by: max(1, (labels.count + 4) / 5)))
+            chart.chartXAxis {
+                AxisMarks(values: ticks) { value in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.18))
+                    if let index = value.as(Int.self), labels.indices.contains(index) {
+                        AxisValueLabel(labels[index])
+                    }
+                }
+            }
+        }
     }
 
     private struct TeamPolePoint: Identifiable {
@@ -854,7 +893,25 @@ struct TeammateComparisonBoard: View {
     @State private var poleMode = Mode.combined
     @State private var highlightLatest = false
     @State private var selectedGap: [PairID: Double] = [:]
+    @State private var tappedGapPoint: GapPointSelection?
+    @State private var hoveredGapPoint: GapPointSelection?
     @State private var constructorPositions: [String: Int] = [:]
+    @State private var matchupScroll = ScrollPosition(edge: .leading)
+    @State private var nextMatchupOffset: CGFloat?
+
+    private let tabletWebLayout: Bool
+
+    init(initialDriver: String? = nil, teammate: String? = nil, tabletWebLayout: Bool = false) {
+        self.tabletWebLayout = tabletWebLayout
+        if let initialDriver {
+            _first = State(initialValue: initialDriver)
+            _second = State(initialValue: teammate ?? "")
+            _showCustom = State(initialValue: !tabletWebLayout)
+            if let teammate, !tabletWebLayout {
+                _customMatchup = State(initialValue: PairID(team: "", left: initialDriver, right: teammate))
+            }
+        }
+    }
 
     private enum Mode: Hashable {
         case combined, regular, sprint
@@ -905,7 +962,8 @@ struct TeammateComparisonBoard: View {
     }
 
     private var teams: [(key: String, value: String)] {
-        Dictionary(currentLineup.map { ($0.teamID, $0.team) }, uniquingKeysWith: { name, _ in name })
+        let drivers = tabletWebLayout ? tabletDrivers : currentLineup
+        return Dictionary(drivers.map { ($0.teamID, $0.team) }, uniquingKeysWith: { name, _ in name })
             .sorted { ($0.value, $0.key) < ($1.value, $1.key) }
     }
 
@@ -971,6 +1029,24 @@ struct TeammateComparisonBoard: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     popularComparisons
+                    if tabletWebLayout, let left = tabletDrivers.first(where: { $0.id == first }),
+                       let right = tabletDrivers.first(where: { $0.id == second }) {
+                        let standings = model.driverRoster.filter { $0.season == model.season }
+                        HStack {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("\(left.name)  vs  \(right.name)").bold()
+                                let scores = [left, right].compactMap { driver in
+                                    standings.first { $0.id == driver.id }.map { "\($0.points.formatted()) pts · P\($0.position)" }
+                                }
+                                Text(scores.joined(separator: "   /   ")).font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+                            }
+                            Spacer()
+                            Button("Show all comparisons", action: resetFilters)
+                                .buttonStyle(.plain)
+                        }
+                        .padding(14)
+                        .dashboardPanel(WebDashboardStyle.homePanel)
+                    }
                     Group {
                         if let archive = model.seasonArchive {
                             if archive.meta.stale {
@@ -1001,11 +1077,13 @@ struct TeammateComparisonBoard: View {
                 .padding(16)
             }
         }
+        .onChange(of: first) { resetGapSelection() }
+        .onChange(of: second) { resetGapSelection() }
+        .onChange(of: team) { resetGapSelection() }
         .foregroundStyle(WebDashboardStyle.homeText)
         .background(WebDashboardStyle.homeBackground)
         .onChange(of: model.dataContext) {
             resetFilters()
-            selectedGap = [:]
             constructorPositions = [:]
         }
         .task(id: model.dataContext) { await loadStandingsAndArchive() }
@@ -1051,11 +1129,12 @@ struct TeammateComparisonBoard: View {
         return NavigationStack {
             List {
                 Section {
-                    PulseSectionPicker(sections: [(true, "Driver 1"), (false, "Driver 2")], selection: $pickingFirst)
-                    if !first.isEmpty || !second.isEmpty {
-                        let names = [first, second].map { id in customDrivers.first { $0.id == id }?.name ?? "Select Driver" }
-                        LabeledContent(names[0], value: names[1])
-                            .font(.subheadline)
+                    let slots = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(spacing: 8))
+                        : AnyLayout(HStackLayout(spacing: 8))
+                    slots {
+                        matchupSlot(firstSlot: true)
+                        matchupSlot(firstSlot: false)
                     }
                 }
                 ForEach(options) { driver in
@@ -1110,48 +1189,98 @@ struct TeammateComparisonBoard: View {
         .presentationDragIndicator(.visible)
     }
 
+    private func matchupSlot(firstSlot: Bool) -> some View {
+        let id = firstSlot ? first : second
+        let active = pickingFirst == firstSlot
+        return Button {
+            pickingFirst = firstSlot
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(firstSlot ? "Driver 1" : "Driver 2").font(.caption).foregroundStyle(.secondary)
+                Text(customDrivers.first { $0.id == id }?.name ?? "Select Driver")
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 12)
+            .background(active ? PulseStyle.red.opacity(0.12) : Color.secondary.opacity(0.06),
+                        in: .rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
     private func resetFilters() {
         team = nil
         first = ""
         second = ""
         pendingMatchup = nil
+        resetGapSelection()
+    }
+
+    private func resetGapSelection() {
         selectedGap = [:]
+        tappedGapPoint = nil
+        hoveredGapPoint = nil
+    }
+
+    private var tabletDrivers: [MatchupDriver] {
+        model.driverRoster.filter { $0.season == model.season }.map { driver in
+            MatchupDriver(id: driver.id, name: driver.driverName, teamID: driver.seasonTeamID,
+                          team: driver.seasonTeamName, number: driver.driverNumber, rank: driver.position)
+        }.sorted { ($0.rank, $0.id) < ($1.rank, $1.id) }
     }
 
     private var popularComparisons: some View {
         let teams = teams
         let currentTeam = team.flatMap { id in teams.first { $0.key == id } }
         let groups = Dictionary(grouping: currentLineup, by: \.teamID)
-        let pairs = groups.filter { currentTeam == nil || currentTeam?.key == $0.key }.values
-            .compactMap { drivers -> (first: MatchupDriver, second: MatchupDriver)? in
+        let pairs = tabletWebLayout ? tabletPopularPairs : groups.filter { currentTeam == nil || currentTeam?.key == $0.key }
+            .compactMap { team, drivers -> (team: String, first: MatchupDriver, second: MatchupDriver)? in
                 let ranked = drivers.sorted { ($0.rank, $0.id) < ($1.rank, $1.id) }
                 guard ranked.count >= 2 else { return nil }
-                return (ranked[0], ranked[1])
+                return (team, ranked[0], ranked[1])
             }.sorted { ($0.first.rank, $0.first.teamID) < ($1.first.rank, $1.first.teamID) }
 
         return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Teammate Matchups").font(.headline).accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button {
-                    pickingFirst = first.isEmpty || !second.isEmpty
-                    showCustom = true
-                } label: {
-                    Label("Custom Matchup", systemImage: "person.2.badge.plus")
-                        .labelStyle(.iconOnly)
-                }
-                .buttonStyle(.glass)
-            }
-            Menu {
-                Picker("Team", selection: $team) {
-                    Text("All Teams").tag(String?.none)
-                    ForEach(teams, id: \.key) { entry in
-                        Text(entry.value).tag(Optional(entry.key))
+            if tabletWebLayout {
+                HStack {
+                    Text("Popular Driver Comparisons").font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    if let nextMatchupOffset {
+                        Button {
+                            withAnimation(.smooth) { matchupScroll.scrollTo(x: nextMatchupOffset) }
+                        } label: {
+                            Image(systemName: "chevron.right").frame(width: 32, height: 30)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Show more comparisons")
                     }
                 }
-            } label: {
-                Label(currentTeam?.value ?? "All Teams", systemImage: "line.3.horizontal.decrease")
-                    .font(.subheadline.weight(.medium))
+            } else {
+                HStack {
+                    Text("Teammate Matchups").font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Button {
+                        pickingFirst = first.isEmpty || !second.isEmpty
+                        showCustom = true
+                    } label: {
+                        Label("Custom Matchup", systemImage: "person.2.badge.plus")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.glass)
+                }
+                Menu {
+                    Picker("Team", selection: $team) {
+                        Text("All Teams").tag(String?.none)
+                        ForEach(teams, id: \.key) { entry in
+                            Text(entry.value).tag(Optional(entry.key))
+                        }
+                    }
+                } label: {
+                    Label(currentTeam?.value ?? "All Teams", systemImage: "line.3.horizontal.decrease")
+                        .font(.subheadline.weight(.medium))
+                }
             }
             if pairs.isEmpty {
                 if model.seasonArchive == nil, model.seasonArchiveError == nil {
@@ -1163,13 +1292,25 @@ struct TeammateComparisonBoard: View {
             } else {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 12) {
-                        ForEach(pairs, id: \.first.teamID) { pair in
-                            NavigationLink {
-                                DriverComparison(firstDriverID: pair.first.id, secondDriverID: pair.second.id,
-                                                 teammateTeamID: pair.first.teamID, combineSprint: true)
-                                    .navigationTitle("Driver Comparison").navigationBarTitleDisplayMode(.inline)
-                            } label: {
-                                matchupCard(pair.first, pair.second)
+                        ForEach(pairs, id: \.team) { pair in
+                            Group {
+                                if tabletWebLayout {
+                                    Button {
+                                        team = nil
+                                        first = pair.first.id
+                                        second = pair.second.id
+                                    } label: {
+                                        matchupCard(pair.first, pair.second)
+                                    }
+                                } else {
+                                    NavigationLink {
+                                        DriverComparison(firstDriverID: pair.first.id, secondDriverID: pair.second.id,
+                                                         teammateTeamID: pair.first.teamID, combineSprint: true)
+                                            .navigationTitle("Driver Comparison").navigationBarTitleDisplayMode(.inline)
+                                    } label: {
+                                        matchupCard(pair.first, pair.second)
+                                    }
+                                }
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Compare \(pair.first.name) and \(pair.second.name)")
@@ -1177,12 +1318,37 @@ struct TeammateComparisonBoard: View {
                     }.scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.viewAligned)
+                .scrollPosition($matchupScroll)
+                .onScrollGeometryChange(for: CGFloat?.self) { geometry in
+                    let maximum = max(0, geometry.contentSize.width - geometry.containerSize.width)
+                    let current = max(0, geometry.contentOffset.x)
+                    return current < maximum - 4
+                        ? min(maximum, current + max(240, geometry.containerSize.width * 0.8))
+                        : nil
+                } action: { _, offset in
+                    if tabletWebLayout { nextMatchupOffset = offset }
+                }
                 .scrollIndicators(.hidden)
                 .frame(height: 135)
             }
         }
         .onChange(of: teams.map(\.key)) { _, ids in
             if let team, !ids.contains(team) { self.team = nil }
+        }
+    }
+
+    private var tabletPopularPairs: [(team: String, first: MatchupDriver, second: MatchupDriver)] {
+        let drivers = Dictionary(uniqueKeysWithValues: customDrivers.map { ($0.id, $0) })
+        let pairs = summaries(types: seasonComparisonTypes, catalog: true, ignoresFilters: true)
+        let ranked = pairs.sorted {
+            (drivers[$0.id.left]?.rank ?? .max, drivers[$0.id.right]?.rank ?? .max, $0.id.team, $0.id.left, $0.id.right)
+                < (drivers[$1.id.left]?.rank ?? .max, drivers[$1.id.right]?.rank ?? .max, $1.id.team, $1.id.left, $1.id.right)
+        }
+        var used: Set<String> = []
+        return ranked.compactMap { pair in
+            guard let left = drivers[pair.id.left], let right = drivers[pair.id.right],
+                  used.insert(pair.id.team).inserted else { return nil }
+            return (pair.id.team, left, right)
         }
     }
 
@@ -1248,24 +1414,46 @@ struct TeammateComparisonBoard: View {
     private func comparisonCard(_ category: SessionType, mode: Binding<Mode>) -> some View {
         let qualifying = category == .qualifying
         let types = mode.wrappedValue.types(for: category)
-        let pairs = summaries(types: types)
+        let summaries = summaries(types: types)
+        let pairs = tabletWebLayout ? summaries.sorted {
+            Double(abs($0.wins - $0.losses)) / Double($0.total)
+                > Double(abs($1.wins - $1.losses)) / Double($1.total)
+        } : summaries
+        let session = qualifying ? "Qualifying" : "Race"
+        let title = session + (tabletWebLayout ? " H2H" : " Head to Head")
         return VStack(alignment: .leading, spacing: 8) {
-            Text(qualifying ? "Qualifying Head to Head" : "Race Head to Head").font(.headline).accessibilityAddTraits(.isHeader)
+            HStack {
+                Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+            }
             sessionModes(mode, qualifying: qualifying)
             if pairs.isEmpty {
                 Text("No shared results for the selected drivers and session type.")
                     .font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
             }
             ForEach(pairs) { pair in
-                if pair.id != pairs.first?.id { Divider() }
-                NavigationLink {
-                    DriverComparison(firstDriverID: pair.id.left, secondDriverID: pair.id.right,
-                                     teammateTeamID: !pair.id.team.isEmpty ? pair.id.team : nil,
-                                     category: types[0], combineSprint: types.count > 1)
-                        .navigationTitle("\(shortName(pair.left)) vs \(shortName(pair.right))")
-                        .navigationBarTitleDisplayMode(.inline)
-                } label: { pairRow(pair) }
+                if tabletWebLayout {
+                    Button {
+                        team = nil
+                        let winnerFirst = pair.wins >= pair.losses
+                        first = winnerFirst ? pair.id.left : pair.id.right
+                        second = winnerFirst ? pair.id.right : pair.id.left
+                    } label: {
+                        tabletPairBar(pair)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    if pair.id != pairs.first?.id { Divider() }
+                    NavigationLink {
+                        DriverComparison(firstDriverID: pair.id.left, secondDriverID: pair.id.right,
+                                         teammateTeamID: pair.id.team.isEmpty ? nil : pair.id.team,
+                                         category: types[0], combineSprint: types.count > 1)
+                            .navigationTitle("\(shortName(pair.left)) vs \(shortName(pair.right))")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        pairRow(pair)
+                    }
                     .buttonStyle(.plain).navigationLinkIndicatorVisibility(.hidden)
+                }
             }
         }
         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
@@ -1286,6 +1474,13 @@ struct TeammateComparisonBoard: View {
         var id: String { "\(session)-\(phase)" }
     }
 
+    private typealias GapRow = (pair: Pair, samples: [GapSample], average: Double)
+
+    private struct GapPointSelection: Equatable {
+        let pair: PairID
+        let sample: String
+    }
+
     private func qualifyingGapCard(_ weekends: [SeasonResultWeekend]) -> some View {
         let types = gapMode.types(for: .qualifying)
         let sessions = weekends.flatMap { weekend in
@@ -1295,11 +1490,14 @@ struct TeammateComparisonBoard: View {
                         Dictionary(rows.map { ($0.driverId, $0) }, uniquingKeysWith: { first, _ in first }))
             }
         }
-        let rows = summaries(types: types).compactMap { pair -> (pair: Pair, samples: [GapSample], average: Double)? in
+        let pairs = tabletWebLayout ? summaries(types: seasonComparisonTypes, catalog: true) : summaries(types: types)
+        let matches = pairs.compactMap { pair -> GapRow? in
             let samples = sessions.enumerated().flatMap { index, session -> [GapSample] in
                 guard let left = session.rows[pair.id.left], let right = session.rows[pair.id.right],
-                      MobileModel.normalizedConstructorID(left.constructorId) == pair.id.team,
-                      MobileModel.normalizedConstructorID(right.constructorId) == pair.id.team else { return [] }
+                      pair.id.team.isEmpty || (
+                        MobileModel.normalizedConstructorID(left.constructorId) == pair.id.team
+                        && MobileModel.normalizedConstructorID(right.constructorId) == pair.id.team
+                      ) else { return [] }
                 let leftTimes = [left.q1, left.q2, left.q3]
                 let rightTimes = [right.q1, right.q2, right.q3]
                 let prefix = session.sprint ? "SQ" : "Q"
@@ -1317,11 +1515,15 @@ struct TeammateComparisonBoard: View {
             guard !samples.isEmpty else { return nil }
             return (pair, samples, samples.reduce(0.0) { $0 + $1.seconds } / Double(samples.count))
         }
-        let extent = max(0.25, (rows.lazy.flatMap(\.samples).map { abs($0.seconds) }.max() ?? 0) * 1.08)
-        return analysisCard("Qualifying Gaps") {
+        let rows = tabletWebLayout ? matches.sorted { $0.average < $1.average } : matches
+        let extent = tabletWebLayout ? 2 : max(0.25, (rows.lazy.flatMap(\.samples).map { abs($0.seconds) }.max() ?? 0) * 1.08)
+        let title = tabletWebLayout ? "Teammate Qualifying Gaps" : "Qualifying Gaps"
+        return analysisCard(title) {
             sessionModes($gapMode)
-            Toggle("Highlight Latest Session", isOn: $highlightLatest).font(.subheadline)
-            Text("Each dot shows the gap in the same qualifying phase. Tap the chart for the session and exact time.")
+            Toggle(tabletWebLayout ? "Highlight last quali" : "Highlight Latest Session", isOn: $highlightLatest).font(.subheadline)
+            Text(tabletWebLayout
+                 ? "Each dot compares matching Q1, Q2 and Q3 (or SQ1, SQ2 and SQ3) lap times. Only phases with valid times for both drivers are included."
+                 : "Each dot shows the gap in the same qualifying phase. Tap the chart for the session and exact time.")
                 .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
             if rows.isEmpty {
                 Text("No matching qualifying lap times are available for this selection.")
@@ -1331,15 +1533,24 @@ struct TeammateComparisonBoard: View {
                 gapPlot(row.pair, samples: row.samples, average: row.average, extent: extent)
             }
         }
-        .onChange(of: gapMode) { selectedGap = [:] }
+        .onChange(of: gapMode) { resetGapSelection() }
     }
 
     private func gapPlot(_ pair: Pair, samples: [GapSample], average: Double, extent: Double) -> some View {
-        let tint = DashboardArt.teamColor(pair.leftTeamID)
+        let tint = tabletWebLayout ? WebDashboardStyle.chartTeamColor(pair.leftTeamID) : DashboardArt.teamColor(pair.leftTeamID)
         let latest = samples.last?.session
+        func plottedGap(_ seconds: Double) -> Double { max(-extent, min(extent, seconds)) }
+        let ticks = tabletWebLayout ? (-4...4).map { Double($0) / 2 } : [-extent * 0.75, 0, extent * 0.75]
         let selection = Binding<Double?>(get: { selectedGap[pair.id] }, set: { selectedGap[pair.id] = $0 })
-        let sample = selection.wrappedValue.flatMap { value in
-            samples.min { abs($0.seconds - value) < abs($1.seconds - value) }
+        let activePoint = hoveredGapPoint ?? tappedGapPoint
+        let sample = if tabletWebLayout {
+            activePoint.flatMap { point in
+                point.pair == pair.id ? samples.first { $0.id == point.sample } : nil
+            }
+        } else {
+            selection.wrappedValue.flatMap { value in
+                samples.min { abs($0.seconds - value) < abs($1.seconds - value) }
+            }
         }
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
@@ -1349,15 +1560,15 @@ struct TeammateComparisonBoard: View {
             }.font(.subheadline.weight(.semibold))
             Chart {
                 RuleMark(x: .value("Equal", 0.0)).foregroundStyle(.secondary)
-                RuleMark(x: .value("Mean", average)).foregroundStyle(tint)
+                RuleMark(x: .value("Mean", plottedGap(average))).foregroundStyle(tint)
                 ForEach(Array(samples.enumerated()), id: \.element.id) { index, point in
-                    PointMark(x: .value("Gap", point.seconds), y: .value("Lane", index % 3))
-                        .foregroundStyle(tint.opacity(!highlightLatest || point.session == latest ? 1 : 0.22))
+                    PointMark(x: .value("Gap", plottedGap(point.seconds)), y: .value("Lane", index % 3))
+                        .foregroundStyle(tint.opacity(!highlightLatest || point.session == latest ? 1 : (tabletWebLayout ? 0.18 : 0.22)))
                         .accessibilityLabel("\(point.meeting) · \(point.phase)")
                         .accessibilityValue(gapLabel(point.seconds))
                 }
                 if let sample {
-                    RuleMark(x: .value("Selected Gap", sample.seconds))
+                    RuleMark(x: .value("Selected Gap", plottedGap(sample.seconds)))
                         .foregroundStyle(.primary.opacity(0.55))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 }
@@ -1366,7 +1577,7 @@ struct TeammateComparisonBoard: View {
             .chartYScale(domain: -1...3)
             .chartYAxis(.hidden)
             .chartXAxis {
-                AxisMarks(values: [-extent * 0.75, 0, extent * 0.75]) { value in
+                AxisMarks(values: ticks) { value in
                     AxisGridLine()
                     if let seconds = value.as(Double.self) {
                         AxisValueLabel(seconds == 0 ? "0" : seconds.formatted(.number.sign(strategy: .always()).precision(.fractionLength(1))) + " s")
@@ -1376,12 +1587,37 @@ struct TeammateComparisonBoard: View {
             .chartGesture { proxy in
                 SpatialTapGesture().onEnded { event in proxy.selectXValue(at: event.location.x) }
             }
-            .chartXSelection(value: selection)
+            .chartXSelection(value: tabletWebLayout ? .constant(nil) : selection)
+            .chartOverlay { proxy in
+                if tabletWebLayout {
+                    GeometryReader { geometry in
+                        if let frame = proxy.plotFrame {
+                            let plot = geometry[frame]
+                            Color.clear.contentShape(.rect)
+                                .onTapGesture { location in
+                                    let point = gapPoint(at: location, plot: plot, proxy: proxy, pair: pair.id,
+                                                         samples: samples, extent: extent)
+                                    tappedGapPoint = tappedGapPoint == point ? nil : point
+                                }
+                                .onContinuousHover { phase in
+                                    switch phase {
+                                    case .active(let location):
+                                        hoveredGapPoint = gapPoint(at: location, plot: plot, proxy: proxy, pair: pair.id,
+                                                                   samples: samples, extent: extent)
+                                    case .ended:
+                                        if hoveredGapPoint?.pair == pair.id { hoveredGapPoint = nil }
+                                    }
+                                }
+                                .accessibilityHidden(true)
+                        }
+                    }
+                }
+            }
             .frame(height: 80)
             .pulseChart()
             if let sample {
                 LabeledContent("\(sample.meeting) · \(sample.phase)") {
-                    PulseNumber(gapLabel(sample.seconds))
+                    PulseNumber(gapLabel(sample.seconds) + (tabletWebLayout && abs(sample.seconds) > extent ? " (outside ±2s axis)" : ""))
                 }
                 .font(.caption).monospacedDigit()
             } else {
@@ -1393,6 +1629,30 @@ struct TeammateComparisonBoard: View {
         }
         .padding(10)
         .background(.primary.opacity(0.035), in: PulseStyle.insetShape)
+        .onDisappear {
+            if hoveredGapPoint?.pair == pair.id { hoveredGapPoint = nil }
+            if tappedGapPoint?.pair == pair.id { tappedGapPoint = nil }
+        }
+    }
+
+    private func gapPoint(
+        at location: CGPoint, plot: CGRect, proxy: ChartProxy, pair: PairID, samples: [GapSample], extent: Double
+    ) -> GapPointSelection? {
+        guard plot.insetBy(dx: -8, dy: -8).contains(location) else { return nil }
+        var nearest: GapPointSelection?
+        var bestDistance: CGFloat = 10 * 10
+        for (index, sample) in samples.enumerated() {
+            let plotted = max(-extent, min(extent, sample.seconds))
+            guard let x = proxy.position(forX: plotted), let y = proxy.position(forY: index % 3) else { continue }
+            let dx = location.x - plot.minX - x
+            let dy = location.y - plot.minY - y
+            let distance = dx * dx + dy * dy
+            if distance <= bestDistance {
+                bestDistance = distance
+                nearest = GapPointSelection(pair: pair, sample: sample.id)
+            }
+        }
+        return nearest
     }
 
     private func gapLabel(_ seconds: Double) -> String {
@@ -1401,19 +1661,27 @@ struct TeammateComparisonBoard: View {
 
     private func poleCard(_ weekends: [SeasonResultWeekend]) -> some View {
         let types = poleMode.types(for: .qualifying)
-        let pairs = summaries(types: [.qualifying, .sprintQualifying, .race, .sprint])
-        let teams = Set(pairs.map(\.id.team))
+        let pairs = summaries(types: seasonComparisonTypes, catalog: tabletWebLayout)
+        let teams = Set(pairs.flatMap { pair in
+            pair.id.team.isEmpty ? [pair.leftTeamID, pair.rightTeamID] : [pair.id.team]
+        })
         return analysisCard("Team Gap to Pole") {
             sessionModes($poleMode)
             Text("Each team's fastest qualifying lap compared with the pole sitter's time in the same qualifying phase.")
                 .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
-            TeamPoleTrend(weekends: weekends, teamIDs: teams, types: types, constructorPositions: constructorPositions)
+            TeamPoleTrend(weekends: weekends, teamIDs: teams, types: types,
+                          constructorPositions: constructorPositions, tabletWebLayout: tabletWebLayout)
         }
     }
 
-    private func analysisCard<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func analysisCard<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+            HStack {
+                Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+            }
             content()
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
@@ -1469,9 +1737,98 @@ struct TeammateComparisonBoard: View {
         name.split(separator: " ").last.map(String.init) ?? name
     }
 
-    private func summaries(types: [SessionType]) -> [Pair] {
+    private struct ComparisonBar {
+        let leftTeam: String
+        let rightTeam: String
+        let leftName: String
+        let rightName: String
+        let leftWins: Int
+        let rightWins: Int
+
+        init(_ pair: Pair) {
+            let swapped = pair.losses > pair.wins
+            leftTeam = swapped ? pair.rightTeamID : pair.leftTeamID
+            rightTeam = swapped ? pair.leftTeamID : pair.rightTeamID
+            leftName = swapped ? pair.right : pair.left
+            rightName = swapped ? pair.left : pair.right
+            leftWins = max(pair.wins, pair.losses)
+            rightWins = min(pair.wins, pair.losses)
+        }
+
+        var fraction: CGFloat {
+            let decisive = leftWins + rightWins
+            let proportion = decisive > 0 ? CGFloat(leftWins) / CGFloat(decisive) : 0.5
+            return min(645.0 / 780, max(135.0 / 780, proportion))
+        }
+
+        var darkInk: Bool {
+            ["mclaren", "mercedes", "haas", "williams", "cadillac", "rb", "racing-bulls"]
+                .contains(LiveIslandLogic.assetSlug(leftTeam))
+        }
+    }
+
+    private func tabletPairBar(_ pair: Pair) -> some View {
+        let bar = ComparisonBar(pair)
+        let leftInk: Color = bar.darkInk ? Color(red: 7 / 255, green: 17 / 255, blue: 27 / 255) : .white
+        return GeometryReader { geometry in
+            let scale = geometry.size.width / 780
+            ZStack {
+                WebDashboardStyle.chartTeamColor(bar.rightTeam, adjustsForLight: false)
+                Color.black.opacity(0.42)
+                HStack(spacing: 0) {
+                    WebDashboardStyle.chartTeamColor(bar.leftTeam, adjustsForLight: false).frame(width: geometry.size.width * bar.fraction)
+                    Spacer(minLength: 0)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 10 * scale) {
+                    Text(String(bar.leftWins)).font(.system(size: 19 * scale, weight: .bold))
+                    Text(shortName(bar.leftName)).font(.system(size: 14 * scale, weight: .semibold)).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Text(shortName(bar.rightName)).font(.system(size: 14 * scale, weight: .semibold)).lineLimit(1).foregroundStyle(.white)
+                    Text(String(bar.rightWins)).font(.system(size: 19 * scale, weight: .bold)).foregroundStyle(.white)
+                }
+                .foregroundStyle(leftInk)
+                .padding(.horizontal, 14 * scale)
+                if let logo = DashboardArt.image(.teamLogo, id: bar.leftTeam, season: model.season) {
+                    Image(uiImage: logo).resizable().scaledToFit().frame(width: 46 * scale, height: 28 * scale)
+                }
+            }
+            .frame(height: 52 * scale)
+            .clipShape(.rect(cornerRadius: 4 * scale))
+        }
+        .aspectRatio(780.0 / 52, contentMode: .fit)
+        .contentShape(.rect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(bar.leftName) \(bar.leftWins), \(bar.rightName) \(bar.rightWins)")
+        .accessibilityValue("\(pair.total) comparable sessions, \(pair.ties) ties")
+        .accessibilityHint("Open driver comparison")
+    }
+
+    private var seasonComparisonTypes: [SessionType] { [.race, .sprint, .qualifying, .sprintQualifying] }
+
+    private func summaries(types: [SessionType], catalog: Bool = false, ignoresFilters: Bool = false) -> [Pair] {
         let weekends = model.seasonArchive?.data ?? []
-        let lineup = currentLineup
+        let rankedDrivers = tabletWebLayout ? tabletDrivers : currentLineup
+        if tabletWebLayout, !ignoresFilters,
+           let left = rankedDrivers.first(where: { $0.id == first }),
+           let right = rankedDrivers.first(where: { $0.id == second }) {
+            let team = left.teamID == right.teamID ? left.teamID : ""
+            let id = PairID(team: team, left: left.id, right: right.id)
+            var pair = Pair(id: id, left: left.name, right: right.name, leftTeamID: left.teamID, rightTeamID: right.teamID)
+            if catalog { return [pair] }
+            for weekend in weekends {
+                for type in types {
+                    let rows = weekend.sessions[type.rawValue]?.rows ?? []
+                    guard let first = rows.first(where: { $0.id == left.id }),
+                          let second = rows.first(where: { $0.id == right.id }),
+                          team.isEmpty || (MobileModel.normalizedConstructorID(first.constructorId) == team
+                            && MobileModel.normalizedConstructorID(second.constructorId) == team),
+                          let outcome = comparisonWinner(first, second, onlyClassified: false) else { continue }
+                    pair.record(outcome)
+                }
+            }
+            return pair.total == 0 ? [] : [pair]
+        }
+        let lineup = rankedDrivers
         let driverPositions = Dictionary(lineup.map { ($0.id, $0.rank) }, uniquingKeysWith: min)
         let currentTeams = Dictionary(lineup.map { ($0.id, $0.teamID) }, uniquingKeysWith: { first, _ in first })
         var pairs: [PairID: Pair] = [:]
@@ -1480,7 +1837,7 @@ struct TeammateComparisonBoard: View {
                 let rows = weekend.sessions[type.rawValue]?.rows ?? []
                 let groups = Dictionary(grouping: rows.filter { row in
                     let id = MobileModel.normalizedConstructorID(row.constructorId)
-                    return currentTeams[row.id] == id && (team == nil || id == team)
+                    return (tabletWebLayout || currentTeams[row.id] == id) && (ignoresFilters || team == nil || id == team)
                 }) { MobileModel.normalizedConstructorID($0.constructorId) }.values
                 for group in groups where group.count > 1 {
                     let sorted = group.sorted {
@@ -1488,11 +1845,17 @@ struct TeammateComparisonBoard: View {
                     }
                     for (index, left) in sorted.enumerated() {
                         for right in sorted.dropFirst(index + 1) where left.id != right.id {
-                            guard let outcome = comparisonWinner(left, right, onlyClassified: false) else { continue }
+                            if tabletWebLayout, !ignoresFilters,
+                               [first, second].contains(where: { !$0.isEmpty && $0 != left.id && $0 != right.id }) {
+                                continue
+                            }
                             let key = PairID(team: MobileModel.normalizedConstructorID(left.constructorId), left: left.id, right: right.id)
                             var pair = pairs[key] ?? Pair(id: key, left: left.driverName, right: right.driverName,
                                                          leftTeamID: left.constructorId, rightTeamID: right.constructorId)
-                            pair.record(outcome)
+                            if !catalog {
+                                guard let outcome = comparisonWinner(left, right, onlyClassified: false) else { continue }
+                                pair.record(outcome)
+                            }
                             pairs[key] = pair
                         }
                     }
@@ -1511,17 +1874,24 @@ struct TeammateComparisonBoard: View {
 struct DriverConsistency: View {
     @EnvironmentObject private var model: MobileModel
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var excludeRetirements = false
+    @Environment(\.openDashboardDriverProfile) private var openDriver
+    var tabletWebLayout = false
+    var tabletFilter: Binding<Bool>? = nil
+    @State private var localFilter = false
+
+    private var retirementFilter: Binding<Bool> { tabletFilter ?? $localFilter }
+    private var excludeRetirements: Bool { retirementFilter.wrappedValue }
     @State private var selectedDrivers: [SessionType: String] = [:]
+    @State private var hoveredDriver: [SessionType: String] = [:]
 
     private let sessions: [SessionType] = [.race, .sprint, .qualifying, .sprintQualifying]
 
     var body: some View {
         GeometryReader { geometry in
-            let columns = geometry.size.width >= 980 && !typeSize.isAccessibilitySize ? 2 : 1
+            let columns = geometry.size.width >= (tabletWebLayout ? 1051 : 980) && !typeSize.isAccessibilitySize ? 2 : 1
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    consistencyOptions
+                    if !tabletWebLayout { consistencyOptions }
                     Group {
                         if let archive = model.seasonArchive {
                             if archive.meta.stale {
@@ -1532,6 +1902,7 @@ struct DriverConsistency: View {
                                       alignment: .leading, spacing: 14) {
                                 ForEach(sessions, id: \.self) { category in
                                     consistencyCard(category, archive: archive.data)
+                                        .accessibilityElement(children: .contain)
                                 }
                             }
                         } else if let error = model.seasonArchiveError {
@@ -1553,12 +1924,21 @@ struct DriverConsistency: View {
                 .padding(16)
             }
         }
-        .onChange(of: model.dataContext) { selectedDrivers = [:] }
-        .onChange(of: excludeRetirements) { selectedDrivers = [:] }
+        .onChange(of: model.dataContext) { resetDistributionSelection() }
+        .onChange(of: excludeRetirements) { resetDistributionSelection() }
         .foregroundStyle(WebDashboardStyle.homeText)
         .background(WebDashboardStyle.homeBackground)
-        .task(id: model.dataContext) { await model.loadSeasonArchive() }
+        .task(id: model.dataContext) {
+            async let roster: Void = tabletWebLayout ? model.loadF1Roster() : ()
+            await model.loadSeasonArchive()
+            await roster
+        }
         .refreshable { await model.loadSeasonArchive(force: true) }
+    }
+
+    private func resetDistributionSelection() {
+        selectedDrivers = [:]
+        hoveredDriver = [:]
     }
 
     private var consistencyOptions: some View {
@@ -1571,7 +1951,7 @@ struct DriverConsistency: View {
             Text("The line shows best to worst. The box shows the middle 50%, with a marker at the median.")
                 .font(.footnote).foregroundStyle(.secondary)
             Divider()
-            Toggle("Exclude DNF, DNS, DSQ and NC", isOn: $excludeRetirements)
+            Toggle("Exclude DNF, DNS, DSQ and NC", isOn: retirementFilter)
                 .font(.subheadline.weight(.medium))
                 .tint(PulseStyle.red)
                 .accessibilityIdentifier("consistency.excludeDNF")
@@ -1588,11 +1968,20 @@ struct DriverConsistency: View {
                                          set: { selectedDrivers[category] = $0 })
         let selected = groups.first { $0.id == selection.wrappedValue }
         return VStack(alignment: .leading, spacing: 10) {
-            Text(distributionTitle(category))
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("consistency.chart.\(category.rawValue)")
-            if groups.isEmpty {
+            HStack {
+                Text(distributionTitle(category))
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("consistency.chart.\(category.rawValue)")
+            }
+            if tabletWebLayout {
+                if groups.isEmpty {
+                    Text("No recorded positions for this season and selection.")
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                } else {
+                    tabletDistributionChart(groups, fieldSize: fieldSize, category: category)
+                }
+            } else if groups.isEmpty {
                 ContentUnavailableView("No recorded positions", systemImage: "chart.box")
                     .frame(minHeight: 160)
             } else {
@@ -1614,11 +2003,116 @@ struct DriverConsistency: View {
 
     private func distributionTitle(_ category: SessionType) -> String {
         switch category {
+        case .race where tabletWebLayout: "Race Finishing Position Distribution"
+        case .sprint where tabletWebLayout: "Sprint Finishing Position Distribution"
+        case .qualifying where tabletWebLayout: "Qualifying Position Distribution"
+        case .sprintQualifying where tabletWebLayout: "Sprint Qualifying Position Distribution"
         case .race: "Race Results"
         case .sprint: "Sprint Results"
         case .qualifying: "Qualifying Results"
         case .sprintQualifying: "Sprint Qualifying Results"
         default: "Position Distribution"
+        }
+    }
+
+    private struct DistributionGeometry {
+        let fieldSize: Int
+        let count: Int
+        var step: CGFloat { 734 / CGFloat(max(1, count)) }
+        var width: CGFloat { min(26, step * 0.72) }
+        func x(_ index: Int) -> CGFloat { 34 + step * (CGFloat(index) + 0.5) }
+        func y(_ position: Double) -> CGFloat { 24 + CGFloat((position - 1) / Double(fieldSize - 1)) * 538 }
+    }
+
+    private func tabletDistributionChart(_ groups: [Distribution], fieldSize: Int, category: SessionType) -> some View {
+        let layout = DistributionGeometry(fieldSize: fieldSize, count: groups.count)
+        let width = layout.width
+        let lines = cutoffs(category: category, fieldSize: fieldSize)
+        let qualifying = category == .qualifying || category == .sprintQualifying
+        let muted = WebDashboardStyle.homeMuted
+
+        return Canvas { context, size in
+            var context = context
+            context.scaleBy(x: size.width / 780, y: size.height / 620)
+            func line(_ first: CGPoint, _ last: CGPoint, color: Color, style: StrokeStyle = StrokeStyle(lineWidth: 1)) {
+                var path = Path()
+                path.move(to: first)
+                path.addLine(to: last)
+                context.stroke(path, with: .color(color), style: style)
+            }
+            for rank in 1...fieldSize {
+                let level = layout.y(Double(rank))
+                line(CGPoint(x: 34, y: level), CGPoint(x: 768, y: level), color: muted.opacity(0.17))
+                context.draw(Text(String(rank)).font(.system(size: 11, weight: .semibold)).foregroundStyle(muted),
+                             at: CGPoint(x: 27, y: level), anchor: .trailing)
+            }
+            for cutoff in lines {
+                let level = layout.y(Double(cutoff.position))
+                line(CGPoint(x: 34, y: level), CGPoint(x: 768, y: level),
+                     color: muted.opacity(0.8), style: StrokeStyle(lineWidth: 1, dash: [4, 5]))
+                context.draw(Text(qualifying ? cutoff.label : "In points").font(.system(size: 11, weight: .semibold)).foregroundStyle(muted),
+                             at: CGPoint(x: qualifying ? 44 : 760, y: level - 10), anchor: qualifying ? .leading : .trailing)
+            }
+            for (index, driver) in groups.enumerated() {
+                let x = layout.x(index)
+                let color = WebDashboardStyle.chartTeamColor(driver.team, adjustsForLight: false)
+                let best = layout.y(Double(driver.positions.first ?? 1))
+                let worst = layout.y(Double(driver.positions.last ?? 1))
+                let lower = layout.y(driver.quantile(0.25))
+                let upper = layout.y(driver.quantile(0.75))
+                let middle = layout.y(driver.median)
+                line(CGPoint(x: x, y: best), CGPoint(x: x, y: worst), color: color)
+                for level in [best, worst] {
+                    line(CGPoint(x: x - width * 0.3, y: level), CGPoint(x: x + width * 0.3, y: level), color: color)
+                }
+                let box = CGRect(x: x - width / 2, y: lower == upper ? lower - 1 : lower,
+                                 width: width, height: max(2, upper - lower))
+                context.fill(Path(roundedRect: box, cornerRadius: 2), with: .color(color))
+                line(CGPoint(x: x - width / 2, y: middle), CGPoint(x: x + width / 2, y: middle),
+                     color: .black.opacity(0.28), style: StrokeStyle(lineWidth: 2.2))
+                var rotated = context
+                rotated.translateBy(x: x + 2, y: 577)
+                rotated.rotate(by: .degrees(-48))
+                rotated.draw(Text(MotorsportAssetName.abbreviation(driver.name)).font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(muted), at: .zero, anchor: .trailing)
+            }
+        }
+        .accessibilityHidden(true)
+        .overlay {
+            GeometryReader { geometry in
+                let scaleX = geometry.size.width / 780
+                let scaleY = geometry.size.height / 620
+                ForEach(Array(groups.enumerated()), id: \.element.id) { index, driver in
+                    let profile = model.driverRoster.first { $0.id == driver.id && $0.season == model.season }
+                    Button {
+                        if let profile { openDriver?(.stats(StandingEntry(driver: profile))) }
+                    } label: {
+                        Color.clear.contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: layout.step * scaleX, height: 589 * scaleY)
+                    .position(x: (layout.x(index)) * scaleX, y: 313.5 * scaleY)
+                    .disabled(profile == nil || openDriver == nil)
+                    .onHover { inside in
+                        if inside { hoveredDriver[category] = driver.id }
+                        else if hoveredDriver[category] == driver.id { hoveredDriver[category] = nil }
+                    }
+                    .accessibilityLabel(driver.name)
+                    .accessibilityValue(distributionSummary(driver))
+                    .accessibilityHint("Open driver statistics")
+                }
+            }
+        }
+        .aspectRatio(780.0 / 620, contentMode: .fit)
+        .overlay(alignment: .top) {
+            if let driver = groups.first(where: { $0.id == hoveredDriver[category] }) {
+                Text("\(driver.name) · \(distributionSummary(driver))")
+                    .font(.caption)
+                    .padding(6)
+                    .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 5))
+                    .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(WebDashboardStyle.homeLine) }
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -1763,14 +2257,25 @@ struct DriverConsistency: View {
     private func distributions(_ samples: [SessionResult]) -> [Distribution] {
         let retired = Set(["DNF", "DNS", "DSQ", "NC"])
         let rows = samples.filter {
-            ($0.position ?? 0) > 0 && (!excludeRetirements || !retired.contains($0.classification.uppercased()))
+            guard ($0.position ?? 0) > 0 else { return false }
+            guard excludeRetirements else { return true }
+            if tabletWebLayout {
+                return $0.classification.range(
+                    of: "dnf|dns|dsq|disqual|retired|did not|not classified|withdrawn",
+                    options: [.caseInsensitive, .regularExpression]
+                ) == nil
+            }
+            return !retired.contains($0.classification.uppercased())
         }
-        let standings = Dictionary(model.driverRoster.map { ($0.id, $0.position) }, uniquingKeysWith: min)
+        let roster = model.driverRoster.filter { $0.season == model.season }
+        let standings = Dictionary(roster.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return Dictionary(grouping: rows, by: \.driverId).compactMap { id, rows in
             guard let row = rows.last else { return nil }
-            return Distribution(id: id, name: row.driverName, team: row.constructorId, positions: rows.compactMap(\.position).sorted())
-        }.sorted { ($0.median, $0.average, standings[$0.id] ?? Int.max, $0.id)
-            < ($1.median, $1.average, standings[$1.id] ?? Int.max, $1.id) }
+            let driver = tabletWebLayout ? standings[id] : nil
+            return Distribution(id: id, name: driver?.driverName ?? row.driverName,
+                                team: driver?.seasonTeamID ?? row.constructorId, positions: rows.compactMap(\.position).sorted())
+        }.sorted { ($0.median, $0.average, standings[$0.id]?.position ?? Int.max, $0.id)
+            < ($1.median, $1.average, standings[$1.id]?.position ?? Int.max, $1.id) }
     }
 
     private struct Distribution: Identifiable {

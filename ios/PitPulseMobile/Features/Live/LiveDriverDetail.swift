@@ -5,6 +5,7 @@ struct LiveDriverDetail: View {
     @EnvironmentObject private var model: MobileModel
     @Environment(\.dismiss) private var dismiss
     let number: String
+    var onClose: (() -> Void)? = nil
     private var driver: LiveDriver? { model.liveSnapshot.drivers.first { $0.number == number } }
     var body: some View {
         NavigationStack {
@@ -35,7 +36,9 @@ struct LiveDriverDetail: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close driver charts", systemImage: "xmark") { dismiss() }
+                    Button("Close driver charts", systemImage: "xmark") {
+                        if let onClose { onClose() } else { dismiss() }
+                    }
                         .labelStyle(.iconOnly)
                 }
             }
@@ -129,44 +132,64 @@ struct LiveDriverTrackStatus: View {
 struct LiveSectorTimes: View {
     let sectors: [LiveSector]
     let showsSegments: Bool
+    var compactSegments = false
 
     var body: some View {
         HStack(alignment: .top, spacing: showsSegments ? 8 : 4) {
             ForEach(0..<3, id: \.self) { index in
                 let sector = sectors.indices.contains(index) ? sectors[index] : nil
-                let segments = sector?.segments ?? []
-                VStack(spacing: 4) {
-                    if showsSegments {
-                        HStack(spacing: 4) {
-                            Text("S\(index + 1)").foregroundStyle(.secondary)
-                            Spacer(minLength: 2)
-                            sectorTime(sector)
-                        }
-                        .font(.caption.weight(.semibold))
-                        HStack(spacing: 2) {
-                            if segments.isEmpty {
-                                RoundedRectangle(cornerRadius: 1).fill(.secondary.opacity(0.25))
-                            } else {
-                                ForEach(segments.indices, id: \.self) { index in
-                                    RoundedRectangle(cornerRadius: 1).fill(segmentStyle(segments[index]).color)
-                                }
-                            }
-                        }
-                        .frame(height: 4)
-                        .accessibilityHidden(true)
-                    } else {
-                        sectorTime(sector).font(.caption2.weight(.semibold))
-                        Capsule()
-                            .fill(sectorColor(sector))
-                            .frame(height: 3)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("S\(index + 1)，\(sector?.value ?? "No Results Yet")"
-                                    + (showsSegments && !segments.isEmpty ? ", mini-sectors " + segments.map { segmentStyle($0).label }.joined(separator: "、") : ""))
+                LiveSectorTimingCell(sector: sector, index: index, showsSegments: showsSegments,
+                                     compactSegments: compactSegments)
             }
         }
+    }
+}
+
+struct LiveSectorTimingCell: View {
+    let sector: LiveSector?
+    let index: Int
+    let showsSegments: Bool
+    var compactSegments = false
+
+    var body: some View {
+        let segments = sector?.segments ?? []
+        VStack(spacing: 4) {
+            if compactSegments {
+                segmentBar(segments, fallback: sectorColor(sector), spacing: 1)
+                sectorTime(sector).font(.caption2.weight(.semibold))
+            } else if showsSegments {
+                HStack(spacing: 4) {
+                    Text("S\(index + 1)").foregroundStyle(.secondary)
+                    Spacer(minLength: 2)
+                    sectorTime(sector)
+                }
+                .font(.caption.weight(.semibold))
+                segmentBar(segments, fallback: .secondary.opacity(0.25), spacing: 2)
+            } else {
+                sectorTime(sector).font(.caption2.weight(.semibold))
+                Capsule()
+                    .fill(sectorColor(sector))
+                    .frame(height: 3)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("S\(index + 1)，\(sector?.value ?? "No Results Yet")"
+                            + (showsSegments && !segments.isEmpty ? ", mini-sectors " + segments.map { segmentStyle($0).label }.joined(separator: "、") : ""))
+    }
+
+    private func segmentBar(_ segments: [Int?], fallback: Color, spacing: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            if segments.isEmpty {
+                RoundedRectangle(cornerRadius: 1).fill(fallback)
+            } else {
+                ForEach(segments.indices, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1).fill(segmentStyle(segments[index]).color)
+                }
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 
     private func sectorTime(_ sector: LiveSector?) -> some View {

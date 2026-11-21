@@ -8,11 +8,23 @@ struct DriverAnalysisScreen: View {
     let driver: SessionResult
     let season: Int
     let sessionLabel: String
+    var embedded = false
     @State private var analysis: SessionAnalysis?
     @State private var error: String?
     @State private var focusedLap: Int?
 
     var body: some View {
+        if embedded {
+            charts
+        } else {
+            charts
+                .navigationTitle("Driver Charts (\(sessionLabel))")
+                .dashboardDetail()
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var charts: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
@@ -60,9 +72,6 @@ struct DriverAnalysisScreen: View {
         }
             .background(WebDashboardStyle.homeBackground)
             .pulseSwap(analysis != nil)
-            .navigationTitle("Driver Charts (\(sessionLabel))")
-            .dashboardDetail()
-            .navigationBarTitleDisplayMode(.inline)
             .refreshable { await load() }
             .task(id: model.dataContext) { await load() }
     }

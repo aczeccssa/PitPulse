@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0411F6FFB3EBA6AA66F80C67 /* WebNavigation.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6D923A6CC0E449975879756F /* WebNavigation.xcassets */; };
 		0013CAD769E3B2F8FD94FBB3 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7C1F5CAD9893A0F33E362D /* CalendarScreen.swift */; };
 		0152F8A6EF0581EE820B6A02 /* MobileModel+Roster.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE4D05339C7C56694DB7529C /* MobileModel+Roster.swift */; };
 		0ADD08509227B8B40E7EE6ED /* MobileModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67AEDB36B70E803441CBC20F /* MobileModel.swift */; };
@@ -104,6 +105,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6D923A6CC0E449975879756F /* WebNavigation.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = WebNavigation.xcassets; sourceTree = "<group>"; };
 		01EB4AAA3D6D6FA2A6CCCC1F /* AnalysisScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisScreen.swift; sourceTree = "<group>"; };
 		02F4574F88E3552B31356FC0 /* NavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTests.swift; sourceTree = "<group>"; };
 		0BD6D321D88EA9EE2CFFC377 /* ServerConfigurationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigurationSheet.swift; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 		42C5FD311414EEA3FEE001E6 /* PitPulseMobile */ = {
 			isa = PBXGroup;
 			children = (
+				6D923A6CC0E449975879756F /* WebNavigation.xcassets */,
 				CC88D10DA3BFCFC0BC092785 /* PitPulseMobile.entitlements */,
 				A28E96EA2CB56686374D4273 /* App */,
 				604B95866324BC75165C3D1A /* Core */,
@@ -558,6 +561,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A204470FA27FEA246EEA109 /* AppIcon.icon in Resources */,
+				0411F6FFB3EBA6AA66F80C67 /* WebNavigation.xcassets in Resources */,
 				C843FD46F819A5C8DBA00438 /* motorsport in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -666,7 +670,7 @@
 				PRODUCT_NAME = PitPulseLiveActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -787,7 +791,7 @@
 				PRODUCT_NAME = PitPulse;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -811,7 +815,7 @@
 				PRODUCT_MODULE_NAME = PitPulseMobile;
 				PRODUCT_NAME = PitPulse;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -900,7 +904,7 @@
 				PRODUCT_NAME = PitPulseLiveActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};

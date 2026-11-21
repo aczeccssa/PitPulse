@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import SharedData
 
 struct LiveNotice: Equatable {
@@ -146,7 +147,8 @@ final class MobileModel: ObservableObject {
         series = preferredSeries
         favoriteDriverID = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         islandMode = defaults.string(forKey: "mobileIslandMode").flatMap(IslandContentMode.init(rawValue:)) ?? .overview
-        season = storedSeason > 2000 ? storedSeason : Calendar.current.component(.year, from: Date())
+        let currentYear = Calendar(identifier: .gregorian).component(.year, from: .now)
+        season = UIDevice.current.userInterfaceIdiom != .pad && storedSeason > 2000 ? storedSeason : currentYear
         serverText = storedServer?.isEmpty == false ? storedServer! : "http://localhost:38701"
         for (series, store) in liveStores {
             store.onSnapshot = { [weak self] snapshot in self?.handle(snapshot, from: series) }
