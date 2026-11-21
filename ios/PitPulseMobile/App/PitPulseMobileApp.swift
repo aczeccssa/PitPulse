@@ -245,6 +245,7 @@ struct RootView: View {
     @State private var showCalendar = false
     @State private var padSidebarExpanded = false
     @State private var padSidebarFits = false
+    @State private var usesCompactPadNavigation = false
     private var showsExpandedSidebar: Bool { padSidebarFits && padSidebarExpanded }
     @State private var driverProfileTarget: DriverProfileDestination?
     @State private var resultsTarget: (Meeting, Session)?
@@ -307,7 +308,7 @@ struct RootView: View {
                         .lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 36, alignment: showsExpandedSidebar ? .leading : .center)
+            .frame(maxWidth: .infinity, minHeight: usesCompactPadNavigation ? 44 : 36, alignment: showsExpandedSidebar ? .leading : .center)
             .padding(.horizontal, showsExpandedSidebar ? 10 : 0)
                 .background(selected ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.055)) : .clear, in: .rect(cornerRadius: 6))
                 .foregroundStyle(selected ? .primary : .secondary)
@@ -323,55 +324,10 @@ struct RootView: View {
     private var navigation: some View {
         let selectedTab = Binding(get: { selection }, set: { selectTab($0) })
         if isPad {
-            HStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 3) {
-                        Button {
-                            showLive = false
-                            selectTab(DashboardTab.home.rawValue)
-                        } label: {
-                            HStack(spacing: 9) {
-                                Image("web-brand-mark")
-                                    .resizable().scaledToFit()
-                                    .frame(width: 24, height: 20)
-                                    .accessibilityHidden(true)
-                                if showsExpandedSidebar {
-                                    Text("PitPulse").font(.system(size: 13, weight: .bold))
-                                }
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 20,
-                                   alignment: showsExpandedSidebar ? .leading : .center)
-                            .padding(.horizontal, showsExpandedSidebar ? 10 : 0)
-                            .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("PitPulse Home")
-                        .accessibilityIdentifier("dashboard.brand")
-                        .padding(.bottom, 17)
-                        ForEach(DashboardTab.padTabs) { tab in
-                            iPadSidebarButton(tab == .constructors ? "Constructor Standings" : tab.title,
-                                              symbol: tab.symbol, webIcon: tab.webNavigationIcon,
-                                              selected: selection == tab.rawValue) {
-                                showLive = false
-                                selectTab(tab.rawValue)
-                            }
-                            .accessibilityIdentifier(tab == .calendar ? "calendar.open" : "dashboard.tab.\(tab.rawValue)")
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 18)
-                    .frame(maxWidth: .infinity)
-                }
-                .scrollIndicators(.hidden)
-                .frame(width: showsExpandedSidebar ? 240 : 56)
-                .background {
-                    WebDashboardStyle.adaptive(dark: 0x040811, light: 0xffffff)
-                        .ignoresSafeArea(edges: [.top, .bottom, .leading])
-                }
-                .overlay(alignment: .trailing) {
-                    Rectangle().fill(webWorkspaceLine).frame(width: 1)
-                        .ignoresSafeArea(edges: [.top, .bottom])
-                }
+            let workspace = usesCompactPadNavigation
+                ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+            workspace {
+                iPadNavigationBar
                 ZStack {
                     ForEach(DashboardTab.padTabs) { tab in
                         let active = selection == tab.rawValue
@@ -387,6 +343,8 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .onGeometryChange(for: Bool.self) { $0.size.width >= 740 } action: { padSidebarFits = $0 }
+            .onGeometryChange(for: Bool.self) { $0.size.width < 460 } action: { usesCompactPadNavigation = $0 }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: usesCompactPadNavigation)
             .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showsExpandedSidebar)
             .onChange(of: selection, initial: true) { _, tab in visitedTabs.insert(tab) }
         } else {
@@ -403,6 +361,74 @@ struct RootView: View {
                         .tag(tab.rawValue)
                 }
             }
+        }
+    }
+
+    private var iPadNavigationBar: some View {
+        let compact = usesCompactPadNavigation
+        let items = compact ? AnyLayout(HStackLayout(spacing: 4)) : AnyLayout(VStackLayout(spacing: 3))
+        return ScrollViewReader { scroll in
+            ScrollView(compact ? .horizontal : .vertical) {
+                items { iPadNavigationItems }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, compact ? 0 : 18)
+                    .frame(maxWidth: compact ? nil : .infinity)
+            }
+            .onChange(of: compact, initial: true) {
+                if compact { scroll.scrollTo(selection, anchor: .center) }
+            }
+            .onChange(of: selection) {
+                if compact { scroll.scrollTo(selection, anchor: .center) }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .frame(width: compact ? nil : showsExpandedSidebar ? 240 : 56, height: compact ? 48 : nil)
+        .background {
+            WebDashboardStyle.adaptive(dark: 0x040811, light: 0xffffff)
+                .ignoresSafeArea(edges: compact ? [.top, .horizontal] : [.top, .bottom, .leading])
+        }
+        .overlay(alignment: compact ? .bottom : .trailing) {
+            Rectangle().fill(webWorkspaceLine)
+                .frame(width: compact ? nil : 1, height: compact ? 1 : nil)
+                .ignoresSafeArea(edges: compact ? .horizontal : .vertical)
+        }
+    }
+
+    @ViewBuilder
+    private var iPadNavigationItems: some View {
+        Button {
+            showLive = false
+            selectTab(DashboardTab.home.rawValue)
+        } label: {
+            HStack(spacing: 9) {
+                Image("web-brand-mark")
+                    .resizable().scaledToFit()
+                    .frame(width: 24, height: 20)
+                    .accessibilityHidden(true)
+                if showsExpandedSidebar {
+                    Text("PitPulse").font(.system(size: 13, weight: .bold))
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: usesCompactPadNavigation ? 44 : 20,
+                   alignment: showsExpandedSidebar ? .leading : .center)
+            .padding(.horizontal, showsExpandedSidebar ? 10 : 0)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("PitPulse Home")
+        .accessibilityIdentifier("dashboard.brand")
+        .frame(width: usesCompactPadNavigation ? 44 : nil)
+        .padding(.bottom, usesCompactPadNavigation ? 0 : 17)
+        ForEach(DashboardTab.padTabs) { tab in
+            iPadSidebarButton(tab == .constructors ? "Constructor Standings" : tab.title,
+                              symbol: tab.symbol, webIcon: tab.webNavigationIcon,
+                              selected: selection == tab.rawValue) {
+                showLive = false
+                selectTab(tab.rawValue)
+            }
+            .frame(width: usesCompactPadNavigation ? 44 : nil)
+            .id(tab.rawValue)
+            .accessibilityIdentifier(tab == .calendar ? "calendar.open" : "dashboard.tab.\(tab.rawValue)")
         }
     }
 

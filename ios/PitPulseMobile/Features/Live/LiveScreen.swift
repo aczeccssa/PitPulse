@@ -74,7 +74,7 @@ struct LiveScreen: View {
         }
         .statusBarHidden(isLandscape && !isPad)
         .onGeometryChange(for: Bool.self) { geometry in
-            if tablet { return geometry.size.width >= 890 && geometry.size.height >= 420 && !usesAccessibilityText }
+            if tablet { return geometry.size.width >= 890 && geometry.size.height >= 460 && !usesAccessibilityText }
             return geometry.size.width > geometry.size.height
         } action: { landscape in
             if isPad, landscape, let compactPanel, !visibleTabletPanels.contains(compactPanel) {
@@ -381,7 +381,7 @@ struct LiveScreen: View {
         let minimumWidth: CGFloat = 510
         if compact && width < minimumWidth {
             landscapeScrollPanel {
-                timingBoard(selecting: false)
+                timingBoard(selecting: false, stackedSectors: width < 350)
             }
         } else if width < minimumWidth {
             ScrollView(.horizontal) {
@@ -1120,7 +1120,7 @@ struct LiveScreen: View {
         closeTabletPanel(.driver)
     }
 
-    private func timingBoard(selecting: Bool, detailed: Bool = false, wide: Bool = false) -> some View {
+    private func timingBoard(selecting: Bool, detailed: Bool = false, wide: Bool = false, stackedSectors: Bool = false) -> some View {
         let drivers = model.sortedDrivers
         let rows = (selecting ? battleDraft : nil).map { draft in
             drivers.sorted {
@@ -1146,12 +1146,14 @@ struct LiveScreen: View {
                             .accessibilityLabel("Position")
                             .frame(width: 24)
                         Text("Driver").frame(maxWidth: .infinity, alignment: .leading)
-                        HStack(spacing: 4) {
-                            ForEach(1...3, id: \.self) { index in
-                                Text("S\(index)").frame(maxWidth: .infinity)
+                        if !stackedSectors {
+                            HStack(spacing: 4) {
+                                ForEach(1...3, id: \.self) { index in
+                                    Text("S\(index)").frame(maxWidth: .infinity)
+                                }
                             }
+                            .frame(width: 126)
                         }
-                        .frame(width: 126)
                         if !selecting { Text("Gap / Tire").frame(width: 64, alignment: .trailing) }
                     }
                     .font(.caption2.weight(.semibold))
@@ -1159,12 +1161,13 @@ struct LiveScreen: View {
                     .padding(.vertical, isLandscape ? 7 : 12)
                     ForEach(rows, id: \.number) { driver in
                         Divider()
-                        driverRow(driver, selecting: selecting)
+                        driverRow(driver, selecting: selecting, stackedSectors: stackedSectors)
                     }
                 }
                 .padding(.horizontal, isLandscape ? 9 : 14)
                 .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: rows.map(\.number))
-                if isLandscape {
+                .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: stackedSectors)
+                if isLandscape || isPad {
                     table
                 } else {
                     table.dashboardPanel(WebDashboardStyle.homePanel)
@@ -1297,7 +1300,7 @@ struct LiveScreen: View {
             .padding(.vertical, 32)
     }
 
-    private func driverRow(_ driver: LiveDriver, selecting: Bool) -> some View {
+    private func driverRow(_ driver: LiveDriver, selecting: Bool, stackedSectors: Bool) -> some View {
         let isSelected = battleDraft?.selection.contains(driver.number) ?? false
         let teamID = LiveIslandLogic.teamAssetID(for: driver, isWec: snapshot.isWec)
         let position = driver.position ?? driver.classPosition
@@ -1320,64 +1323,73 @@ struct LiveScreen: View {
                 selectedNumber = driver.number
             }
         } label: {
-            HStack(spacing: 6) {
-                if selecting {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(isSelected ? PulseStyle.red : .secondary)
-                        .frame(width: 44, height: 44)
-                        .accessibilityHidden(true)
-                }
-                PulseNumber(position.map(String.init) ?? "—")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(width: 24)
-                    .overlay(alignment: .bottom) {
-                        if isFavorite {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(PulseStyle.red)
-                                .offset(y: 9)
-                                .accessibilityLabel("Favorite driver")
+            VStack(spacing: 4) {
+                HStack(spacing: 6) {
+                    if selecting {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(isSelected ? PulseStyle.red : .secondary)
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+                    }
+                    PulseNumber(position.map(String.init) ?? "—")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 24)
+                        .overlay(alignment: .bottom) {
+                            if isFavorite {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(PulseStyle.red)
+                                    .offset(y: 9)
+                                    .accessibilityLabel("Favorite driver")
+                            }
+                        }
+                    HStack(spacing: 5) {
+                        if !snapshot.isWec {
+                            AssetImage(name: model.helmetAsset(for: driver)).frame(width: 26, height: 25)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("#\(driver.number) \(driver.name.map(MotorsportAssetName.abbreviation) ?? "—")")
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .accessibilityLabel("Car \(driver.number), \(driver.name ?? "Unknown driver")")
+                            if let logo {
+                                Image(uiImage: logo).resizable().scaledToFit()
+                                    .frame(width: 28, height: 13, alignment: .leading)
+                                    .accessibilityLabel(driver.team ?? "Team")
+                            }
                         }
                     }
-                HStack(spacing: 5) {
-                    if !snapshot.isWec {
-                        AssetImage(name: model.helmetAsset(for: driver)).frame(width: 26, height: 25)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("#\(driver.number) \(driver.name.map(MotorsportAssetName.abbreviation) ?? "—")")
-                            .font(.caption.weight(.semibold).monospacedDigit())
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .accessibilityLabel("Car \(driver.number), \(driver.name ?? "Unknown driver")")
-                        if let logo {
-                            Image(uiImage: logo).resizable().scaledToFit()
-                                .frame(width: 28, height: 13, alignment: .leading)
-                                .accessibilityLabel(driver.team ?? "Team")
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                LiveSectorTimes(sectors: driver.sectors ?? [], showsSegments: false)
-                    .frame(width: 126)
-                if !selecting {
-                    VStack(alignment: .trailing, spacing: 3) {
-                        PulseNumber(gapText)
-                            .font(.caption.weight(.semibold).monospacedDigit())
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .accessibilityLabel(driver.gap == nil && driver.interval != nil ? "Interval \(gapText)" : "Gap to leader \(gapText)")
-                        HStack(spacing: 4) {
-                            LiveDriverTrackStatus(driver: driver)
-                            LiveTireBadge(driver: driver)
-                        }
+                    if !stackedSectors {
+                        LiveSectorTimes(sectors: driver.sectors ?? [], showsSegments: false)
+                            .frame(width: 126)
                     }
-                    .frame(width: 64, alignment: .trailing)
+                    if !selecting {
+                        VStack(alignment: .trailing, spacing: 3) {
+                            PulseNumber(gapText)
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .accessibilityLabel(driver.gap == nil && driver.interval != nil ? "Interval \(gapText)" : "Gap to leader \(gapText)")
+                            HStack(spacing: 4) {
+                                LiveDriverTrackStatus(driver: driver)
+                                LiveTireBadge(driver: driver)
+                            }
+                        }
+                        .frame(width: 64, alignment: .trailing)
+                    }
+                }
+                if stackedSectors {
+                    LiveSectorTimes(sectors: driver.sectors ?? [], showsSegments: true)
+                        .padding(.leading, 30)
                 }
             }
+            .padding(.vertical, stackedSectors ? 5 : 0)
             .frame(minHeight: isLandscape ? 44 : 54)
             .background {
                 if isFocusedDriver || isFavorite {

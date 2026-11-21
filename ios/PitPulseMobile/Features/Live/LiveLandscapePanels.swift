@@ -28,9 +28,11 @@ struct LiveLandscapeDriverPanel: View {
         GeometryReader { layout in
             if isTablet {
                 let sideBySide = layout.size.width >= 340
-                let contentHeight = max(layout.size.height, sideBySide ? 314 : 480)
+                    || (layout.size.width >= 286 && layout.size.height < 360)
+                let dialWidth = sideBySide ? min(118, layout.size.width * 0.30) : nil
+                let contentHeight = max(layout.size.height, sideBySide ? 276 : 480)
                 ScrollView {
-                    tabletPanel(sideBySide: sideBySide)
+                    tabletPanel(dialWidth: dialWidth)
                         .frame(height: contentHeight)
                 }
                 .scrollBounceBehavior(.basedOnSize)
@@ -112,7 +114,8 @@ struct LiveLandscapeDriverPanel: View {
         .minimumScaleFactor(0.7)
     }
 
-    private func tabletPanel(sideBySide: Bool) -> some View {
+    private func tabletPanel(dialWidth: CGFloat?) -> some View {
+        let sideBySide = dialWidth != nil
         let layout = sideBySide ? AnyLayout(HStackLayout(spacing: 10)) : AnyLayout(VStackLayout(spacing: 6))
         let tint = LiveIslandLogic.teamAssetID(for: driver, isWec: model.liveSnapshot.isWec)
             .map(DashboardArt.teamColor) ?? .blue
@@ -120,7 +123,7 @@ struct LiveLandscapeDriverPanel: View {
             driverSummary
             layout {
                 LiveTabletBattleDial(driver: driver, tint: tint, expanded: false, identifierPrefix: "live.driver.gauge")
-                    .frame(width: sideBySide ? 118 : nil)
+                    .frame(width: dialWidth)
                 TelemetryChartPanel(samples: model.liveHistory[driver.number] ?? [], driver: driver, isTablet: true)
             }
             .padding(10)
