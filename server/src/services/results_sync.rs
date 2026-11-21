@@ -303,7 +303,7 @@ impl ResultsSync {
             let primary = alpha.await;
             if matches!(
                 session.session_type,
-                SessionType::Sprint | SessionType::SprintQualifying
+                SessionType::Sprint | SessionType::SprintQualifying | SessionType::Qualifying
             ) && self.openf1.enabled
                 && session.openf1_session_key.is_some()
                 && match &primary {

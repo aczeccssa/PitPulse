@@ -1557,8 +1557,9 @@ private struct HomeWeekendSchedule: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
-            detail(forecast?.precipitationProbability.map { "\($0.formatted(.number.precision(.fractionLength(0))))%" } ?? "—",
-                   symbol: forecast?.precipitationIcon, symbolAfter: true, label: "Chance of Rain", width: 49)
+            detail(forecast?.rainText ?? "—",
+                   symbol: forecast?.rainIcon, symbolAfter: true,
+                   label: forecast?.rainLabel ?? "Chance of Rain", width: 49)
 //            if showVisibility {
 //                detail(session.sessionType == .race ? forecast?.visibilityMeters.map { "\(($0 / 1000).formatted(.number.precision(.fractionLength(0...1)))) km" } : nil,
 //                       symbol: "eye", label: "Visibility", width: 57)
@@ -1631,6 +1632,23 @@ private struct WeekendForecast: Decodable {
             let precipitation: Double?
             let weatherCode: Int?
             let windSpeed: Double?
+            let rainfall: Double?
+
+            /// Finished sessions return measured observations, which carry
+            /// rainfall instead of an Open-Meteo probability.
+            var rainText: String? {
+                if let rainfall { return rainfall > 0 ? "Rain" : "Dry" }
+                return precipitationProbability.map { "\($0.formatted(.number.precision(.fractionLength(0))))%" }
+            }
+
+            var rainIcon: String? {
+                if let rainfall { return rainfall > 0 ? "cloud.rain" : "sun.max" }
+                return precipitationIcon
+            }
+
+            var rainLabel: String {
+                rainfall == nil ? "Chance of Rain" : "Rain"
+            }
 
             var precipitationIcon: String? {
                 guard let precipitation, precipitation >= 0 else { return nil }

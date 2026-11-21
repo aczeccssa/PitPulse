@@ -214,6 +214,88 @@ async fn test_sprint_fallback_preserves_primary_priority_rate_limit_and_cached_r
 }
 
 #[tokio::test]
+async fn test_qualifying_falls_back_to_openf1_when_alpha_is_empty() {
+    let app = Router::new()
+        .route("/ergast/f1/2026/drivers.json", get(mock_drivers))
+        .route("/ergast/f1/2026/constructors.json", get(mock_constructors))
+        .route(
+            "/f1/alpha/results/round_test/Q/",
+            get(|| async { Json(json!({"data":{"results":[]}})) }),
+        )
+        .route("/v1/drivers", get(mock_openf1_drivers))
+        .route(
+            "/v1/session_result",
+            get(|| async {
+                Json(json!([{
+                    "driver_number":16,"position":1,
+                    "duration":[79.1,78.5,78.2],
+                    "dnf":false,"dns":false,"dsq":false
+                }]))
+            }),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let upstream = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let temp = TempDir::new().unwrap();
+    let database = Database::open(&temp.path().join("pitpulse.sqlite"))
+        .await
+        .unwrap();
+    database.migrate().await.unwrap();
+    let session = Session {
+        id: "2026:1:qualifying".into(),
+        meeting_id: "2026:1".into(),
+        session_type: SessionType::Qualifying,
+        start_time: "2026-10-08T20:00:00Z".into(),
+        end_time: Some("2026-10-08T21:00:00Z".into()),
+        status: SessionStatus::Finished,
+        jolpica_session_id: None,
+        openf1_session_key: Some(10),
+    };
+    let meeting = Meeting {
+        circuit: None,
+        id: "2026:1".into(),
+        season: 2026,
+        round: Some(1),
+        jolpica_round_id: Some("round_test".into()),
+        name: "Test Grand Prix".into(),
+        country: "Australia".into(),
+        country_code: Some("AU".into()),
+        location: "Melbourne".into(),
+        start_date: session.start_time.clone(),
+        end_date: session.start_time.clone(),
+        status: MeetingStatus::Scheduled,
+        sessions: vec![session.clone()],
+        source: Some("jolpica-alpha".into()),
+        fetched_at: None,
+        source_updated_at: None,
+        revision: None,
+    };
+    database
+        .replace_calendar(std::slice::from_ref(&meeting), "2026-10-08T23:00:00Z")
+        .await
+        .unwrap();
+    let sync = ResultsSync {
+        jolpica: JolpicaProvider::with_base_url(reqwest::Client::new(), &base),
+        openf1: OpenF1Provider::with_base_url(reqwest::Client::new(), &base),
+        timeout: Duration::from_secs(2),
+    };
+    let identities = sync.load_identity_maps_once(&database, 2026).await.unwrap();
+    assert_eq!(
+        sync.sync_session_once(&database, &meeting, &session, &identities)
+            .await
+            .unwrap(),
+        SyncOutcome::Stored { retry_after: None }
+    );
+    let (rows, meta) = database.session_results(&session.id).await.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].driver_id, "leclerc");
+    assert_eq!(rows[0].q1.as_deref(), Some("1:19.100"));
+    assert_eq!(rows[0].q3.as_deref(), Some("1:18.200"));
+    assert_eq!(meta.source.as_deref(), Some("openf1"));
+    upstream.abort();
+}
+
+#[tokio::test]
 async fn test_split_sync_targets_fetch_and_preserve_results_and_both_standings() {
     let app = Router::new()
         .route("/ergast/f1/2026/drivers.json", get(mock_drivers))
