@@ -27,12 +27,9 @@ struct LiveLandscapeDriverPanel: View {
     var body: some View {
         GeometryReader { layout in
             if isTablet {
-                let sideBySide = layout.size.width >= 340
-                    || (layout.size.width >= 286 && layout.size.height < 360)
-                let dialWidth = sideBySide ? min(118, layout.size.width * 0.30) : nil
-                let contentHeight = max(layout.size.height, sideBySide ? 276 : 480)
+                let contentHeight = max(layout.size.height, 290)
                 ScrollView {
-                    tabletPanel(dialWidth: dialWidth)
+                    tabletPanel(compactHeight: layout.size.height < 430)
                         .frame(height: contentHeight)
                 }
                 .scrollBounceBehavior(.basedOnSize)
@@ -114,21 +111,49 @@ struct LiveLandscapeDriverPanel: View {
         .minimumScaleFactor(0.7)
     }
 
-    private func tabletPanel(dialWidth: CGFloat?) -> some View {
-        let sideBySide = dialWidth != nil
-        let layout = sideBySide ? AnyLayout(HStackLayout(spacing: 10)) : AnyLayout(VStackLayout(spacing: 6))
+    private func tabletPanel(compactHeight: Bool) -> some View {
         let tint = LiveIslandLogic.teamAssetID(for: driver, isWec: model.liveSnapshot.isWec)
             .map(DashboardArt.teamColor) ?? .blue
         return VStack(spacing: 8) {
-            driverSummary
-            layout {
-                LiveTabletBattleDial(driver: driver, tint: tint, expanded: false, identifierPrefix: "live.driver.gauge")
-                    .frame(width: dialWidth)
-                TelemetryChartPanel(samples: model.liveHistory[driver.number] ?? [], driver: driver, isTablet: true)
+            VStack(alignment: .leading, spacing: 6) {
+                driverHeading
+                if compactHeight {
+                    HStack {
+                        trackSummary
+                        Spacer()
+                        PulseNumber(driver.telemetry?.speed.map { "\(Int($0)) km/h" } ?? "— km/h")
+                        PulseNumber(driver.telemetry?.gear.map { "G\(Int($0))" } ?? "G—")
+                    }.font(.caption.monospacedDigit())
+                } else {
+                HStack(spacing: 16) {
+                    LiveTabletBattleDial(driver: driver, tint: tint, expanded: false,
+                                         diameterLimit: 116, identifierPrefix: "live.driver.gauge")
+                        .frame(width: 116)
+                    VStack(alignment: .leading, spacing: 8) {
+                        trackSummary
+                        lapReading("Best", time: driver.bestLap)
+                        lapReading("Last lap", time: driver.lastLap)
+                    }
+                    .font(.caption.monospacedDigit())
+                }
+                }
+                Divider()
+                LiveSectorTimes(sectors: driver.sectors ?? [], showsSegments: true, compactSegments: true)
             }
             .padding(10)
-            .liveLandscapePanel(PulseStyle.surface)
-            .animation(reduceMotion ? nil : .snappy(duration: 0.26), value: sideBySide)
+            .liveLandscapePanel(WebDashboardStyle.homePanel)
+
+            TelemetryChartPanel(samples: model.liveHistory[driver.number] ?? [], driver: driver, isTablet: true)
+                .padding(10)
+                .liveLandscapePanel(PulseStyle.surface)
+        }
+    }
+
+    private func lapReading(_ label: String, time: String?) -> some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            PulseNumber(time ?? "—").fontWeight(.semibold)
         }
     }
 
@@ -359,6 +384,7 @@ struct LiveTabletBattleMetrics: View {
 }
 
 private struct LiveTabletBattleDial: View {
+    @EnvironmentObject private var model: MobileModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let driver: LiveDriver
     let tint: Color
@@ -381,7 +407,8 @@ private struct LiveTabletBattleDial: View {
                                    speed: readings[0], rpm: readings[1],
                                    throttle: readings[2], brake: readings[3])
                     .id(readings.map { $0 != nil })
-                    .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: readings)
+                    .animation(reduceMotion || model.liveSnapshot.sourceStatus != .connected
+                               ? nil : .easeOut(duration: transitionDuration), value: readings)
                     .frame(width: diameter, height: diameter)
                     .position(x: diameter / 2, y: diameter / 2)
             }
@@ -404,6 +431,13 @@ private struct LiveTabletBattleDial: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(driver.name ?? driver.number), speed \(number(telemetry?.speed)) kilometers per hour, RPM \(number(telemetry?.rpm)), gear \(gear), throttle \(percentage(telemetry?.throttle)), brake \(percentage(telemetry?.brake))")
         .accessibilityIdentifier("\(identifierPrefix).\(driver.number)")
+    }
+
+    private var transitionDuration: Double {
+        guard let samples = model.liveHistory[driver.number], samples.count >= 2,
+              let previous = RFC3339.parse(samples[samples.count - 2].utc),
+              let latest = RFC3339.parse(samples[samples.count - 1].utc) else { return 0.28 }
+        return min(2, max(0.22, latest.timeIntervalSince(previous) * 0.65))
     }
 
     private func finite(_ value: Double?) -> Double? {
@@ -452,7 +486,7 @@ private struct LiveTabletDialFace: View, Animatable {
             arc(throttle, limit: 100, start: 145, sweep: 85, color: .green.opacity(0.78),
                 radius: diameter * 0.337, width: diameter * 0.105)
             arc(brake, limit: 100, start: 310, sweep: 85, color: PulseStyle.red.opacity(0.78),
-                radius: diameter * 0.337, width: diameter * 0.105)
+                radius: diameter * 0.337, width: diameter * 0.105, reversed: true)
             curvedLabel("THROTTLE", start: 161, end: 212, diameter: diameter)
             curvedLabel("BRAKE", start: 340, end: 377, diameter: diameter)
 
@@ -496,14 +530,15 @@ private struct LiveTabletDialFace: View, Animatable {
     }
 
     private func arc(_ value: Double?, limit: Double, start: Double, sweep: Double, color: Color,
-                     radius: CGFloat, width: CGFloat) -> some View {
+                     radius: CGFloat, width: CGFloat, reversed: Bool = false) -> some View {
         let span = sweep / 360
         let fraction = value.flatMap { $0.isFinite ? min(max($0 / limit, 0), 1) : nil } ?? 0
         let stroke = StrokeStyle(lineWidth: width, lineCap: .round)
         return ZStack {
             Circle().trim(from: 0, to: span).stroke(.primary.opacity(0.10), style: stroke)
             if fraction > 0 {
-                Circle().trim(from: 0, to: span * fraction).stroke(color, style: stroke)
+                Circle().trim(from: reversed ? span * (1 - fraction) : 0, to: reversed ? span : span * fraction)
+                    .stroke(color, style: stroke)
             }
         }
         .frame(width: radius * 2, height: radius * 2)
@@ -648,7 +683,7 @@ private struct LiveBattleGauge: View {
                     let inset = size * 0.14
                     gaugeTrack(value: telemetry?.throttle, limit: 100, start: 135, sweep: 98, tint: .green)
                         .padding(inset)
-                    gaugeTrack(value: telemetry?.brake, limit: 100, start: 307, sweep: 98, tint: PulseStyle.red)
+                    gaugeTrack(value: telemetry?.brake, limit: 100, start: 307, sweep: 98, tint: PulseStyle.red, reversed: true)
                         .padding(inset)
                     VStack(spacing: 1) {
                         PulseNumber(number(telemetry?.speed))
@@ -681,14 +716,14 @@ private struct LiveBattleGauge: View {
         .accessibilityLabel("\(driver.name ?? driver.number), speed \(number(telemetry?.speed)), RPM \(number(telemetry?.rpm)), gear \(number(telemetry?.gear)), throttle \(percent(telemetry?.throttle)), brake \(percent(telemetry?.brake))")
     }
 
-    private func gaugeTrack(value: Double?, limit: Double, start: Double, sweep: Double, tint: Color) -> some View {
+    private func gaugeTrack(value: Double?, limit: Double, start: Double, sweep: Double, tint: Color, reversed: Bool = false) -> some View {
         let end = sweep / 360
         let fraction = value.flatMap { $0.isFinite ? min(max($0 / limit, 0), 1) : nil } ?? 0
         return ZStack {
             Circle().trim(from: 0, to: end)
                 .stroke(.secondary.opacity(0.20), style: StrokeStyle(lineWidth: 5, lineCap: .round))
             if fraction > 0 {
-                Circle().trim(from: 0, to: end * fraction)
+                Circle().trim(from: reversed ? end * (1 - fraction) : 0, to: reversed ? end : end * fraction)
                     .stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round))
             }
         }

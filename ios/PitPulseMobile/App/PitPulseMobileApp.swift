@@ -246,6 +246,10 @@ struct RootView: View {
     @State private var padSidebarExpanded = false
     @State private var padSidebarFits = false
     @State private var usesCompactPadNavigation = false
+    @State private var compactPadFitsLiveBar = false
+    @State private var compactTabPlatterFrame: CGRect?
+    @State private var lastCompactPrimaryTab: DashboardTab = .home
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private var showsExpandedSidebar: Bool { padSidebarFits && padSidebarExpanded }
     @State private var driverProfileTarget: DriverProfileDestination?
     @State private var resultsTarget: (Meeting, Session)?
@@ -322,76 +326,169 @@ struct RootView: View {
 
     @ViewBuilder
     private var navigation: some View {
-        let selectedTab = Binding(get: { selection }, set: { selectTab($0) })
         if isPad {
-            let workspace = usesCompactPadNavigation
-                ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
-            workspace {
-                iPadNavigationBar
-                ZStack {
-                    ForEach(DashboardTab.padTabs) { tab in
-                        let active = selection == tab.rawValue
-                        if selection == tab.rawValue || visitedTabs.contains(tab.rawValue) {
-                            dashboardPage(tab)
-                                .opacity(active ? 1 : 0)
-                                .allowsHitTesting(active)
-                                .accessibilityHidden(!active)
-                                .zIndex(active ? 1 : 0)
+            Group {
+                if usesCompactPadNavigation {
+                    VStack(spacing: 0) {
+                        GlassEffectContainer(spacing: 8) {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                compactUtilityButton(.calendar)
+                                compactUtilityButton(.consistency)
+                                compactUtilityButton(.settings)
+                            }
+                            .padding(.horizontal, 10)
+                            .containerCornerOffset(.leading, sizeToFit: true)
                         }
+                        primaryTabView(selection: Binding(
+                            get: { compactPrimaryTab.rawValue },
+                            set: { selectTab($0) }
+                        )) { tab in
+                            ZStack {
+                                dashboardPage(tab == .drivers ? .driverStandings : tab)
+                                    .opacity(compactUtilityTab == nil ? 1 : 0)
+                                    .allowsHitTesting(compactUtilityTab == nil)
+                                    .accessibilityHidden(compactUtilityTab != nil)
+                                if let utility = compactUtilityTab, tab == compactPrimaryTab {
+                                    dashboardPage(utility).id(utility)
+                                }
+                            }
+                            .environment(\.horizontalSizeClass, horizontalSizeClass)
+                            .overlay { iPadLiveControl(adaptsToTabPage: true) }
+                        }
+                        .environment(\.horizontalSizeClass, .compact)
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .onGeometryChange(for: Bool.self) { $0.size.width >= 740 } action: { padSidebarFits = $0 }
-            .onGeometryChange(for: Bool.self) { $0.size.width < 460 } action: { usesCompactPadNavigation = $0 }
-            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: usesCompactPadNavigation)
-            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showsExpandedSidebar)
-            .onChange(of: selection, initial: true) { _, tab in visitedTabs.insert(tab) }
-        } else {
-            TabView(selection: selectedTab) {
-                ForEach(DashboardTab.phoneTabs) { tab in
-                    dashboardPage(tab)
-                        .tabItem {
-                            if let icon = Self.tabIcons[tab] {
-                                Image(uiImage: icon).accessibilityLabel(tab.title)
-                            } else {
-                                Image(systemName: tab.symbol).accessibilityLabel(tab.title)
+                } else {
+                    HStack(spacing: 0) {
+                        iPadNavigationBar
+                        ZStack {
+                            ForEach(DashboardTab.padTabs) { tab in
+                                let active = selection == tab.rawValue
+                                if active || visitedTabs.contains(tab.rawValue) {
+                                    dashboardPage(tab)
+                                        .opacity(active ? 1 : 0)
+                                        .allowsHitTesting(active)
+                                        .accessibilityHidden(!active)
+                                        .zIndex(active ? 1 : 0)
+                                }
                             }
                         }
-                        .tag(tab.rawValue)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .overlay { iPadLiveControl() }
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: Bool.self) { $0.size.width >= 740 } action: { padSidebarFits = $0 }
+            .onGeometryChange(for: Bool.self) { $0.size.width < 520 } action: { usesCompactPadNavigation = $0 }
+            .onGeometryChange(for: Bool.self) { $0.size.height >= 580 } action: { fits in
+                compactPadFitsLiveBar = fits
+                if !fits { liveBarFrames.removeAll() }
+            }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showsExpandedSidebar)
+            .onChange(of: selection, initial: true) { _, value in
+                visitedTabs.insert(value)
+                if let tab = DashboardTab(rawValue: value), DashboardTab.phoneTabs.contains(tab) {
+                    lastCompactPrimaryTab = tab
+                } else if value == DashboardTab.driverStandings.rawValue {
+                    lastCompactPrimaryTab = .drivers
+                }
+            }
+        } else {
+            primaryTabView(selection: Binding(get: { selection }, set: { selectTab($0) })) { tab in
+                dashboardPage(tab)
             }
         }
     }
 
+    private var compactPrimaryTab: DashboardTab {
+        if selection == DashboardTab.driverStandings.rawValue { return .drivers }
+        if let tab = DashboardTab(rawValue: selection), DashboardTab.phoneTabs.contains(tab) { return tab }
+        return lastCompactPrimaryTab
+    }
+
+    private var compactUtilityTab: DashboardTab? {
+        guard let tab = DashboardTab(rawValue: selection) else { return nil }
+        switch tab {
+        case .calendar, .consistency, .settings: return tab
+        default: return nil
+        }
+    }
+
+    private func primaryTabView<Content: View>(selection: Binding<Int>,
+                                               @ViewBuilder content: @escaping (DashboardTab) -> Content) -> some View {
+        TabView(selection: selection) {
+            ForEach(DashboardTab.phoneTabs) { tab in
+                content(tab)
+                    .tabItem {
+                        if let icon = Self.tabIcons[tab] {
+                            Image(uiImage: icon).accessibilityLabel(tab.title)
+                        } else {
+                            Image(systemName: tab.symbol).accessibilityLabel(tab.title)
+                        }
+                    }
+                    .tag(tab.rawValue)
+            }
+        }
+    }
+
+    private func compactUtilityButton(_ tab: DashboardTab) -> some View {
+        let selected = selection == tab.rawValue
+        return Button {
+            selectTab(selected ? lastCompactPrimaryTab.rawValue : tab.rawValue)
+        } label: {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(selected ? PulseStyle.red : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(tab.title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(tab == .calendar ? "calendar.open" : "dashboard.tab.\(tab.rawValue)")
+        .help(tab.title)
+    }
+
+    private func iPadLiveControl(adaptsToTabPage: Bool = false) -> some View {
+        GeometryReader { geometry in
+            let page = adaptsToTabPage ? liveDetailPages[selection] : nil
+            let bar = if adaptsToTabPage && compactPadFitsLiveBar,
+                         let anchor = liveBarFrames[selection], let platter = compactTabPlatterFrame {
+                CGRect(x: platter.minX, y: anchor.minY, width: platter.width, height: anchor.height)
+            } else {
+                nil as CGRect?
+            }
+            let bounds = geometry.frame(in: .global)
+            DashboardLiveControl(
+                barFrame: bar,
+                isCompact: bar == nil || page != nil,
+                detailFrame: bounds,
+                transitionNamespace: liveTransition,
+                dockToAllEdges: true,
+                compactSeries: model.hasActiveLive ? model.series : nil,
+                open: openLive
+            )
+        }
+    }
+
     private var iPadNavigationBar: some View {
-        let compact = usesCompactPadNavigation
-        let items = compact ? AnyLayout(HStackLayout(spacing: 4)) : AnyLayout(VStackLayout(spacing: 3))
-        return ScrollViewReader { scroll in
-            ScrollView(compact ? .horizontal : .vertical) {
-                items { iPadNavigationItems }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, compact ? 0 : 18)
-                    .frame(maxWidth: compact ? nil : .infinity)
-            }
-            .onChange(of: compact, initial: true) {
-                if compact { scroll.scrollTo(selection, anchor: .center) }
-            }
-            .onChange(of: selection) {
-                if compact { scroll.scrollTo(selection, anchor: .center) }
-            }
+        ScrollView {
+            VStack(spacing: 3) { iPadNavigationItems }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
-        .frame(width: compact ? nil : showsExpandedSidebar ? 240 : 56, height: compact ? 48 : nil)
-        .containerCornerOffset(compact ? .leading : .top, sizeToFit: true)
+        .frame(width: showsExpandedSidebar ? 240 : 56)
+        .containerCornerOffset(.top, sizeToFit: true)
         .background {
             WebDashboardStyle.adaptive(dark: 0x040811, light: 0xffffff)
-                .ignoresSafeArea(edges: compact ? [.top, .horizontal] : [.top, .bottom, .leading])
+                .ignoresSafeArea(edges: [.top, .bottom, .leading])
         }
-        .overlay(alignment: compact ? .bottom : .trailing) {
-            Rectangle().fill(webWorkspaceLine)
-                .frame(width: compact ? nil : 1, height: compact ? 1 : nil)
-                .ignoresSafeArea(edges: compact ? .horizontal : .vertical)
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(webWorkspaceLine).frame(width: 1).ignoresSafeArea(edges: .vertical)
         }
     }
 
@@ -461,17 +558,20 @@ struct RootView: View {
             } : nil)
             .environment(\.pulseEnglishPresentation, true)
             .environment(\.locale, .pulseEnglish)
-            .environment(\.dashboardLiveBarFrame, isPad ? nil : { frame in
+            .environment(\.dashboardLiveBarFrame, !isPad || (usesCompactPadNavigation && compactPadFitsLiveBar) ? { frame in
                 if frame.width > 0 { liveBarFrames[tab.rawValue] = frame }
-            })
-            .environment(\.dashboardLivePage, isPad ? nil : { id in
+            } : nil)
+            .environment(\.dashboardTabPlatterFrame, isPad && usesCompactPadNavigation ? { frame in
+                if compactTabPlatterFrame != frame { compactTabPlatterFrame = frame }
+            } : nil)
+            .environment(\.dashboardLivePage, !isPad || usesCompactPadNavigation ? { id in
                 liveDetailPages[tab.rawValue] = id
-            })
-            .environment(\.dashboardLiveDetailFrame, isPad ? nil : { id, frame in
+            } : nil)
+            .environment(\.dashboardLiveDetailFrame, !isPad || usesCompactPadNavigation ? { id, frame in
                 if liveDetailPages[tab.rawValue] == id {
                     liveDetailFrames[tab.rawValue] = LiveDetailFrame(id: id, frame: frame)
                 }
-            })
+            } : nil)
     }
 
     var body: some View {
@@ -479,19 +579,7 @@ struct RootView: View {
         .background { PulseStyle.background.ignoresSafeArea() }
         .tint(PulseStyle.red)
         .overlay {
-            if isPad {
-                GeometryReader { geometry in
-                    DashboardLiveControl(
-                        barFrame: nil,
-                        isCompact: true,
-                        detailFrame: geometry.frame(in: .global),
-                        transitionNamespace: liveTransition,
-                        dockToAllEdges: true,
-                        compactSeries: model.hasActiveLive ? model.series : nil,
-                        open: openLive
-                    )
-                }
-            } else {
+            if !isPad {
                 DashboardLiveControl(
                     barFrame: liveBarFrames[selection],
                     isCompact: liveDetailPages[selection] != nil,
@@ -589,6 +677,8 @@ struct RootView: View {
     }
 
     private func selectTab(_ destination: Int) {
+        let destination = isPad && destination == DashboardTab.drivers.rawValue
+            ? DashboardTab.driverStandings.rawValue : destination
         guard destination != selection, DashboardTab(rawValue: destination) != nil else { return }
         let now = Date.now
         let outgoing = titleChange.flatMap { now.timeIntervalSince($0.start) < 0.13 ? $0.outgoing : nil }

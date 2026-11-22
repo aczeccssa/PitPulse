@@ -170,17 +170,6 @@ struct WebHomeScreen<Header: View>: View {
 
     private func tabletOverview(halfWidth: CGFloat, columns: Int, spacing: CGFloat) -> some View {
         let columnWidth = max(0, (halfWidth - spacing) / 2)
-        let pit = homeFeatures?.data.pitStop?.first
-        let pitTime = pit.map { $0.time.formatted(.number.precision(.fractionLength(2))) }
-        let pitNote = pit.map { [$0.driverName, $0.country, $0.round.map { "R\($0)" }].compactMap { $0 }.joined(separator: " · ") }
-        let pitCard = tabletMetric("Fastest Pit Stop", value: pitTime, unit: "s", note: pitNote, symbol: "stopwatch")
-        let damage = tabletEngineeringMetric("Crash Damage", key: "crashes",
-                    value: homeFeatures?.data.crashes?.seasonTotal?.formatted(.currency(code: "USD").precision(.fractionLength(0))),
-                    symbol: "exclamationmark.triangle")
-        let power = tabletEngineeringMetric("PU Elements Used", key: "pu",
-                    value: homeFeatures?.data.pu?.total?.formatted(), symbol: "engine.combustion")
-        let upgrades = tabletEngineeringMetric("Tech Upgrades", key: "tech",
-                       value: homeFeatures?.data.tech?.total?.formatted(), symbol: "wrench.and.screwdriver")
         return Group {
             if columns == 4 {
                 HStack(alignment: .top, spacing: spacing) {
@@ -194,29 +183,15 @@ struct WebHomeScreen<Header: View>: View {
                             .frame(width: columnWidth)
                     }
                     .frame(width: halfWidth)
-                    HStack(alignment: .top, spacing: spacing) {
-                        VStack(spacing: spacing) {
-                            pitCard
-                            power
-                        }
-                        .frame(width: columnWidth)
-                        VStack(spacing: spacing) {
-                            damage
-                            upgrades
-                        }
-                        .frame(width: columnWidth)
-                    }
-                    .frame(width: halfWidth)
+                    tabletSeasonMetrics(minimumHeight: 292)
+                        .frame(width: halfWidth)
                 }
             } else {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
                     tabletCountdown
                     tabletSchedule
-                    pitCard
-                    damage
-                    power
-                    upgrades
                 }
+                tabletSeasonMetrics(minimumHeight: 0)
                 tabletWeekend(compact: columns == 1, minimumHeight: 0)
             }
         }
@@ -313,45 +288,130 @@ struct WebHomeScreen<Header: View>: View {
         }
     }
 
-    private func tabletMetric(_ title: String, value: String?, unit: String? = nil, note: String?, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: symbol)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PulseStyle.red)
-                    .frame(width: 30, height: 30)
-                    .background(PulseStyle.red.opacity(0.10), in: .rect(cornerRadius: 10))
-                    .accessibilityHidden(true)
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(WebDashboardStyle.homeMuted)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    PulseNumber(value ?? "—")
-                        .font(.system(.largeTitle, design: .default, weight: .bold).monospacedDigit())
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
-                    if value != nil, let unit {
-                        Text(unit)
-                            .font(.headline)
-                            .foregroundStyle(WebDashboardStyle.homeMuted)
-                    }
-                }
-                Text(value == nil ? "Data unavailable" : note ?? "Season total")
-                    .font(.caption)
-                    .foregroundStyle(WebDashboardStyle.homeMuted)
-                    .lineLimit(2)
+    private func tabletSeasonMetrics(minimumHeight: CGFloat) -> some View {
+        let data = homeFeatures?.data
+        let stops = Array((data?.pitStop ?? []).prefix(3))
+        let currency = FloatingPointFormatStyle<Double>.Currency(code: "USD").precision(.fractionLength(0))
+        let lastDamage = data?.crashes?.lastRound.map { $0.formatted(currency) }
+        let lastUpgrades = data?.tech?.lastRace.map { "\($0.formatted()) new" }
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("\(String(model.season)) Season Metrics")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            pitStopLeaders(stops)
+            Divider()
+            VStack(spacing: 0) {
+                tabletMetric("Crash Damage", symbol: "exclamationmark.triangle",
+                             value: engineeringValue("crashes", data?.crashes?.seasonTotal?.formatted(currency)),
+                             note: roundNote(data?.crashes?.latestRound, detail: lastDamage) ?? "Estimated season total")
+                Divider()
+                tabletMetric("PU Elements Used", symbol: "engine.combustion",
+                             value: engineeringValue("pu", data?.pu?.total?.formatted()),
+                             note: "Season allocation")
+                Divider()
+                tabletMetric("Tech Upgrades", symbol: "wrench.and.screwdriver",
+                             value: engineeringValue("tech", data?.tech?.total?.formatted()),
+                             note: roundNote(data?.tech?.latestRound, detail: lastUpgrades))
             }
         }
-        .webHomePanel(inset: 16, minHeight: 140)
+        .webHomePanel(minHeight: minimumHeight)
+        .accessibilityIdentifier("home.seasonMetrics")
+    }
+
+    private func pitStopLeaders(_ stops: [HomeFeatures.PitStop]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Fastest Pit Stops", systemImage: "stopwatch")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 4)
+                if stops.count > 1 {
+                    Text("Best by race").font(.caption2).foregroundStyle(WebDashboardStyle.homeMuted)
+                }
+            }
+            if stops.isEmpty {
+                Text("Data unavailable").font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+            } else {
+                let layout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+                layout {
+                    ForEach(stops.indices, id: \.self) { index in
+                        pitStopEntry(stops[index], rank: index + 1, abbreviated: stops.count > 1 && !typeSize.isAccessibilitySize)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func pitStopEntry(_ stop: HomeFeatures.PitStop, rank: Int, abbreviated: Bool) -> some View {
+        let name = stop.driverName ?? "Unknown driver"
+        let surname = name.split(separator: " ").last.map(String.init)
+        let driverID = model.driverRoster.first { $0.driverName.caseInsensitiveCompare(name) == .orderedSame }?.driverId
+        let helmet = MotorsportAssetName.helmetName(driverID: driverID, name: name, season: model.season)
+        return HStack(spacing: 6) {
+            AssetImage(name: helmet)
+                .frame(width: abbreviated ? 29 : 44, height: abbreviated ? 32 : 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(abbreviated ? (surname ?? name).capitalized : name)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .accessibilityLabel(name)
+                HStack(spacing: 4) {
+                    PulseNumber(stop.time.formatted(.number.precision(.fractionLength(2))) + " s")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                    if abbreviated, let round = stop.round {
+                        Text("R\(round)").foregroundStyle(WebDashboardStyle.homeMuted)
+                    } else if !abbreviated {
+                        Text([stop.team, stop.country].compactMap { $0 }.joined(separator: " · "))
+                            .foregroundStyle(WebDashboardStyle.homeMuted)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            if abbreviated {
+                Spacer(minLength: 0)
+            } else if let round = stop.round {
+                Spacer(minLength: 4)
+                Text("R\(round)").foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+        }
+        .font(.caption2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Rank \(rank)")
+    }
+
+    private func tabletMetric(_ title: String, symbol: String, value: String?, note: String?) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: symbol)
+                .font(.subheadline)
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+                .frame(width: 20)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.medium))
+                if let detail = value == nil ? "Data unavailable" : note {
+                    Text(detail).font(.caption2).foregroundStyle(WebDashboardStyle.homeMuted)
+                }
+            }
+            Spacer(minLength: 4)
+            PulseNumber(value ?? "—")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(minHeight: 46)
         .accessibilityElement(children: .combine)
     }
 
-    private func tabletEngineeringMetric(_ title: String, key: String, value: String?, symbol: String) -> some View {
-        let visibleValue = homeFeatures?.meta?.sections?[key]?.unavailable == true ? nil : value
-        return tabletMetric(title, value: visibleValue,
-                            note: key == "crashes" ? "Estimated season total" : nil, symbol: symbol)
+    private func roundNote(_ round: Int?, detail: String?) -> String? {
+        guard let detail else { return nil }
+        return round.map { "R\($0) · \(detail)" } ?? detail
+    }
+
+    private func engineeringValue(_ key: String, _ value: String?) -> String? {
+        homeFeatures?.meta?.sections?[key]?.unavailable == true ? nil : value
     }
 
     private var meetings: [Meeting] {

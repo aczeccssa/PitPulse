@@ -115,6 +115,7 @@ struct LiveScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 sessionHeader
+                timingStatus
                 timingBoard(selecting: isSelectingBattleDrivers)
             }
             .padding(.horizontal, 16)
@@ -159,6 +160,8 @@ struct LiveScreen: View {
         return ZStack {
             VStack(spacing: 4) {
                 landscapeHeader
+                    .padding(.horizontal, isPad ? Self.tabletHorizontalInset : 4)
+                timingStatus
                     .padding(.horizontal, isPad ? Self.tabletHorizontalInset : 4)
                 GeometryReader { layout in
                     let hasSidePanel = selectedDriver != nil || raceControlPresented
@@ -1119,6 +1122,23 @@ struct LiveScreen: View {
         closeTabletPanel(.driver)
     }
 
+    @ViewBuilder
+    private var timingStatus: some View {
+        if snapshot.sourceStatus == .stale, !snapshot.drivers.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .accessibilityHidden(true)
+                Text(snapshot.statusReason == "data_stale" ? "Timing delayed" : "Showing last received timing")
+                if snapshot.statusReason == "connecting" || snapshot.statusReason == "reconnecting" {
+                    ProgressView().controlSize(.mini)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     private func timingBoard(selecting: Bool, detailed: Bool = false, wide: Bool = false, stackedSectors: Bool = false) -> some View {
         let drivers = model.sortedDrivers
         let rows = (selecting ? battleDraft : nil).map { draft in
@@ -1126,14 +1146,18 @@ struct LiveScreen: View {
                 (draft.rowOrder.firstIndex(of: $0.number) ?? Int.max) < (draft.rowOrder.firstIndex(of: $1.number) ?? Int.max)
             }
         } ?? drivers
-        let timingAvailable = snapshot.sourceStatus == .connected
-            || (snapshot.sourceStatus == .stale && LiveIslandLogic.isSuspended(snapshot.sessionStatus))
+        let timingAvailable = snapshot.sourceStatus != .disconnected && !drivers.isEmpty
+        let awaitingStart = model.isLiveRunning && model.series == .f1 && model.scheduledLiveSession != nil
+            && snapshot.statusReason != "unauthorized" && snapshot.statusReason != "server_unavailable"
         return Group {
             if snapshot.statusReason == "connecting", drivers.isEmpty, !model.hasActiveLive {
                 PulseSkeleton(rows: 6, label: "Loading live timing")
             } else if LiveIslandLogic.isFinished(snapshot.sessionStatus) {
                 ContentUnavailableView("Session finished", systemImage: "flag.checkered")
-            } else if !timingAvailable || drivers.isEmpty {
+            } else if !timingAvailable && awaitingStart {
+                ContentUnavailableView("Waiting for session timing", systemImage: "flag.checkered",
+                                       description: Text("Timing will appear automatically when the feed publishes it."))
+            } else if !timingAvailable {
                 refreshTimingButton
             } else if detailed {
                 detailedTimingTable(rows, wide: wide)
@@ -1534,7 +1558,7 @@ struct LiveClockTimeline<Content: View>: View {
 
     var body: some View {
         let suspended = snapshot.sourceStatus != .disconnected && LiveIslandLogic.isSuspended(snapshot.sessionStatus)
-        if suspended {
+        if suspended || snapshot.sourceStatus == .stale {
             content(snapshot.prefersSessionClock ? snapshot.sessionClockLabel() : snapshot.lapCount.map { _ in snapshot.lapLabel })
         } else if snapshot.sourceStatus == .connected, snapshot.sessionClockLabel() != nil {
             TimelineView(.periodic(from: .now, by: 1)) { context in

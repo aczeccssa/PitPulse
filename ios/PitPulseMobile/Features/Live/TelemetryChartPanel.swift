@@ -26,7 +26,74 @@ struct TelemetryChartPanel: View {
     var body: some View {
         let points = self.points
         let latest = points.last?.date ?? .now
-        VStack(spacing: isTablet ? 6 : compact ? 8 : 20) {
+        if isTablet {
+            tabletHistory(points, latest: latest)
+        } else {
+            phoneHistory(points, latest: latest)
+        }
+    }
+
+    private func tabletHistory(_ points: [Point], latest: Date) -> some View {
+        let maximum = max(350, ceil((points.compactMap(\.speed).max() ?? 0) / 50) * 50)
+        let domain = timeDomain(for: points, endingAt: latest)
+        return GeometryReader { geometry in
+            let pedalHeight = max(40, geometry.size.height * 0.20)
+            VStack(alignment: .leading, spacing: 8) {
+                historyLane("Speed", scale: "0–\(Int(maximum)) km/h", points: points, latest: latest,
+                            domain: domain, maximum: maximum, channel: \.speed, tint: .cyan)
+                historyLane("Throttle", scale: "0–100%", points: points, latest: latest,
+                            domain: domain, maximum: 100, channel: \.throttle, tint: .green)
+                    .frame(height: pedalHeight)
+                historyLane("Brake", scale: "0–100%", points: points, latest: latest,
+                            domain: domain, maximum: 100, channel: \.brake, tint: PulseStyle.red,
+                            showsTime: true)
+                    .frame(height: pedalHeight + 16)
+            }
+        }
+    }
+
+    private func historyLane(_ title: String, scale: String, points: [Point], latest: Date,
+                             domain: ClosedRange<Double>, maximum: Double, channel: KeyPath<Point, Double?>,
+                             tint: Color, showsTime: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(title).font(.caption.bold())
+                Spacer()
+                Text(scale).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            if points.contains(where: { $0[keyPath: channel] != nil }) {
+                Chart(points) { point in
+                    if let value = point[keyPath: channel] {
+                        let x = PlottableValue.value("Seconds from latest sample", point.date.timeIntervalSince(latest))
+                        AreaMark(x: x, yStart: .value("Zero", 0), yEnd: .value(title, value))
+                            .foregroundStyle(LinearGradient(colors: [tint.opacity(0.35), tint.opacity(0.06)],
+                                                            startPoint: .top, endPoint: .bottom))
+                        LineMark(x: x, y: .value(title, value))
+                            .foregroundStyle(tint)
+                            .lineStyle(StrokeStyle(lineWidth: 1.6))
+                    }
+                }
+                .chartYScale(domain: 0...maximum)
+                .chartXScale(domain: domain)
+                .chartYAxis(.hidden)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { tick in
+                        AxisGridLine()
+                        if showsTime, let seconds = tick.as(Double.self) {
+                            AxisValueLabel { Text("\(Int(seconds))s").font(.caption2.monospacedDigit()) }
+                        }
+                    }
+                }
+                .chartPlotStyle { $0.background(.primary.opacity(0.035)).clipped() }
+            } else {
+                Text("Waiting for data").font(.caption2).foregroundStyle(.secondary)
+                    .frame(maxHeight: .infinity)
+            }
+        }
+    }
+
+    private func phoneHistory(_ points: [Point], latest: Date) -> some View {
+        VStack(spacing: compact ? 8 : 20) {
             chartCard {
                 VStack(alignment: .leading, spacing: compact ? 4 : 14) {
                     if isTablet {

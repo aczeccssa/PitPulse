@@ -29,7 +29,6 @@
 		9A7EC39ED190E57E9F617D9C /* LiveLandscapePanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E35598CDBC77E5FDB0A4FF3 /* LiveLandscapePanels.swift */; };
 		81395AB5B7BD33C798D0CBA1 /* DriversDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1118DC4AC821B9B3F4D9A48 /* DriversDashboard.swift */; };
 		870B19096E29F8147B9D7E26 /* IslandPreviewSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AB1A39EC11498C6473FD9E /* IslandPreviewSample.swift */; };
-		8DD3F71C6F55C6A69FB80D43 /* EngineeringScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF4128BC0C9E8B730C2A647 /* EngineeringScreen.swift */; };
 		92944C118B0675B6FF146DB4 /* PitPulseLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22DD96034FE30742D4E1E116 /* PitPulseLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		986CBFF0C33099B59E607AF8 /* NavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F4574F88E3552B31356FC0 /* NavigationTests.swift */; };
 		9B8A9E0893AE095AF810C9B1 /* ServerConfigurationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD6D321D88EA9EE2CFFC377 /* ServerConfigurationSheet.swift */; };
@@ -138,7 +137,6 @@
 		95804A8095451FEFD7EC8B7A /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		960BC3F408844F9A3C407731 /* IslandPhonePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPhonePreview.swift; sourceTree = "<group>"; };
 		6E35598CDBC77E5FDB0A4FF3 /* LiveLandscapePanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLandscapePanels.swift; sourceTree = "<group>"; };
-		ABF4128BC0C9E8B730C2A647 /* EngineeringScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineeringScreen.swift; sourceTree = "<group>"; };
 		B48DA20D84FBC3F4732D1854 /* IslandPhonePreview+Update.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "IslandPhonePreview+Update.swift"; sourceTree = "<group>"; };
 		B8594F498E882DE188E7C2F4 /* PitPulseLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseLiveActivityBundle.swift; sourceTree = "<group>"; };
 		C1118DC4AC821B9B3F4D9A48 /* DriversDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriversDashboard.swift; sourceTree = "<group>"; };
@@ -259,7 +257,6 @@
 			isa = PBXGroup;
 			children = (
 				01EB4AAA3D6D6FA2A6CCCC1F /* AnalysisScreen.swift */,
-				ABF4128BC0C9E8B730C2A647 /* EngineeringScreen.swift */,
 			);
 			path = Analysis;
 			sourceTree = "<group>";
@@ -579,7 +576,6 @@
 				0C734AA6AC962F2894EDD27A /* DashboardScreen.swift in Sources */,
 				BEA7BEF17AE1C90835D7DD4A /* DriverAnalysisScreen.swift in Sources */,
 				81395AB5B7BD33C798D0CBA1 /* DriversDashboard.swift in Sources */,
-				8DD3F71C6F55C6A69FB80D43 /* EngineeringScreen.swift in Sources */,
 				C12620B2509C15694D8A88C4 /* IslandLiquidSilhouette.swift in Sources */,
 				D8B9B8F1EC918E15816314E5 /* IslandModePreviewSheet.swift in Sources */,
 				151E52D030ED2945E2871D36 /* IslandModelPose.swift in Sources */,

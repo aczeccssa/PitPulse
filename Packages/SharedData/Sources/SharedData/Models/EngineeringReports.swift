@@ -140,14 +140,19 @@ public struct HomeFeatures: Codable, Sendable {
 
     public struct Count: Codable, Sendable {
         public let total: Int?
+        public let lastRace: Int?
+        public let latestRound: Int?
     }
 
     public struct Damage: Codable, Sendable {
         public let seasonTotal: Double?
+        public let lastRound: Double?
+        public let latestRound: Int?
     }
 
     public struct PitStop: Codable, Sendable {
         public let time: Double
+        public let team: String?
         public let driverName: String?
         public let country: String?
         public let round: Int?

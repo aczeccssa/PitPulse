@@ -97,7 +97,7 @@ async fn pit_stops(state: &AppState, year: i64) -> Result<Value, ApiError> {
             .unwrap()
             .total_cmp(&b["time"].as_f64().unwrap())
     });
-    stops.truncate(1);
+    stops.truncate(3);
     let unavailable = stops.is_empty();
     Ok(
         json!({"data":stops,"meta":{"source":"PitPulse timing archive","fetchedAt":state.database.utc_now().await?,"stale":false,"unavailable":unavailable,"coverage":{"rounds":covered,"complete":false}}}),

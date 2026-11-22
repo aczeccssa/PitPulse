@@ -117,6 +117,7 @@ struct DashboardScreen<Header: View>: View {
             WebHomeScreen(header: header, showCalendar: $showCalendar, openResultsSession: openResultsSession, openTab: openTab)
         case .settings:
             SettingsScreen(embedded: true)
+                .modifier(DashboardLiveBarSpace())
         case .constructors:
             NavigationStack {
                 ChampionshipScreen(constructorsOnly: true, tabletWebLayout: padWorkspace)
@@ -193,6 +194,7 @@ extension View {
 
 extension EnvironmentValues {
     @Entry var openDashboardDriverProfile: ((DriverProfileDestination) -> Void)? = nil
+    @Entry var dashboardTabPlatterFrame: ((CGRect) -> Void)? = nil
     @Entry var dashboardLiveBarFrame: ((CGRect) -> Void)? = nil
     @Entry var dashboardLivePage: ((UUID?) -> Void)? = nil
     @Entry var dashboardLiveDetailFrame: ((UUID, CGRect) -> Void)? = nil
@@ -201,6 +203,7 @@ extension EnvironmentValues {
 private struct DashboardLiveBarSpace: ViewModifier {
     @EnvironmentObject private var model: MobileModel
     @Environment(\.dashboardLiveBarFrame) private var reportFrame
+    @Environment(\.dashboardTabPlatterFrame) private var reportTabPlatter
     @Environment(\.dashboardLivePage) private var showPage
 
     func body(content: Content) -> some View {
@@ -216,7 +219,11 @@ private struct DashboardLiveBarSpace: ViewModifier {
             }
         }
         .onAppear { showPage?(nil) }
-        .background { DashboardTabBarTransition(hidesTabBar: false) { showPage?(nil) } }
+        .background {
+            if let showPage {
+                DashboardTabBarTransition(hidesTabBar: false, reportTabPlatter: reportTabPlatter) { showPage(nil) }
+            }
+        }
     }
 }
 
@@ -236,7 +243,7 @@ private struct DashboardDetail: ViewModifier {
                     reportFrame(id, frame)
                 }
                 .onAppear { showPage?(id) }
-                .background { DashboardTabBarTransition(hidesTabBar: true) { showPage?(id) } }
+                .background { DashboardTabBarTransition(hidesTabBar: UIDevice.current.userInterfaceIdiom != .pad) { showPage?(id) } }
         } else {
             content
         }
@@ -245,6 +252,7 @@ private struct DashboardDetail: ViewModifier {
 
 private struct DashboardTabBarTransition: UIViewControllerRepresentable {
     let hidesTabBar: Bool
+    var reportTabPlatter: ((CGRect) -> Void)? = nil
     let didAppear: () -> Void
 
     func makeUIViewController(context: Context) -> Controller {
@@ -253,11 +261,13 @@ private struct DashboardTabBarTransition: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: Controller, context: Context) {
         controller.didAppear = didAppear
+        controller.reportTabPlatter = reportTabPlatter
     }
 
     final class Controller: UIViewController {
         let hidesTabBar: Bool
         var didAppear: () -> Void
+        var reportTabPlatter: ((CGRect) -> Void)?
 
         init(hidesTabBar: Bool, didAppear: @escaping () -> Void) {
             self.hidesTabBar = hidesTabBar
@@ -306,6 +316,32 @@ private struct DashboardTabBarTransition: UIViewControllerRepresentable {
             // Some gestures settle without a coordinator on the destination.
             applyVisibility(in: tabs, hidden: hidesTabBar)
             didAppear()
+            reportPlatterAfterLayout()
+        }
+
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            reportPlatterAfterLayout()
+        }
+
+        private func reportPlatterAfterLayout() {
+            guard reportTabPlatter != nil else { return }
+            Task { @MainActor [weak self] in
+                guard let self, let bar = tabBarController?.tabBar, let window = bar.window,
+                      viewIfLoaded?.window === window else { return }
+                // UITabBar spans the window. The inset view containing the tab controls is the visible glass.
+                let platter = bar.subviews.first { candidate in
+                    !candidate.isHidden && candidate.bounds.width > bar.bounds.width / 2
+                        && candidate.bounds.width < bar.bounds.width && containsTabControl(candidate)
+                }
+                if let platter {
+                    reportTabPlatter?(platter.convert(platter.bounds, to: window))
+                }
+            }
+        }
+
+        private func containsTabControl(_ view: UIView) -> Bool {
+            view is UIControl || view.subviews.contains(where: containsTabControl)
         }
 
         private func applyVisibility(in tabs: UITabBarController, hidden: Bool) {
