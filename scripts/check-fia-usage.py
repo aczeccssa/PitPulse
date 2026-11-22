@@ -28,10 +28,12 @@ else:
     raise AssertionError('truncated table must not replace a full report')
 with sqlite3.connect(':memory:') as db:
     db.execute('CREATE TABLE analysis_cache(cache_key TEXT PRIMARY KEY,value_json TEXT,fetched_at TEXT)')
+    db.execute("INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES('pitpulse:fia:document:2021:22:usage',?,?)",
+               (json.dumps({'data': {'kind': 'usage', 'round': 22, 'rows': []}, 'meta': {}}), '2021-12-09T13:30:00Z'))
     db.execute('CREATE TABLE meetings(round INTEGER,season INTEGER,status TEXT,end_date TEXT)')
     fia.save(db, 'pitpulse:fia:document:2021:22:usage', {'kind':'usage','round':22,'rows':rows}, {'fetchedAt':'2021-12-09T13:30:00Z','publishedAt':'2021-12-09T13:30:00Z'})
     fia.rebuild(db, 2021, '2021-12-13T00:00:00Z')
-    elements = json.loads(db.execute("SELECT value_json FROM analysis_cache WHERE cache_key='pitpulse:fia:elements:2021'").fetchone()[0])['data']
+    elements = json.loads(fia.decode(db.execute("SELECT value_json FROM analysis_cache WHERE cache_key='pitpulse:fia:elements:2021'").fetchone()[0]))['data']
     assert [e['code'] for e in elements] == list(max_row['used'])
     assert all(e['quota'] is None for e in elements)
-print('PASS: historical MGU-H/EX columns, team/engine ownership, truncated input rejection, stored season columns')
+print('PASS: historical MGU-H/EX columns, team/engine ownership, truncated input rejection, stored season columns, legacy cache rows')

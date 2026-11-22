@@ -42,6 +42,9 @@ pub enum StorageError {
 
     #[error("blocking database task failed: {0}")]
     Task(#[from] tokio::task::JoinError),
+
+    #[error("analysis cache entry is corrupted: {0}")]
+    CorruptCache(String),
 }
 
 impl IntoResponse for StorageError {

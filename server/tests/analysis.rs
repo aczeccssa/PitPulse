@@ -35,7 +35,7 @@ async fn state() -> (AppState, TempDir) {
     db.replace_calendar(&[meeting], "2024-03-02T18:00:00Z")
         .await
         .unwrap();
-    let result: SessionResult = serde_json::from_value(json!({"sessionId":"2024:1:race","position":1,"classification":"classified","driverId":"leclerc","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","laps":2,"points":25.,"source":"fixture","fetchedAt":"2024-03-02T18:00:00Z","revision":1,"quality":"partial"})).unwrap();
+    let result: SessionResult = serde_json::from_value(json!({"sessionId":"2024:1:race","position":1,"classification":"classified","driverId":"leclerc","driverNumber":"16","driverName":"Charles Leclerc","constructorId":"ferrari","team":"Ferrari","laps":2,"points":25.,"source":"fixture","fetchedAt":"2024-03-02T18:00:00Z","revision":1,"quality":"partial"})).unwrap();
     db.replace_session_results(vec![result], "partial")
         .await
         .unwrap();
@@ -134,6 +134,77 @@ async fn test_analysis_authorization_validation_and_unknown_entity() {
 }
 
 #[tokio::test]
+async fn test_direct_bundle_readers_rehydrate_shared_snapshot() {
+    let (state, _temp) = state().await;
+    let shared = json!({
+        "data": {
+            "laps": [{"driverNumber":16,"lapNumber":1,"lapDuration":90.0,"isPitOutLap":false}],
+            "stints": [],
+            "pit": [{"driverNumber":16,"stopDuration":2.4}],
+            "positions": [],
+            "weather": [{
+                "date":"2024-03-02T15:00:00Z","airTemperature":27.5,
+                "trackTemperature":42.0,"humidity":40,"rainfall":0,
+                "windSpeed":2.1,"windDirection":180,"pressure":1012
+            }],
+            "raceControl": [],
+            "grid": [{"driverNumber":16,"position":2}],
+            "warnings": []
+        },
+        "meta": {"fetchedAt":"2024-03-02T18:00:00Z"}
+    });
+    state
+        .database
+        .save_analysis_cache("session:2024:1:race:shared:fixture", &shared)
+        .await
+        .unwrap();
+    let bundle = json!({
+        "data": {
+            "drivers": [{"driverNumber":16,"fullName":"Charles Leclerc","teamName":"Ferrari"}],
+            "laps": null,
+            "stints": null,
+            "pit": null,
+            "positions": null,
+            "weather": null,
+            "raceControl": null,
+            "grid": null,
+            "warnings": null
+        },
+        "meta": {
+            "schemaVersion": 1,
+            "revision": 1,
+            "quality": "partial",
+            "stale": false,
+            "source": "fixture",
+            "fetchedAt": "2024-03-02T18:00:00Z",
+            "analysisStatus": "ready",
+            "analysisCacheSchema": "pitpulse:v2:shared-reference",
+            "bundleFingerprint": "fixture"
+        }
+    });
+    state
+        .database
+        .save_analysis_cache("session:2024:1:race:bundle", &bundle)
+        .await
+        .unwrap();
+
+    let app = server::router(state);
+    let (status, season) = read(app.clone(), "/api/v1/results/season?season=2024", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        season["data"][0]["sessions"]["race"]["rows"][0]["gridPosition"],
+        2
+    );
+    let (status, home) = read(app.clone(), "/api/v1/home?season=2024", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(home["data"]["pitStop"][0]["time"], 2.4);
+    let (status, weather) = read(app, "/api/v1/meetings/2024:1/weather", false).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(weather["data"]["status"], "historical");
+    assert_eq!(weather["data"]["hours"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
 async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_and_cache() {
     async fn upstream(
         State(count): State<Arc<AtomicUsize>>,
@@ -173,8 +244,10 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
         .route("/v1/{resource}", get(upstream))
         .with_state(count.clone());
     let task = tokio::spawn(async move { axum::serve(listener, upstream_app).await.unwrap() });
-    let (mut state, _temp) = state().await;
+    let (mut state, temp) = state().await;
     state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), &base);
+    let fresh_config = (*state.config).clone();
+    let upstream_provider = state.openf1.clone();
     let database = state.database.clone();
     let app = server::router(state);
     let url = "/api/v1/sessions/2024:1:race/drivers/leclerc/analysis";
@@ -186,24 +259,160 @@ async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_an
     let (status, data) = ready(app.clone(), url).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(data["data"]["selectedLap"], 1);
-    let archived = database
-        .analysis_cache("session:2024:1:race:leclerc:base")
+    let bundle = database
+        .analysis_cache("session:2024:1:race:bundle")
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(archived["data"]["laps"].as_array().unwrap().len(), 2);
-    assert!(
-        archived["data"]["carData"].as_array().unwrap().is_empty(),
-        "shared lap archive must not retain telemetry from a different selected lap"
+    assert_eq!(
+        bundle["meta"]["analysisCacheSchema"],
+        "pitpulse:v2:shared-reference"
     );
+    let fingerprint = bundle["meta"]["bundleFingerprint"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let shared = database
+        .analysis_cache(&format!("session:2024:1:race:shared:{fingerprint}"))
+        .await
+        .unwrap()
+        .unwrap();
+    let bundle_data = shared["data"].clone();
+    assert_eq!(bundle_data["laps"].as_array().unwrap().len(), 2);
+    assert!(
+        bundle_data["carData"].as_array().unwrap().is_empty(),
+        "shared bundle must not retain telemetry from a different selected lap"
+    );
+    assert!(
+        database
+            .analysis_cache("session:2024:1:race:leclerc:base")
+            .await
+            .unwrap()
+            .is_none(),
+        "base is derived from the bundle and must not be materialized"
+    );
+    let reopened = Database::open(&temp.path().join("test.sqlite"))
+        .await
+        .unwrap();
+    let (_, derived) = read(
+        server::router(AppState::new(AppConfig::default(), reopened)),
+        url,
+        false,
+    )
+    .await;
+    assert_eq!(derived, data);
+
+    // A cached per-lap envelope keeps its original selected lap when no lap
+    // query is supplied. The derived base must not overwrite that field.
+    let cached_lap = url.to_string() + "?lap=1";
+    let (_, first) = read(app.clone(), &cached_lap, false).await;
+    assert_eq!(first["data"]["selectedLap"], 1);
+    let restarted = Database::open(&temp.path().join("test.sqlite"))
+        .await
+        .unwrap();
+    let (_, second) = read(
+        server::router(AppState::new(AppConfig::default(), restarted)),
+        &cached_lap,
+        false,
+    )
+    .await;
+    assert_eq!(second["data"]["selectedLap"], first["data"]["selectedLap"]);
+
+    // The fallback's selected lap remains derived from its timing data, even
+    // when a cached per-lap envelope was generated for a different lap.
+    let (_, fallback) = read(
+        server::router(AppState::new(AppConfig::default(), database.clone())),
+        url,
+        false,
+    )
+    .await;
+    assert_eq!(fallback["data"]["selectedLap"], 1);
+    for value in [&data, &derived, &first, &second, &fallback] {
+        assert!(
+            value["meta"].get("analysisCacheSchema").is_none(),
+            "internal shared-reference metadata must not escape the API"
+        );
+        assert!(
+            value["meta"].get("bundleFingerprint").is_none(),
+            "internal bundle fingerprint must not escape the API"
+        );
+    }
     assert_eq!(data["data"]["laps"][0]["durationSector1"], Value::Null);
     assert_eq!(data["data"]["carData"][0]["nGear"], 7);
     assert_eq!(data["data"]["pit"], json!([]));
     assert_eq!(data["data"]["warnings"].as_array().unwrap().len(), 1);
     let calls = count.load(Ordering::SeqCst);
-    let (_, cached) = read(app, url, false).await;
+    let (_, cached) = read(app.clone(), url, false).await;
     assert_eq!(data, cached);
     assert_eq!(count.load(Ordering::SeqCst), calls);
+
+    // A stripped cache entry without its immutable shared snapshot must not be
+    // served as complete data. The refresh path rebuilds the snapshot first.
+    let shared_key = format!("session:2024:1:race:shared:{fingerprint}");
+    let database_path = temp.path().join("test.sqlite");
+    let cache = database
+        .analysis_cache("session:2024:1:race:leclerc:0")
+        .await
+        .unwrap()
+        .unwrap();
+    let missing_reference = json!({
+        "data": {
+            "location": cache["data"]["location"].clone(),
+            "carData": cache["data"]["carData"].clone(),
+            "selectedLap": cache["data"]["selectedLap"].clone(),
+            "driver": cache["data"]["driver"].clone()
+        },
+        "meta": {
+            "schemaVersion": 1, "revision": 1, "quality": "partial", "stale": true,
+            "source": "openf1", "fetchedAt": "2000-01-01T00:00:00Z",
+            "analysisStatus": "failed", "analysisCacheSchema": "pitpulse:v2:shared-reference",
+            "bundleFingerprint": "missing-snapshot"
+        }
+    });
+    {
+        let connection = rusqlite::Connection::open(&database_path).unwrap();
+        let stored = serde_json::to_vec(&missing_reference).unwrap();
+        connection
+            .execute(
+                "UPDATE analysis_cache SET value_json=?1, fetched_at=?2 WHERE cache_key=?3",
+                rusqlite::params![
+                    stored,
+                    cache["meta"]["fetchedAt"].as_str().unwrap(),
+                    "session:2024:1:race:leclerc:0"
+                ],
+            )
+            .unwrap();
+    }
+    let mut evicted_state = AppState::new(fresh_config, database.clone());
+    evicted_state.openf1 = upstream_provider;
+    let evicted_app = server::router(evicted_state);
+    let (status, stale) = read(evicted_app.clone(), url, false).await;
+    assert_eq!(status, StatusCode::OK);
+    for field in [
+        "laps",
+        "stints",
+        "pit",
+        "positions",
+        "weather",
+        "raceControl",
+        "grid",
+        "warnings",
+    ] {
+        assert!(
+            !stale["data"][field].is_null(),
+            "{field} must not be exposed as null"
+        );
+    }
+    let (_, rebuilt) = ready(evicted_app, url).await;
+    assert_eq!(rebuilt["data"], data["data"]);
+    assert_eq!(rebuilt["meta"]["analysisStatus"], "ready");
+    assert!(
+        database
+            .analysis_cache(&shared_key)
+            .await
+            .unwrap()
+            .is_some()
+    );
     task.abort();
 }
 
@@ -333,7 +542,7 @@ async fn test_loading_deduplicates_and_does_not_block_persisted_or_stale_cache()
 #[tokio::test]
 async fn test_analysis_archive_retains_history_and_migration_keeps_results() {
     let (state, _temp) = state().await;
-    assert_eq!(state.database.user_version().await.unwrap(), 9);
+    assert_eq!(state.database.user_version().await.unwrap(), 10);
     assert_eq!(
         state
             .database

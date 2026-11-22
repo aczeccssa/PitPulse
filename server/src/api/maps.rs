@@ -83,9 +83,7 @@ pub async fn weather(State(state): State<AppState>, Path(id): Path<String>) -> R
             if end >= now_seconds {
                 continue;
             }
-            let bundle = state
-                .database
-                .analysis_cache(&format!("session:{}:bundle", session.id))
+            let bundle = crate::services::analysis::cached_session_bundle(&state, &session.id)
                 .await
                 .map_err(|_| "database_error")?;
             let mut rows = bundle
