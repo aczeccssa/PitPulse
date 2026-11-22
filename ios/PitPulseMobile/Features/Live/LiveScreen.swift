@@ -4,6 +4,9 @@ import SwiftUI
 import UIKit
 
 struct LiveScreen: View {
+    private static let tabletWideMinWidth: CGFloat = 890
+    private static let tabletHorizontalInset: CGFloat = 14
+
     var onClose: (() -> Void)? = nil
     @EnvironmentObject private var model: MobileModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -60,6 +63,7 @@ struct LiveScreen: View {
     var body: some View {
         let tablet = isPad
         let usesAccessibilityText = typeSize.isAccessibilitySize
+        let tabletWideMinWidth = Self.tabletWideMinWidth
         Group {
             if isPad || isLandscape {
                 landscapeLayout
@@ -74,7 +78,7 @@ struct LiveScreen: View {
         }
         .statusBarHidden(isLandscape && !isPad)
         .onGeometryChange(for: Bool.self) { geometry in
-            if tablet { return geometry.size.width >= 890 && geometry.size.height >= 460 && !usesAccessibilityText }
+            if tablet { return geometry.size.width >= tabletWideMinWidth && geometry.size.height >= 460 && !usesAccessibilityText }
             return geometry.size.width > geometry.size.height
         } action: { landscape in
             if isPad, landscape, let compactPanel, !visibleTabletPanels.contains(compactPanel) {
@@ -155,7 +159,7 @@ struct LiveScreen: View {
         return ZStack {
             VStack(spacing: 4) {
                 landscapeHeader
-                    .padding(.horizontal, isPad ? 14 : 4)
+                    .padding(.horizontal, isPad ? Self.tabletHorizontalInset : 4)
                 GeometryReader { layout in
                     let hasSidePanel = selectedDriver != nil || raceControlPresented
                     let hasTabletInspector = fullPanel != nil || topPanel != nil || bottomPanel != nil
@@ -163,18 +167,25 @@ struct LiveScreen: View {
                     let timingWidth = hasTabletInspector ? max(0, layout.size.width - 12 - inspectorWidth) : layout.size.width
                     HStack(alignment: .top, spacing: isPad ? 12 : 8) {
                         if isPad {
-                            if isLandscape {
-                                tabletTimingPanel(width: timingWidth)
-                                    .frame(width: timingWidth)
-                                if hasTabletInspector { tabletInspector }
-                            } else if let compactPanel {
-                                tabletPanel(compactPanel, expanded: true, inspectorHeight: layout.size.height, movable: false)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .transition(.opacity)
-                            } else {
-                                tabletTimingPanel(width: layout.size.width, compact: true)
-                                    .transition(.opacity)
+                            ZStack(alignment: .topLeading) {
+                                let compact = !isLandscape
+                                    || layout.size.width < Self.tabletWideMinWidth - 2 * Self.tabletHorizontalInset
+                                let showsTiming = !compact || compactPanel == nil
+                                let showsInspector = compact ? compactPanel != nil : hasTabletInspector
+                                tabletTimingPanel(width: compact ? layout.size.width : timingWidth)
+                                    .frame(width: compact ? layout.size.width : timingWidth)
+                                    .allowsHitTesting(showsTiming)
+                                    .accessibilityHidden(!showsTiming)
+                                if showsInspector {
+                                    let inspectorOffset = (timingWidth + 12) * (layoutDirection == .leftToRight ? 1 : -1)
+                                    tabletInspector(compact: compact)
+                                        .frame(width: compact ? layout.size.width : inspectorWidth)
+                                        .background(compact ? PulseStyle.background : .clear)
+                                        .offset(x: compact ? 0 : inspectorOffset)
+                                        .transition(.opacity)
+                                }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         } else {
                             landscapeScrollPanel {
                                 timingBoard(selecting: false)
@@ -199,7 +210,7 @@ struct LiveScreen: View {
                         }
                     }
                 }
-                .padding(.horizontal, isPad ? 14 : 4)
+                .padding(.horizontal, isPad ? Self.tabletHorizontalInset : 4)
                 .padding(landscapeBodyExtensionEdge, 20)
                 .ignoresSafeArea(.container, edges: landscapeBodyExtensionEdge)
             }
@@ -376,23 +387,9 @@ struct LiveScreen: View {
         .accessibilityIdentifier("live.battle.driver.\(driver.number)")
     }
 
-    @ViewBuilder
-    private func tabletTimingPanel(width: CGFloat, compact: Bool = false) -> some View {
-        let minimumWidth: CGFloat = 510
-        if compact && width < minimumWidth {
-            landscapeScrollPanel {
-                timingBoard(selecting: false, stackedSectors: width < 350)
-            }
-        } else if width < minimumWidth {
-            ScrollView(.horizontal) {
-                ScrollView { timingBoard(selecting: false, detailed: true) }
-                    .frame(width: minimumWidth)
-            }
-            .liveLandscapePanel(WebDashboardStyle.homePanel)
-        } else {
-            landscapeScrollPanel {
-                timingBoard(selecting: false, detailed: true, wide: width >= 650)
-            }
+    private func tabletTimingPanel(width: CGFloat) -> some View {
+        landscapeScrollPanel {
+            timingBoard(selecting: false, detailed: width >= 510, wide: width >= 650, stackedSectors: width < 350)
         }
     }
 
@@ -401,9 +398,9 @@ struct LiveScreen: View {
         return [topPanel, bottomPanel].compactMap { $0 }
     }
 
-    private var tabletInspector: some View {
+    private func tabletInspector(compact: Bool) -> some View {
         GeometryReader { geometry in
-            let panels = visibleTabletPanels
+            let panels = compact ? compactPanel.map { [$0] } ?? [] : visibleTabletPanels
             let expanded = panels.count == 1
             let splitHeight = max(0, geometry.size.height - 8)
             let contentSizedComparison = !expanded && panels.contains(.battle)
@@ -424,7 +421,7 @@ struct LiveScreen: View {
                                     compactComparisonHeight = $0
                                 }
                         } else {
-                            tabletPanel(panel, expanded: expanded, inspectorHeight: geometry.size.height)
+                            tabletPanel(panel, expanded: expanded, inspectorHeight: geometry.size.height, movable: !compact)
                         }
                     }
                     .frame(width: geometry.size.width, height: height, alignment: .top)
@@ -675,6 +672,7 @@ struct LiveScreen: View {
                 trackStatus
                 landscapeProgress
             }
+            .containerCornerOffset(.leading, sizeToFit: true)
             HStack(spacing: 8) {
                 if compactPanel != nil {
                     headerButton("Back to timing", icon: "list.bullet") { compactPanel = nil }
@@ -722,6 +720,7 @@ struct LiveScreen: View {
                 }
             }
         }
+        .containerCornerOffset(.leading, sizeToFit: true)
     }
 
     @ViewBuilder

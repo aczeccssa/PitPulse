@@ -383,6 +383,7 @@ struct RootView: View {
         }
         .scrollIndicators(.hidden)
         .frame(width: compact ? nil : showsExpandedSidebar ? 240 : 56, height: compact ? 48 : nil)
+        .containerCornerOffset(compact ? .leading : .top, sizeToFit: true)
         .background {
             WebDashboardStyle.adaptive(dark: 0x040811, light: 0xffffff)
                 .ignoresSafeArea(edges: compact ? [.top, .horizontal] : [.top, .bottom, .leading])
