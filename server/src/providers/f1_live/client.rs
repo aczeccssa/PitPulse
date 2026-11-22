@@ -105,14 +105,13 @@ impl F1LiveClient {
         let (disconnected_tx, mut disconnected_rx) = mpsc::channel(1);
         let overflow_signal = disconnected_tx.clone();
         let token = access_token.filter(|token| !token.trim().is_empty());
-        let fallback_token = token.clone();
-        if let Some(interface) = self.interface.as_deref() {
-            // Binding outbound sockets to a physical interface bypasses a transparent
-            // proxy/TUN that would otherwise route the live feed through a blocked egress.
+        if token.is_some() || self.interface.is_some() {
+            // The authenticated transport carries the F1 TV token in headers for
+            // both requests, and preserves negotiate affinity on the upgrade.
             return super::protocol::run_cookie_transport(
                 &self.base_url,
-                fallback_token.as_deref(),
-                Some(interface),
+                token.as_deref(),
+                self.interface.as_deref(),
                 updates,
                 &mut stop,
             )
@@ -123,9 +122,6 @@ impl F1LiveClient {
             SignalRClient::connect_with(&domain, &hub, move |config| {
                 if let Some(port) = port {
                     config.with_port(i32::from(port));
-                }
-                if let Some(token) = token.clone() {
-                    config.authenticate_bearer(token);
                 }
                 config.with_disconnection_handler(DisconnectNotifier(disconnected_tx.clone()));
             }),
@@ -138,8 +134,8 @@ impl F1LiveClient {
             Err(F1LiveError::HandshakeFailed) => {
                 return super::protocol::run_cookie_transport(
                     &self.base_url,
-                    fallback_token.as_deref(),
-                    self.interface.as_deref(),
+                    None,
+                    None,
                     updates,
                     &mut stop,
                 )

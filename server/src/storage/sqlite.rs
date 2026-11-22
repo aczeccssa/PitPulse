@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
+    io::{Read, Write},
     path::Path,
     sync::Arc,
 };
@@ -7,7 +8,6 @@ use std::{
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::Value;
-use std::io::{Read, Write};
 use tokio::{sync::Mutex, task::spawn_blocking};
 
 use crate::{
@@ -21,12 +21,10 @@ use crate::{
     error::StorageError,
 };
 
-/// Stored analysis values are gzip encoded with this prefix. Plain JSON
-/// remains readable so an existing database keeps working during a rolling
-/// upgrade; the next write migrates that key to the compressed format.
 const ANALYSIS_CACHE_GZIP_PREFIX: &[u8] = b"\x00PULSEGZ\x01";
-const ANALYSIS_CACHE_FORMAT_VERSION: i64 = 9;
+const MAX_DECOMPRESSED_ANALYSIS_BYTES: usize = 16 * 1024 * 1024;
 
+const MIGRATION_0009: &str = include_str!("migrations/0009_live_snapshot_cache.sql");
 const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
 const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
 const MIGRATION_0001: &str = include_str!("migrations/0001_init.sql");
@@ -92,6 +90,40 @@ impl Database {
         Ok(())
     }
 
+    pub async fn live_snapshot_cache(&self, series: &str) -> Result<Option<String>, StorageError> {
+        let series = series.to_owned();
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || {
+            connection
+                .blocking_lock()
+                .query_row(
+                    "SELECT snapshot_json FROM live_snapshot_cache WHERE series = ?1",
+                    [series],
+                    |row| row.get(0),
+                )
+                .optional()
+        })
+        .await??)
+    }
+
+    pub async fn save_live_snapshot_cache(
+        &self,
+        series: &str,
+        snapshot: String,
+    ) -> Result<(), StorageError> {
+        let series = series.to_owned();
+        let connection = Arc::clone(&self.connection);
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO live_snapshot_cache (series, snapshot_json) VALUES (?1, ?2)
+                 ON CONFLICT(series) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+                [series, snapshot],
+            )
+        })
+        .await??;
+        Ok(())
+    }
+
     pub async fn racing_seasons_before(&self, season: i64) -> Result<Vec<i64>, StorageError> {
         let connection = Arc::clone(&self.connection);
         Ok(spawn_blocking(move || -> Result<Vec<i64>, rusqlite::Error> {
@@ -136,7 +168,7 @@ impl Database {
     ) -> Result<(), StorageError> {
         let connection = Arc::clone(&self.connection);
         let key = key.to_string();
-        let stored = encode_analysis_value(&value.to_string());
+        let stored = encode_analysis_value(value.to_string());
         let fetched_at = value["meta"]["fetchedAt"]
             .as_str()
             .unwrap_or_default()
@@ -952,29 +984,37 @@ fn calendar_meta(connection: &Connection, season: Option<i64>) -> Result<Meta, r
     )
 }
 
-fn encode_analysis_value(json: &str) -> Vec<u8> {
+fn encode_analysis_value(json: String) -> rusqlite::types::Value {
+    use rusqlite::types::Value::{Blob, Text};
+
+    if json.len() > MAX_DECOMPRESSED_ANALYSIS_BYTES {
+        return Text(json);
+    }
     let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
-    let _ = encoder.write_all(json.as_bytes());
+    if encoder.write_all(json.as_bytes()).is_err() {
+        return Text(json);
+    }
     let compressed = match encoder.finish() {
-        Ok(compressed) if compressed.len() < json.len() => compressed,
-        _ => return json.as_bytes().to_vec(),
+        Ok(compressed) if compressed.len() + ANALYSIS_CACHE_GZIP_PREFIX.len() < json.len() => {
+            compressed
+        }
+        _ => return Text(json),
     };
     let mut stored = Vec::with_capacity(ANALYSIS_CACHE_GZIP_PREFIX.len() + compressed.len());
     stored.extend_from_slice(ANALYSIS_CACHE_GZIP_PREFIX);
     stored.extend_from_slice(&compressed);
-    stored
+    Blob(stored)
 }
 
 fn decode_analysis_value(stored: Vec<u8>) -> Result<serde_json::Value, StorageError> {
-    const MAX_DECOMPRESSED_ANALYSIS_BYTES: u64 = 16 * 1024 * 1024;
     let json = if stored.starts_with(ANALYSIS_CACHE_GZIP_PREFIX) {
         let mut decoder = GzDecoder::new(&stored[ANALYSIS_CACHE_GZIP_PREFIX.len()..])
-            .take(MAX_DECOMPRESSED_ANALYSIS_BYTES + 1);
+            .take(MAX_DECOMPRESSED_ANALYSIS_BYTES as u64 + 1);
         let mut json = String::new();
         decoder.read_to_string(&mut json).map_err(|error| {
             StorageError::CorruptCache(format!("invalid gzip analysis value: {error}"))
         })?;
-        if json.len() as u64 > MAX_DECOMPRESSED_ANALYSIS_BYTES {
+        if json.len() > MAX_DECOMPRESSED_ANALYSIS_BYTES {
             return Err(StorageError::CorruptCache(
                 "analysis value exceeds the decompression limit".to_owned(),
             ));
@@ -1030,11 +1070,10 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         connection.execute_batch(MIGRATION_0008)?;
     }
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-    if version < ANALYSIS_CACHE_FORMAT_VERSION {
-        // The read path accepts both plain JSON and compressed values. Writes
-        // use the new format, so existing entries migrate lazily without a
-        // large blocking recompression during startup.
-        connection.execute_batch("PRAGMA user_version = 9;")?;
+    if version < 10 {
+        // The original analysis-cache branch also marked its local databases as v9.
+        connection.execute_batch(MIGRATION_0009)?;
+        connection.execute_batch("PRAGMA user_version = 10;")?;
     }
 
     Ok(())

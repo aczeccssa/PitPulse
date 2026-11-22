@@ -1,6 +1,13 @@
 import Foundation
 import SwiftUI
+import UIKit
 import SharedData
+
+struct LiveNotice: Equatable {
+    let id = UUID()
+    let series: LiveSeries
+    let text: String
+}
 
 @MainActor
 final class MobileModel: ObservableObject {
@@ -44,12 +51,27 @@ final class MobileModel: ObservableObject {
         }
     }
 
-    @Published var series: LiveSeries = .f1
+    @Published var series: LiveSeries
+    @Published var preferredLiveSeries: LiveSeries {
+        didSet {
+            guard oldValue != preferredLiveSeries else { return }
+            defaults.set(preferredLiveSeries.rawValue, forKey: PreferenceKeys.liveSeries)
+            manuallySelectedLiveSeries = nil
+            refreshLiveSelection()
+            updateActivity()
+        }
+    }
+    var manuallySelectedLiveSeries: LiveSeries?
     @Published var liveSnapshots: [LiveSeries: LiveSnapshot] = [:]
+    @Published var liveEntries: [LiveSeries: LiveSnapshot] = [:]
+    @Published var scheduledLiveSession: NextSession?
+    var currentSeasonLiveMeetings: [Meeting] = []
+    var lastFinishedF1: LiveSnapshot?
+    var displayedLiveSessionKey: String?
     @Published var driverRoster: [DriverStanding] = []
     @Published var rosterLoadError: String?
     @Published var settingsPresented = false
-    @Published var liveNotice: String?
+    @Published var liveNotice: LiveNotice?
     @Published var favoriteDriverID: String? {
         didSet {
             defaults.set(favoriteDriverID, forKey: PreferenceKeys.favoriteDriverId)
@@ -61,13 +83,14 @@ final class MobileModel: ObservableObject {
         didSet { defaults.set(islandMode.rawValue, forKey: "mobileIslandMode"); updateActivity() }
     }
     @Published var islandBattleNumbers: [String] = []
-    func toggleIslandBattle(_ number: String) {
-        islandBattleNumbers = IslandBattleSelection.toggled(number, in: islandBattleNumbers)
+    func setIslandBattle(_ numbers: [String]) {
+        islandBattleNumbers = numbers
         islandMode = .battle
     }
     func resetIslandBattle() { islandBattleNumbers = []; updateActivity() }
     let liveStores: [LiveSeries: LiveStore] = [.f1: LiveStore(), .wec: LiveStore()]
     var historiesBySeries: [LiveSeries: [String: [LiveTelemetry]]] = [:]
+    var recentLiveLaps: [LiveSeries: [String: [LiveCompletedLap]]] = [:]
     var liveConnectionContext: String?
 
     let defaults = UserDefaults.standard
@@ -79,21 +102,36 @@ final class MobileModel: ObservableObject {
     let widgetPublisher = WidgetSnapshotPublisher()
     var widgetHighlightsContext: String?
     var rosterSavedAt: Date = .distantPast
-    var recentRaceSources: [FavoriteRaceSource] = []
+    @Published var recentRaceSources: [FavoriteRaceSource] = []
     var recentRaceSavedAt: Date = .distantPast
+    @Published var seasonArchive: APIEnvelope<[SeasonResultWeekend]>?
+    @Published var seasonArchiveError: String?
+    var seasonArchiveTask: Task<Void, Never>?
     @Published var credentialRevision = 0
 
     var dataContext: String { "\(serverURL?.absoluteString ?? serverText)|\(season)|\(credentialRevision)" }
 
     func invalidateCalendar() {
         calendarRequestID = UUID()
+        seasonArchiveTask?.cancel()
+        seasonArchiveTask = nil
+        seasonArchive = nil
+        seasonArchiveError = nil
         meetings = []
         loadState = .idle
         healthText = nil
         liveHistory = [:]
         driverRoster = []
         historiesBySeries = [:]
+        recentLiveLaps = [:]
         liveSnapshots = [:]
+        liveEntries = [:]
+        scheduledLiveSession = nil
+        currentSeasonLiveMeetings = []
+        lastFinishedF1 = nil
+        displayedLiveSessionKey = nil
+        liveNotice = nil
+        manuallySelectedLiveSeries = nil
         widgetHighlightsContext = nil
         rosterSavedAt = .distantPast
         recentRaceSources = []
@@ -104,12 +142,17 @@ final class MobileModel: ObservableObject {
     init() {
         let storedSeason = defaults.integer(forKey: PreferenceKeys.selectedSeason)
         let storedServer = defaults.string(forKey: PreferenceKeys.serverAddress)
+        let preferredSeries = defaults.string(forKey: PreferenceKeys.liveSeries).flatMap(LiveSeries.init(rawValue:)) ?? .f1
+        preferredLiveSeries = preferredSeries
+        series = preferredSeries
         favoriteDriverID = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         islandMode = defaults.string(forKey: "mobileIslandMode").flatMap(IslandContentMode.init(rawValue:)) ?? .overview
-        season = storedSeason > 2000 ? storedSeason : Calendar.current.component(.year, from: Date())
+        let currentYear = Calendar(identifier: .gregorian).component(.year, from: .now)
+        season = UIDevice.current.userInterfaceIdiom != .pad && storedSeason > 2000 ? storedSeason : currentYear
         serverText = storedServer?.isEmpty == false ? storedServer! : "http://localhost:38701"
         for (series, store) in liveStores {
             store.onSnapshot = { [weak self] snapshot in self?.handle(snapshot, from: series) }
+            store.onConnectionState = { [weak self] snapshot in self?.handle(snapshot, from: series) }
         }
         #if DEBUG
         if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" {

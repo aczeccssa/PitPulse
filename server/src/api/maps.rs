@@ -1,5 +1,11 @@
+use std::collections::BTreeMap;
+
 use crate::{
-    api::dto::Meta, app_state::AppState, domain::calendar::Meeting, providers::resources::Resource,
+    api::dto::Meta,
+    app_state::AppState,
+    domain::calendar::{Meeting, Session, SessionStatus},
+    providers::resources::Resource,
+    scheduler::parse_utc_seconds,
 };
 use axum::{
     Json,
@@ -60,31 +66,96 @@ pub async fn weather(State(state): State<AppState>, Path(id): Path<String>) -> R
             .utc_now()
             .await
             .map_err(|_| "database_error")?;
-        let (forecast, meta) = state.weather.forecast(&meeting, &now).await?;
-        if forecast["status"] != "past_event" {
-            return Ok((forecast, meta));
-        }
-        // Historical observations are already archived with the session bundle.
-        // Never query a forecast provider again for a completed weekend.
-        let mut hours = Vec::new();
+        let now_seconds = parse_utc_seconds(&now).ok_or("invalid_time")?;
+        let (forecast, forecast_meta) = state.weather.forecast(&meeting, &now).await?;
+        let forecast_hours = forecast["hours"].as_array().cloned().unwrap_or_default();
+        // Finished sessions have fixed observations; upcoming sessions keep the
+        // forecast. A forecast window that starts today would otherwise drop the
+        // sessions that already ran yesterday.
+        let mut measured = Vec::new();
         for session in &meeting.sessions {
+            if session.status == SessionStatus::Cancelled {
+                continue;
+            }
+            let Some(end) = session_end_seconds(session) else {
+                continue;
+            };
+            if end >= now_seconds {
+                continue;
+            }
             let bundle = crate::services::analysis::cached_session_bundle(&state, &session.id)
                 .await
                 .map_err(|_| "database_error")?;
-            if let Some(bundle) = bundle {
-                hours.extend(historical_weather(&bundle["data"], &session.id));
+            let mut rows = bundle
+                .map(|bundle| historical_weather(&bundle["data"], &session.id))
+                .unwrap_or_default();
+            if rows.is_empty()
+                && state.openf1.enabled
+                && let Some(key) = session.openf1_session_key
+            {
+                match state.weather.observations(key, &session.id, &now).await {
+                    Ok((observed, _)) => rows = observed,
+                    Err(error) => {
+                        tracing::warn!(session = %session.id, %error, "OpenF1 session weather unavailable");
+                    }
+                }
             }
+            measured.extend(rows);
         }
-        hours.sort_by(|a, b| a["utc"].as_str().cmp(&b["utc"].as_str()));
-        let available = !hours.is_empty();
-        Ok((json!({"status": if available { "historical" } else { "history_pending" }, "hours": hours}),
-            Meta::from_cache(Some("openf1-archive".into()), None, 1, false)))
+        let hours = merge_weather_hours(&forecast_hours, &measured);
+        if hours.is_empty() {
+            let status = match forecast["status"].as_str() {
+                Some("past_event") => "history_pending",
+                Some(status) => status,
+                None => "outside_forecast_window",
+            };
+            return Ok((json!({"status": status, "hours": []}), forecast_meta));
+        }
+        let any_forecast = hours.iter().any(|hour| hour["sessionId"].is_null());
+        let any_measured = hours.iter().any(|hour| !hour["sessionId"].is_null());
+        let status = if any_forecast { "available" } else { "historical" };
+        let source = match (any_forecast, any_measured) {
+            (true, true) => "open-meteo+openf1",
+            (true, false) => "open-meteo",
+            _ => "openf1-archive",
+        };
+        Ok((
+            json!({"status": status, "hours": hours}),
+            Meta::from_cache(Some(source.into()), None, 1, false),
+        ))
     }
     .await;
     match result {
         Ok((data, meta)) => Json(json!({"data":data,"meta":meta})).into_response(),
         Err(e) => failure(e),
     }
+}
+
+fn session_end_seconds(session: &Session) -> Option<i64> {
+    let start = parse_utc_seconds(&session.start_time)?;
+    Some(
+        session
+            .end_time
+            .as_deref()
+            .and_then(parse_utc_seconds)
+            .unwrap_or(start + 7200),
+    )
+}
+
+/// One row per hour, with measured observations replacing the forecast for the
+/// same hour. Clients look weather up by the hour a session starts in.
+fn merge_weather_hours(
+    forecast: &[serde_json::Value],
+    measured: &[serde_json::Value],
+) -> Vec<serde_json::Value> {
+    let mut hours = BTreeMap::new();
+    for row in forecast.iter().chain(measured.iter()) {
+        let Some(utc) = row["utc"].as_str().and_then(parse_utc_seconds) else {
+            continue;
+        };
+        hours.insert(utc.div_euclid(3600), row.clone());
+    }
+    hours.into_values().collect()
 }
 pub async fn radar_frames(State(state): State<AppState>) -> Response {
     let result = async {
@@ -218,5 +289,25 @@ mod weather_tests {
         assert_eq!(rows[0]["trackTemp"], 42);
         assert!(rows[0].get("precipitationProbability").is_none());
         assert!(rows[0]["humidity"].is_null());
+    }
+
+    #[test]
+    fn merged_hours_prefer_measured_observations_for_finished_sessions() {
+        let forecast = vec![
+            json!({"utc":"2026-11-21T19:00:00Z","airTemp":21,"precipitationProbability":40}),
+            json!({"utc":"2026-11-22T02:00:00Z","airTemp":18,"precipitationProbability":10}),
+        ];
+        let measured = vec![
+            json!({"utc":"2026-11-21T19:05:00Z","sessionId":"2026:22:qualifying","airTemp":24,"rainfall":0}),
+            json!({"utc":"2026-11-21T19:55:00Z","sessionId":"2026:22:qualifying","airTemp":23,"rainfall":1}),
+        ];
+        let hours = merge_weather_hours(&forecast, &measured);
+        assert_eq!(hours.len(), 2);
+        assert_eq!(hours[0]["sessionId"], "2026:22:qualifying");
+        assert_eq!(hours[0]["airTemp"], 23);
+        assert_eq!(hours[0]["rainfall"], 1);
+        assert!(hours[0]["precipitationProbability"].is_null());
+        assert_eq!(hours[1]["precipitationProbability"], 10);
+        assert!(hours[1]["sessionId"].is_null());
     }
 }

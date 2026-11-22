@@ -141,7 +141,7 @@ check_sse_first_event \
 
 check_web_shell "http://$PITPULSE_BIND" "$WORK_DIR" local ||
     rollback "web dashboard shell or its embedded assets did not load"
-log "local web dashboard shell was served only with a bootstrapped session; API stayed gated"
+log "local web dashboard shell served with its issued session; API stayed gated without one"
 
 caddy_cmd validate --config "$PITPULSE_CADDY_FILE" >/dev/null 2>&1 ||
     rollback "Caddy config validation failed; existing Caddy routes were not changed"
@@ -153,7 +153,7 @@ health_with_token "$public_base/api/v1/health" "$CURL_AUTH" "$WORK_DIR/public-he
     rollback "public authenticated health check failed"
 check_sse_first_event "$public_base/api/v1/live/stream?series=f1" "$CURL_SSE" "$WORK_DIR/public-sse.txt" ||
     rollback "public SSE first event was not received"
-check_web_shell "$public_base" "$WORK_DIR" public "$WORK_DIR" ||
+check_web_shell "$public_base" "$WORK_DIR" public ||
     rollback "public web dashboard shell was not served through Caddy"
 log "public HTTPS health, SSE and web dashboard checks passed"
 

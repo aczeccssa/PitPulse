@@ -4,7 +4,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
-  developmentLanguage: zh-Hans
+  developmentLanguage: en
 packages:
   SharedData:
     path: ../Packages/SharedData
@@ -28,6 +28,16 @@ targets:
       - path: PitPulseMobile
         excludes:
           - "Info.plist"
+      - path: ../server/resources/motorsport
+        type: folder
+        buildPhase: resources
+      - path: ../server/resources/web/motorsport
+        name: Web Motorsport
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: WebAssets
       - path: ../Packages/SharedComponents/Resources/AppIcon.icon
         buildPhase: resources
     settings:
@@ -44,7 +54,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile
         PRODUCT_MODULE_NAME: PitPulseMobile
         PRODUCT_NAME: PitPulse
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/Frameworks"
@@ -75,7 +85,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.pitpulse.mobile.liveactivity
         PRODUCT_NAME: PitPulseLiveActivity
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"

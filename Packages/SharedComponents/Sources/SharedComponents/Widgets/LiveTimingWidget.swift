@@ -11,8 +11,8 @@ public struct LiveTimingWidget: Widget {
             LiveTimingWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
                 .widgetURL(WidgetDestination.live.url)
         }
-        .configurationDisplayName("实时计时 · Formula 1")
-        .description("小尺寸前两位，中尺寸前三位，大尺寸完整前八位。明确标记回放和过期数据。")
+        .configurationDisplayName(widgetCopy("Live Timing · Formula 1", "实时计时 · Formula 1"))
+        .description(widgetCopy("Live timing for the top two, three, or eight drivers.", "小尺寸前两位，中尺寸前三位，大尺寸完整前八位。明确标记回放和过期数据。"))
         .supportedFamilies(raceWidgetFamilies)
     }
 }
@@ -30,26 +30,26 @@ struct LiveTimingWidgetView: View {
             case .systemLarge: large(timing)
             #if os(iOS)
             case .accessoryInline:
-                Text("\(status(timing)) · \(timing.lap) · \(timing.drivers.first?.name ?? timing.session)")
+                Text("\(status(timing)) · \(widgetDisplayLabel(timing.lap)) · \(timing.drivers.first?.name ?? timing.session)")
             case .accessoryCircular:
-                VStack(spacing: 2) { Image(systemName: "flag.checkered"); Text(timing.isStale(at: entry.date) ? "过期" : timing.lap).font(.system(size: 9, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7) }
+                VStack(spacing: 2) { Image(systemName: "flag.checkered"); Text(timing.isStale(at: entry.date) ? widgetCopy("Stale", "过期") : widgetDisplayLabel(timing.lap)).font(.system(size: 9, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7) }
             #endif
             default:
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack { Text(timing.session).bold(); Spacer(); Text(timing.lap) }.font(.caption)
+                    HStack { Text(widgetDisplayLabel(timing.session)).bold(); Spacer(); Text(widgetDisplayLabel(timing.lap)) }.font(.caption)
                     Text("\(status(timing)) · \(timing.drivers.first?.name ?? timing.meeting)").font(.caption2).lineLimit(1)
                 }
             }
-        } else { WidgetEmpty(title: "F1 实时计时", icon: "antenna.radiowaves.left.and.right") }
+        } else { WidgetEmpty(title: widgetCopy("F1 Live Timing", "F1 实时计时"), icon: "antenna.radiowaves.left.and.right") }
     }
     private func status(_ timing: RaceTimingSnapshot) -> String {
-        guard timing.isStale(at: entry.date) else { return timing.status }
-        return timing.status.contains("回放") ? "回放 · 数据过期" : "数据过期"
+        guard timing.isStale(at: entry.date) else { return widgetDisplayLabel(timing.status) }
+        return (timing.status.contains("回放") || timing.status.lowercased().contains("replay")) ? widgetCopy("Replay · Stale", "回放 · 数据过期") : widgetCopy("Stale Data", "数据过期")
     }
     private func small(_ timing: RaceTimingSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             WidgetHeading(label: status(timing), warning: timing.isStale(at: entry.date))
-            Text(timing.lap).font(.system(size: 28, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1)
+            Text(widgetDisplayLabel(timing.lap)).font(.system(size: 28, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1)
             Text(timing.meeting).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
             Spacer(minLength: 0)
             ForEach(Array(timing.drivers.prefix(2))) { row in driverRow(row, compact: true) }
@@ -59,8 +59,8 @@ struct LiveTimingWidgetView: View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("PITPULSE").font(.system(size: 9, weight: .heavy)).tracking(1.5).foregroundStyle(widgetRed)
-                Text(timing.session.uppercased()).font(.caption2.bold()).foregroundStyle(.secondary)
-                Text(timing.lap).font(.title2.bold().monospacedDigit())
+                Text(widgetDisplayLabel(timing.session).uppercased()).font(.caption2.bold()).foregroundStyle(.secondary)
+                Text(widgetDisplayLabel(timing.lap)).font(.title2.bold().monospacedDigit())
                 Text(status(timing)).font(.system(size: 9, weight: .semibold)).foregroundStyle(timing.isStale(at: entry.date) ? .orange : widgetRed)
             }.frame(width: 95, alignment: .leading)
             Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 1)
@@ -76,12 +76,12 @@ struct LiveTimingWidgetView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(timing.meeting).font(.headline).lineLimit(2)
                 Spacer(minLength: 8)
-                Text(timing.lap).font(.title3.bold().monospacedDigit())
+                Text(widgetDisplayLabel(timing.lap)).font(.title3.bold().monospacedDigit())
             }
-            Text("距离领跑车手 · 秒").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text(widgetCopy("Gap to Leader · Seconds", "距离领跑车手 · 秒")).font(.system(size: 9)).foregroundStyle(.secondary)
             Chart(Array(timing.drivers.prefix(8))) { row in
                 if let gap = widgetGap(row.gap) {
-                    BarMark(x: .value("秒差", gap), y: .value("车手", MotorsportAssetName.abbreviation(row.name)))
+                    BarMark(x: .value(widgetCopy("Gap (s)", "秒差"), gap), y: .value(widgetCopy("Driver", "车手"), MotorsportAssetName.abbreviation(row.name)))
                         .foregroundStyle(widgetRed).cornerRadius(2)
                         .annotation(position: .trailing) { Text(gap == 0 ? "P1" : String(format: "+%.1f", gap)).font(.system(size: 8).monospacedDigit()) }
                 }
@@ -89,7 +89,7 @@ struct LiveTimingWidgetView: View {
             Divider()
             ForEach(Array(timing.drivers.prefix(3))) { row in driverRow(row, compact: false) }
             Spacer(minLength: 0)
-            HStack { Text(timing.session); Spacer(); Text("更新 "); Text(timing.updatedAt, style: .time) }.font(.system(size: 9)).foregroundStyle(.secondary)
+            HStack { Text(widgetDisplayLabel(timing.session)); Spacer(); Text(widgetCopy("Updated ", "更新 ")); Text(timing.updatedAt, style: .time) }.font(.system(size: 9)).foregroundStyle(.secondary)
         }
     }
     private func widgetGap(_ text: String) -> Double? {

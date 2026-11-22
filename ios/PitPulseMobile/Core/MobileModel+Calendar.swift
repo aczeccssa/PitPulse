@@ -15,6 +15,7 @@ extension MobileModel {
         if meetings.isEmpty, let cached = try? await cache.load(server: serverURL, season: selectedSeason) {
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
             meetings = cached.envelope.data.sorted { $0.startDate < $1.startDate }
+            updateScheduledLiveSession()
             publishWidget(savedAt: cached.envelope.meta.stale ? .distantPast : cached.savedAt)
         }
         loadState = .loading
@@ -22,16 +23,46 @@ extension MobileModel {
             let envelope = try await APIClient(baseURL: serverURL).calendar(season: selectedSeason, token: currentToken)
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
             meetings = envelope.data.sorted { $0.startDate < $1.startDate }
+            updateScheduledLiveSession()
             loadState = meetings.isEmpty
-                ? .failed("当前服务器尚无 \(selectedSeason) 赛季 F1 赛历。请检查服务地址或服务器同步状态。")
+                ? .failed("The server has no F1 calendar for \(selectedSeason). Check the server address or sync status.")
                 : .loaded(Date())
             publishWidget(savedAt: envelope.meta.stale ? .distantPast : (envelope.meta.fetchedAt ?? .distantPast))
             try? await cache.save(server: serverURL, season: selectedSeason, envelope: envelope)
         } catch {
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
-            loadState = .failed((meetings.isEmpty ? "" : "缓存数据 · ") + Self.message(for: error))
+            loadState = .failed((meetings.isEmpty ? "" : "Cached data · ") + Self.message(for: error))
         }
     }
+    func loadSeasonArchive(force: Bool = false) async {
+        if let seasonArchiveTask {
+            await seasonArchiveTask.value
+            return
+        }
+        guard force || seasonArchive == nil else { return }
+        guard let serverURL else {
+            seasonArchiveError = "服务器地址无效"
+            return
+        }
+        let context = dataContext
+        let requestSeason = season
+        let token = currentToken
+        let task = Task {
+            do {
+                let envelope = try await APIClient(baseURL: serverURL).seasonResults(season: requestSeason, token: token)
+                guard context == dataContext, !Task.isCancelled else { return }
+                seasonArchive = envelope
+                seasonArchiveError = nil
+            } catch {
+                guard context == dataContext, !Task.isCancelled else { return }
+                seasonArchiveError = Self.message(for: error)
+            }
+            seasonArchiveTask = nil
+        }
+        seasonArchiveTask = task
+        await task.value
+    }
+
     func loadWidgetHighlights(force: Bool = false) async {
         guard let serverURL else { return }
         let races = completedRaces(limit: 3)

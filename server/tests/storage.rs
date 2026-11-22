@@ -20,6 +20,28 @@ async fn test_database_migrates_and_answers_health_query() {
 }
 
 #[tokio::test]
+async fn test_live_snapshot_cache_replaces_latest_and_survives_reopen() {
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("live-cache.sqlite");
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    assert!(database.live_snapshot_cache("f1").await.unwrap().is_none());
+    for snapshot in ["{\"sessionId\":\"11412\"}", "{\"sessionId\":\"11413\"}"] {
+        database
+            .save_live_snapshot_cache("f1", snapshot.to_owned())
+            .await
+            .unwrap();
+    }
+    drop(database);
+    let reopened = Database::open(&path).await.unwrap();
+    assert_eq!(
+        reopened.live_snapshot_cache("f1").await.unwrap().as_deref(),
+        Some("{\"sessionId\":\"11413\"}")
+    );
+    assert!(reopened.live_snapshot_cache("wec").await.unwrap().is_none());
+}
+
+#[tokio::test]
 async fn test_sync_deadline_and_identity_cache_survive_database_reopen() {
     let temp = TempDir::new().unwrap();
     let path = temp.path().join("sync-state.sqlite");
@@ -164,7 +186,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 9);
+    assert_eq!(database.user_version().await.unwrap(), 10);
     let (meetings, _) = database.calendar(Some(2026)).await.unwrap();
     assert_eq!(meetings.len(), 1);
     assert!(meetings[0].circuit.is_none());
@@ -446,7 +468,7 @@ async fn test_result_driver_number_roundtrip_and_number_only_revision() {
         Some("44")
     );
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 9);
+    assert_eq!(database.user_version().await.unwrap(), 10);
 }
 
 #[tokio::test]
@@ -479,14 +501,14 @@ async fn test_analysis_cache_compresses_values_and_reads_legacy_plaintext() {
     connection
         .execute(
             "INSERT INTO analysis_cache(cache_key,value_json,fetched_at) VALUES('legacy',?1,'2026-11-18T00:00:00Z')",
-            rusqlite::params![value.to_string().as_bytes()],
+            rusqlite::params![value.to_string()],
         )
         .unwrap();
     assert_eq!(
         database.analysis_cache("legacy").await.unwrap(),
         Some(value)
     );
-    assert_eq!(database.user_version().await.unwrap(), 9);
+    assert_eq!(database.user_version().await.unwrap(), 10);
 
     connection
         .execute(
@@ -495,6 +517,34 @@ async fn test_analysis_cache_compresses_values_and_reads_legacy_plaintext() {
         )
         .unwrap();
     assert!(database.analysis_cache("corrupt").await.is_err());
+}
+
+#[tokio::test]
+async fn test_analysis_cache_upgrades_v9_and_round_trips_large_values() {
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("analysis.sqlite");
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+
+    let connection = rusqlite::Connection::open(&path).unwrap();
+    connection
+        .execute_batch("DROP TABLE live_snapshot_cache; PRAGMA user_version = 9;")
+        .unwrap();
+    database.migrate().await.unwrap();
+    assert_eq!(database.user_version().await.unwrap(), 10);
+    assert!(database.live_snapshot_cache("f1").await.unwrap().is_none());
+
+    let value = serde_json::json!({"data": "x".repeat(16 * 1024 * 1024)});
+    database.save_analysis_cache("large", &value).await.unwrap();
+    let storage_type: String = connection
+        .query_row(
+            "SELECT typeof(value_json) FROM analysis_cache WHERE cache_key='large'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(storage_type, "text");
+    assert_eq!(database.analysis_cache("large").await.unwrap(), Some(value));
 }
 
 #[tokio::test]

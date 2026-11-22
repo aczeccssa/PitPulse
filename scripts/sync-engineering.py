@@ -192,11 +192,13 @@ def parse_tech(xml, spec, source):
 
 def encode(envelope):
     import gzip
-    text = envelope if isinstance(envelope, str) else envelope.decode()
-    compressed = gzip.compress(text.encode(), compresslevel=1)
-    if len(compressed) < len(envelope):
+    raw = envelope.encode()
+    if len(raw) > 16 * 1024 * 1024:
+        return envelope
+    compressed = gzip.compress(raw, compresslevel=1)
+    if len(GZIP_PREFIX) + len(compressed) < len(raw):
         return GZIP_PREFIX + compressed
-    return envelope.encode()
+    return envelope
 
 
 def decode(value):

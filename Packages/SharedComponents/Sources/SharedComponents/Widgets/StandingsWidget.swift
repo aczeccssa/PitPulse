@@ -38,8 +38,8 @@ public struct StandingsWidget: Widget {
         StaticConfiguration(kind: RaceWidgetCache.standingsKind, provider: StandingsWidgetProvider()) { entry in
             StandingsWidgetView(entry: entry).containerBackground(widgetBackground, for: .widget)
         }
-        .configurationDisplayName("车手积分 · Formula 1")
-        .description("小尺寸看榜首，中尺寸查看前五名与和榜首的差距。")
+        .configurationDisplayName(widgetCopy("Driver Standings · Formula 1", "车手积分 · Formula 1"))
+        .description(widgetCopy("See the championship leader or the top five drivers and their gaps.", "小尺寸看榜首，中尺寸查看前五名与和榜首的差距。"))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -57,7 +57,7 @@ struct StandingsWidgetView: View {
             default: content(snapshot)
             }
         } else {
-            WidgetEmpty(title: "车手积分", icon: "trophy.fill")
+            WidgetEmpty(title: widgetCopy("Driver Standings", "车手积分"), icon: "trophy.fill")
         }
     }
 
@@ -67,7 +67,7 @@ struct StandingsWidgetView: View {
         let runnerUp = snapshot.drivers.count > 1 ? snapshot.drivers[1] : nil
         return VStack(alignment: .leading, spacing: 6) {
             WidgetHeading(label: "STANDINGS",
-                          trailing: stale ? "缓存过期" : "\(snapshot.season)",
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "\(snapshot.season)",
                           warning: stale)
             HStack(spacing: 7) {
                 MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: leader.driverID, name: leader.name, season: snapshot.season))
@@ -85,10 +85,10 @@ struct StandingsWidgetView: View {
                 Text("\(Int(leader.points.rounded()))")
                     .font(.system(size: 28, weight: .bold, design: .rounded)).monospacedDigit()
                     .foregroundStyle(widgetRed)
-                Text("积分").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                Text(widgetCopy("Points", "积分")).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
             }
             HStack(spacing: 3) {
-                Text("领先 P2").font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary)
+                Text(widgetCopy("Lead over P2", "领先 P2")).font(.system(size: 8, weight: .medium)).foregroundStyle(.secondary)
                 Spacer(minLength: 2)
                 Text(runnerUp.map { "+\(Int($0.gapToLeader.rounded()))" } ?? "—")
                     .font(.system(size: 10, weight: .bold)).monospacedDigit()
@@ -101,14 +101,14 @@ struct StandingsWidgetView: View {
         let season = snapshot.season
         return VStack(alignment: .leading, spacing: 8) {
             WidgetHeading(label: "STANDINGS",
-                          trailing: stale ? "缓存过期" : "\(season)",
+                          trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "\(season)",
                           warning: stale)
 //            HStack(spacing: 4) {
-//                Text("车手").font(.system(size: 11, weight: .bold))
+//                Text(widgetCopy("Driver", "车手")).font(.system(size: 11, weight: .bold))
 //                Spacer(minLength: 4)
-//                Text("积分").font(.system(size: 8, weight: .medium))
+//                Text(widgetCopy("Points", "积分")).font(.system(size: 8, weight: .medium))
 //                    .foregroundStyle(.secondary).frame(width: 30, alignment: .trailing)
-//                Text("与榜首").font(.system(size: 8, weight: .medium))
+//                Text(widgetCopy("Gap to Leader", "与榜首")).font(.system(size: 8, weight: .medium))
 //                    .foregroundStyle(.secondary).frame(width: 28, alignment: .trailing)
 //            }
             ForEach(Array(snapshot.drivers.prefix(4))) { driver in

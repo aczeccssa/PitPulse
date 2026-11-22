@@ -18,6 +18,7 @@ REPLAY_FILES = ("f1-sao-paulo-2026.json.gz", "wec-monza-2026.json.gz")
 def main():
     env = dict(os.environ)
     settings = LOCAL / "server/environment.json"
+    engineering_db = LOCAL / "server/pitpulse.sqlite"
     if settings.exists():
         values = json.loads(settings.read_text())
         if not isinstance(values, dict) or not all(
@@ -27,6 +28,7 @@ def main():
             for key, value in values.items()
         ):
             raise SystemExit("Local server environment must contain only string F1 configuration values")
+        engineering_db = Path(values.get("F1_COMPANION_DATABASE_PATH", str(engineering_db)))
         # Local file supplies defaults only: explicit Taskdeck / shell env wins.
         # The replay server owns its bind address and never touches the live DB.
         for key, value in values.items():
@@ -34,6 +36,8 @@ def main():
                 env.setdefault(key, value)
     env.setdefault("F1_COMPANION_BIND", "0.0.0.0:38702")
     env.setdefault("F1_COMPANION_DATABASE_PATH", str(LOCAL / "replay/pitpulse.sqlite"))
+    if engineering_db.is_file():
+        env.setdefault("F1_COMPANION_REPLAY_ENGINEERING_DB", str(engineering_db))
     replay_dir = Path(env.setdefault("F1_COMPANION_REPLAY_DIR", str(PROJECT / "server/target/replay-data")))
     missing = [name for name in REPLAY_FILES if not (replay_dir / name).is_file()]
     if missing:

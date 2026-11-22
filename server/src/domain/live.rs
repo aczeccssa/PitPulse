@@ -78,6 +78,10 @@ pub struct LiveLocation {
     pub y: f64,
     pub utc: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub cached: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub received_at: Option<String>,
     pub status: Option<String>,
     pub longitude: Option<f64>,
@@ -88,6 +92,10 @@ pub struct LiveLocation {
 #[serde(rename_all = "camelCase")]
 pub struct LiveTelemetry {
     pub utc: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub cached: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub received_at: Option<String>,
     pub rpm: Option<f64>,
@@ -182,6 +190,10 @@ pub struct LiveSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_remaining_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_sample_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_running: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elapsed_seconds: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_time_based: Option<bool>,
@@ -217,6 +229,8 @@ impl Default for LiveSnapshot {
             position_status: None,
             position_diagnostics: None,
             time_remaining_seconds: None,
+            clock_sample_at: None,
+            clock_running: None,
             elapsed_seconds: None,
             is_time_based: None,
         }

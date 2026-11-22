@@ -255,15 +255,39 @@ final class LiveActivityContentStateTests: XCTestCase {
         XCTAssertFalse(LiveSessionAvailability.isAvailable(.disconnected(), now: now))
     }
 
+    func testRedFlagAndZeroClockKeepTimingAvailableUntilOfficialFinish() throws {
+        let at = "2026-11-20T01:24:00Z"
+        let now = try XCTUnwrap(RFC3339.parse(at)).addingTimeInterval(20)
+        for status in ["Aborted", "Suspended", "Started", "Finished", "Finalised", "Cancelled"] {
+            var snapshot = try liveFixture(status: status, updatedAt: at, sessionName: "Practice 2")
+            snapshot.timeRemainingSeconds = 10
+            snapshot.clockRunning = true
+            snapshot.clockSampleAt = at
+            let suspended = ["Aborted", "Suspended"].contains(status)
+            let active = suspended || status == "Started"
+            XCTAssertEqual(LiveIslandLogic.isFinished(status), !active, status)
+            XCTAssertEqual(LiveSessionAvailability.isAvailable(snapshot, now: now), active, status)
+            if active {
+                XCTAssertEqual(snapshot.sessionClockLabel(at: now), suspended ? "0:10" : "0:00", status)
+            }
+            if suspended {
+                let stale = try liveFixture(status: status, updatedAt: at, sessionName: "Practice 2", source: "stale")
+                XCTAssertEqual(stale.trackCondition, .red, status)
+                XCTAssertTrue(LiveSessionAvailability.isAvailable(stale, now: now.addingTimeInterval(600)), status)
+                XCTAssertEqual(LiveIslandLogic.displayedSnapshot(current: stale, lastKnown: nil, meetings: [], now: now), stale)
+            }
+        }
+    }
+
     func testHelmetAssetsUseExistingDriverIdentityAliases() {
         XCTAssertEqual(MotorsportAssetName.helmetName(name: "Max VERSTAPPEN", season: 2026), "helmet-max_verstappen-2026")
         XCTAssertEqual(MotorsportAssetName.helmetName(name: "Rafael CÂMARA", season: 2026), "helmet-rafael_camara-2026")
         XCTAssertEqual(MotorsportAssetName.helmetName(driverID: "norris", name: "Lando Norris", season: 2026), "helmet-norris-2026")
     }
 
-    private func liveFixture(status: String, updatedAt: String) throws -> LiveSnapshot {
+    private func liveFixture(status: String, updatedAt: String, sessionName: String = "Race", source: String = "connected") throws -> LiveSnapshot {
         let json = """
-        {"schemaVersion":1,"stateVersion":1,"sessionId":"race","sessionName":"Race","sourceStatus":"connected","sourceMode":"live","sessionStatus":"\(status)","updatedAt":"\(updatedAt)","drivers":[{"number":"1","position":1,"name":"Lando Norris"}],"raceControl":[]}
+        {"schemaVersion":1,"stateVersion":1,"sessionId":"race","sessionName":"\(sessionName)","sourceStatus":"\(source)","sourceMode":"live","sessionStatus":"\(status)","updatedAt":"\(updatedAt)","drivers":[{"number":"1","position":1,"name":"Lando Norris"}],"raceControl":[]}
         """
         return try JSONDecoder().decode(LiveSnapshot.self, from: Data(json.utf8))
     }

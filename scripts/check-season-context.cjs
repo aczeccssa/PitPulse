@@ -10,7 +10,7 @@ function functionSource(name) {
  return source.slice(start, end + 6);
 }
 const context = vm.createContext({
- location: { hash: '#/head-to-head?season=2021' },
+ location: { search: '?season=2021' },
  state: { driversStandings: [{ season: 2026 }] },
  artSeasonValue: 2026,
  driverPages: {season: 2026},
@@ -19,7 +19,7 @@ const context = vm.createContext({
 vm.runInContext(functionSource('requestedSeason'), context);
 vm.runInContext(functionSource('artSeason'), context);
 assert.equal(vm.runInContext('artSeason()', context), 2021, 'background render must not overwrite requested media season');
-context.location.hash = '#/driver-standings?season=2024';
+context.location.search = '?season=2024';
 assert.equal(vm.runInContext('artSeason()', context), 2024);
 vm.runInContext(functionSource('seasonDriver'), context);
 context.driver = { driverId: 'max_verstappen', season: 2021, driverNumber: '3', constructor: 'Red Bull' };

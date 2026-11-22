@@ -7,12 +7,13 @@ use crate::{
     api::refresh::{DataRefreshEvent, RefreshRequest, RefreshStatus, RefreshTarget},
     app_state::AppState,
     domain::calendar::{Meeting, Session, SessionType},
-    domain::live::{LiveSourceMode, LiveStatus},
+    domain::live::{LiveSnapshot, LiveSourceMode, LiveStatus},
     error::ProviderError,
     providers::{
         f1_live::{
             client::{F1LiveClient, F1LiveError, F1LiveUpdate},
             reducer::LiveTopicReducer,
+            telemetry_relay::{self, TelemetryUpdate},
         },
         wec_live::{WEC_SERIES_ID, WecLiveClient, snapshot_from_bootstrap},
     },
@@ -550,11 +551,32 @@ async fn run_live_supervisor(state: AppState) {
         "https://livetiming.formula1.com/signalrcore".to_string(),
     )
     .with_interface(state.config.providers.f1_live_interface.clone());
+    let relay_enabled = state.config.providers.f1_telemetry_relay_enabled
+        && state.config.providers.f1_live_access_token.is_none();
+    let (relay_tx, mut relay_rx) = mpsc::channel(32);
+    let relay = async {
+        if relay_enabled {
+            telemetry_relay::supervise(state.live.subscribe(), relay_tx).await;
+        }
+        std::future::pending::<()>().await;
+    };
+    tokio::pin!(relay);
+    let mut cached_relay = if relay_enabled {
+        match state.database.live_snapshot_cache("f1").await {
+            Ok(Some(json)) => serde_json::from_str::<LiveSnapshot>(&json).ok(),
+            Ok(None) => None,
+            Err(error) => {
+                tracing::warn!(%error, "failed to read F1 telemetry cache");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let mut pending_cache = None;
     let mut failures = 0usize;
     loop {
-        state
-            .live
-            .reset(LiveStatus::Disconnected, LiveSourceMode::Live, "connecting");
+        state.live.begin_reconnect();
         let mut reducer = LiveTopicReducer::default();
         let (update_tx, mut update_rx) = mpsc::channel(256);
         let (stop_tx, stop_rx) = oneshot::channel();
@@ -564,12 +586,22 @@ async fn run_live_supervisor(state: AppState) {
         let mut freshness = tokio::time::interval(Duration::from_secs(1));
         freshness.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         freshness.tick().await;
+        let mut checkpoint = tokio::time::interval(Duration::from_secs(5));
+        checkpoint.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        checkpoint.tick().await;
 
         let result = loop {
             tokio::select! {
+                _ = &mut relay => unreachable!("telemetry supervisor stays pending"),
+                Some(update) = relay_rx.recv(), if relay_enabled => {
+                    if let Some(snapshot) = apply_telemetry_relay(&state, &mut reducer, update).await {
+                        cached_relay = Some(snapshot.clone());
+                        pending_cache = Some(snapshot);
+                    }
+                }
                 update = update_rx.recv() => match update {
                     Some(update) => {
-                        apply_live_update(&state, &mut reducer, update).await;
+                        apply_live_update(&state, &mut reducer, update, cached_relay.as_ref()).await;
                         if state.live.current().source_status == LiveStatus::Connected {
                             if failures > 0 {
                                 tracing::info!(session_id = ?state.live.current().session_id, "F1 Live subscription recovered");
@@ -580,7 +612,16 @@ async fn run_live_supervisor(state: AppState) {
                     None => break Err(F1LiveError::ChannelClosed),
                 },
                 result = &mut connection => break result,
+                _ = checkpoint.tick(), if relay_enabled => save_relay_cache(&state, &mut pending_cache).await,
                 _ = freshness.tick() => {
+                    if reducer.has_relay_telemetry()
+                        && let Ok(now) = state.database.utc_now().await
+                    {
+                        let snapshot = reducer.snapshot(&now);
+                        if snapshot.drivers != state.live.current().drivers {
+                            publish_live_supplement(&state, snapshot);
+                        }
+                    }
                     let stale_after = Duration::from_secs(state.config.live.stale_after_seconds.max(1));
                     let disconnect_after = Duration::from_secs(
                         state.config.live.disconnect_after_seconds.max(state.config.live.stale_after_seconds.saturating_add(1)),
@@ -592,6 +633,7 @@ async fn run_live_supervisor(state: AppState) {
                 }
             }
         };
+        save_relay_cache(&state, &mut pending_cache).await;
 
         let error = result.err().unwrap_or(F1LiveError::Disconnected);
         let reason = if matches!(error, F1LiveError::Disconnected)
@@ -733,11 +775,57 @@ async fn run_wec_live_supervisor(state: AppState) {
     }
 }
 
-async fn apply_live_update(state: &AppState, reducer: &mut LiveTopicReducer, update: F1LiveUpdate) {
+async fn apply_telemetry_relay(
+    state: &AppState,
+    reducer: &mut LiveTopicReducer,
+    update: TelemetryUpdate,
+) -> Option<LiveSnapshot> {
+    if telemetry_relay::matching_session(&state.live.current()) != Some(update.session_id.as_str())
+    {
+        return None;
+    }
+    let received_at = state.database.utc_now().await.ok()?;
+    if !reducer.apply_relay_telemetry(&update.session_id, &update.data, &received_at) {
+        return None;
+    }
+    let snapshot = reducer.snapshot(&received_at);
+    let cache = LiveTopicReducer::relay_cache(&snapshot);
+    publish_live_supplement(state, snapshot);
+    Some(cache)
+}
+
+async fn save_relay_cache(state: &AppState, pending: &mut Option<LiveSnapshot>) {
+    if let Some(json) = pending
+        .as_ref()
+        .and_then(|snapshot| serde_json::to_string(snapshot).ok())
+    {
+        match state.database.save_live_snapshot_cache("f1", json).await {
+            Ok(()) => *pending = None,
+            Err(error) => tracing::warn!(%error, "failed to checkpoint F1 telemetry cache"),
+        }
+    }
+}
+
+fn publish_live_supplement(state: &AppState, mut snapshot: LiveSnapshot) {
+    let official = state.live.current().clone();
+    snapshot.source_status = official.source_status;
+    snapshot.status_reason = official.status_reason;
+    snapshot.updated_at = official.updated_at;
+    snapshot.last_transport_at = official.last_transport_at;
+    state.live.publish_supplement(snapshot);
+}
+
+async fn apply_live_update(
+    state: &AppState,
+    reducer: &mut LiveTopicReducer,
+    update: F1LiveUpdate,
+    cached_relay: Option<&LiveSnapshot>,
+) {
     let Ok(received_at) = state.database.utc_now().await else {
         tracing::warn!("failed to timestamp F1 Live update");
         return;
     };
+    let previous_session = reducer.session_id().map(str::to_owned);
     let reduced = match update {
         F1LiveUpdate::InitialSnapshot(value) => {
             reducer.apply_initial_snapshot(&value, &received_at)
@@ -755,6 +843,13 @@ async fn apply_live_update(state: &AppState, reducer: &mut LiveTopicReducer, upd
     };
     let data_updated = reduced.data_updated;
     let mut snapshot = reduced.snapshot;
+    if let Some(cache) = cached_relay
+        && previous_session != snapshot.session_id
+        && cache.session_id == snapshot.session_id
+    {
+        reducer.restore_relay_telemetry(cache);
+        snapshot = reducer.snapshot(&received_at);
+    }
     if !data_updated {
         let current = state.live.current();
         snapshot.source_status = current.source_status;

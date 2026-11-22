@@ -46,7 +46,7 @@ impl LiveState {
         self.sender.receiver_count()
     }
 
-    pub fn publish(&self, mut snapshot: LiveSnapshot, data_updated: bool) {
+    pub fn publish(&self, snapshot: LiveSnapshot, data_updated: bool) {
         let now = Instant::now();
         *self
             .last_transport
@@ -58,6 +58,11 @@ impl LiveState {
                 .lock()
                 .unwrap_or_else(|error| error.into_inner()) = Some(now);
         }
+        self.publish_supplement(snapshot);
+    }
+
+    /// Supplemental data must never refresh the primary connection or timing age.
+    pub fn publish_supplement(&self, mut snapshot: LiveSnapshot) {
         snapshot.state_version = self.next_version();
         self.sender.send_replace(snapshot);
     }
@@ -69,15 +74,34 @@ impl LiveState {
         }
         snapshot.source_status = status;
         snapshot.status_reason = Some(reason.to_string());
+        if status != LiveStatus::Connected {
+            for driver in &mut snapshot.drivers {
+                if let Some(sample) = &mut driver.telemetry {
+                    sample.cached = true;
+                }
+                if let Some(sample) = &mut driver.location {
+                    sample.cached = true;
+                }
+            }
+        }
         snapshot.state_version = self.next_version();
         self.sender.send_replace(snapshot);
     }
 
-    pub fn reset(&self, status: LiveStatus, mode: LiveSourceMode, reason: &str) {
+    fn reset_freshness(&self) {
         *self
             .last_transport
             .lock()
             .unwrap_or_else(|error| error.into_inner()) = None;
+    }
+
+    pub fn begin_reconnect(&self) {
+        self.reset_freshness();
+        self.mark_status(LiveStatus::Disconnected, "connecting");
+    }
+
+    pub fn reset(&self, status: LiveStatus, mode: LiveSourceMode, reason: &str) {
+        self.reset_freshness();
         *self
             .last_data
             .lock()
@@ -126,6 +150,19 @@ impl LiveState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_supplement_versions_snapshot_without_refreshing_official_connection() {
+        let live = LiveState::new(LiveStatus::Connected);
+        live.publish(LiveSnapshot::default(), true);
+        let before = live.current().clone();
+        let transport = *live.last_transport.lock().unwrap();
+        let data = *live.last_data.lock().unwrap();
+        live.publish_supplement(before.clone());
+        assert!(live.current().state_version > before.state_version);
+        assert_eq!(*live.last_transport.lock().unwrap(), transport);
+        assert_eq!(*live.last_data.lock().unwrap(), data);
+    }
 
     #[tokio::test]
     async fn test_slow_watch_consumer_gets_latest_snapshot_without_backlog() {
