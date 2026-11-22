@@ -2,9 +2,50 @@ import Charts
 import SharedComponents
 import SharedData
 import SwiftUI
+import UIKit
+
+struct StandingColumns<Rankings: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Binding var wide: Bool
+    var enabled = true
+    let selected: StandingEntry?
+    var driversDesign = false
+    var tabletDriverProfile = false
+    @ViewBuilder var rankings: () -> Rankings
+
+    var body: some View {
+        GeometryReader { viewport in
+            HStack(spacing: 0) {
+                rankings()
+                    .frame(width: wide ? min(350, viewport.size.width * 0.32) : viewport.size.width)
+                if wide {
+                    Divider()
+                    if let selected {
+                        NavigationStack {
+                            StandingProfile(entry: selected, driversDesign: driversDesign, tabletWebProfile: tabletDriverProfile)
+                                .toolbar(.visible, for: .navigationBar)
+                        }
+                        .environment(\.dashboardLivePage, nil)
+                        .environment(\.dashboardLiveDetailFrame, nil)
+                        .id(selected.id)
+                    } else {
+                        ContentUnavailableView("Select a Standing", systemImage: "trophy",
+                                               description: Text("Choose an entry to view its season details."))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+            }
+        }
+        .onGeometryChange(for: Bool.self) { geometry in
+            enabled && UIDevice.current.userInterfaceIdiom == .pad
+                && geometry.size.width >= 840 && !typeSize.isAccessibilitySize
+        } action: { wide = $0 }
+    }
+}
 
 struct ChampionshipScreen: View {
     @Environment(\.pulseEnglishPresentation) private var english
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private func copy(_ englishText: @autoclosure () -> String, _ original: @autoclosure () -> String) -> String {
         english ? englishText() : original()
@@ -15,13 +56,17 @@ struct ChampionshipScreen: View {
     @State private var teamError: String?
     @State private var showTeams: Bool
     let constructorsOnly: Bool
+    var tabletWebLayout = false
     @State private var showSeasonCharts = false
     @State private var showConstructorCharts = false
     @State private var selection: Set<String>?
     @State private var showChartFilters = false
     @State private var standingDetail: StandingEntry?
-    init(constructorsOnly: Bool = false, showTeams: Bool = false) {
+    @State private var wideStandings = false
+    @State private var compactStanding = false
+    init(constructorsOnly: Bool = false, showTeams: Bool = false, tabletWebLayout: Bool = false) {
         self.constructorsOnly = constructorsOnly
+        self.tabletWebLayout = tabletWebLayout
         _showTeams = State(initialValue: showTeams)
     }
 
@@ -42,11 +87,20 @@ struct ChampionshipScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            championshipContent
+        Group {
+            if constructorsOnly && tabletWebLayout {
+                constructorOverview
+            } else {
+                StandingColumns(wide: $wideStandings, enabled: constructorsOnly, selected: standingDetail) {
+                    championshipContent
+                }
+            }
         }
-        .navigationDestination(item: $standingDetail) { entry in
-            StandingProfile(entry: entry)
+        .onChange(of: wideStandings) { _, wide in
+            compactStanding = !wide && standingDetail != nil
+        }
+        .navigationDestination(isPresented: $compactStanding) {
+            if let standingDetail { StandingProfile(entry: standingDetail) }
         }
         .navigationDestination(isPresented: $showConstructorCharts) {
             ScrollView {
@@ -86,6 +140,58 @@ struct ChampionshipScreen: View {
             await loadTeams()
             await archive
         }
+    }
+
+    private var constructorOverview: some View {
+        GeometryReader { viewport in
+            let split = viewport.size.width >= 720 && !typeSize.isAccessibilitySize
+            let layout = split ? AnyLayout(HStackLayout(alignment: .top, spacing: 14))
+                               : AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            ScrollView {
+                layout {
+                    if let leader = entries.first {
+                        VStack(spacing: 12) {
+                            constructorOverviewLeader(leader)
+                            standingsTable(leader)
+                        }
+                        .frame(width: split ? min(315, viewport.size.width * 0.28) : nil)
+                    }
+                    VStack(alignment: .leading, spacing: 12) { seasonChartsContent }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .padding(14)
+            }
+            .refreshable {
+                async let archive: Void = model.loadSeasonArchive(force: true)
+                await loadTeams()
+                await archive
+            }
+        }
+        .background(WebDashboardStyle.homeBackground)
+    }
+
+    private func constructorOverviewLeader(_ leader: StandingEntry) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Constructors’ Championship Leader").font(.subheadline.weight(.semibold))
+                Spacer(minLength: 6)
+                AssetImage(name: leader.asset).frame(width: 32, height: 32).accessibilityHidden(true)
+            }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(leader.name).font(.title2.bold()).lineLimit(2)
+                    Text("\(leader.points.formatted()) points").font(.subheadline).foregroundStyle(.secondary)
+                }
+                if let car = DashboardArt.image(.carSide, id: leader.id, season: leader.season) {
+                    Image(uiImage: car).resizable().scaledToFit().frame(maxHeight: 65)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardPanel(WebDashboardStyle.homePanel)
     }
 
     private var championshipContent: some View {
@@ -158,7 +264,8 @@ struct ChampionshipScreen: View {
                 Text(copy("Showing cached season data", "赛季数据使用缓存")).font(.caption).foregroundStyle(.secondary)
             }
             ChampionshipSeasonCharts(entries: entries, weekends: archive.data, usingTeams: usingTeams,
-                                      sharedSelection: constructorsOnly ? $selection : nil)
+                                      sharedSelection: constructorsOnly && !tabletWebLayout ? $selection : nil,
+                                      tabletWebLayout: tabletWebLayout)
                 .id("\(model.dataContext):\(usingTeams)")
         } else if let error = (usingTeams ? teamError : model.rosterLoadError) ?? model.seasonArchiveError {
             ContentUnavailableView(copy("Couldn't Load Season Charts", "无法载入赛季图表"), systemImage: "chart.xyaxis.line", description: Text(english ? error.pulseEnglishError : error))
@@ -246,31 +353,32 @@ struct ChampionshipScreen: View {
                 guard ranks.count == 2, let earlier = ranks.first, let later = ranks.last else { return nil }
                 return earlier.ranking - later.ranking
             }
+        let title = "\(String(model.season)) F1 Constructor Standings"
         return PulseCard {
             VStack(alignment: .leading, spacing: 0) {
-                Text(copy("\(String(model.season)) \(entity) Standings", "\(String(model.season)) \(entity)积分榜"))
-                    .font(.headline)
-                    .padding(.bottom, 10)
+                HStack {
+                    Text(tabletWebLayout ? title : copy("\(String(model.season)) \(entity) Standings", "\(String(model.season)) \(entity)积分榜"))
+                        .font(.headline)
+                }
+                .padding(.bottom, 10)
                 if usingTeams ? teams?.meta.stale == true : model.rosterSavedAt == .distantPast {
                     Text(copy("Standings · Stale Cache", "缓存积分 · 已过期")).font(.caption).foregroundStyle(.secondary)
                 }
                 constructorColumns {
-                    Text("POS.").frame(minWidth: 30, alignment: .leading)
+                    Text("POS.").frame(minWidth: tabletWebLayout ? 20 : 30, alignment: .leading)
                     Text(usingTeams ? "CONSTRUCTOR" : "DRIVER").frame(maxWidth: .infinity, alignment: .leading)
                     Text("POINTS").frame(minWidth: 50, alignment: .trailing)
                     Text(lastRound.map { "R\($0) Δ" } ?? "EVO.")
-                        .frame(width: 38, alignment: .trailing)
+                        .frame(width: tabletWebLayout ? 29 : 38, alignment: .trailing)
                         .accessibilityLabel(copy("Position change in the latest archived race", "最近一站归档排名变动"))
                 }.font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                     .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, tabletWebLayout ? 8 : 0)
                     .padding(.vertical, 10)
                 ForEach(entries, id: \.id) { entry in
                     Divider()
-                    Button {
-                        standingDetail = entry
-                    } label: {
-                        constructorColumns {
-                            Text(String(entry.position)).monospacedDigit().frame(minWidth: 30, alignment: .leading)
+                    let row = constructorColumns {
+                            Text(String(entry.position)).monospacedDigit().frame(minWidth: tabletWebLayout ? 20 : 30, alignment: .leading)
                             HStack(spacing: 7) {
                                 AssetImage(name: entry.asset).frame(width: 26, height: 21).accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
@@ -289,11 +397,24 @@ struct ChampionshipScreen: View {
                                 }
                             }.monospacedDigit().frame(minWidth: 50, alignment: .trailing)
                             constructorEvolution(changes[entry.id])
-                                .frame(width: 38, alignment: .trailing)
-                        }.font(.subheadline).frame(minHeight: 48).contentShape(.rect)
-                            .accessibilityElement(children: .combine)
-                    }.buttonStyle(PulsePressStyle())
+                                .frame(width: tabletWebLayout ? 29 : 38, alignment: .trailing)
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, tabletWebLayout ? 8 : 0)
+                        .frame(minHeight: 48)
+                        .accessibilityElement(children: .combine)
+                    if tabletWebLayout {
+                        row
+                    } else {
+                        Button {
+                            standingDetail = entry
+                            compactStanding = !wideStandings
+                        } label: {
+                            row.contentShape(.rect)
+                        }
+                        .buttonStyle(PulsePressStyle())
                         .accessibilityIdentifier("\(usingTeams ? "constructors" : "drivers").detail.\(entry.id)")
+                    }
                 }
             }
         }
@@ -326,6 +447,7 @@ struct ChampionshipScreen: View {
         let tint = DashboardArt.teamColor(leader.id)
         return Button {
             standingDetail = leader
+            compactStanding = !wideStandings
         } label: {
             PulseCardDestination {
                 VStack(alignment: .leading, spacing: 8) {
@@ -416,6 +538,9 @@ struct ChampionshipSeasonCharts: View {
     let usingTeams: Bool
     var sharedSelection: Binding<Set<String>?>? = nil
     var driversDesign = false
+    var tabletWebLayout = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var chartWidth: CGFloat = 0
     @State private var driverChart = DriverChart.trends
     @State private var showRanks = false
     @State private var selectedRound: Int?
@@ -522,10 +647,10 @@ struct ChampionshipSeasonCharts: View {
         let shownIDs = Set(shownEntries.map(\.id))
         let visible = history.filter { shownIDs.contains($0.team.id) }
         VStack(spacing: 12) {
-            if driversDesign {
+            if driversDesign && !tabletWebLayout {
                 PulseSectionPicker(sections: [(.trends, "Trends"), (.points, "Points")], selection: $driverChart)
             }
-            if sharedSelection == nil && !driversDesign {
+            if sharedSelection == nil && !driversDesign && !tabletWebLayout {
                 Button {
                     showFilters = true
                 } label: {
@@ -548,17 +673,25 @@ struct ChampionshipSeasonCharts: View {
 
             if shownEntries.isEmpty {
                 ContentUnavailableView(usingTeams ? copy("Select Teams", "请选择车队") : copy("Select Drivers", "请选择车手"), systemImage: "line.3.horizontal.decrease")
+            } else if tabletWebLayout {
+                let columns = chartWidth >= 710 && !typeSize.isAccessibilitySize ? 2 : 1
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns), spacing: 12) {
+                    if !visible.isEmpty {
+                        trend(visible, shownEntries: shownEntries, ranks: false, round: $selectedRound)
+                        trend(visible, shownEntries: shownEntries, ranks: true, round: $selectedRankRound)
+                    }
+                    resultBreakdown(shownEntries)
+                    distribution(visible, shownEntries: shownEntries)
+                }
             } else {
                 if sharedSelection == nil && (!driversDesign || driverChart == .trends) {
                     if visible.isEmpty {
                         ContentUnavailableView(copy("No Standings Trend", "暂无可计算的累计走势"), systemImage: "chart.xyaxis.line")
+                    } else if driversDesign {
+                        trend(visible, shownEntries: shownEntries, ranks: false, round: $selectedRound)
+                        trend(visible, shownEntries: shownEntries, ranks: true, round: $selectedRankRound)
                     } else {
-                        if driversDesign {
-                            trend(visible, shownEntries: shownEntries, ranks: false, round: $selectedRound)
-                            trend(visible, shownEntries: shownEntries, ranks: true, round: $selectedRankRound)
-                        } else {
-                            trend(visible, shownEntries: shownEntries, ranks: showRanks, round: $selectedRound)
-                        }
+                        trend(visible, shownEntries: shownEntries, ranks: showRanks, round: $selectedRound)
                     }
                 }
                 if !driversDesign || driverChart == .points {
@@ -568,6 +701,9 @@ struct ChampionshipSeasonCharts: View {
                     resultBreakdown(shownEntries)
                 }
             }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+            if tabletWebLayout { chartWidth = width }
         }
         .pulseSwap(driverChart)
         .toolbar {
@@ -654,11 +790,17 @@ struct ChampionshipSeasonCharts: View {
     private func trend(_ visible: [Sample], shownEntries: [StandingEntry], ranks: Bool, round: Binding<Int?>) -> some View {
         let counts = Dictionary(grouping: visible, by: { $0.team.id }).mapValues(\.count)
         let selectedRound = round.wrappedValue
+        let flags = Dictionary(weekends.compactMap { weekend in
+            weekend.meeting.round.map { ($0, weekend.meeting.countryCode) }
+        }, uniquingKeysWith: { first, _ in first })
+        let rounds = Set(visible.map(\.round)).sorted()
+        let ranksByTeam = 1...max(1, visible.map(\.ranking).max() ?? shownEntries.count)
+        let title = "\(usingTeams ? "Constructor" : "Driver") \(ranks ? "Ranking" : "Points") Evolution"
         return PulseCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(driversDesign ? (ranks ? "Rank" : "Cumulative Points")
-                         : (ranks ? copy("Rank by Round", "分站排名走势") : copy("Season Points", "赛季累计积分")))
+                    Text(tabletWebLayout ? title : (driversDesign ? (ranks ? "Rank" : "Cumulative Points")
+                         : (ranks ? copy("Rank by Round", "分站排名走势") : copy("Season Points", "赛季累计积分"))))
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
                     if driversDesign && !ranks {
@@ -672,7 +814,7 @@ struct ChampionshipSeasonCharts: View {
                         .accessibilityAddTraits(compareChampion ? .isSelected : [])
                     }
                 }
-                if !driversDesign {
+                if !driversDesign && !tabletWebLayout {
                     PulseSectionPicker(sections: [(false, copy("Cumulative Points", "累计积分")), (true, copy("Rank", "排名"))], selection: $showRanks)
                 }
                 if !ranks {
@@ -691,16 +833,19 @@ struct ChampionshipSeasonCharts: View {
                         }
                     }
                 }
-                legend(shownEntries)
+                if tabletWebLayout && ranks {
+                    Color.clear.frame(height: 26).accessibilityHidden(true)
+                }
+                if !tabletWebLayout { legend(shownEntries) }
                 Chart {
                     ForEach(visible) { sample in
                         let y = ranks ? Double(sample.ranking) : sample.points
                         LineMark(x: .value(copy("Round", "轮次"), sample.round), y: .value(copy("Results", "成绩"), y),
                                  series: .value(copy("Team", "车队"), sample.team.id))
                             .foregroundStyle(seriesColor(sample.team))
-                        if sample.round == selectedRound || counts[sample.team.id] == 1 {
+                        if tabletWebLayout || sample.round == selectedRound || counts[sample.team.id] == 1 {
                             PointMark(x: .value(copy("Round", "轮次"), sample.round), y: .value(copy("Results", "成绩"), y))
-                                .foregroundStyle(seriesColor(sample.team)).symbolSize(26)
+                                .foregroundStyle(seriesColor(sample.team)).symbolSize(tabletWebLayout ? 10 : 26)
                         }
                     }
                     if !ranks, compareChampion, let previousChampion {
@@ -713,6 +858,29 @@ struct ChampionshipSeasonCharts: View {
                     }
                 }.pulseChart()
                 .chartYScale(domain: .automatic(includesZero: !ranks, reversed: ranks))
+                .chartXAxis {
+                    if tabletWebLayout {
+                        AxisMarks(values: rounds) { value in
+                            if let round = value.as(Int.self) {
+                                AxisValueLabel {
+                                    FlagBadge(countryCode: flags[round] ?? nil, width: 11)
+                                }
+                            }
+                        }
+                    } else {
+                        AxisMarks()
+                    }
+                }
+                .chartYAxis {
+                    if tabletWebLayout && ranks {
+                        AxisMarks(position: .leading, values: ranksByTeam.map(Double.init)) {
+                            AxisGridLine()
+                            AxisValueLabel()
+                        }
+                    } else {
+                        AxisMarks(position: tabletWebLayout ? .leading : .automatic)
+                    }
+                }
                 .chartXSelection(value: round)
                 .frame(height: 210)
                 if let selectedRound {
@@ -723,15 +891,16 @@ struct ChampionshipSeasonCharts: View {
                     }
                 }
             }
+            .frame(minHeight: tabletWebLayout ? 290 : nil, alignment: .topLeading)
         }
     }
 
-    private func distribution(_ visible: [Sample], shownEntries: [StandingEntry]) -> some View {
+    @ViewBuilder private func distribution(_ visible: [Sample], shownEntries: [StandingEntry]) -> some View {
         let overall = shownEntries.filter { $0.points > 0 }
         let overallPoints = overall.reduce(0) { $0 + $1.points }
         let rounded = visible.filter { sample in
             guard let points = sample.roundPoints else { return false }
-            return sharedSelection != nil || driversDesign || points > 0
+            return tabletWebLayout || sharedSelection != nil || driversDesign || points > 0
         }
         let rounds = Set(rounded.map(\.round)).sorted()
         let meetingsByRound = Dictionary(weekends.compactMap { weekend in
@@ -739,35 +908,93 @@ struct ChampionshipSeasonCharts: View {
         }, uniquingKeysWith: { first, _ in first })
         let teamNames = shownEntries.map(\.name)
         let colors = shownEntries.map(seriesColor)
-        return VStack(spacing: 12) {
-            PulseCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(copy("Total Points Distribution", "总积分分布")).font(.headline)
-                    if !overall.isEmpty {
-                        Chart(overall, id: \.id) { team in
-                            BarMark(x: .value(copy("Points", "积分"), team.points), stacking: .normalized)
-                                .foregroundStyle(by: .value(copy("Team", "车队"), team.name))
-                                .accessibilityLabel(team.name)
-                                .accessibilityValue(share(team.points, of: overallPoints))
-                        }.pulseChart()
-                        .chartForegroundStyleScale(domain: teamNames, range: colors)
-                        .chartXAxis(.hidden).chartYAxis(.hidden).chartLegend(.hidden)
-                        .frame(height: 28)
-                    } else {
-                        Text(copy("No season points", "暂无可用的赛季积分")).font(.caption).foregroundStyle(.secondary)
+        let title = usingTeams ? "Constructor Points Distribution" : "Driver Points Distribution"
+        if tabletWebLayout {
+            tabletDistribution(title: title, entries: shownEntries, samples: rounded, rounds: rounds, meetings: meetingsByRound)
+        } else {
+            VStack(spacing: 12) {
+                PulseCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(copy("Total Points Distribution", "总积分分布")).font(.headline)
+                        if !overall.isEmpty {
+                            Chart(overall, id: \.id) { team in
+                                BarMark(x: .value(copy("Points", "积分"), team.points), stacking: .normalized)
+                                    .foregroundStyle(by: .value(copy("Team", "车队"), team.name))
+                                    .accessibilityLabel(team.name)
+                                    .accessibilityValue(share(team.points, of: overallPoints))
+                            }.pulseChart()
+                            .chartForegroundStyleScale(domain: teamNames, range: colors)
+                            .chartXAxis(.hidden).chartYAxis(.hidden).chartLegend(.hidden)
+                            .frame(height: 28)
+                        } else {
+                            Text(copy("No season points", "暂无可用的赛季积分")).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                PulseCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(copy("Round Points Distribution", "分站积分分布")).font(.headline)
+                        if rounds.isEmpty {
+                            Text(copy("No round points", "暂无可用的分站积分")).font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            roundDistribution(rounded, rounds: rounds, meetingsByRound: meetingsByRound, teamNames: teamNames, colors: colors)
+                        }
                     }
                 }
             }
-            PulseCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(copy("Round Points Distribution", "分站积分分布")).font(.headline)
-                    if rounds.isEmpty {
-                        Text(copy("No round points", "暂无可用的分站积分")).font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        roundDistribution(rounded, rounds: rounds, meetingsByRound: meetingsByRound, teamNames: teamNames, colors: colors)
+        }
+    }
+
+    private func tabletDistribution(title: String, entries: [StandingEntry], samples: [Sample],
+                                    rounds: [Int], meetings: [Int: Meeting]) -> some View {
+        let overall = entries.map { ($0, $0.points) }.filter { $0.1 > 0 }
+        let total = overall.reduce(0) { $0 + $1.1 }
+        let byRound = Dictionary(grouping: samples, by: \.round)
+        let maxRound = byRound.values.map { $0.reduce(0) { $0 + max(0, $1.roundPoints ?? 0) } }.max() ?? 0
+        let order = Dictionary(uniqueKeysWithValues: entries.enumerated().map { ($1.id, $0) })
+        return PulseCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                }
+                Text("OVERALL").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                pointStack(overall, scale: total, total: total, country: nil)
+                Text("BY RACE").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    .padding(.top, 4)
+                ForEach(rounds, id: \.self) { round in
+                    let segments = byRound[round, default: []].compactMap { sample -> (StandingEntry, Double)? in
+                        guard let value = sample.roundPoints, value > 0 else { return nil }
+                        return (sample.team, value)
+                    }.sorted { order[$0.0.id, default: .max] < order[$1.0.id, default: .max] }
+                    pointStack(segments, scale: maxRound, total: segments.reduce(0) { $0 + $1.1 },
+                               country: meetings[round]?.countryCode)
+                        .accessibilityLabel(roundTitle(round))
+                }
+            }
+        }
+    }
+
+    private func pointStack(_ segments: [(StandingEntry, Double)], scale: Double, total: Double, country: String?) -> some View {
+        HStack(spacing: 5) {
+            if let country {
+                FlagBadge(countryCode: country, width: 15).accessibilityHidden(true)
+            } else {
+                Color.clear.frame(width: 15, height: 1).accessibilityHidden(true)
+            }
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
+                    ForEach(segments, id: \.0.id) { entry, value in
+                        Rectangle()
+                            .fill(WebDashboardStyle.chartTeamColor(entry.colorID, adjustsForLight: false))
+                            .frame(width: geometry.size.width * value / max(1, scale))
+                            .accessibilityLabel(entry.name)
+                            .accessibilityValue(value.formatted())
                     }
                 }
             }
+            .frame(height: 16)
+            PulseNumber(total.formatted()).font(.caption2.weight(.semibold)).monospacedDigit()
+                .frame(width: 34, alignment: .trailing)
         }
     }
 
@@ -846,7 +1073,7 @@ struct ChampionshipSeasonCharts: View {
     }
 
     private func resultBreakdown(_ shownEntries: [StandingEntry]) -> some View {
-        let selectedMetrics = ResultMetric.allCases.filter { metrics.contains($0) }
+        let selectedMetrics = tabletWebLayout ? ResultMetric.allCases : ResultMetric.allCases.filter { metrics.contains($0) }
         let races = weekends.flatMap { $0.sessions["race"]?.rows ?? [] }
         let qualifying = weekends.flatMap { $0.sessions["qualifying"]?.rows ?? [] }
         let values = shownEntries.flatMap { team in
@@ -858,28 +1085,67 @@ struct ChampionshipSeasonCharts: View {
             }
         }
         let chartMetrics = selectedMetrics.filter { metric in values.contains { $0.metric == metric } }
+        let title = usingTeams ? "Constructor Season Stats" : "Driver Season Stats"
         return PulseCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text(usingTeams ? copy("Constructor Performance", "车队赛季表现") : copy("Driver Performance", "车手赛季表现")).font(.headline)
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        ForEach(ResultMetric.allCases) { metric in
-                            let active = metrics.contains(metric)
-                            Button {
-                                if active { metrics.remove(metric) }
-                                else { metrics.insert(metric) }
-                            } label: {
-                                Label(metricTitle(metric), systemImage: active ? "checkmark.circle.fill" : "circle")
-                                    .font(.caption)
-                            }.buttonStyle(.glass)
-                                .foregroundStyle(active ? metric.color : .secondary)
-                                .accessibilityAddTraits(active ? .isSelected : [])
+                HStack {
+                    Text(tabletWebLayout ? title : (usingTeams ? copy("Constructor Performance", "车队赛季表现") : copy("Driver Performance", "车手赛季表现")))
+                        .font(.headline).accessibilityAddTraits(.isHeader)
+                }
+                if tabletWebLayout {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8, alignment: .leading)],
+                              alignment: .leading, spacing: 6) {
+                        ForEach(chartMetrics) { metric in
+                            Label {
+                                Text(metricTitle(metric)).foregroundStyle(WebDashboardStyle.homeMuted)
+                            } icon: {
+                                Circle().fill(metric.color).frame(width: 7, height: 7)
+                            }
+                            .font(.caption2)
                         }
                     }
-                }.scrollIndicators(.hidden)
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(ResultMetric.allCases) { metric in
+                                let active = metrics.contains(metric)
+                                Button {
+                                    if active { metrics.remove(metric) }
+                                    else { metrics.insert(metric) }
+                                } label: {
+                                    Label(metricTitle(metric), systemImage: active ? "checkmark.circle.fill" : "circle")
+                                        .font(.caption)
+                                }.buttonStyle(.glass)
+                                    .foregroundStyle(active ? metric.color : .secondary)
+                                    .accessibilityAddTraits(active ? .isSelected : [])
+                            }
+                        }
+                    }.scrollIndicators(.hidden)
+                }
                 if chartMetrics.isEmpty {
                     Text(selectedMetrics.isEmpty ? copy("Select Metrics", "请选择指标") : copy("No archived data for these metrics", "暂无此指标的归档数据"))
                         .font(.caption).foregroundStyle(.secondary)
+                } else if tabletWebLayout {
+                    Chart(values) { item in
+                        BarMark(x: .value("Constructor", item.team.id),
+                                y: .value("Count", item.metric == .retirements ? -item.count : item.count))
+                            .position(by: .value("Metric", metricTitle(item.metric)))
+                            .foregroundStyle(by: .value("Metric", metricTitle(item.metric)))
+                            .accessibilityLabel("\(item.team.name) · \(metricTitle(item.metric))")
+                            .accessibilityValue(item.count.formatted())
+                    }
+                    .pulseChart()
+                    .chartXScale(domain: shownEntries.map(\.id))
+                    .chartXAxis {
+                        AxisMarks(values: shownEntries.map(\.id)) { value in
+                            if let id = value.as(String.self), let entry = shownEntries.first(where: { $0.id == id }) {
+                                AxisValueLabel { AssetImage(name: entry.asset).frame(width: 13, height: 12) }
+                            }
+                        }
+                    }
+                    .chartForegroundStyleScale(domain: chartMetrics.map(metricTitle), range: chartMetrics.map(\.color))
+                    .chartLegend(.hidden)
+                    .frame(height: 245)
                 } else {
                     Chart(values) { item in
                         BarMark(x: .value(copy("Count", "次数"), item.metric == .retirements ? -item.count : item.count),
@@ -1314,10 +1580,14 @@ struct StandingProfile: View {
     @ScaledMetric(relativeTo: .title2) private var profileHelmetSize = 22.0
     let entry: StandingEntry
     var driversDesign = false
+    var tabletWebProfile = false
+    @Environment(\.openDashboardDriverProfile) private var openDriverProfile
     @State private var showsResults = false
     @Namespace private var driverRoundTransition
     @State private var analysis: APIEnvelope<SeasonAnalysis>?
     @State private var priorAnalysis: SeasonAnalysis?
+    @State private var tabletPreviousResults: [SeasonResultWeekend]?
+    @State private var tabletPreviousLoading = false
     @State private var comparePrevious = false
     @State private var priorUnavailable = false
     @State private var priorStale = false
@@ -1336,24 +1606,25 @@ struct StandingProfile: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(driversDesign ? .visible : .automatic, for: .navigationBar)
         .toolbar {
-            if entry.team != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    let favorite = model.favoriteDriverID == entry.id
-                    Button {
-                        model.favoriteDriverID = favorite ? nil : entry.id
-                    } label: {
-                        Label(driversDesign ? (favorite ? "Remove favorite driver" : "Set as favorite driver") : copy("Favorite driver", "收藏车手"),
-                              systemImage: driversDesign ? (favorite ? "heart.fill" : "heart") : (favorite ? "star.fill" : "star"))
-                            .foregroundStyle(driversDesign && favorite ? PulseStyle.red : .primary)
-                    }
-                    .accessibilityAddTraits(favorite ? .isSelected : [])
-                }
+            if entry.team != nil && !tabletWebProfile {
+                ToolbarItem(placement: .topBarTrailing) { favoriteButton }
             }
         }
         .task(id: model.dataContext) {
             async let archive: Void = entry.team == nil ? () : model.loadSeasonArchive()
             await load()
             await archive
+        }
+        .task(id: model.dataContext) {
+            guard tabletWebProfile else { return }
+            tabletPreviousResults = nil
+            guard entry.season > 2024, let url = model.serverURL else { return }
+            let context = model.dataContext
+            tabletPreviousLoading = true
+            let previous = try? await APIClient(baseURL: url).seasonResults(season: entry.season - 1, token: model.currentToken)
+            guard !Task.isCancelled, context == model.dataContext else { return }
+            tabletPreviousResults = previous?.data
+            tabletPreviousLoading = false
         }
         .task(id: "\(comparePrevious)-\(model.dataContext)") {
             guard comparePrevious, let url = model.serverURL else { return }
@@ -1432,30 +1703,35 @@ struct StandingProfile: View {
     private var redesignedDriver: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
-                driverHero
-                PulseSectionPicker(sections: [(false, "Overview"), (true, "Results")], selection: $showsResults)
-                Group {
-                    if showsResults {
-                        if let analysis {
-                            profileResults(analysis.data.rounds)
-                        } else {
-                            profileStatus
-                        }
-                    } else {
-                        if let analysis {
-                            let trend = analysis.data.cumulativePointsByRound
-                            if !trend.isEmpty { profileTrend(trend) }
-                            else if !analysis.data.hasData {
-                                ContentUnavailableView("No Season Results Yet", systemImage: "flag.checkered")
+                if tabletWebProfile {
+                    tabletDriverSummary
+                    tabletDriverCharts
+                } else {
+                    driverHero
+                    PulseSectionPicker(sections: [(false, "Overview"), (true, "Results")], selection: $showsResults)
+                    Group {
+                        if showsResults {
+                            if let analysis {
+                                profileResults(analysis.data.rounds)
+                            } else {
+                                profileStatus
                             }
                         } else {
-                            profileStatus
+                            if let analysis {
+                                let trend = analysis.data.cumulativePointsByRound
+                                if !trend.isEmpty { profileTrend(trend) }
+                                else if !analysis.data.hasData {
+                                    ContentUnavailableView("No Season Results Yet", systemImage: "flag.checkered")
+                                }
+                            } else {
+                                profileStatus
+                            }
+                            driverContext
+                            driverStatistics
                         }
-                        driverContext
-                        driverStatistics
                     }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
                 if let analysis, analysis.meta.stale || !analysis.data.warnings.isEmpty {
                     Text("Some season results may be incomplete.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -1466,6 +1742,720 @@ struct StandingProfile: View {
         .foregroundStyle(WebDashboardStyle.homeText)
         .pulseSwap(showsResults)
         .pulseSwap(analysis != nil)
+    }
+
+    @ViewBuilder private var tabletDriverCharts: some View {
+        if let archive = model.seasonArchive, entry.season == model.season {
+            let races = archive.data.compactMap { $0.sessions["race"]?.rows.first { $0.driverId == entry.id } }
+            let qualifying = archive.data.compactMap { $0.sessions["qualifying"]?.rows.first { $0.driverId == entry.id } }
+            let layout = profileTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 14))
+            layout {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        tabletPerformanceRings(races, qualifying: qualifying)
+                        tabletPointsRing(races)
+                    }
+                    tabletPointsEvolution(archive.data)
+                    tabletGridFlow(races)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                VStack(alignment: .leading, spacing: 14) {
+                    tabletFinishDistribution(races, weekends: archive.data)
+                    tabletLapsLed(archive.data)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+        } else {
+            profileStatus
+        }
+    }
+
+    @State private var hoveredGridFlow: GridFlow?
+    @State private var tappedGridFlow: GridFlow?
+    @State private var hoveredFinishPosition: String?
+    @State private var tappedFinishPosition: String?
+    @State private var hoveredLapsLed: String?
+    @State private var tappedLapsLed: String?
+    private struct GridFlow: Hashable {
+        let start: Int
+        let finish: Int
+    }
+
+    private struct GridFlowNode {
+        let top: CGFloat
+        let height: CGFloat
+        var next: CGFloat
+    }
+
+    private func tabletGridFlow(_ races: [SessionResult]) -> some View {
+        let pitLane = Int.max - 1
+        let unclassified = Int.max
+        let flows = races.compactMap { result -> GridFlow? in
+            guard let grid = result.gridPosition, grid >= 0 else { return nil }
+            let finish = tabletFinishPosition(result) ?? unclassified
+            return GridFlow(start: grid == 0 ? pitLane : grid, finish: finish)
+        }
+        let counts = Dictionary(grouping: flows, by: { $0 }).mapValues(\.count)
+        let ordered = counts.keys.sorted { ($0.start, $0.finish) < ($1.start, $1.finish) }
+        let height = CGFloat(max(480, counts.count * 30))
+        func label(_ position: Int) -> String {
+            switch position {
+            case pitLane: "PL"
+            case unclassified: "NC"
+            default: "P\(position)"
+            }
+        }
+        func color(_ position: Int) -> Color {
+            switch position {
+            case 1: WebDashboardStyle.adaptive(dark: 0xd69b00, light: 0xd69b00)
+            case 2: WebDashboardStyle.adaptive(dark: 0x94a3b8, light: 0x94a3b8)
+            case 3: WebDashboardStyle.adaptive(dark: 0xb96512, light: 0xb96512)
+            case unclassified: WebDashboardStyle.adaptive(dark: 0x435067, light: 0x435067)
+            default: tabletChartTeamColor
+            }
+        }
+        func nodes(_ key: KeyPath<GridFlow, Int>) -> ([Int: GridFlowNode], CGFloat) {
+            let groups = Dictionary(grouping: flows) { $0[keyPath: key] }
+            let scale = (height - 40 - CGFloat(max(0, groups.count - 1)) * 12) / CGFloat(max(1, flows.count))
+            var top: CGFloat = 20
+            var result: [Int: GridFlowNode] = [:]
+            for position in groups.keys.sorted() {
+                let size = CGFloat(groups[position, default: []].count) * scale
+                result[position] = GridFlowNode(top: top, height: size, next: top)
+                top += size + 12
+            }
+            return (result, scale)
+        }
+        var ribbons: [(GridFlow, Path)] = []
+        var (left, leftScale) = nodes(\.start)
+        var (right, rightScale) = nodes(\.finish)
+        for flow in ordered {
+            guard var start = left[flow.start], var finish = right[flow.finish] else { continue }
+            let count = CGFloat(counts[flow, default: 0])
+            let y1 = start.next
+            let y2 = finish.next
+            start.next += count * leftScale
+            finish.next += count * rightScale
+            let path = Path { path in
+                path.move(to: CGPoint(x: 62, y: y1))
+                path.addCurve(to: CGPoint(x: 718, y: y2), control1: CGPoint(x: 340, y: y1), control2: CGPoint(x: 440, y: y2))
+                path.addLine(to: CGPoint(x: 718, y: finish.next))
+                path.addCurve(to: CGPoint(x: 62, y: start.next), control1: CGPoint(x: 440, y: finish.next), control2: CGPoint(x: 340, y: start.next))
+                path.closeSubpath()
+            }
+            ribbons.append((flow, path))
+            left[flow.start] = start
+            right[flow.finish] = finish
+        }
+        let active = hoveredGridFlow ?? tappedGridFlow
+        func description(_ flow: GridFlow) -> String {
+            let count = counts[flow, default: 0]
+            return "\(label(flow.start)) → \(label(flow.finish)): \(count) race\(count == 1 ? "" : "s")"
+        }
+        func hit(_ point: CGPoint, size: CGSize) -> GridFlow? {
+            guard size.width > 0, size.height > 0 else { return nil }
+            let unscaled = CGPoint(x: point.x * 780 / size.width, y: point.y * height / size.height)
+            return ribbons.last { $0.1.contains(unscaled) }?.0
+        }
+        return PulseCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Starting Grid to Race Finish").font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                }
+                if flows.isEmpty {
+                    Text("Starting grid data is not available for this season.")
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                } else {
+                    Canvas { context, size in
+                        var context = context
+                        context.scaleBy(x: size.width / 780, y: size.height / height)
+                        for (flow, path) in ribbons {
+                            context.fill(path, with: .color(color(flow.start).opacity(flow == active ? 0.85 : 0.55)))
+                        }
+                        for (side, x, labelX, anchor) in [(left, 53.0, 45.0, UnitPoint.trailing), (right, 718.0, 735.0, UnitPoint.leading)] {
+                            for (position, node) in side {
+                                let rect = CGRect(x: x, y: node.top, width: 9, height: node.height)
+                                context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(color(position)))
+                                context.draw(Text(label(position)).font(.system(size: 12)).foregroundStyle(WebDashboardStyle.homeMuted),
+                                             at: CGPoint(x: labelX, y: node.top + node.height / 2), anchor: anchor)
+                            }
+                        }
+                    }
+                    .overlay {
+                        GeometryReader { geometry in
+                            Color.clear.contentShape(.rect)
+                                .onContinuousHover { phase in
+                                    switch phase {
+                                    case .active(let point): hoveredGridFlow = hit(point, size: geometry.size)
+                                    case .ended: hoveredGridFlow = nil
+                                    }
+                                }
+                                .onTapGesture { point in
+                                    let flow = hit(point, size: geometry.size)
+                                    tappedGridFlow = flow == tappedGridFlow ? nil : flow
+                                }
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .overlay(alignment: .top) {
+                        if let active, counts[active] != nil {
+                            Text(description(active))
+                                .font(.system(size: 12, weight: .semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 8))
+                                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(WebDashboardStyle.homeLine) }
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .aspectRatio(780 / height, contentMode: .fit)
+                    .accessibilityRepresentation {
+                        ForEach(ordered, id: \.self) { flow in
+                            Button(description(flow)) {
+                                tappedGridFlow = flow == tappedGridFlow ? nil : flow
+                            }
+                            .accessibilityAddTraits(tappedGridFlow == flow ? .isSelected : [])
+                        }
+                    }
+                    Text("\(flows.count) races with starting grid data · PL = pit lane · NC = unclassified")
+                        .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func tabletPointsEvolution(_ weekends: [SeasonResultWeekend]) -> some View {
+        let currentYear = String(entry.season)
+        let priorYear = String(entry.season - 1)
+        func series(_ events: [SeasonResultWeekend], year: String) -> [ProfilePoint] {
+            var total = 0.0
+            let completed = events.filter { $0.sessions["race"]?.rows.isEmpty == false }
+                .sorted { ($0.meeting.round ?? 0) < ($1.meeting.round ?? 0) }
+            return completed.enumerated().map { index, weekend in
+                for kind in ["race", "sprint"] {
+                    total += weekend.sessions[kind]?.rows.first { $0.driverId == entry.id }?.points ?? 0
+                }
+                return ProfilePoint(year: year, round: index + 1, points: total)
+            }
+        }
+        let previous = series(tabletPreviousResults ?? [], year: priorYear)
+        let current = series(weekends, year: currentYear)
+        let samples = previous + current
+        let upper = max(50, samples.map(\.points).max() ?? 0)
+        let rounds = max(2, weekends.count, previous.count)
+        let teamColor = tabletChartTeamColor
+        let priorColor = WebDashboardStyle.adaptive(dark: 0x718096, light: 0x718096)
+        let surname = entry.name.split(separator: " ").last.map(String.init) ?? entry.name
+        let comparisonNote: String
+        if !previous.isEmpty { comparisonNote = "   /   " + priorYear }
+        else if tabletPreviousLoading { comparisonNote = " · Loading previous season…" }
+        else { comparisonNote = " · Previous season data unavailable" }
+        let legend = currentYear + " · " + surname + comparisonNote
+        let title = "Points Evolution vs. Previous Season"
+        return PulseCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                }
+                Chart(samples) { sample in
+                    LineMark(x: .value("Round", sample.round), y: .value("Points", sample.points),
+                             series: .value("Season", sample.year))
+                        .foregroundStyle(sample.year == currentYear ? teamColor : priorColor)
+                        .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    PointMark(x: .value("Round", sample.round), y: .value("Points", sample.points))
+                        .foregroundStyle(sample.year == currentYear ? teamColor : priorColor)
+                        .symbolSize(18)
+                        .accessibilityLabel("\(sample.year), round \(sample.round)")
+                        .accessibilityValue("\(sample.points.formatted()) points")
+                }
+                .chartXScale(domain: 1...rounds)
+                .chartYScale(domain: 0...upper)
+                .chartXAxis { AxisMarks(values: Array(1...rounds)) { _ in AxisValueLabel() } }
+                .chartYAxis { AxisMarks(position: .leading, values: (0...5).map { upper * Double($0) / 5 }) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let points = value.as(Double.self) { Text(points.formatted(.number.precision(.fractionLength(0)))) }
+                    }
+                } }
+                .chartXAxisLabel("Rounds", position: .bottom, alignment: .center)
+                .chartXSelection(value: $selectedPointsRound)
+                .frame(height: 250)
+                if let selectedPointsRound {
+                    ForEach(samples.filter { $0.round == selectedPointsRound }) { sample in
+                        LabeledContent("\(sample.year) · R\(sample.round)", value: "\(sample.points.formatted()) points")
+                            .font(.caption.monospacedDigit())
+                    }
+                }
+                Text(legend)
+                    .font(.caption).foregroundStyle(WebDashboardStyle.homeMuted)
+            }
+        }
+    }
+
+    private func tabletLapsLed(_ weekends: [SeasonResultWeekend]) -> some View {
+        let races = weekends.compactMap { weekend -> (meeting: Meeting, row: SessionResult)? in
+            guard let row = weekend.sessions["race"]?.rows.first(where: { $0.driverId == entry.id }) else { return nil }
+            return (weekend.meeting, row)
+        }
+        let available = races.compactMap { $0.row.lapsLed }
+        let maximum = max(1, races.compactMap { $0.row.laps }.max() ?? 0)
+        let total = available.reduce(0, +)
+        let title = "Laps Led per Race"
+        return PulseCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                }
+                if available.isEmpty {
+                    Text("Lap-by-lap leadership data is not available for this season.")
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                } else {
+                    HStack(spacing: 16) {
+                        Text("Sprint Races excluded").foregroundStyle(WebDashboardStyle.homeMuted)
+                        Spacer()
+                        Text("Total \(total)")
+                        Text("Average \((Double(total) / Double(available.count)).formatted(.number.precision(.fractionLength(1))))")
+                    }.font(.caption.monospacedDigit())
+                    ForEach(races, id: \.meeting.id) { race in
+                        HStack(spacing: 8) {
+                            FlagBadge(countryCode: race.meeting.countryCode, width: 18, height: 12)
+                                .accessibilityHidden(true)
+                            GeometryReader { geometry in
+                                let lapWidth = geometry.size.width / CGFloat(maximum)
+                                ZStack(alignment: .leading) {
+                                    Rectangle().fill(WebDashboardStyle.homeText.opacity(0.12))
+                                        .frame(width: lapWidth * CGFloat(max(0, race.row.laps ?? 0)))
+                                    if let led = race.row.lapsLed {
+                                        Button {
+                                            tappedLapsLed = tappedLapsLed == race.meeting.id ? nil : race.meeting.id
+                                        } label: {
+                                            Rectangle().fill(tabletChartTeamColor)
+                                                .frame(width: min(geometry.size.width, lapWidth * CGFloat(max(0, led))))
+                                                .contentShape(.rect)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .onHover { inside in
+                                            if inside { hoveredLapsLed = race.meeting.id }
+                                            else if hoveredLapsLed == race.meeting.id { hoveredLapsLed = nil }
+                                        }
+                                        .accessibilityLabel(race.meeting.name)
+                                        .accessibilityValue("\(led) laps led")
+                                        .accessibilityAddTraits(tappedLapsLed == race.meeting.id ? .isSelected : [])
+                                    }
+                                }
+                            }.frame(height: 20)
+                        }
+                        .overlay(alignment: .trailing) {
+                            if race.meeting.id == (hoveredLapsLed ?? tappedLapsLed), let led = race.row.lapsLed {
+                                let round = race.meeting.round.map { "R\($0)" } ?? race.meeting.name
+                                Text("\(round): \(led) laps led")
+                                    .font(.caption)
+                                    .padding(6)
+                                    .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 5))
+                                    .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(WebDashboardStyle.homeLine) }
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func tabletRetired(_ result: SessionResult) -> Bool {
+        let status = result.classification.trimmingCharacters(in: .whitespacesAndNewlines)
+        return status.caseInsensitiveCompare("NC") == .orderedSame
+            || status.range(
+                of: "dnf|dns|dsq|disqual|retired|did not|not classified|withdrawn",
+                options: [.regularExpression, .caseInsensitive]
+            ) != nil
+    }
+
+    private func tabletFinishPosition(_ result: SessionResult) -> Int? {
+        guard let position = result.position, position > 0, !tabletRetired(result) else { return nil }
+        return position
+    }
+
+    private var tabletChartTeamColor: Color {
+        WebDashboardStyle.chartTeamColor(entry.colorID)
+    }
+
+    private func tabletRingCard<Content: View>(
+        _ title: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .tracking(-0.5)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+            }
+            content()
+                .aspectRatio(420.0 / 330, contentMode: .fit)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(WebDashboardStyle.homeLine).allowsHitTesting(false) }
+    }
+
+    private func tabletPerformanceRings(_ races: [SessionResult], qualifying: [SessionResult]) -> some View {
+        let finishes = races.compactMap(tabletFinishPosition)
+        let metrics: [(label: String, count: Int, tint: Color)] = [
+            ("In Points", races.filter { ($0.points ?? 0) > 0 }.count, WebDashboardStyle.adaptive(dark: 0xd1d5db, light: 0x6b7280)),
+            ("Podiums", finishes.filter { $0 <= 3 }.count, WebDashboardStyle.adaptive(dark: 0x237beb, light: 0x237beb)),
+            ("Wins", finishes.filter { $0 == 1 }.count, WebDashboardStyle.adaptive(dark: 0xffcf40, light: 0xffcf40)),
+            ("Poles", qualifying.filter { $0.position == 1 }.count, WebDashboardStyle.adaptive(dark: 0xc22bdd, light: 0xc22bdd)),
+            ("DNF/DNS/DSQ", races.filter(tabletRetired).count, WebDashboardStyle.adaptive(dark: 0xe10a19, light: 0xe10a19))
+        ]
+        func progress(_ count: Int) -> Double { min(1, Double(count) / Double(max(1, races.count))) }
+        return tabletRingCard("Season Performance") {
+            Canvas { context, size in
+                var context = context
+                context.scaleBy(x: size.width / 420, y: size.height / 330)
+                let center = CGPoint(x: 224, y: 163)
+                let style = StrokeStyle(lineWidth: 17, lineCap: .round)
+                for (index, metric) in metrics.enumerated() {
+                    let radius = CGFloat(132 - 23 * index)
+                    var track = Path()
+                    track.addRelativeArc(center: center, radius: radius, startAngle: .degrees(-90), delta: .degrees(270))
+                    context.stroke(track, with: .color(WebDashboardStyle.homeMuted.opacity(0.12)), style: style)
+                    context.draw(Text(metric.label).font(.system(size: 11)).foregroundStyle(WebDashboardStyle.homeMuted),
+                                 at: CGPoint(x: 205, y: center.y - radius), anchor: .trailing)
+                    if metric.count > 0 {
+                        let sweep = 270 * progress(metric.count)
+                        var ring = Path()
+                        ring.addRelativeArc(center: center, radius: radius, startAngle: .degrees(-90), delta: .degrees(sweep))
+                        context.stroke(ring, with: .color(metric.tint), style: style)
+                        let angle = Angle.degrees(sweep - 90).radians
+                        let end = CGPoint(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle))
+                        context.draw(Text(String(metric.count)).font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(WebDashboardStyle.adaptive(dark: 0x121923, light: 0x121923)), at: end)
+                    }
+                }
+            }
+            .accessibilityRepresentation {
+                ForEach(metrics, id: \.label) { metric in
+                    Text("\(metric.label): \(metric.count)")
+                }
+            }
+        }
+    }
+
+    private func tabletPointsRing(_ races: [SessionResult]) -> some View {
+        let scored = races.filter { ($0.points ?? 0) > 0 }.count
+        let share = Double(scored) / Double(max(races.count, 1))
+        let label = races.isEmpty ? "—" : share.formatted(.percent.precision(.fractionLength(0)))
+        return tabletRingCard("Race Finishes in the Points") {
+            Canvas { context, size in
+                var context = context
+                context.scaleBy(x: size.width / 420, y: size.height / 330)
+                let center = CGPoint(x: 210, y: 165)
+                let track = Path(ellipseIn: CGRect(x: 88, y: 43, width: 244, height: 244))
+                context.stroke(track, with: .color(WebDashboardStyle.homeMuted.opacity(0.18)), lineWidth: 50)
+                if share > 0 {
+                    var ring = Path()
+                    ring.addRelativeArc(center: center, radius: 122, startAngle: .degrees(-90), delta: .degrees(360 * share))
+                    context.stroke(ring, with: .color(tabletChartTeamColor), lineWidth: 50)
+                }
+                context.draw(Text(label).font(.system(size: 27, weight: .bold)).foregroundStyle(WebDashboardStyle.homeMuted),
+                             at: CGPoint(x: 210, y: 165))
+            }
+            .accessibilityRepresentation {
+                Text("\(scored) of \(races.count) races in the points")
+            }
+        }
+    }
+
+    private func tabletFinishDistribution(_ races: [SessionResult], weekends: [SeasonResultWeekend]) -> some View {
+        let positions = races.compactMap(\.position).filter { $0 > 0 }
+        let fieldSize = max(20, weekends.map { $0.sessions["race"]?.rows.count ?? 0 }.max() ?? 0)
+        let frequency = Dictionary(grouping: positions, by: { $0 }).mapValues(\.count)
+        let rows = (1...fieldSize).map { (label: "P\($0)", count: frequency[$0, default: 0]) }
+            + [(label: "NC", count: races.count - positions.count)]
+        let largestCount = max(1, rows.map(\.count).max() ?? 0)
+        let rowHeight = 560 / CGFloat(rows.count)
+        let bars = rows.enumerated().map { index, row in
+            (
+                label: row.label,
+                count: row.count,
+                rect: CGRect(
+                    x: 46, y: 52 + CGFloat(index) * rowHeight,
+                    width: 700 * CGFloat(row.count) / CGFloat(largestCount),
+                    height: max(10, rowHeight - 3)
+                )
+            )
+        }
+        let active = hoveredFinishPosition ?? tappedFinishPosition
+        let best = positions.min().map { "P\($0)" } ?? "—"
+        let average = positions.isEmpty ? "—" : (Double(positions.reduce(0, +)) / Double(positions.count))
+            .formatted(.number.precision(.fractionLength(1)))
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("Race Finish Position Distribution")
+                    .font(.system(size: 18, weight: .semibold))
+                    .tracking(-0.5)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Best").foregroundStyle(WebDashboardStyle.homeMuted)
+                    Text(best).bold()
+                }.font(.caption)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Average").foregroundStyle(WebDashboardStyle.homeMuted)
+                    Text(average).bold()
+                }.font(.caption)
+            }
+            Canvas { context, size in
+                var context = context
+                context.scaleBy(x: size.width / 780, y: size.height / 650)
+                context.draw(Text("Sprint Races excluded").font(.system(size: 13)).foregroundStyle(WebDashboardStyle.homeMuted),
+                             at: CGPoint(x: 20, y: 21), anchor: .leading)
+                for bar in bars {
+                    let labelY = bar.rect.minY + 9
+                    context.draw(Text(bar.label).font(.system(size: 11)).foregroundStyle(WebDashboardStyle.homeMuted),
+                                 at: CGPoint(x: 36, y: labelY), anchor: .trailing)
+                    if bar.count > 0 {
+                        context.fill(Path(roundedRect: bar.rect, cornerRadius: 1.5), with: .color(tabletChartTeamColor))
+                        context.draw(Text(String(bar.count)).font(.system(size: 11))
+                            .foregroundStyle(WebDashboardStyle.adaptive(dark: 0xffffff, light: 0x111111)),
+                            at: CGPoint(x: 54, y: labelY), anchor: .leading)
+                    }
+                }
+            }
+            .accessibilityHidden(true)
+            .overlay {
+                GeometryReader { geometry in
+                    let scaleX = geometry.size.width / 780
+                    let scaleY = geometry.size.height / 650
+                    ForEach(bars, id: \.label) { bar in
+                        let description = "\(bar.label): \(bar.count) races"
+                        if bar.count > 0 {
+                            Button {
+                                tappedFinishPosition = tappedFinishPosition == bar.label ? nil : bar.label
+                            } label: {
+                                Color.clear.contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                            .frame(width: bar.rect.width * scaleX, height: bar.rect.height * scaleY)
+                            .position(x: bar.rect.midX * scaleX, y: bar.rect.midY * scaleY)
+                            .onHover { inside in
+                                if inside { hoveredFinishPosition = bar.label }
+                                else if hoveredFinishPosition == bar.label { hoveredFinishPosition = nil }
+                            }
+                            .accessibilityLabel(description)
+                            .accessibilityAddTraits(tappedFinishPosition == bar.label ? .isSelected : [])
+                        } else {
+                            Color.clear
+                                .frame(width: 36 * scaleX, height: bar.rect.height * scaleY)
+                                .position(x: 18 * scaleX, y: bar.rect.midY * scaleY)
+                                .accessibilityLabel(description)
+                                .accessibilityAddTraits(.isStaticText)
+                        }
+                    }
+                    if let bar = bars.first(where: { $0.label == active && $0.count > 0 }) {
+                        Text("\(bar.label): \(bar.count) races")
+                            .font(.caption)
+                            .padding(6)
+                            .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 5))
+                            .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(WebDashboardStyle.homeLine) }
+                            .position(x: geometry.size.width / 2, y: max(14, bar.rect.minY * scaleY - 12))
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+            .aspectRatio(780.0 / 650, contentMode: .fit)
+            .accessibilityHint("Sprint races excluded")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(WebDashboardStyle.homeLine).allowsHitTesting(false) }
+    }
+
+    private var favoriteButton: some View {
+        let favorite = model.favoriteDriverID == entry.id
+        return Button {
+            model.favoriteDriverID = favorite ? nil : entry.id
+        } label: {
+            Label(driversDesign ? (favorite ? "Remove favorite driver" : "Set as favorite driver") : copy("Favorite driver", "收藏车手"),
+                  systemImage: driversDesign ? (favorite ? "heart.fill" : "heart") : (favorite ? "star.fill" : "star"))
+                .foregroundStyle(driversDesign && favorite ? PulseStyle.red : .primary)
+        }
+        .accessibilityAddTraits(favorite ? .isSelected : [])
+    }
+
+    private var tabletDriverSummary: some View {
+        let roster = model.driverRoster.filter { $0.season == entry.season }
+        let leader = roster.min { $0.position < $1.position }
+        let teammates = roster.filter {
+            MobileModel.normalizedConstructorID($0.seasonTeamID) == MobileModel.normalizedConstructorID(entry.colorID)
+        }
+        let teammate = teammates.first { $0.id != entry.id }
+        let teamTotal = teammates.map(\.points).reduce(0, +)
+        let archive = (model.seasonArchive?.data ?? []).sorted { ($0.meeting.round ?? 0) < ($1.meeting.round ?? 0) }
+        let ownRaces = archive.compactMap { $0.sessions["race"]?.rows.first { $0.driverId == entry.id } }
+        let rivalRaces = archive.filter { weekend in
+            weekend.sessions["race"]?.rows.contains { $0.driverId == teammate?.id } == true
+        }.count
+        let ownAverage = ownRaces.isEmpty ? nil : entry.points / Double(ownRaces.count)
+        let rivalAverage = rivalRaces > 0 ? teammate.map { $0.points / Double(rivalRaces) } : nil
+        let teamColor = DashboardArt.teamColor(entry.colorID)
+        return VStack(alignment: .leading, spacing: 14) {
+            VStack(spacing: 0) {
+                HStack(spacing: 16) {
+                    AssetImage(name: MotorsportAssetName.name(kind: .driverPhoto, id: entry.id, season: entry.season))
+                        .frame(width: 94, height: 94).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 8) {
+                            Text(entry.name).font(.system(size: 20, weight: .medium))
+                            Text(MotorsportAssetName.abbreviation(entry.name))
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(WebDashboardStyle.homeLine, in: .rect(cornerRadius: 6))
+                        }
+                        HStack(spacing: 6) {
+                            AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: entry.colorID, season: entry.season))
+                                .frame(width: 22, height: 16).accessibilityHidden(true)
+                            Text(entry.team ?? "").font(.system(size: 12)).foregroundStyle(WebDashboardStyle.homeMuted)
+                        }
+                        Button("Head-to-head") { openDriverProfile?(.comparison(entry.id, teammate?.id)) }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.top, 3)
+                    }
+                    Spacer()
+                    favoriteButton
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .frame(minWidth: 44, minHeight: 44)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("P\(entry.position)").font(.system(size: 24, weight: .bold))
+                        Text("\(entry.points.formatted()) pts").font(.system(size: 12)).foregroundStyle(WebDashboardStyle.homeMuted)
+                    }.monospacedDigit()
+                }
+                .padding(.horizontal, 14)
+                .frame(minHeight: 112)
+                .background(LinearGradient(colors: [teamColor.opacity(0.12), .clear],
+                                           startPoint: .leading, endPoint: .trailing), in: .rect)
+                Divider()
+                Grid(alignment: .topLeading, horizontalSpacing: 10) {
+                    GridRow {
+                        tabletDriverMetric("GAP TO LEADER", entry.position == 1 ? "Leader" : leader.map { "\((entry.points - $0.points).formatted()) pts" } ?? "—",
+                                           entry.position == 1 ? "Leading the championship" : leader.map { "behind \($0.driverName)" } ?? "")
+                        tabletDriverMetric("TEAM SHARE", teamTotal > 0 ? (entry.points / teamTotal).formatted(.percent.precision(.fractionLength(1))) : "—",
+                                           "of \(entry.team ?? "team") points (\(entry.points.formatted())/\(teamTotal.formatted()))")
+                        tabletDriverMetric("LEAD VS TEAMMATE", teammate.map { "\((entry.points - $0.points).formatted(.number.sign(strategy: .always()))) pts" } ?? "—",
+                                           teammate.map { "\(entry.points >= $0.points ? "ahead of" : "behind") \($0.driverName)" } ?? "No teammate results available")
+                        tabletDriverMetric("AVG POINTS VS TEAMMATE",
+                                           ownAverage.flatMap { own in rivalAverage.map { String(format: "%+.1f", own - $0) } } ?? "—",
+                                           ownAverage.flatMap { own in rivalAverage.map { String(format: "%.1f vs %.1f · Sprints included", own, $0) } } ?? "No teammate race results available")
+                    }
+                }.padding(10)
+            }
+            .clipShape(PulseStyle.cardShape)
+            .dashboardPanel(WebDashboardStyle.homePanel, line: teamColor.opacity(0.55))
+            if model.seasonArchive != nil {
+                ViewThatFits(in: .horizontal) {
+                    tabletDriverMiniGrid(archive, columns: 4)
+                        .frame(minWidth: 988)
+                    tabletDriverMiniGrid(archive, columns: 2)
+                }
+            }
+        }
+    }
+
+    private enum TabletDriverMetric: String, CaseIterable {
+        case wins = "Grand Prix Wins"
+        case podiums = "Grand Prix Podiums"
+        case points = "Season Points"
+        case poles = "Poles"
+
+        var session: String { self == .poles ? "qualifying" : "race" }
+        var sprintSession: String { self == .poles ? "sprintQualifying" : "sprint" }
+
+        func value(_ row: SessionResult, finish: Int?) -> Double {
+            switch self {
+            case .wins: finish == 1 ? 1 : 0
+            case .podiums: (finish ?? Int.max) <= 3 ? 1 : 0
+            case .points: row.points ?? 0
+            case .poles: row.position == 1 ? 1 : 0
+            }
+        }
+
+        func sprintValue(_ row: SessionResult) -> Double {
+            value(row, finish: row.position.flatMap { $0 > 0 ? $0 : nil })
+        }
+
+        func resultLabel(_ row: SessionResult) -> String {
+            if self == .points {
+                return "\((row.points ?? 0).formatted(.number.precision(.fractionLength(0...1)))) points"
+            }
+            return row.position.map { $0 > 0 ? "P\($0)" : row.classification } ?? row.classification
+        }
+    }
+
+    private func tabletDriverMiniGrid(_ archive: [SeasonResultWeekend], columns: Int) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns), spacing: 12) {
+            ForEach(TabletDriverMetric.allCases, id: \.self) { metric in
+                let rounds = archive.map { weekend in
+                    let rows = weekend.sessions[metric.session]?.rows ?? []
+                    let result = rows.first { $0.driverId == entry.id }
+                    let sprint = weekend.sessions[metric.sprintSession]?.rows.first { $0.driverId == entry.id }
+                    let round = weekend.meeting.round.map(String.init) ?? "—"
+                    let resultLabel = result.map(metric.resultLabel) ?? (rows.isEmpty ? "Upcoming" : "Did not participate")
+                    return DriverMiniMetricCard.Round(
+                        value: result.map { metric.value($0, finish: tabletFinishPosition($0)) } ?? 0,
+                        sprintValue: sprint.map(metric.sprintValue) ?? 0,
+                        upcoming: rows.isEmpty,
+                        retired: result.map(tabletRetired) ?? false,
+                        participated: result != nil,
+                        raceLabel: "R\(round) \(weekend.meeting.country) · \(resultLabel)",
+                        sprintLabel: sprint.map { "R\(round) Sprint · \(metric.resultLabel($0))" }
+                    )
+                }
+                let sprintTotal = Int(rounds.reduce(0) { $0 + $1.sprintValue })
+                let seasonTotal = metric == .points ? entry.points : rounds.reduce(0) { $0 + $1.value }
+                let starts = rounds.filter(\.participated).count
+                let average = starts > 0
+                    ? (seasonTotal / Double(starts)).formatted(.number.precision(.fractionLength(1))) : "—"
+                let description: String = switch metric {
+                case .wins: "\(sprintTotal) Sprint \(sprintTotal == 1 ? "Win" : "Wins")"
+                case .podiums: "\(sprintTotal) Sprint \(sprintTotal == 1 ? "Podium" : "Podiums")"
+                case .poles: "\(sprintTotal) Sprint \(sprintTotal == 1 ? "Pole" : "Poles")"
+                case .points: "Avg. \(average) (Sprints included)"
+                }
+                DriverMiniMetricCard(
+                    title: metric.rawValue,
+                    total: seasonTotal.formatted(.number.precision(.fractionLength(0...1))),
+                    description: description,
+                    rounds: rounds,
+                    teamColor: tabletChartTeamColor
+                )
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(metric.rawValue)
+            }
+        }
+    }
+
+    private func tabletDriverMetric(_ title: String, _ value: String, _ note: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.system(size: 10, weight: .bold)).foregroundStyle(WebDashboardStyle.homeMuted)
+            Text(value).font(.system(size: 18, weight: .bold)).monospacedDigit()
+            Text(note).font(.system(size: 11)).foregroundStyle(WebDashboardStyle.homeMuted)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 84, maxHeight: .infinity, alignment: .topLeading)
+        .background(WebDashboardStyle.adaptive(dark: 0x02050b, light: 0xffffff), in: .rect(cornerRadius: 6))
     }
 
     private var driverHero: some View {
@@ -2047,5 +3037,151 @@ struct StandingProfile: View {
         } catch {
             if context == model.dataContext, !Task.isCancelled { self.error = MobileModel.message(for: error) }
         }
+    }
+}
+
+private struct DriverMiniMetricCard: View {
+    struct Round {
+        let value: Double
+        let sprintValue: Double
+        let upcoming: Bool
+        let retired: Bool
+        let participated: Bool
+        let raceLabel: String
+        let sprintLabel: String?
+    }
+
+    let title: String
+    let total: String
+    let description: String
+    let rounds: [Round]
+    let teamColor: Color
+
+    @State private var hovered: String?
+    @State private var selected: String?
+
+    private let muted = WebDashboardStyle.adaptive(dark: 0x9da5b4, light: 0x52525b)
+    private let retired = WebDashboardStyle.adaptive(dark: 0xef4444, light: 0xef4444)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .accessibilityAddTraits(.isHeader)
+            Text(total)
+                .font(.system(size: 24, weight: .bold))
+                .padding(.top, 4)
+            Text(description)
+                .font(.system(size: 11))
+                .foregroundStyle(muted)
+            GeometryReader { geometry in
+                let scale = min(geometry.size.width / 460, geometry.size.height / 75)
+                let step = 452 / CGFloat(max(1, rounds.count))
+                let barWidth = max(3, step - 3)
+                let maximum = max(1, rounds.map(\.value).max() ?? 0)
+                ZStack(alignment: .topLeading) {
+                    ForEach(rounds.indices, id: \.self) { index in
+                        let round = rounds[index]
+                        let x = 4 + CGFloat(index) * step
+                        let height = max(4, CGFloat(round.value / maximum) * 50)
+                        let fill = round.retired ? retired : round.value > 0 ? teamColor : muted.opacity(0.25)
+                        bar(round.raceLabel, color: round.upcoming ? muted : fill, outline: round.upcoming)
+                            .frame(width: barWidth * scale, height: height * scale)
+                            .position(x: (x + barWidth / 2) * scale, y: (72 - height / 2) * scale)
+                        if let label = round.sprintLabel, round.sprintValue > 0 {
+                            let height = max(4, CGFloat(round.sprintValue / maximum) * 50)
+                            let top = 72 - min(64, CGFloat((round.value + round.sprintValue) / maximum) * 50)
+                            bar(label, color: teamColor, outline: true)
+                                .frame(width: barWidth * scale, height: height * scale)
+                                .position(x: (x + barWidth / 2) * scale, y: (top + height / 2) * scale)
+                        }
+                    }
+                }
+                .frame(width: 460 * scale, height: 75 * scale)
+                .frame(maxWidth: .infinity)
+            }
+            .aspectRatio(460.0 / 75, contentMode: .fit)
+            .frame(maxHeight: 88)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 9) {
+                    raceLegend
+                    statusLegend
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    raceLegend
+                    statusLegend
+                }
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(muted)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(WebDashboardStyle.homeLine).allowsHitTesting(false) }
+        .overlay(alignment: .bottomLeading) {
+            if let label = hovered ?? selected {
+                Text(label)
+                    .font(.caption)
+                    .padding(6)
+                    .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 5))
+                    .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(WebDashboardStyle.homeLine) }
+                    .padding(.horizontal, 8)
+                    .offset(y: -30)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func bar(_ label: String, color: Color, outline: Bool) -> some View {
+        Button {
+            selected = selected == label ? nil : label
+        } label: {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(outline ? .clear : color)
+                .overlay {
+                    if outline {
+                        RoundedRectangle(cornerRadius: 1.5).strokeBorder(color, lineWidth: 0.75)
+                    }
+                }
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { inside in
+            if inside { hovered = label }
+            else if hovered == label { hovered = nil }
+        }
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selected == label ? .isSelected : [])
+    }
+
+    private var raceLegend: some View {
+        HStack(spacing: 9) {
+            legend("Race", color: teamColor)
+            legend("Sprint", color: teamColor, outline: true)
+        }
+    }
+
+    private var statusLegend: some View {
+        HStack(spacing: 9) {
+            legend("DNF/DNS/DSQ", color: retired)
+            legend("Upcoming", color: muted, outline: true)
+        }
+    }
+
+    private func legend(_ title: String, color: Color, outline: Bool = false) -> some View {
+        Label {
+            Text(title).fixedSize()
+        } icon: {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(outline ? .clear : color)
+                .overlay {
+                    if outline {
+                        RoundedRectangle(cornerRadius: 2).strokeBorder(color, lineWidth: 1)
+                    }
+                }
+                .frame(width: 9, height: 6)
+        }
+        .labelStyle(.titleAndIcon)
     }
 }

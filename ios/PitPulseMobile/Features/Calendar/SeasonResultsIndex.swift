@@ -1,9 +1,23 @@
+import Charts
 import SharedComponents
 import SharedData
 import SwiftUI
+import UIKit
 
 struct SeasonResultsIndex: View {
+    let initialMeeting: Meeting?
+    let initialSession: Session?
+
+    init(initialMeeting: Meeting? = nil, initialSession: Session? = nil) {
+        self.initialMeeting = initialMeeting
+        self.initialSession = initialSession
+    }
     @EnvironmentObject private var model: MobileModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var statsMode = SeasonResultsMode.race
+    @State private var matrixShowsPosition = false
+    @State private var wideResults = false
+    @State private var openedInitialSession = false
     @State private var previewDestination: (weekend: SeasonResultWeekend, session: Session)?
     var body: some View {
         ScrollView {
@@ -18,7 +32,9 @@ struct SeasonResultsIndex: View {
                             .font(.caption)
                             .foregroundStyle(WebDashboardStyle.homeMuted)
                     }
-                    if let latest = entries.first {
+                    if wideResults, !entries.isEmpty {
+                        seasonOverview(Array(weekends.reversed()), entries: entries)
+                    } else if let latest = entries.first {
                         NavigationLink {
                             MeetingResultsDashboard(weekend: latest.weekend, initial: latest.session)
                         } label: {
@@ -77,8 +93,11 @@ struct SeasonResultsIndex: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+        .onGeometryChange(for: Bool.self) { geometry in
+            UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width >= 740 && !typeSize.isAccessibilitySize
+        } action: { wideResults = $0 }
         .foregroundStyle(WebDashboardStyle.homeText)
-        .background(WebDashboardStyle.homeBackground)
+        .background(wideResults ? WebDashboardStyle.homePanel : WebDashboardStyle.homeBackground)
         .pulseSwap(model.seasonArchive != nil)
         .navigationDestination(isPresented: Binding(
             get: { previewDestination != nil },
@@ -88,8 +107,263 @@ struct SeasonResultsIndex: View {
                 MeetingResultsDashboard(weekend: destination.weekend, initial: destination.session)
             }
         }
+        .task {
+            guard !openedInitialSession, let initialMeeting, let initialSession else { return }
+            openedInitialSession = true
+            let weekend = model.seasonArchive?.data.first { $0.id == initialMeeting.id }
+                ?? SeasonResultWeekend(meeting: initialMeeting, sessions: [:])
+            previewDestination = (weekend, initialSession)
+        }
         .task(id: model.dataContext) { await model.loadSeasonArchive() }
         .refreshable { await model.loadSeasonArchive(force: true) }
+    }
+
+    private func seasonOverview(_ weekends: [SeasonResultWeekend],
+                                entries: [(weekend: SeasonResultWeekend, session: Session)]) -> some View {
+        LazyVStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text("\(String(model.season)) F1 Season Results")
+                    .font(.title2.bold())
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 6)
+                Text("SEASON STATS")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Picker("Season stats", selection: $statsMode) {
+                    ForEach(SeasonResultsMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 276)
+            }
+            SeasonLeaders(weekends: weekends, sessions: statsMode.types, season: model.season, showsCards: true)
+            seasonInsights(weekends)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Grand Prix Results").font(.headline).accessibilityAddTraits(.isHeader)
+                    .padding(.bottom, 8)
+                grandPrixColumns(height: 30) {
+                    Text("GRAND PRIX")
+                    Text("DATE")
+                    Text("SPRINT POLEMAN")
+                    Text("SPRINT WINNER")
+                    Text("POLEMAN")
+                    Text("RACE WINNER")
+                }
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(minHeight: 30)
+                .accessibilityAddTraits(.isHeader)
+                ForEach(entries.reversed(), id: \.weekend.id) { entry in
+                    Divider()
+                    NavigationLink {
+                        MeetingResultsDashboard(weekend: entry.weekend, initial: entry.session)
+                    } label: {
+                        grandPrixColumns(height: 42) {
+                            HStack(spacing: 6) {
+                                FlagBadge(countryCode: entry.weekend.meeting.countryCode, width: 17)
+                                    .accessibilityHidden(true)
+                                if let round = entry.weekend.meeting.round {
+                                    Text("R\(round)").font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 4).padding(.vertical, 3)
+                                        .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(WebDashboardStyle.homeLine) }
+                                        .fixedSize()
+                                }
+                                Text(entry.weekend.meeting.name).fontWeight(.semibold).lineLimit(2)
+                            }
+                            Text(weekendDates(entry.weekend.meeting))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            ForEach([SessionType.sprintQualifying, .sprint, .qualifying, .race], id: \.self) { session in
+                                winnerCell(entry.weekend.sessions[session.rawValue]?.rows.first { $0.position == 1 })
+                            }
+                        }
+                        .font(.caption)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .navigationLinkIndicatorVisibility(.hidden)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(12)
+            .seasonResultsPanel()
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Driver Points and Positions by Round").font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Picker("Round values", selection: $matrixShowsPosition) {
+                        Text("Points").tag(false)
+                        Text("Position").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 180)
+                }
+                let rounds = statsMode.rounds(in: weekends)
+                if rounds.isEmpty {
+                    ContentUnavailableView("No results for this filter", systemImage: "flag.checkered")
+                } else {
+                    SeasonRoundMatrix(weekends: rounds, sessions: statsMode.types, season: model.season,
+                                      showsPosition: matrixShowsPosition, scrollsVertically: false, showsRoundDetails: false)
+                }
+            }
+            .padding(12)
+            .seasonResultsPanel()
+        }
+    }
+
+    private func seasonInsights(_ weekends: [SeasonResultWeekend]) -> some View {
+        let stats = SeasonOverviewInsights(weekends: weekends, sessions: statsMode.types)
+        let detailHeight: CGFloat = 136
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+            seasonInsight("Best Average Finish", symbol: "target",
+                          value: stats.average?.value.formatted(.number.precision(.fractionLength(1))),
+                          unit: "average", row: stats.average?.row)
+            seasonInsight("Most Positions Gained", symbol: "chart.line.uptrend.xyaxis",
+                          value: stats.positionsGained?.value.formatted(), unit: "places", row: stats.positionsGained?.row)
+            marginCard("Largest Winning Margin", symbol: "arrow.up.left.and.arrow.down.right", result: stats.largestMargin)
+            marginCard("Closest Winning Margin", symbol: "arrow.down.right.and.arrow.up.left", result: stats.closestMargin,
+                       minHeight: detailHeight)
+            seasonInsight("Biggest Comeback", symbol: "arrow.up.forward",
+                          value: stats.comeback.map { "+\($0.value)" }, unit: "places", row: stats.comeback?.row,
+                          detail: stats.comeback.map { "P\($0.row.gridPosition ?? 0) → P\($0.row.position ?? 0)" },
+                          meeting: stats.comeback?.meeting, minHeight: detailHeight)
+            mileageCard(stats.mileage, minHeight: detailHeight)
+        }
+    }
+
+    private func marginCard(_ title: String, symbol: String, result: SeasonOverviewInsights.Margin?,
+                            minHeight: CGFloat = 104) -> some View {
+        seasonInsight(title, symbol: symbol, value: result.map { String(format: "+%.3fs", $0.seconds) },
+                      row: result?.row, meeting: result?.meeting, minHeight: minHeight)
+    }
+
+    private func seasonInsight(_ title: String, symbol: String, value: String?, unit: String = "",
+                               row: SessionResult?, detail: String? = nil, meeting: Meeting? = nil,
+                               minHeight: CGFloat = 104) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 5) {
+                Text(title).font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                Image(systemName: symbol)
+                    .font(.caption.weight(.medium))
+                    .frame(width: 26, height: 26)
+                    .foregroundStyle(.secondary)
+                    .background(WebDashboardStyle.homeBackground, in: .rect(cornerRadius: 7))
+                    .accessibilityHidden(true)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                PulseNumber(value ?? "—").font(.title2.bold()).monospacedDigit()
+                Text(unit).font(.caption).foregroundStyle(.secondary)
+            }
+            if let row {
+                HStack(spacing: 5) {
+                    resultTeamLogo(row.constructorId, season: model.season)
+                    Text(row.driverName.split(separator: " ").last.map(String.init) ?? row.driverName)
+                    if let detail { Text("· " + detail).fixedSize() }
+                    if let meeting {
+                        if let round = meeting.round { Text("· R\(round)").fixedSize() }
+                        FlagBadge(countryCode: meeting.countryCode, width: 13).accessibilityHidden(true)
+                        Text(meeting.country.isEmpty ? meeting.name : meeting.country).lineLimit(1)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+        .seasonResultsPanel()
+        .accessibilityElement(children: .combine)
+    }
+
+    private func mileageCard(_ mileage: [SeasonOverviewInsights.Distance], minHeight: CGFloat) -> some View {
+        let maxDistance = mileage.first?.km ?? 0
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Team Mileage").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            if mileage.isEmpty { Text("—").foregroundStyle(.secondary) }
+            ForEach(mileage, id: \.teamID) { team in
+                HStack(spacing: 6) {
+                    HStack(spacing: 4) {
+                        resultTeamLogo(team.row.constructorId, season: model.season)
+                        Text(team.row.team).lineLimit(1)
+                    }
+                    .frame(maxWidth: 96, alignment: .leading)
+                    GeometryReader { proxy in
+                        let fraction = team.km / maxDistance
+                        let color = seasonResultTeamColor(team.row.constructorId)
+                        Text(team.km.formatted(.number.precision(.fractionLength(1))) + " km")
+                            .fontWeight(.bold)
+                            .lineLimit(1)
+                            .padding(.horizontal, 7)
+                            .frame(width: min(proxy.size.width, max(82, proxy.size.width * fraction)), height: proxy.size.height, alignment: .leading)
+                            .foregroundStyle(.black)
+                            .background(color, in: .rect(topLeadingRadius: proxy.size.height / 2,
+                                                         bottomLeadingRadius: proxy.size.height / 2))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .frame(height: 20)
+                }
+                .font(.caption)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding([.leading, .top], 12)
+        .padding(.bottom, 26)
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+        .seasonResultsPanel()
+    }
+
+    private func grandPrixColumns(height: CGFloat, @ViewBuilder content: () -> some View) -> some View {
+        let cells = content()
+        return GeometryReader { proxy in
+            let width = max(0, proxy.size.width - 5 * 3)
+            let nameWidth = width * 0.25
+            let dateWidth = width * 0.115
+            let resultWidth = (width - nameWidth - dateWidth) / 4
+            HStack(spacing: 3) {
+                Group(subviews: cells) { columns in
+                    columns[0].frame(width: nameWidth, alignment: .leading)
+                    columns[1].frame(width: dateWidth, alignment: .leading)
+                    ForEach(2..<6, id: \.self) { index in
+                        columns[index].frame(width: resultWidth, alignment: .leading)
+                    }
+                }
+            }
+            .frame(height: proxy.size.height)
+        }
+        .frame(height: height)
+    }
+
+    private func weekendDates(_ meeting: Meeting) -> String {
+        let format = Date.VerbatimFormatStyle(format: "\(day: .twoDigits)/\(month: .twoDigits)",
+                                              locale: .pulseEnglish, timeZone: .current, calendar: .current)
+        let start = meeting.startDate.formatted(format)
+        let end = meeting.endDate.formatted(format)
+        return start == end ? start : "\(start) – \(end)"
+    }
+
+    private func winnerCell(_ winner: SessionResult?) -> some View {
+        HStack(spacing: 5) {
+            if let winner {
+                resultTeamLogo(winner.constructorId, season: model.season, contrast: true)
+                Text(winner.driverName).fontWeight(.semibold).lineLimit(2)
+            } else {
+                Text("—")
+            }
+        }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+        .foregroundStyle(winner == nil ? WebDashboardStyle.homeMuted : .black)
+        .background(winner.map { seasonResultTeamColor($0.constructorId) } ?? WebDashboardStyle.homeBackground,
+                    in: .rect(cornerRadius: 5))
     }
 
     private var loadingResults: some View {
@@ -381,18 +655,24 @@ private struct SeasonResultsStatistics: View {
             VStack(alignment: .leading, spacing: 14) {
                 SeasonLeaders(weekends: weekends, sessions: SeasonResultsMode.combined.types,
                               season: season, sheetMaxHeight: viewportHeight)
-                Button {
-                    mode = .race
-                    showsPosition = false
-                    showsMatrix = true
-                } label: {
+                if UIDevice.current.userInterfaceIdiom == .pad {
                     SeasonRoundMatrix(weekends: SeasonResultsMode.race.rounds(in: weekends),
                                       sessions: [.race], season: season, showsPosition: false)
                         .preview
+                } else {
+                    Button {
+                        mode = .race
+                        showsPosition = false
+                        showsMatrix = true
+                    } label: {
+                        SeasonRoundMatrix(weekends: SeasonResultsMode.race.rounds(in: weekends),
+                                          sessions: [.race], season: season, showsPosition: false)
+                            .preview
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Open the round-by-round grid in landscape")
+                    .matchedTransitionSource(id: "season-round-matrix", in: matrixTransition)
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Open the round-by-round grid in landscape")
-                .matchedTransitionSource(id: "season-round-matrix", in: matrixTransition)
             }
             .padding(16)
         }
@@ -472,6 +752,8 @@ private struct SeasonRoundMatrix: View {
     let sessions: [SessionType]
     let season: Int
     let showsPosition: Bool
+    var scrollsVertically = true
+    var showsRoundDetails = true
     @State private var selected: RoundScore?
     @ScaledMetric(relativeTo: .caption) private var rowHeight = 44
 
@@ -557,57 +839,12 @@ private struct SeasonRoundMatrix: View {
 
     var body: some View {
         let drivers = standings
-        ScrollView {
-            HStack(alignment: .top, spacing: 0) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("DRIVER / PTS").foregroundStyle(.secondary).frame(height: rowHeight)
-                        .accessibilityAddTraits(.isHeader)
-                    ForEach(Array(drivers.enumerated()), id: \.element.id) { rank, entry in
-                        HStack(spacing: 5) {
-                            Text(String(rank + 1)).foregroundStyle(.secondary).frame(width: 20)
-                            driverHelmet(entry).frame(width: 22, height: 20)
-                            Text(MotorsportAssetName.abbreviation(entry.driver.driverName))
-                                .fontWeight(.semibold).lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                            PulseNumber(entry.points.formatted()).foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                        .frame(height: rowHeight)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("\(rank + 1), \(entry.driver.driverName), \(entry.points.formatted()) points")
-                    }
-                }
-                .frame(width: 120)
-                .padding(.trailing, 8)
-                ScrollView(.horizontal) {
-                    HStack(spacing: 4) {
-                        ForEach(weekends) { weekend in
-                            VStack(spacing: 0) {
-                                Text(weekend.meeting.round.map { "R\($0)" } ?? "—")
-                                    .foregroundStyle(.secondary).frame(height: rowHeight)
-                                    .accessibilityLabel(weekend.meeting.name)
-                                ForEach(drivers) { entry in
-                                    if let score = entry.rounds[weekend.id] {
-                                        Button { selected = score } label: {
-                                            Text(value(score)).fontWeight(.semibold)
-                                                .frame(width: 43, height: rowHeight - 4)
-                                                .background(tint(score).opacity(0.24), in: .rect(cornerRadius: 4))
-                                        }.buttonStyle(.plain)
-                                            .accessibilityLabel("\(entry.driver.driverName), \(weekend.meeting.name)")
-                                            .accessibilityValue(value(score))
-                                            .frame(height: rowHeight)
-                                    } else {
-                                        Text("—").foregroundStyle(.tertiary).frame(width: 43, height: rowHeight)
-                                            .accessibilityHidden(true)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                .defaultScrollAnchor(.leading)
+        Group {
+            if scrollsVertically {
+                ScrollView { matrixRows(drivers) }
+            } else {
+                matrixRows(drivers)
             }
-            .font(.caption.monospacedDigit())
-            .padding(.horizontal, 12)
         }
         .sheet(item: $selected) { score in
             NavigationStack {
@@ -631,6 +868,65 @@ private struct SeasonRoundMatrix: View {
             }
             .presentationDetents([.medium, .large])
         }
+    }
+
+    private func matrixRows(_ drivers: [DriverScore]) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("DRIVER / PTS").foregroundStyle(.secondary).frame(height: rowHeight)
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(Array(drivers.enumerated()), id: \.element.id) { rank, entry in
+                    HStack(spacing: 5) {
+                        Text(String(rank + 1)).foregroundStyle(.secondary).frame(width: 20)
+                        driverHelmet(entry).frame(width: 22, height: 20)
+                        Text(MotorsportAssetName.abbreviation(entry.driver.driverName))
+                            .fontWeight(.semibold).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                        PulseNumber(entry.points.formatted()).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .frame(height: rowHeight)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(rank + 1), \(entry.driver.driverName), \(entry.points.formatted()) points")
+                }
+            }
+            .frame(width: 120)
+            .padding(.trailing, 8)
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 4) {
+                    ForEach(weekends) { weekend in
+                        VStack(spacing: 0) {
+                            Text(weekend.meeting.round.map { "R\($0)" } ?? "—")
+                                .foregroundStyle(.secondary).frame(height: rowHeight)
+                                .accessibilityLabel(weekend.meeting.name)
+                            ForEach(drivers) { entry in
+                                if let score = entry.rounds[weekend.id] {
+                                    let cell = Text(value(score)).fontWeight(.semibold)
+                                        .frame(width: 43, height: rowHeight - 4)
+                                        .background(tint(score).opacity(0.24), in: .rect(cornerRadius: 4))
+                                    Group {
+                                        if showsRoundDetails {
+                                            Button { selected = score } label: { cell }
+                                                .buttonStyle(.plain)
+                                        } else {
+                                            cell
+                                        }
+                                    }
+                                    .accessibilityLabel("\(entry.driver.driverName), \(weekend.meeting.name)")
+                                    .accessibilityValue(value(score))
+                                    .frame(height: rowHeight)
+                                } else {
+                                    Text("—").foregroundStyle(.tertiary).frame(width: 43, height: rowHeight)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .defaultScrollAnchor(.leading)
+        }
+        .font(.caption.monospacedDigit())
+        .padding(.horizontal, 12)
     }
 
     private func driverHelmet(_ entry: DriverScore) -> some View {
@@ -661,10 +957,139 @@ private struct SeasonRoundMatrix: View {
     }
 }
 
+private struct SeasonOverviewInsights {
+    struct Margin {
+        let row: SessionResult
+        let seconds: Double
+        let meeting: Meeting
+    }
+
+    struct Distance {
+        let teamID: String
+        let row: SessionResult
+        var km: Double
+    }
+
+    let average: (row: SessionResult, value: Double)?
+    let positionsGained: (row: SessionResult, value: Int)?
+    let closestMargin: Margin?
+    let largestMargin: Margin?
+    let comeback: (row: SessionResult, value: Int, meeting: Meeting)?
+    let mileage: [Distance]
+
+    init(weekends: [SeasonResultWeekend], sessions: [SessionType]) {
+        var finishes: [String: (row: SessionResult, sum: Int, count: Int)] = [:]
+        var gains: [String: (row: SessionResult, value: Int)] = [:]
+        var distances: [String: Distance] = [:]
+        var margins: [Margin] = []
+        var bestComeback: (row: SessionResult, value: Int, meeting: Meeting)?
+
+        for weekend in weekends {
+            for session in sessions {
+                let rows = weekend.sessions[session.rawValue]?.rows ?? []
+                if let winner = rows.first(where: { $0.position == 1 }),
+                   let runnerUp = rows.first(where: { $0.position == 2 }),
+                   let seconds = Self.winningMargin(winner: winner, runnerUp: runnerUp) {
+                    margins.append(Margin(row: winner, seconds: seconds, meeting: weekend.meeting))
+                }
+                for row in rows {
+                    if let position = row.position, position > 0 {
+                        if row.classification.uppercased() == "CLASSIFIED" {
+                            let prior = finishes[row.driverId] ?? (row, 0, 0)
+                            finishes[row.driverId] = (prior.row, prior.sum + position, prior.count + 1)
+                        }
+                        if let grid = row.gridPosition, grid > 0 {
+                            let gain = grid - position
+                            let prior = gains[row.driverId] ?? (row, 0)
+                            gains[row.driverId] = (prior.row, prior.value + gain)
+                            if gain > (bestComeback?.value ?? 0) {
+                                bestComeback = (row, gain, weekend.meeting)
+                            }
+                        }
+                    }
+                    if let length = weekend.meeting.circuit?.lengthKm, length.isFinite, length > 0,
+                       let laps = row.laps, laps > 0 {
+                        let teamID = row.constructorId.isEmpty ? row.team : row.constructorId
+                        distances[teamID, default: Distance(teamID: teamID, row: row, km: 0)].km += Double(laps) * length
+                    }
+                }
+            }
+        }
+
+        average = finishes.values.map { ($0.row, Double($0.sum) / Double($0.count)) }
+            .min { ($0.1, $0.0.driverId) < ($1.1, $1.0.driverId) }
+        positionsGained = gains.values.min { ($0.value == $1.value) ? $0.row.driverId < $1.row.driverId : $0.value > $1.value }
+        closestMargin = margins.min { $0.seconds < $1.seconds }
+        largestMargin = margins.max { $0.seconds < $1.seconds }
+        comeback = bestComeback
+        mileage = Array(distances.values.sorted {
+            $0.km == $1.km ? $0.teamID < $1.teamID : $0.km > $1.km
+        }.prefix(3))
+    }
+
+    private static func winningMargin(winner: SessionResult, runnerUp: SessionResult) -> Double? {
+        if let gap = runnerUp.gap?.trimmingCharacters(in: .whitespacesAndNewlines),
+           gap.range(of: #"^\+?\d+(?::\d+)?(?:\.\d+)?s?$"#, options: .regularExpression) != nil {
+            let time = gap.dropFirst(gap.hasPrefix("+") ? 1 : 0).dropLast(gap.hasSuffix("s") ? 1 : 0)
+            return AnalysisMath.elapsedSeconds(String(time))
+        }
+        guard let laps = winner.laps, laps > 0, laps == runnerUp.laps,
+              let first = AnalysisMath.elapsedSeconds(winner.raceTime),
+              let second = AnalysisMath.elapsedSeconds(runnerUp.raceTime), second > first else { return nil }
+        return second - first
+    }
+}
+
+private func seasonResultTeamColor(_ id: String) -> Color {
+    let rgb: UInt32
+    switch LiveIslandLogic.assetSlug(id) {
+    case "mercedes": rgb = 0x27f4d2
+    case "ferrari": rgb = 0xe8002d
+    case "mclaren": rgb = 0xff8000
+    case "red-bull", "red-bull-racing": rgb = 0x3671c6
+    case "williams": rgb = 0x64c4ff
+    case "rb", "racing-bulls": rgb = 0x6692ff
+    case "aston-martin": rgb = 0x229971
+    case "alpine": rgb = 0x0093cc
+    case "haas": rgb = 0xb6babd
+    case "sauber": rgb = 0x52e252
+    case "alfa", "alfa-romeo": rgb = 0xc92d4b
+    case "alphatauri": rgb = 0x5e8faa
+    case "audi": rgb = 0xf50537
+    case "cadillac": rgb = 0xc9b037
+    default: return DashboardArt.teamColor(id)
+    }
+    return WebDashboardStyle.adaptive(dark: rgb, light: rgb)
+}
+
+@MainActor @ViewBuilder
+private func resultTeamLogo(_ id: String, season: Int, contrast: Bool = false, size: CGFloat = 18) -> some View {
+    let name = MotorsportAssetName.name(kind: .teamLogo, id: id, season: season)
+    if contrast, ["mercedes", "mclaren"].contains(LiveIslandLogic.assetSlug(id)),
+       let image = DashboardArt.image(named: name) {
+        Image(uiImage: image).renderingMode(.template).resizable().scaledToFit()
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    } else {
+        AssetImage(name: name).frame(width: size, height: size).accessibilityHidden(true)
+    }
+}
+
+private extension View {
+    func seasonResultsPanel() -> some View {
+        background(WebDashboardStyle.homePanel, in: PulseStyle.cardShape)
+            .clipShape(PulseStyle.cardShape)
+            .overlay { PulseStyle.cardShape.strokeBorder(WebDashboardStyle.homeLine).allowsHitTesting(false) }
+            .containerShape(PulseStyle.cardShape)
+    }
+}
+
 private struct SeasonLeaders: View {
     let weekends: [SeasonResultWeekend]
     let sessions: [SessionType]
     let season: Int
+    var showsCards = false
 
     @State private var selectedMetric: Metric?
     var sheetMaxHeight: CGFloat = 0
@@ -696,11 +1121,78 @@ private struct SeasonLeaders: View {
     }
 
     var body: some View {
+        Group {
+            if showsCards {
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(Metric.allCases) { metric in
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Most " + metric.rawValue.lowercased())
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+                                .background(WebDashboardStyle.homeBackground, in: .rect)
+                            HStack(spacing: 0) {
+                                overviewStatCell(metric, teams: false)
+                                Rectangle().fill(WebDashboardStyle.homeLine).frame(width: 1)
+                                overviewStatCell(metric, teams: true)
+                            }
+                            .frame(height: 60)
+                        }
+                        .seasonResultsPanel()
+                        .accessibilityElement(children: .contain)
+                    }
+                }
+            } else {
+                leaderList
+            }
+        }
+    }
+
+    private func overviewStatCell(_ metric: Metric, teams: Bool) -> some View {
+        let best = leader(metric, teams: teams, sessions: sessions)
+        let label = teams ? "Constructor" : "Driver"
+        let unit = metric.rawValue.lowercased()
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.caption2.weight(.semibold)).tracking(0.6)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                PulseNumber(best?.value.formatted() ?? "—").font(.title3.bold())
+                Text(unit).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+        .padding(.leading, 9)
+        .padding(.trailing, best == nil ? 8 : 37)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .overlay(alignment: .bottomTrailing) {
+            if let best {
+                ZStack {
+                    Circle().fill(seasonResultTeamColor(best.team))
+                    if teams {
+                        resultTeamLogo(best.team, season: season, contrast: true, size: 24)
+                    } else {
+                        AssetImage(name: MotorsportAssetName.name(kind: .driverPhoto, id: best.id, season: season))
+                    }
+                }
+                .frame(width: 27, height: 27)
+                .clipShape(.circle)
+                .padding(.trailing, 8).padding(.bottom, 8)
+                .accessibilityHidden(true)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label), \(best?.name ?? "No result"), \(best?.value.formatted() ?? "—") \(unit)")
+    }
+
+    private var leaderList: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Season Leaders").font(.headline).accessibilityAddTraits(.isHeader)
                 Spacer()
-                Text("Combined").font(.caption.weight(.medium)).foregroundStyle(WebDashboardStyle.homeMuted)
+                Text(sessions.count > 1 ? "Combined" : sessions.first == .sprint ? "Sprint" : "Race")
+                    .font(.caption.weight(.medium)).foregroundStyle(WebDashboardStyle.homeMuted)
             }
             .padding(.bottom, 14)
 
@@ -846,13 +1338,17 @@ struct MeetingResultsDashboard: View {
     @ScaledMetric(relativeTo: .caption) private var comparisonValueWidth = 72.0
     let weekend: SeasonResultWeekend
     let initial: Session
+
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selected: Session?
     @State private var analysis: WeekendAnalysis?
+    @State private var selectedPanel: WeekendResultPanel?
     @State private var driverTrend: DriverTrend?
     @State private var progressViewportHeight: CGFloat = 0
     @State private var excludeProgressOutliers = true
     @State private var progressSessions = Set(SessionType.allCases)
+    @State private var progressPointID: String?
+    @State private var hoveredProgressPointID: String?
 
     private enum WeekendAnalysis: Identifiable {
         case grid, progress
@@ -867,15 +1363,34 @@ struct MeetingResultsDashboard: View {
 
     private var availableSessions: [Session] {
         weekend.meeting.sessions
-            .filter { weekend.sessions[$0.sessionType.rawValue]?.rows.isEmpty == false }
-            .sorted { $0.startTime > $1.startTime }
+            .filter {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    return $0.id == initial.id || weekend.sessions[$0.sessionType.rawValue] != nil
+                }
+                return weekend.sessions[$0.sessionType.rawValue]?.rows.isEmpty == false
+            }
+            .sorted {
+                if UIDevice.current.userInterfaceIdiom == .pad { return $0.startTime < $1.startTime }
+                return $0.startTime > $1.startTime
+            }
     }
 
     var body: some View {
         let session = selected ?? initial
+        let isPad = UIDevice.current.userInterfaceIdiom == .pad
         ResultsScreen(session: session, meeting: weekend.meeting, availableSessions: availableSessions,
-                      selectSession: { selected = $0 }) {
-            analysisEntries
+                      selectSession: { selectedPanel = nil; selected = $0 },
+                      selectedPanel: isPad ? selectedPanel : nil, hasStartingGrid: !grid.isEmpty,
+                      selectPanel: { selectedPanel = $0 }) {
+            if isPad {
+                switch selectedPanel {
+                case .grid: tabletStartingGrid
+                case .progress: tabletProgressChart
+                case nil: EmptyView()
+                }
+            } else {
+                analysisEntries
+            }
         }
         .id(session.id)
         .transition(.opacity)
@@ -883,7 +1398,11 @@ struct MeetingResultsDashboard: View {
         .navigationTitle("Race Results")
         .dashboardDetail()
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.visible, for: .navigationBar)
+        .toolbar(isPad ? .hidden : .visible, for: .navigationBar)
+        .sheet(item: Binding(get: { isPad ? driverTrend : nil }, set: { driverTrend = $0 })) { trend in
+            if isPad { ResultFittedSheet(maximumHeight: progressViewportHeight) { driverTrendContent(trend) } }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { progressViewportHeight = $0 }
         .sheet(item: $analysis) { tool in
             NavigationStack {
                 Group {
@@ -1013,6 +1532,36 @@ struct MeetingResultsDashboard: View {
             .sorted { ($0.gridPosition == 0 ? Int.max : $0.gridPosition ?? Int.max) < ($1.gridPosition == 0 ? Int.max : $1.gridPosition ?? Int.max) }
     }
 
+    private var tabletStartingGrid: some View {
+        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+            GridRow {
+                Text("POS.")
+                Text("NO.")
+                Text("DRIVER")
+                Text("TEAM")
+                Text("TIME")
+            }.font(.caption.bold()).foregroundStyle(WebDashboardStyle.homeMuted)
+            Divider()
+            ForEach(grid.filter { ($0.gridPosition ?? 0) > 0 }) { row in
+                let qualifying = weekend.sessions["qualifying"]?.rows.first { $0.driverId == row.driverId }
+                GridRow {
+                    Text(row.gridPosition.map(String.init) ?? "—")
+                    Text(row.driverNumber ?? "—")
+                    Text(row.driverName.split(whereSeparator: \.isWhitespace).last.map(String.init) ?? row.driverName)
+                        .accessibilityLabel(row.driverName)
+                    HStack(spacing: 7) {
+                        AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: row.constructorId, season: weekend.meeting.season))
+                            .frame(width: 20, height: 16).accessibilityHidden(true)
+                        Text(row.team)
+                    }
+                    Text(qualifying?.q3 ?? qualifying?.q2 ?? qualifying?.q1 ?? "—")
+                }.font(.subheadline.monospacedDigit())
+                Divider()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var startingGrid: some View {
         let grid = grid
         return ScrollView {
@@ -1074,6 +1623,220 @@ struct MeetingResultsDashboard: View {
             ResultFittedSheet(maximumHeight: progressViewportHeight) {
                 driverTrendContent(trend)
             }
+        }
+    }
+
+    private var tabletProgressChart: some View {
+        let sessions: [SessionType] = [.fp1, .fp2, .fp3, .qualifying]
+        let available = sessions.filter { weekend.sessions[$0.rawValue] != nil }
+        let samples = available.flatMap { session in
+            (weekend.sessions[session.rawValue]?.rows ?? []).compactMap { row -> Timing? in
+                guard let lap = row.bestLap.flatMap(AnalysisMath.elapsedSeconds), lap.isFinite else { return nil }
+                return Timing(row: row, session: session, lap: lap)
+            }
+        }
+        let orderedQualifying = weekend.sessions["qualifying"]?.rows ?? []
+        let positions = Dictionary(orderedQualifying.map { ($0.driverId, $0.position ?? 99) }, uniquingKeysWith: { first, _ in first })
+        var seen = Set<String>()
+        let drivers = samples.filter { seen.insert($0.driver).inserted }.map(\.driver)
+        let order = drivers.enumerated().sorted {
+            let first = positions[$0.element, default: 99]
+            let second = positions[$1.element, default: 99]
+            return first == second ? $0.offset < $1.offset : first < second
+        }.map(\.element)
+        let names = Dictionary(samples.map { ($0.driver, $0.row.driverName) }, uniquingKeysWith: { _, last in last })
+        let times = samples.map(\.lap).sorted()
+        let limit: Double = {
+            guard !times.isEmpty, excludeProgressOutliers else { return .infinity }
+            let q1 = times[times.count / 4]
+            let q3 = times[times.count * 3 / 4]
+            return q3 + 1.5 * (q3 - q1)
+        }()
+        let low = floor(times.first ?? 0)
+        let high = max(low + 1, ceil(times.last { $0 <= limit } ?? low))
+        let visible = samples.filter { progressSessions.contains($0.session) && $0.lap <= limit }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ForEach(available, id: \.self) { session in
+                    let active = progressSessions.contains(session)
+                    Button {
+                        if active { progressSessions.remove(session) }
+                        else { progressSessions.insert(session) }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle().fill(tabletProgressColor(session)).frame(width: 8, height: 8)
+                            Text(session.webTitle)
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 32)
+                        .background(WebDashboardStyle.homeBackground, in: .rect(cornerRadius: 6))
+                        .opacity(active ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(active ? .isSelected : [])
+                }
+                Spacer()
+                Toggle("Exclude outliers", isOn: $excludeProgressOutliers)
+                    .fixedSize()
+                    .font(.caption)
+            }
+            if samples.isEmpty {
+                Text("No fastest lap data available.").foregroundStyle(WebDashboardStyle.homeMuted)
+            } else {
+                Chart(visible) { sample in
+                    PointMark(x: .value("Lap time", sample.lap), y: .value("Driver", sample.driver))
+                        .symbolSize(44)
+                        .foregroundStyle(tabletProgressColor(sample.session))
+                        .accessibilityLabel("\(sample.row.driverName), \(sample.session.webTitle)")
+                        .accessibilityValue(sample.row.bestLap ?? "")
+                }
+                .chartXScale(domain: low...high)
+                .chartYScale(domain: order)
+                .chartXAxis {
+                    AxisMarks(values: (0...10).map { low + Double($0) }.filter { $0 <= high }) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let seconds = value.as(Double.self) {
+                                Text(String(format: "%d:%02d", Int(seconds) / 60, Int(seconds) % 60))
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: order) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let id = value.as(String.self), let name = names[id] {
+                                Text(MotorsportAssetName.abbreviation(name))
+                            }
+                        }
+                    }
+                }
+                .chartXAxisLabel("Lap time", position: .bottom, alignment: .center)
+                .chartOverlay { proxy in
+                    GeometryReader { geometry in
+                        if let anchor = proxy.plotFrame {
+                            let frame = geometry[anchor]
+                            if let current = visible.first(where: { $0.id == (progressPointID ?? hoveredProgressPointID) }),
+                               let y = proxy.position(forY: current.driver) {
+                                Rectangle().fill(WebDashboardStyle.homeText.opacity(0.08))
+                                    .frame(width: frame.width, height: 24)
+                                    .position(x: frame.midX, y: frame.minY + y)
+                                    .allowsHitTesting(false)
+                            }
+                            ForEach(visible) { point in
+                                if let x = proxy.position(forX: point.lap), let y = proxy.position(forY: point.driver) {
+                                    Button { progressPointID = point.id } label: {
+                                        Circle().fill(.clear).frame(width: 14, height: 14).contentShape(.circle)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .onHover { inside in
+                                        if inside {
+                                            hoveredProgressPointID = point.id
+                                        } else if hoveredProgressPointID == point.id {
+                                            hoveredProgressPointID = nil
+                                        }
+                                    }
+                                    .accessibilityLabel("\(point.row.driverName), \(point.session.webTitle)")
+                                    .accessibilityValue(point.row.bestLap ?? "")
+                                    .popover(isPresented: Binding(
+                                        get: { progressPointID == point.id },
+                                        set: { showing in
+                                            if !showing && progressPointID == point.id { progressPointID = nil }
+                                        }
+                                    ), arrowEdge: .bottom) {
+                                        tabletProgressDetails(point, sessions: sessions, samples: samples)
+                                            .presentationCompactAdaptation(.popover)
+                                    }
+                                    .position(x: frame.minX + x, y: frame.minY + y)
+                                }
+                            }
+                            if progressPointID == nil,
+                               let hovered = visible.first(where: { $0.id == hoveredProgressPointID }),
+                               let x = proxy.position(forX: hovered.lap),
+                               let y = proxy.position(forY: hovered.driver) {
+                                tabletProgressDetails(hovered, sessions: sessions, samples: samples)
+                                    .background(WebDashboardStyle.homePanel, in: .rect(cornerRadius: 10))
+                                    .clipShape(.rect(cornerRadius: 10))
+                                    .shadow(color: .black.opacity(0.23), radius: 12, y: 4)
+                                    .position(
+                                        x: min(max(frame.minX + x, 174), max(174, geometry.size.width - 174)),
+                                        y: frame.minY + y + (y < 175 ? 98 : -98)
+                                    )
+                                    .allowsHitTesting(false)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    }
+                }
+                .frame(height: CGFloat(max(560, order.count * 24 + 80)))
+            }
+        }
+    }
+
+    private func tabletProgressDetails(_ point: Timing, sessions: [SessionType], samples: [Timing]) -> some View {
+        let laps = sessions.map { session in
+            samples.first { $0.driver == point.driver && $0.session == session }
+        }
+        let surname = point.row.driverName.split(whereSeparator: \.isWhitespace).last.map(String.init) ?? point.row.driverName
+        let text = WebDashboardStyle.adaptive(dark: 0xf7fafc, light: 0x101828)
+        let muted = WebDashboardStyle.adaptive(dark: 0xb6c2d4, light: 0x52627a)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 9) {
+                Text(surname).font(.system(size: 14, weight: .bold))
+                Text("(\(MotorsportAssetName.abbreviation(point.row.driverName)))")
+                    .font(.system(size: 14)).foregroundStyle(muted)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            Rectangle().fill(Color(red: 100.0 / 255, green: 116.0 / 255, blue: 139.0 / 255).opacity(0.19))
+                .frame(height: 1)
+            Grid(alignment: .trailing, horizontalSpacing: 0, verticalSpacing: 0) {
+                GridRow {
+                    Text("").frame(width: 42)
+                    ForEach(["Lap time", "vs FP1", "vs FP2", "vs FP3"], id: \.self) { heading in
+                        Text(heading).lineLimit(1).frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
+                .fontWeight(.medium).foregroundStyle(muted)
+                .padding(.vertical, 8)
+                ForEach(Array(sessions.enumerated()), id: \.element) { index, session in
+                    GridRow {
+                        Text(session == .qualifying ? "Q" : session.resultLabel)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(laps[index]?.row.bestLap ?? "—")
+                            .bold().foregroundStyle(tabletProgressColor(session))
+                        ForEach(0..<3) { baseline in
+                            if index > baseline, let lap = laps[index]?.lap, let reference = laps[baseline]?.lap {
+                                let difference = lap - reference
+                                Text(String(format: "%+.3fs", difference))
+                                    .foregroundStyle(difference < 0
+                                                     ? Color(red: 8.0 / 255, green: 163.0 / 255, blue: 68.0 / 255)
+                                                     : Color(red: 239.0 / 255, green: 48.0 / 255, blue: 56.0 / 255))
+                            } else {
+                                Text("—").foregroundStyle(Color(red: 148.0 / 255, green: 163.0 / 255, blue: 184.0 / 255))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+            .font(.system(size: 12).monospacedDigit())
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+        .foregroundStyle(text)
+        .frame(width: 340)
+        .presentationBackground(WebDashboardStyle.homePanel)
+    }
+
+    private func tabletProgressColor(_ session: SessionType) -> Color {
+        switch session {
+        case .fp1: Color(red: 59.0 / 255, green: 130.0 / 255, blue: 246.0 / 255)
+        case .fp2: Color(red: 16.0 / 255, green: 185.0 / 255, blue: 129.0 / 255)
+        case .fp3: Color(red: 245.0 / 255, green: 158.0 / 255, blue: 11.0 / 255)
+        default: Color(red: 239.0 / 255, green: 68.0 / 255, blue: 68.0 / 255)
         }
     }
 

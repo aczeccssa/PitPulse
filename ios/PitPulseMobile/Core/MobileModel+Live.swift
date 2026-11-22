@@ -40,6 +40,7 @@ extension MobileModel {
         liveConnecting = false
         for store in liveStores.values { store.stop() }
         liveSnapshots = [:]
+        liveEntries = [:]
         liveNotice = nil
         manuallySelectedLiveSeries = nil
         liveHistory = [:]
@@ -71,9 +72,15 @@ extension MobileModel {
         let entry = liveEntries[next]
         var displayed = current
         displayed.series = next.rawValue
-        if entry == nil, next == .f1, scheduledLiveSession != nil, current.sessionId != nil {
-            displayed = .disconnected(reason: "awaiting_timing")
-            displayed.series = next.rawValue
+        if entry == nil, next == .f1, let planned = scheduledLiveSession, current.sessionId != nil {
+            let matchesSchedule = current.meetingName == planned.meeting.name
+                && [current.sessionType, current.sessionName].compactMap { $0 }.contains {
+                    LiveIslandLogic.sessionTypeMatches($0, planned.session.sessionType)
+                }
+            if !matchesSchedule || LiveIslandLogic.isFinished(current.sessionStatus) {
+                displayed = .disconnected(reason: "awaiting_timing")
+                displayed.series = next.rawValue
+            }
         }
         if let id = displayed.sessionId ?? entry?.sessionId {
             let key = "\(next.rawValue):\(id)"
@@ -100,7 +107,7 @@ extension MobileModel {
             }
         }
         if snapshot.sessionId == nil {
-            liveSnapshots[incomingSeries] = snapshot
+            liveSnapshots[incomingSeries] = snapshot.retainingTiming(from: liveSnapshots[incomingSeries])
             refreshLiveSelection()
             return
         }

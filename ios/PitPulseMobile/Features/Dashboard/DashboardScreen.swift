@@ -6,6 +6,15 @@ import UIKit
 enum DashboardTab: Int, CaseIterable, Identifiable {
     case home, results, headToHead, drivers, constructors
 
+    case driverStandings, consistency
+    case settings = 10, calendar
+
+    static let phoneTabs: [Self] = [.home, .results, .headToHead, .drivers, .constructors]
+    static let padTabs: [Self] = [
+        .home, .calendar, .driverStandings, .constructors, .results, .headToHead,
+        .consistency, .settings
+    ]
+
     var id: Self { self }
 
     var title: String {
@@ -15,10 +24,27 @@ enum DashboardTab: Int, CaseIterable, Identifiable {
         case .headToHead: "Head to Head"
         case .drivers: "Drivers"
         case .constructors: "Constructors"
+        case .driverStandings: "Driver Standings"
+        case .consistency: "Consistency"
+        case .settings: "Settings"
+        case .calendar: "Calendar"
         }
     }
 
     var headerTitle: String { self == .home ? "Pit Pulse" : title }
+
+    var webNavigationIcon: String? {
+        switch self {
+        case .home: "home"
+        case .driverStandings: "driver-standings"
+        case .constructors: "constructor-standings"
+        case .results: "results"
+        case .drivers: "drivers"
+        case .headToHead: "head-to-head"
+        case .consistency: "consistency"
+        case .settings, .calendar: nil
+        }
+    }
 
     var symbol: String {
         switch self {
@@ -27,15 +53,29 @@ enum DashboardTab: Int, CaseIterable, Identifiable {
         case .headToHead: "arrow.left.arrow.right"
         case .drivers: "person.text.rectangle.fill"
         case .constructors: "trophy.fill"
+        case .driverStandings: "list.number"
+        case .consistency: "waveform.path"
+        case .settings: "gearshape"
+        case .calendar: "calendar"
         }
     }
 }
 
+enum DriverProfileDestination: Hashable {
+    case stats(StandingEntry)
+    case comparison(String, String?)
+}
+
 struct DashboardScreen<Header: View>: View {
+    let padWorkspace: Bool
     let tab: DashboardTab
     let fromHome: Bool
     let header: Header
     @Binding var showCalendar: Bool
+    var profileTarget: DriverProfileDestination?
+    let consistencyFilter: Binding<Bool>
+    let resultsTarget: (Meeting, Session)?
+    let openResultsSession: (Meeting, Session) -> Void
     let openTab: (DashboardTab) -> Void
     @State private var showsDriverStandings: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -48,23 +88,39 @@ struct DashboardScreen<Header: View>: View {
         #endif
     }()
 
-    init(tab: DashboardTab, fromHome: Bool, header: Header, showCalendar: Binding<Bool>,
+    init(padWorkspace: Bool = false, tab: DashboardTab, fromHome: Bool, header: Header, showCalendar: Binding<Bool>,
+         resultsTarget: (Meeting, Session)? = nil, profileTarget: DriverProfileDestination? = nil,
+         consistencyFilter: Binding<Bool>,
+         openResultsSession: @escaping (Meeting, Session) -> Void,
          openTab: @escaping (DashboardTab) -> Void) {
+        self.padWorkspace = padWorkspace
         self.tab = tab
         self.fromHome = fromHome
         self.header = header
         _showCalendar = showCalendar
+        self.resultsTarget = resultsTarget
+        self.profileTarget = profileTarget
+        self.consistencyFilter = consistencyFilter
+        self.openResultsSession = openResultsSession
         self.openTab = openTab
-        _showsDriverStandings = State(initialValue: true)
+        _showsDriverStandings = State(initialValue: !padWorkspace || tab == .driverStandings)
+    }
+
+    private var initialDriverStanding: StandingEntry? {
+        if case let .stats(entry) = profileTarget { return entry }
+        return nil
     }
 
     var body: some View {
         switch tab {
         case .home:
-            WebHomeScreen(header: header, showCalendar: $showCalendar, openTab: openTab)
+            WebHomeScreen(header: header, showCalendar: $showCalendar, openResultsSession: openResultsSession, openTab: openTab)
+        case .settings:
+            SettingsScreen(embedded: true)
+                .modifier(DashboardLiveBarSpace())
         case .constructors:
             NavigationStack {
-                ChampionshipScreen(constructorsOnly: true)
+                ChampionshipScreen(constructorsOnly: true, tabletWebLayout: padWorkspace)
                     .dashboardHeader(header)
             }
             .environment(\.usesDashboardCardStyle, true)
@@ -73,7 +129,14 @@ struct DashboardScreen<Header: View>: View {
                 Group {
                     switch tab {
                     case .results:
-                        SeasonResultsIndex()
+                        SeasonResultsIndex(initialMeeting: resultsTarget?.0, initialSession: resultsTarget?.1)
+                    case .headToHead where padWorkspace:
+                        if case let .comparison(driver, teammate) = profileTarget {
+                            TeammateComparisonBoard(initialDriver: driver, teammate: teammate, tabletWebLayout: true)
+                                .id(profileTarget)
+                        } else {
+                            TeammateComparisonBoard(tabletWebLayout: true)
+                        }
                     case .headToHead:
                         VStack(spacing: 8) {
                             PulseSectionPicker(
@@ -97,8 +160,15 @@ struct DashboardScreen<Header: View>: View {
                                 if shown { visitedConsistency = true }
                             }
                         }
+                    case .calendar:
+                        TabletRaceCalendar()
+                    case .driverStandings:
+                        DriversDashboard(showsStandings: $showsDriverStandings, showsSectionPicker: false,
+                                         initialStanding: initialDriverStanding)
                     case .drivers:
                         DriversDashboard(showsStandings: $showsDriverStandings)
+                    case .consistency:
+                        DriverConsistency(tabletWebLayout: padWorkspace, tabletFilter: consistencyFilter)
                     default:
                         EmptyView()
                     }
@@ -123,6 +193,8 @@ extension View {
 }
 
 extension EnvironmentValues {
+    @Entry var openDashboardDriverProfile: ((DriverProfileDestination) -> Void)? = nil
+    @Entry var dashboardTabPlatterFrame: ((CGRect) -> Void)? = nil
     @Entry var dashboardLiveBarFrame: ((CGRect) -> Void)? = nil
     @Entry var dashboardLivePage: ((UUID?) -> Void)? = nil
     @Entry var dashboardLiveDetailFrame: ((UUID, CGRect) -> Void)? = nil
@@ -131,6 +203,7 @@ extension EnvironmentValues {
 private struct DashboardLiveBarSpace: ViewModifier {
     @EnvironmentObject private var model: MobileModel
     @Environment(\.dashboardLiveBarFrame) private var reportFrame
+    @Environment(\.dashboardTabPlatterFrame) private var reportTabPlatter
     @Environment(\.dashboardLivePage) private var showPage
 
     func body(content: Content) -> some View {
@@ -146,7 +219,11 @@ private struct DashboardLiveBarSpace: ViewModifier {
             }
         }
         .onAppear { showPage?(nil) }
-        .background { DashboardTabBarTransition(hidesTabBar: false) { showPage?(nil) } }
+        .background {
+            if let showPage {
+                DashboardTabBarTransition(hidesTabBar: false, reportTabPlatter: reportTabPlatter) { showPage(nil) }
+            }
+        }
     }
 }
 
@@ -166,7 +243,7 @@ private struct DashboardDetail: ViewModifier {
                     reportFrame(id, frame)
                 }
                 .onAppear { showPage?(id) }
-                .background { DashboardTabBarTransition(hidesTabBar: true) { showPage?(id) } }
+                .background { DashboardTabBarTransition(hidesTabBar: UIDevice.current.userInterfaceIdiom != .pad) { showPage?(id) } }
         } else {
             content
         }
@@ -175,6 +252,7 @@ private struct DashboardDetail: ViewModifier {
 
 private struct DashboardTabBarTransition: UIViewControllerRepresentable {
     let hidesTabBar: Bool
+    var reportTabPlatter: ((CGRect) -> Void)? = nil
     let didAppear: () -> Void
 
     func makeUIViewController(context: Context) -> Controller {
@@ -183,11 +261,13 @@ private struct DashboardTabBarTransition: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: Controller, context: Context) {
         controller.didAppear = didAppear
+        controller.reportTabPlatter = reportTabPlatter
     }
 
     final class Controller: UIViewController {
         let hidesTabBar: Bool
         var didAppear: () -> Void
+        var reportTabPlatter: ((CGRect) -> Void)?
 
         init(hidesTabBar: Bool, didAppear: @escaping () -> Void) {
             self.hidesTabBar = hidesTabBar
@@ -236,6 +316,32 @@ private struct DashboardTabBarTransition: UIViewControllerRepresentable {
             // Some gestures settle without a coordinator on the destination.
             applyVisibility(in: tabs, hidden: hidesTabBar)
             didAppear()
+            reportPlatterAfterLayout()
+        }
+
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            reportPlatterAfterLayout()
+        }
+
+        private func reportPlatterAfterLayout() {
+            guard reportTabPlatter != nil else { return }
+            Task { @MainActor [weak self] in
+                guard let self, let bar = tabBarController?.tabBar, let window = bar.window,
+                      viewIfLoaded?.window === window else { return }
+                // UITabBar spans the window. The inset view containing the tab controls is the visible glass.
+                let platter = bar.subviews.first { candidate in
+                    !candidate.isHidden && candidate.bounds.width > bar.bounds.width / 2
+                        && candidate.bounds.width < bar.bounds.width && containsTabControl(candidate)
+                }
+                if let platter {
+                    reportTabPlatter?(platter.convert(platter.bounds, to: window))
+                }
+            }
+        }
+
+        private func containsTabControl(_ view: UIView) -> Bool {
+            view is UIControl || view.subviews.contains(where: containsTabControl)
         }
 
         private func applyVisibility(in tabs: UITabBarController, hidden: Bool) {
@@ -267,6 +373,28 @@ enum WebDashboardStyle {
     static let homeLine = adaptive(dark: 0x1b2230, light: 0xe8edf3)
     static let homeText = adaptive(dark: 0xf5f7fb, light: 0x080e1c)
     static let homeMuted = adaptive(dark: 0x9da5b4, light: 0x64748b)
+
+    static func chartTeamColor(_ teamID: String, adjustsForLight: Bool = true) -> Color {
+        let colors: (dark: UInt32, light: UInt32)
+        switch LiveIslandLogic.assetSlug(teamID) {
+        case "red-bull", "red-bull-racing": colors = (0x3671c6, 0x3671c6)
+        case "mercedes": colors = (0x27f4d2, 0x008f80)
+        case "mclaren": colors = (0xff8000, 0xff8000)
+        case "ferrari": colors = (0xe8002d, 0xe8002d)
+        case "williams": colors = (0x64c4ff, 0x187db0)
+        case "rb", "racing-bulls": colors = (0x6692ff, 0x6692ff)
+        case "aston-martin": colors = (0x229971, 0x229971)
+        case "alpine": colors = (0x0093cc, 0x0093cc)
+        case "haas": colors = (0xb6babd, 0x727b85)
+        case "sauber": colors = (0x52e252, 0x52e252)
+        case "alfa", "alfa-romeo": colors = (0xc92d4b, 0xc92d4b)
+        case "alphatauri": colors = (0x5e8faa, 0x5e8faa)
+        case "audi": colors = (0xf50537, 0xf50537)
+        case "cadillac": colors = (0xc9b037, 0x8d7a19)
+        default: return DashboardArt.teamColor(teamID)
+        }
+        return WebDashboardStyle.adaptive(dark: colors.dark, light: adjustsForLight ? colors.light : colors.dark)
+    }
 
     static func adaptive(dark: UInt32, light: UInt32) -> Color {
         Color(uiColor: UIColor { traits in

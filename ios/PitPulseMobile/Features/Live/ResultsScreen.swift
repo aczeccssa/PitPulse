@@ -1,20 +1,38 @@
 import SharedComponents
 import SharedData
 import SwiftUI
+import UIKit
+
+enum WeekendResultPanel: Equatable { case grid, progress }
 
 struct ResultsScreen<WeekendTools: View>: View {
     @EnvironmentObject private var model: MobileModel
+    @Environment(\.openDashboardDriverProfile) private var openDashboardDriverProfile
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     let session: Session
     let meeting: Meeting
     var availableSessions: [Session] = []
     var selectSession: ((Session) -> Void)?
+    var selectedPanel: WeekendResultPanel? = nil
+    var hasStartingGrid = false
+    var selectPanel: ((WeekendResultPanel) -> Void)? = nil
     @ViewBuilder var weekendTools: () -> WeekendTools
     @State private var response: APIEnvelope<[SessionResult]>?
     @State private var error: String?
     @State private var showFinishGaps = false
     @State private var viewportHeight: CGFloat = 0
+    @State private var sideBySide = false
+    @State private var selectedDriverID: String?
+    @State private var showsCompactAnalysis = false
+    @State private var shownProfile: String?
+    @State private var profileDestination: DriverProfileDestination?
 
+    private var selectedDriver: SessionResult? {
+        rows.first { $0.driverId == selectedDriverID }
+    }
+
+    private var tabletArchive: Bool { UIDevice.current.userInterfaceIdiom == .pad && selectSession != nil }
     private var isRace: Bool { session.sessionType == .race || session.sessionType == .sprint }
     private var isQualifying: Bool { session.sessionType == .qualifying || session.sessionType == .sprintQualifying }
     private var rows: [SessionResult] {
@@ -35,31 +53,70 @@ struct ResultsScreen<WeekendTools: View>: View {
     }
 
     var body: some View {
+        GeometryReader { viewport in
+            HStack(spacing: 0) {
+                resultsList(workspaceWidth: viewport.size.width)
+                    .frame(width: sideBySide ? min(460, viewport.size.width * 0.46) : viewport.size.width)
+                if sideBySide {
+                    Divider()
+                    Group {
+                        if let selectedDriver {
+                            driverAnalysis(selectedDriver, embedded: true)
+                                .id(selectedDriver.driverId)
+                        } else {
+                            ContentUnavailableView("Select a Driver", systemImage: "chart.xyaxis.line",
+                                                   description: Text("Choose a driver from the results to view lap pace, sectors, and stints."))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if tabletArchive { tabletMeetingHeader }
+        }
+        .background(WebDashboardStyle.homeBackground)
+        .onGeometryChange(for: Bool.self) { geometry in
+            UIDevice.current.userInterfaceIdiom == .pad && selectSession == nil && geometry.size.width >= 820 && !typeSize.isAccessibilitySize
+        } action: { wide in
+            sideBySide = wide
+            showsCompactAnalysis = !wide && selectedDriver != nil
+        }
+        .navigationDestination(item: $profileDestination) { target in
+            switch target {
+            case .stats(let entry):
+                StandingProfile(entry: entry, driversDesign: true)
+            case .comparison(let driver, let teammate):
+                TeammateComparisonBoard(initialDriver: driver, teammate: teammate)
+                    .navigationTitle("Head to Head")
+            }
+        }
+        .navigationDestination(isPresented: $showsCompactAnalysis) {
+            if let selectedDriver { driverAnalysis(selectedDriver) }
+        }
+    }
+
+    private func driverAnalysis(_ row: SessionResult, embedded: Bool = false) -> some View {
+        DriverAnalysisScreen(sessionID: session.id, driver: row, season: meeting.season,
+                             sessionLabel: session.sessionType.resultLabel, embedded: embedded)
+    }
+
+    private func resultsList(workspaceWidth: CGFloat) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                meetingHeader
-                weekendTools()
-                sessionHeader
-                if !rows.isEmpty {
-                    if isRace { podium }
-                    classification
-                } else if response != nil {
-                    ContentUnavailableView("No Results Yet", systemImage: "flag.checkered",
-                                           description: Text("Results appear once the session ends and the server syncs them."))
-                } else if error == nil {
-                    PulseSkeleton(label: "Loading session results…")
-                        .frame(maxWidth: .infinity)
-                        .padding(16)
-                }
-
-                if let error {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(error).foregroundStyle(WebDashboardStyle.homeMuted)
-                        Button("Retry") { Task { await load() } }
+                if !tabletArchive { meetingHeader }
+                if tabletArchive && selectedPanel != .progress { meetingStats }
+                if tabletArchive {
+                    VStack(alignment: .leading, spacing: 14) {
+                        sessionHeader
+                        resultContent(workspaceWidth: workspaceWidth)
                     }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .dashboardPanel(WebDashboardStyle.homePanel)
+                    .padding(16)
+                    .dashboardPanel(WebDashboardStyle.homePanel, line: resultTableLine)
+                } else {
+                    weekendTools()
+                    sessionHeader
+                    resultContent(workspaceWidth: workspaceWidth)
                 }
             }
             .padding(.horizontal, 16)
@@ -87,6 +144,61 @@ struct ResultsScreen<WeekendTools: View>: View {
         .refreshable { await load() }
     }
 
+    @ViewBuilder private func resultContent(workspaceWidth: CGFloat) -> some View {
+        if selectedPanel != nil {
+            weekendTools()
+        } else if tabletArchive && response != nil {
+            tabletClassification(workspaceWidth: workspaceWidth)
+        } else if !rows.isEmpty {
+            if isRace { podium }
+            classification
+        } else if response != nil {
+            ContentUnavailableView("No Results Yet", systemImage: "flag.checkered",
+                                   description: Text("Results appear once the session ends and the server syncs them."))
+        } else if error == nil {
+            PulseSkeleton(label: "Loading session results…")
+                .frame(maxWidth: .infinity)
+                .padding(16)
+        }
+
+        if selectedPanel == nil, let error {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(error).foregroundStyle(WebDashboardStyle.homeMuted)
+                Button("Retry") { Task { await load() } }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dashboardPanel(WebDashboardStyle.homePanel)
+        }
+    }
+
+    private var tabletMeetingHeader: some View {
+        HStack(spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier("results.archive.back")
+
+            FlagBadge(countryCode: meeting.countryCode, width: 20).accessibilityHidden(true)
+            Text("\(meeting.name) Result")
+                .font(.headline)
+                .lineLimit(2)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .padding(.horizontal, 16)
+        .frame(minHeight: 64)
+        .background(WebDashboardStyle.homePanel)
+    }
+
     private var meetingHeader: some View {
         let round = meeting.round.map { "R\($0) · \(meeting.season)" } ?? String(meeting.season)
         return VStack(alignment: .leading, spacing: 8) {
@@ -106,9 +218,81 @@ struct ResultsScreen<WeekendTools: View>: View {
         .dashboardPanel(WebDashboardStyle.homePanel)
     }
 
+    private var meetingStats: some View {
+        let archive = model.seasonArchive?.data.first { $0.id == meeting.id }
+        let race = archive?.sessions["race"]?.rows ?? []
+        let winner = race.first { $0.position == 1 }
+        let pole = archive?.sessions["qualifying"]?.rows.first { $0.position == 1 }
+        let fastest = race.compactMap { row -> (row: SessionResult, seconds: Double)? in
+            guard let lap = row.bestLap, let seconds = resultTimeSeconds(lap) else { return nil }
+            return (row, seconds)
+        }.min { $0.seconds < $1.seconds }?.row
+        return HStack(alignment: .top, spacing: 16) {
+            meetingStat("Race Winner", icon: "web-result-race-winner", driver: winner, value: winner?.raceTime ?? winner?.time)
+            meetingStat("Pole Position", icon: "web-result-pole-position", driver: pole, value: pole?.q3 ?? pole?.time)
+            meetingStat("Fastest Lap", icon: "web-result-fastest-lap", driver: fastest, value: fastest?.bestLap)
+        }
+    }
+
+    private func resultTimeSeconds(_ time: String) -> Double? {
+        let pieces = time.split(separator: ":", omittingEmptySubsequences: false)
+        let values = pieces.compactMap { Double($0) }
+        guard !values.isEmpty, pieces.count == values.count else { return nil }
+        return values.reduce(0) { $0 * 60 + $1 }
+    }
+
+    private func meetingStat(_ title: String, icon: String, driver: SessionResult?, value: String?) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title).font(.system(size: 13, weight: .semibold))
+            HStack(spacing: 7) {
+                if let driver {
+                    AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: driver.constructorId, season: meeting.season))
+                        .frame(width: 23, height: 20).accessibilityHidden(true)
+                    Text(driver.driverName.split(whereSeparator: \.isWhitespace).last.map(String.init) ?? driver.driverName)
+                } else {
+                    Text("—")
+                }
+            }.font(.system(size: 18, weight: .semibold))
+            Text(value ?? "—").font(.system(size: 15).monospacedDigit())
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+        .dashboardPanel(WebDashboardStyle.homePanel, line: resultTableLine)
+        .overlay(alignment: .topTrailing) {
+            Image(icon).resizable().frame(width: 18, height: 18)
+                .frame(width: 28, height: 28)
+                .foregroundStyle(WebDashboardStyle.homeMuted)
+                .background(WebDashboardStyle.adaptive(dark: 0x121822, light: 0xf6f6f6), in: .circle)
+                .padding(14)
+                .accessibilityHidden(true)
+        }
+    }
+
     private var sessionHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let selectSession, availableSessions.count > 1 {
+            if tabletArchive, let selectSession, let selectPanel {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 2) {
+                        ForEach(availableSessions) { choice in
+                            if choice.sessionType == .race && hasStartingGrid {
+                                tabletResultTab("Starting Grid", active: selectedPanel == .grid) { selectPanel(.grid) }
+                            }
+                            tabletResultTab(choice.sessionType.webTitle, active: selectedPanel == nil && choice.id == session.id) {
+                                selectSession(choice)
+                            }
+                        }
+                        if hasStartingGrid && !availableSessions.contains(where: { $0.sessionType == .race }) {
+                            tabletResultTab("Starting Grid", active: selectedPanel == .grid) { selectPanel(.grid) }
+                        }
+                        Rectangle().fill(resultTableLine).frame(width: 1, height: 20)
+                            .padding(.leading, 3)
+                        tabletResultTab("↗  Progress", active: selectedPanel == .progress) { selectPanel(.progress) }
+                    }
+                    .padding(4)
+                    .background(WebDashboardStyle.adaptive(dark: 0x1c2027, light: 0xf1f1f1), in: .rect(cornerRadius: 6))
+                }
+                .scrollIndicators(.hidden)
+            } else if let selectSession, availableSessions.count > 1 {
                 let columns = typeSize.isAccessibilitySize ? 2 : (availableSessions.count > 5
                                                                   ? (availableSessions.count + 1) / 2 : availableSessions.count)
                 VStack(spacing: 2) {
@@ -129,18 +313,31 @@ struct ResultsScreen<WeekendTools: View>: View {
                         }
                     }
                 }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Session")
             } else {
                 Text(session.sessionType.resultLabel).font(.headline)
                     .accessibilityAddTraits(.isHeader)
             }
 
-            Text(session.startTime, format: .dateTime.month().day().hour().minute())
-                .font(.caption)
-                .foregroundStyle(WebDashboardStyle.homeMuted)
+            if !tabletArchive {
+                Text(session.startTime, format: .dateTime.month().day().hour().minute())
+                    .font(.caption)
+                    .foregroundStyle(WebDashboardStyle.homeMuted)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func tabletResultTab(_ label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+                .background(active ? PulseStyle.red.opacity(0.14) : .clear, in: .rect(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(active ? PulseStyle.red : WebDashboardStyle.homeMuted)
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     @ViewBuilder private var podium: some View {
@@ -189,6 +386,202 @@ struct ResultsScreen<WeekendTools: View>: View {
         }
     }
 
+    private var showsPhaseColumns: Bool {
+        isQualifying && rows.contains { $0.q1 != nil || $0.q2 != nil || $0.q3 != nil }
+    }
+
+    private func tabletClassification(workspaceWidth: CGFloat) -> some View {
+        let ordered = rows.sorted {
+            if $0.position != $1.position { return ($0.position ?? Int.max) < ($1.position ?? Int.max) }
+            if $0.laps != $1.laps { return ($0.laps ?? 0) > ($1.laps ?? 0) }
+            return $0.driverId < $1.driverId
+        }
+        let fields = isQualifying ? ["Q1", "Q2", "Q3"] : isRace
+            ? ["TIME", "GAP TO LEADER", "INTERVAL", "POINTS", "LAPS"] : ["TIME", "GAP", "LAPS"]
+        return ScrollView(.horizontal) {
+            Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
+                GridRow {
+                    ForEach(["POS.", "NO.", "DRIVER", "TEAM"] + fields, id: \.self) { title in
+                        Text(title)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(WebDashboardStyle.homeMuted)
+                            .padding(.top, 8)
+                            .padding(.bottom, 10)
+                            .padding(.horizontal, 6)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .frame(maxWidth: .infinity, alignment: fields.contains(title) ? .trailing : .leading)
+                            .gridColumnAlignment(fields.contains(title) ? .trailing : .leading)
+                    }
+                }
+                .accessibilityAddTraits(.isHeader)
+                Rectangle().fill(resultTableLine).frame(height: 1)
+                if ordered.isEmpty {
+                    Text("No results available for this session.")
+                        .foregroundStyle(WebDashboardStyle.homeMuted)
+                        .padding(.vertical, 16)
+                        .gridCellColumns(4 + fields.count)
+                }
+                ForEach(Array(ordered.enumerated()), id: \.element.id) { index, row in
+                    tabletClassificationRow(row, leader: ordered.first, previous: index > 0 ? ordered[index - 1] : nil)
+                    Rectangle().fill(resultTableLine).frame(height: 1)
+                }
+            }
+            .frame(minWidth: max(isRace ? 690 : 550, workspaceWidth - 64))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func tabletClassificationRow(_ row: SessionResult, leader: SessionResult?, previous: SessionResult?) -> some View {
+        let classified = row.classification.uppercased() == "CLASSIFIED"
+        let elapsed = row.raceTime ?? row.time ?? row.bestLap
+        let result = isRace && !classified
+            ? (row.laps == 0 ? "DNS" : row.classification.uppercased()) : (elapsed ?? "—")
+        let lapsBehind = (leader?.laps ?? 0) - (row.laps ?? 0)
+        let gap = previous == nil ? "" : isRace && lapsBehind > 0
+            ? "+\(lapsBehind) lap\(lapsBehind == 1 ? "" : "s")"
+            : classified ? resultDelta(elapsed, from: isRace ? leader?.raceTime ?? leader?.time : leader?.bestLap ?? leader?.time, suffix: isRace ? "s" : "") : ""
+        let interval = classified && previous != nil && row.laps == previous?.laps
+            ? resultDelta(elapsed, from: previous?.raceTime ?? previous?.time ?? previous?.bestLap, suffix: "s") : ""
+        return GridRow {
+            Text(row.position.map(String.init) ?? "NC").modifier(ResultWebCell())
+            Text(row.driverNumber ?? "—")
+                .font(.system(size: 18, weight: .heavy))
+                .foregroundStyle(DashboardArt.teamColor(row.constructorId))
+                .modifier(ResultWebCell())
+            Button { shownProfile = row.driverId } label: {
+                Text(row.driverName.split(whereSeparator: \.isWhitespace).last.map(String.init) ?? row.driverName)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(row.driverName)
+            .popover(isPresented: Binding(
+                get: { shownProfile == row.driverId },
+                set: { if !$0 && shownProfile == row.driverId { shownProfile = nil } }
+            )) {
+                resultDriverProfile(row)
+                    .presentationCompactAdaptation(.popover)
+            }
+            .modifier(ResultWebCell())
+            HStack(spacing: 7) {
+                AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: row.constructorId, season: meeting.season))
+                    .frame(width: 23, height: 20).accessibilityHidden(true)
+                Text(row.team.replacingOccurrences(of: " F1 Team", with: ""))
+            }
+            .padding(.leading, 6)
+            .background(alignment: .leading) {
+                Rectangle().fill(DashboardArt.teamColor(row.constructorId)).frame(width: 5)
+            }
+            .modifier(ResultWebCell())
+            if isQualifying {
+                Text(row.q1 ?? "—").modifier(ResultWebCell())
+                Text(row.q2 ?? "—").modifier(ResultWebCell())
+                Text(row.q3 ?? "—").modifier(ResultWebCell())
+            } else {
+                Text(result).foregroundStyle(isRace && !classified ? PulseStyle.red : .primary).modifier(ResultWebCell())
+                Text(gap).modifier(ResultWebCell())
+                if isRace {
+                    Text(interval).modifier(ResultWebCell())
+                    Text((row.points ?? 0).formatted()).modifier(ResultWebCell())
+                }
+                Text(row.laps.map(String.init) ?? "—").modifier(ResultWebCell())
+            }
+        }
+        .font(.system(size: 13).monospacedDigit())
+    }
+
+    private func resultDriverProfile(_ row: SessionResult) -> some View {
+        let standing = model.driverRoster.first { $0.id == row.driverId && $0.season == meeting.season }
+        let teammate = standing.flatMap { driver in
+            model.driverRoster.first { $0.id != driver.id && $0.season == driver.season && $0.constructor == driver.constructor }
+        }
+        let names = row.driverName.split(whereSeparator: \.isWhitespace)
+        return VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    Text(standing?.driverNumber ?? row.driverNumber ?? "")
+                        .font(.system(size: 34, weight: .heavy))
+                    VStack(alignment: .leading, spacing: 5) {
+                        (Text(names.dropLast().joined(separator: " ") + " ") + Text(names.last.map(String.init) ?? "").bold())
+                            .font(.system(size: 18))
+                        Text(row.team).font(.system(size: 13)).foregroundStyle(WebDashboardStyle.homeMuted)
+                    }
+                    .frame(maxWidth: 190, alignment: .leading)
+                }
+                HStack(spacing: 18) {
+                    resultProfileMetric("RANK", value: standing.map { "P\($0.position)" } ?? "—")
+                    Rectangle().fill(resultTableLine).frame(width: 1, height: 34)
+                    resultProfileMetric("POINTS", value: standing?.points.formatted() ?? "—")
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
+            .background(alignment: .bottomTrailing) {
+                AssetImage(name: MotorsportAssetName.name(kind: .driverPhoto, id: row.driverId, season: meeting.season))
+                    .frame(width: 145, height: 155).accessibilityHidden(true)
+            }
+            .background {
+                LinearGradient(colors: [DashboardArt.teamColor(row.constructorId).opacity(0.22), .clear],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+            Rectangle().fill(resultTableLine).frame(height: 1)
+            HStack(spacing: 8) {
+                resultProfileAction("Stats", symbol: "chart.bar") {
+                    guard let standing else { return }
+                    shownProfile = nil
+                    openResultProfile(.stats(StandingEntry(driver: standing)))
+                }.disabled(standing == nil)
+                resultProfileAction("Head-to-head", symbol: "arrow.left.arrow.right") {
+                    shownProfile = nil
+                    openResultProfile(.comparison(row.driverId, teammate?.id))
+                }
+            }.padding(9)
+        }
+        .frame(width: 360)
+        .foregroundStyle(WebDashboardStyle.homeText)
+        .presentationBackground(WebDashboardStyle.homePanel)
+    }
+
+    private func openResultProfile(_ target: DriverProfileDestination) {
+        if let openDashboardDriverProfile {
+            openDashboardDriverProfile(target)
+        } else {
+            profileDestination = target
+        }
+    }
+
+    private func resultProfileMetric(_ label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).font(.system(size: 10, weight: .semibold)).foregroundStyle(WebDashboardStyle.homeMuted)
+            Text(value).font(.system(size: 23, weight: .bold)).monospacedDigit()
+        }
+    }
+
+    private func resultProfileAction(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .contentShape(.rect)
+                .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(resultTableLine, lineWidth: 1) }
+        }.buttonStyle(.plain)
+    }
+
+    private var resultTableLine: Color {
+        WebDashboardStyle.adaptive(dark: 0x1b2230, light: 0xe7e7e9)
+    }
+
+    private struct ResultWebCell: ViewModifier {
+        func body(content: Content) -> some View {
+            content.fixedSize(horizontal: true, vertical: false).padding(.horizontal, 6).frame(minHeight: 36)
+        }
+    }
+
+    private func resultDelta(_ value: String?, from reference: String?, suffix: String) -> String {
+        guard let value, let reference,
+              let current = resultTimeSeconds(value), let baseline = resultTimeSeconds(reference),
+              current >= baseline else { return "" }
+        return String(format: "+%.3f", current - baseline) + suffix
+    }
+
     private var classification: some View {
         VStack(alignment: .leading, spacing: 0) {
             ViewThatFits(in: .horizontal) {
@@ -203,15 +596,50 @@ struct ResultsScreen<WeekendTools: View>: View {
                 }
             }
             .padding(.bottom, 4)
+            if sideBySide {
+                denseResultColumns {
+                    Text("POS")
+                    Text("DRIVER")
+                    if showsPhaseColumns {
+                        let prefix = session.sessionType == .sprintQualifying ? "SQ" : "Q"
+                        Text(prefix + "1")
+                        Text(prefix + "2")
+                        Text(prefix + "3")
+                    } else {
+                        Text(isRace ? "TIME / GAP" : isQualifying ? "BEST" : "TIME")
+                        Text("LAPS")
+                        if isRace { Text("PTS") }
+                    }
+                }
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 8)
+                .accessibilityAddTraits(.isHeader)
+            }
             ForEach(rows) { row in
                 Divider()
-                NavigationLink {
-                    DriverAnalysisScreen(sessionID: session.id, driver: row, season: meeting.season, sessionLabel: session.sessionType.resultLabel)
-                } label: {
-                    resultRow(row)
+                Group {
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        Button {
+                            selectedDriverID = row.driverId
+                            showsCompactAnalysis = !sideBySide
+                        } label: {
+                            Group {
+                                if sideBySide { denseResultRow(row) } else { resultRow(row) }
+                            }
+                                .background(sideBySide && selectedDriverID == row.driverId ? PulseStyle.red.opacity(0.10) : .clear)
+                        }
+                    } else {
+                        NavigationLink {
+                            driverAnalysis(row)
+                        } label: {
+                            resultRow(row)
+                        }
+                        .navigationLinkIndicatorVisibility(.hidden)
+                    }
                 }
                 .buttonStyle(PulsePressStyle())
-                .navigationLinkIndicatorVisibility(.hidden)
+                .accessibilityAddTraits(sideBySide && selectedDriverID == row.driverId ? .isSelected : [])
                 .accessibilityIdentifier("result.\(row.driverId)")
             }
         }
@@ -253,6 +681,46 @@ struct ResultsScreen<WeekendTools: View>: View {
                     .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private func denseResultRow(_ row: SessionResult) -> some View {
+        denseResultColumns {
+            PulseNumber(row.position.map(String.init) ?? "—").bold()
+            HStack(spacing: 6) {
+                AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: row.constructorId, season: meeting.season))
+                    .frame(width: 18, height: 16)
+                    .accessibilityHidden(true)
+                Text(row.driverName).fontWeight(.semibold).lineLimit(1)
+            }
+            if showsPhaseColumns {
+                PulseNumber(row.q1 ?? (row.classification.uppercased() == "CLASSIFIED" ? "—" : row.classification.uppercased()))
+                PulseNumber(row.q2 ?? "—")
+                PulseNumber(row.q3 ?? "—")
+            } else {
+                PulseNumber(mainValue(row))
+                PulseNumber(row.laps.map(String.init) ?? "—")
+                if isRace { PulseNumber(row.points?.formatted() ?? "—") }
+            }
+        }
+        .font(.caption.monospacedDigit())
+        .frame(minHeight: 44)
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func denseResultColumns(@ViewBuilder content: () -> some View) -> some View {
+        HStack(spacing: 6) {
+            Group(subviews: content()) { columns in
+                columns[0].frame(width: 26, alignment: .leading)
+                columns[1].frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(2..<columns.count, id: \.self) { index in
+                    columns[index]
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                        .frame(width: showsPhaseColumns ? 55 : index == 2 ? 81 : 34, alignment: .trailing)
+                }
+            }
         }
     }
 

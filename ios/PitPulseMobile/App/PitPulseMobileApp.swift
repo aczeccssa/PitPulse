@@ -21,21 +21,22 @@ struct PitPulseMobileApp: App {
             } else if CommandLine.arguments.contains("--island-preview") {
                 IslandModePreviewSheet().environmentObject(model)
             } else {
-                RootView().environmentObject(model)
-                    .environment(\.locale, .pulseEnglish)
-                    .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
-                    .tint(PulseStyle.red)
+                mainScreen
             }
             #else
-            RootView().environmentObject(model)
-                .environment(\.locale, .pulseEnglish)
-                    .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
-                .tint(PulseStyle.red)
+            mainScreen
             #endif
         }
         .backgroundTask(.appRefresh(MobileModel.activityRefreshIdentifier)) {
             await model.refreshLiveActivityInBackground()
         }
+    }
+
+    private var mainScreen: some View {
+        RootView().environmentObject(model)
+            .environment(\.locale, .pulseEnglish)
+            .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
+            .tint(PulseStyle.red)
     }
 }
 
@@ -44,13 +45,14 @@ final class MobileOrientationDelegate: NSObject, UIApplicationDelegate {
     private static weak var liveScene: UIWindowScene?
 
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        if UIDevice.current.userInterfaceIdiom == .pad { return .all }
         guard let scene = window?.windowScene else { return .portrait }
         if scene === Self.landscapeScene { return .landscapeRight }
         return scene === Self.liveScene ? .allButUpsideDown : .portrait
     }
 
     static func allowLiveRotation(in scene: UIWindowScene) {
-        guard liveScene !== scene else { return }
+        guard scene.traitCollection.userInterfaceIdiom != .pad, liveScene !== scene else { return }
         liveScene = scene
         updateOrientationSupport(in: scene)
     }
@@ -62,6 +64,7 @@ final class MobileOrientationDelegate: NSObject, UIApplicationDelegate {
     }
 
     static func enterLandscape(in scene: UIWindowScene) {
+        guard scene.traitCollection.userInterfaceIdiom != .pad else { return }
         landscapeScene = scene
         request(.landscapeRight, in: scene)
     }
@@ -145,7 +148,7 @@ struct LandscapeCover<Background: ShapeStyle, Content: View>: View {
 
     private func close() {
         guard !isClosing else { return }
-        if isLandscape {
+        if isLandscape && UIDevice.current.userInterfaceIdiom != .pad {
             isClosing = true
             MobileOrientationDelegate.leaveLandscape()
         } else {
@@ -232,12 +235,25 @@ private struct LandscapeCanvas<Content: View>: UIViewControllerRepresentable {
 }
 
 struct RootView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var model: MobileModel
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selection = ProcessInfo.processInfo.environment["PITPULSE_TAB"].flatMap(Int.init) ?? 0
     @State private var showLive = ProcessInfo.processInfo.environment["PITPULSE_OPEN_LIVE"] == "1"
+    @State private var visitedTabs: Set<Int> = []
     @State private var showCalendar = false
+    @State private var padSidebarExpanded = false
+    @State private var padSidebarFits = false
+    @State private var usesCompactPadNavigation = false
+    @State private var compactPadFitsLiveBar = false
+    @State private var compactTabPlatterFrame: CGRect?
+    @State private var lastCompactPrimaryTab: DashboardTab = .home
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var showsExpandedSidebar: Bool { padSidebarFits && padSidebarExpanded }
+    @State private var driverProfileTarget: DriverProfileDestination?
+    @State private var resultsTarget: (Meeting, Session)?
+    @State private var excludeConsistencyRetirements = false
     @State private var opensLiveAfterSheet = false
     @State private var liveBarFrames: [Int: CGRect] = [:]
     @State private var liveDetailPages: [Int: UUID] = [:]
@@ -258,28 +274,152 @@ struct RootView: View {
         }
         return (tab, icon.withRenderingMode(.alwaysTemplate))
     })
-    var body: some View {
-        TabView(selection: Binding(get: { selection }, set: { selectTab($0) })) {
-            ForEach(DashboardTab.allCases) { tab in
-                DashboardScreen(tab: tab, fromHome: dashboardLandings[tab] != nil, header: header(for: tab),
-                                showCalendar: $showCalendar) { destination in
-                    dashboardLandings[destination] = UUID()
-                    selectTab(destination.rawValue)
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    private var webWorkspaceBackground: Color {
+        if colorScheme == .dark { return Color(red: 2.0 / 255, green: 5.0 / 255, blue: 11.0 / 255) }
+        return selection == DashboardTab.home.rawValue ? WebDashboardStyle.homeBackground : .white
+    }
+
+    private var webWorkspaceLine: Color {
+        if selection == DashboardTab.home.rawValue {
+            return WebDashboardStyle.adaptive(dark: 0x1b2230, light: 0xe8edf3)
+        }
+        return WebDashboardStyle.adaptive(dark: 0x1b2230, light: 0xe7e7e9)
+    }
+
+    private func openLive() {
+        model.startLive()
+        showLive = true
+    }
+
+    private func iPadSidebarButton(_ title: String, symbol: String, webIcon: String? = nil, selected: Bool,
+                                   action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 9) {
+                if let webIcon {
+                    Image("web-nav-" + webIcon)
+                        .resizable()
+                        .frame(width: 17, height: 17)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 17, weight: .regular))
+                        .frame(width: 17)
                 }
-                    .id(dashboardLandings[tab])
-                    .environment(\.pulseEnglishPresentation, true)
-                    .environment(\.locale, .pulseEnglish)
-                    .environment(\.dashboardLiveBarFrame, { frame in
-                        if frame.width > 0 { liveBarFrames[tab.rawValue] = frame }
-                    })
-                    .environment(\.dashboardLivePage, { id in
-                        liveDetailPages[tab.rawValue] = id
-                    })
-                    .environment(\.dashboardLiveDetailFrame, { id, frame in
-                        if liveDetailPages[tab.rawValue] == id {
-                            liveDetailFrames[tab.rawValue] = LiveDetailFrame(id: id, frame: frame)
+                if showsExpandedSidebar {
+                    Text(title)
+                        .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: usesCompactPadNavigation ? 44 : 36, alignment: showsExpandedSidebar ? .leading : .center)
+            .padding(.horizontal, showsExpandedSidebar ? 10 : 0)
+                .background(selected ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.055)) : .clear, in: .rect(cornerRadius: 6))
+                .foregroundStyle(selected ? .primary : .secondary)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help(title)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var navigation: some View {
+        if isPad {
+            Group {
+                if usesCompactPadNavigation {
+                    VStack(spacing: 0) {
+                        GlassEffectContainer(spacing: 8) {
+                            HStack(spacing: 8) {
+                                Spacer()
+                                compactUtilityButton(.calendar)
+                                compactUtilityButton(.consistency)
+                                compactUtilityButton(.settings)
+                            }
+                            .padding(.horizontal, 10)
+                            .containerCornerOffset(.leading, sizeToFit: true)
                         }
-                    })
+                        primaryTabView(selection: Binding(
+                            get: { compactPrimaryTab.rawValue },
+                            set: { selectTab($0) }
+                        )) { tab in
+                            ZStack {
+                                dashboardPage(tab == .drivers ? .driverStandings : tab)
+                                    .opacity(compactUtilityTab == nil ? 1 : 0)
+                                    .allowsHitTesting(compactUtilityTab == nil)
+                                    .accessibilityHidden(compactUtilityTab != nil)
+                                if let utility = compactUtilityTab, tab == compactPrimaryTab {
+                                    dashboardPage(utility).id(utility)
+                                }
+                            }
+                            .environment(\.horizontalSizeClass, horizontalSizeClass)
+                            .overlay { iPadLiveControl(adaptsToTabPage: true) }
+                        }
+                        .environment(\.horizontalSizeClass, .compact)
+                    }
+                } else {
+                    HStack(spacing: 0) {
+                        iPadNavigationBar
+                        ZStack {
+                            ForEach(DashboardTab.padTabs) { tab in
+                                let active = selection == tab.rawValue
+                                if active || visitedTabs.contains(tab.rawValue) {
+                                    dashboardPage(tab)
+                                        .opacity(active ? 1 : 0)
+                                        .allowsHitTesting(active)
+                                        .accessibilityHidden(!active)
+                                        .zIndex(active ? 1 : 0)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .overlay { iPadLiveControl() }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: Bool.self) { $0.size.width >= 740 } action: { padSidebarFits = $0 }
+            .onGeometryChange(for: Bool.self) { $0.size.width < 520 } action: { usesCompactPadNavigation = $0 }
+            .onGeometryChange(for: Bool.self) { $0.size.height >= 580 } action: { fits in
+                compactPadFitsLiveBar = fits
+                if !fits { liveBarFrames.removeAll() }
+            }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: showsExpandedSidebar)
+            .onChange(of: selection, initial: true) { _, value in
+                visitedTabs.insert(value)
+                if let tab = DashboardTab(rawValue: value), DashboardTab.phoneTabs.contains(tab) {
+                    lastCompactPrimaryTab = tab
+                } else if value == DashboardTab.driverStandings.rawValue {
+                    lastCompactPrimaryTab = .drivers
+                }
+            }
+        } else {
+            primaryTabView(selection: Binding(get: { selection }, set: { selectTab($0) })) { tab in
+                dashboardPage(tab)
+            }
+        }
+    }
+
+    private var compactPrimaryTab: DashboardTab {
+        if selection == DashboardTab.driverStandings.rawValue { return .drivers }
+        if let tab = DashboardTab(rawValue: selection), DashboardTab.phoneTabs.contains(tab) { return tab }
+        return lastCompactPrimaryTab
+    }
+
+    private var compactUtilityTab: DashboardTab? {
+        guard let tab = DashboardTab(rawValue: selection) else { return nil }
+        switch tab {
+        case .calendar, .consistency, .settings: return tab
+        default: return nil
+        }
+    }
+
+    private func primaryTabView<Content: View>(selection: Binding<Int>,
+                                               @ViewBuilder content: @escaping (DashboardTab) -> Content) -> some View {
+        TabView(selection: selection) {
+            ForEach(DashboardTab.phoneTabs) { tab in
+                content(tab)
                     .tabItem {
                         if let icon = Self.tabIcons[tab] {
                             Image(uiImage: icon).accessibilityLabel(tab.title)
@@ -290,21 +430,167 @@ struct RootView: View {
                     .tag(tab.rawValue)
             }
         }
+    }
+
+    private func compactUtilityButton(_ tab: DashboardTab) -> some View {
+        let selected = selection == tab.rawValue
+        return Button {
+            selectTab(selected ? lastCompactPrimaryTab.rawValue : tab.rawValue)
+        } label: {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(selected ? PulseStyle.red : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(tab.title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(tab == .calendar ? "calendar.open" : "dashboard.tab.\(tab.rawValue)")
+        .help(tab.title)
+    }
+
+    private func iPadLiveControl(adaptsToTabPage: Bool = false) -> some View {
+        GeometryReader { geometry in
+            let page = adaptsToTabPage ? liveDetailPages[selection] : nil
+            let bar = if adaptsToTabPage && compactPadFitsLiveBar,
+                         let anchor = liveBarFrames[selection], let platter = compactTabPlatterFrame {
+                CGRect(x: platter.minX, y: anchor.minY, width: platter.width, height: anchor.height)
+            } else {
+                nil as CGRect?
+            }
+            let bounds = geometry.frame(in: .global)
+            DashboardLiveControl(
+                barFrame: bar,
+                isCompact: bar == nil || page != nil,
+                detailFrame: bounds,
+                transitionNamespace: liveTransition,
+                dockToAllEdges: true,
+                compactSeries: model.hasActiveLive ? model.series : nil,
+                open: openLive
+            )
+        }
+    }
+
+    private var iPadNavigationBar: some View {
+        ScrollView {
+            VStack(spacing: 3) { iPadNavigationItems }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity)
+        }
+        .scrollIndicators(.hidden)
+        .frame(width: showsExpandedSidebar ? 240 : 56)
+        .containerCornerOffset(.top, sizeToFit: true)
+        .background {
+            WebDashboardStyle.adaptive(dark: 0x040811, light: 0xffffff)
+                .ignoresSafeArea(edges: [.top, .bottom, .leading])
+        }
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(webWorkspaceLine).frame(width: 1).ignoresSafeArea(edges: .vertical)
+        }
+    }
+
+    @ViewBuilder
+    private var iPadNavigationItems: some View {
+        Button {
+            showLive = false
+            selectTab(DashboardTab.home.rawValue)
+        } label: {
+            HStack(spacing: 9) {
+                Image("web-brand-mark")
+                    .resizable().scaledToFit()
+                    .frame(width: 24, height: 20)
+                    .accessibilityHidden(true)
+                if showsExpandedSidebar {
+                    Text("PitPulse").font(.system(size: 13, weight: .bold))
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: usesCompactPadNavigation ? 44 : 20,
+                   alignment: showsExpandedSidebar ? .leading : .center)
+            .padding(.horizontal, showsExpandedSidebar ? 10 : 0)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("PitPulse Home")
+        .accessibilityIdentifier("dashboard.brand")
+        .frame(width: usesCompactPadNavigation ? 44 : nil)
+        .padding(.bottom, usesCompactPadNavigation ? 0 : 17)
+        ForEach(DashboardTab.padTabs) { tab in
+            iPadSidebarButton(tab == .constructors ? "Constructor Standings" : tab.title,
+                              symbol: tab.symbol, webIcon: tab.webNavigationIcon,
+                              selected: selection == tab.rawValue) {
+                showLive = false
+                selectTab(tab.rawValue)
+            }
+            .frame(width: usesCompactPadNavigation ? 44 : nil)
+            .id(tab.rawValue)
+            .accessibilityIdentifier(tab == .calendar ? "calendar.open" : "dashboard.tab.\(tab.rawValue)")
+        }
+    }
+
+    private func dashboardPage(_ tab: DashboardTab) -> some View {
+        DashboardScreen(padWorkspace: isPad, tab: tab, fromHome: dashboardLandings[tab] != nil, header: header(for: tab),
+                        showCalendar: $showCalendar, resultsTarget: resultsTarget, profileTarget: driverProfileTarget,
+                        consistencyFilter: $excludeConsistencyRetirements,
+                        openResultsSession: { meeting, session in
+                            resultsTarget = (meeting, session)
+                            dashboardLandings[.results] = UUID()
+                            selectTab(DashboardTab.results.rawValue)
+                        }) { destination in
+            if destination == .results { resultsTarget = nil }
+            let page = isPad && destination == .drivers ? DashboardTab.driverStandings : destination
+            if destination == .drivers { driverProfileTarget = nil }
+            dashboardLandings[page] = UUID()
+            selectTab(page.rawValue)
+        }
+            .id(dashboardLandings[tab])
+            .environment(\.openDashboardDriverProfile, isPad ? { target in
+                driverProfileTarget = target
+                let destination: DashboardTab
+                switch target {
+                case .stats: destination = .driverStandings
+                case .comparison: destination = .headToHead
+                }
+                dashboardLandings[destination] = UUID()
+                selectTab(destination.rawValue)
+            } : nil)
+            .environment(\.pulseEnglishPresentation, true)
+            .environment(\.locale, .pulseEnglish)
+            .environment(\.dashboardLiveBarFrame, !isPad || (usesCompactPadNavigation && compactPadFitsLiveBar) ? { frame in
+                if frame.width > 0 { liveBarFrames[tab.rawValue] = frame }
+            } : nil)
+            .environment(\.dashboardTabPlatterFrame, isPad && usesCompactPadNavigation ? { frame in
+                if compactTabPlatterFrame != frame { compactTabPlatterFrame = frame }
+            } : nil)
+            .environment(\.dashboardLivePage, !isPad || usesCompactPadNavigation ? { id in
+                liveDetailPages[tab.rawValue] = id
+            } : nil)
+            .environment(\.dashboardLiveDetailFrame, !isPad || usesCompactPadNavigation ? { id, frame in
+                if liveDetailPages[tab.rawValue] == id {
+                    liveDetailFrames[tab.rawValue] = LiveDetailFrame(id: id, frame: frame)
+                }
+            } : nil)
+    }
+
+    var body: some View {
+        navigation
+        .background { PulseStyle.background.ignoresSafeArea() }
         .tint(PulseStyle.red)
         .overlay {
-            DashboardLiveControl(
-                barFrame: liveBarFrames[selection],
-                isCompact: liveDetailPages[selection] != nil,
-                detailFrame: liveDetailFrames[selection].flatMap {
-                    $0.id == liveDetailPages[selection] ? $0.frame : nil
-                },
-                transitionNamespace: liveTransition,
-                open: {
-                    model.startLive()
-                    showLive = true
-                }
-            )
-            .ignoresSafeArea(.container)
+            if !isPad {
+                DashboardLiveControl(
+                    barFrame: liveBarFrames[selection],
+                    isCompact: liveDetailPages[selection] != nil,
+                    detailFrame: liveDetailFrames[selection].flatMap {
+                        $0.id == liveDetailPages[selection] ? $0.frame : nil
+                    },
+                    transitionNamespace: liveTransition,
+                    open: openLive
+                )
+                .ignoresSafeArea(.container)
+            }
         }
         .task(id: titleChange?.start) {
             guard let change = titleChange else { return }
@@ -312,15 +598,26 @@ struct RootView: View {
             if !Task.isCancelled, titleChange?.start == change.start { titleChange = nil }
         }
         .background {
-            LiveNoticePresenter(notice: model.liveNotice, open: openLiveNotice, close: { model.liveNotice = nil })
-                .frame(width: 0, height: 0)
+            if !isPad {
+                LiveNoticePresenter(notice: model.liveNotice, open: openLiveNotice, close: { model.liveNotice = nil })
+                    .frame(width: 0, height: 0)
+            }
         }
         .task(id: model.liveNotice) {
             guard let notice = model.liveNotice else { return }
             try? await Task.sleep(for: .seconds(6))
             if !Task.isCancelled, model.liveNotice == notice { model.liveNotice = nil }
         }
-        .sheet(isPresented: $model.settingsPresented, onDismiss: openLiveAfterSheet) { SettingsScreen() }
+        .sheet(isPresented: Binding(
+            get: { !isPad && model.settingsPresented },
+            set: { model.settingsPresented = $0 }
+        ), onDismiss: openLiveAfterSheet) { SettingsScreen() }
+        .onChange(of: model.settingsPresented) { _, presented in
+            guard isPad, presented else { return }
+            model.settingsPresented = false
+            showLive = false
+            selectTab(DashboardTab.settings.rawValue)
+        }
         .fullScreenCover(isPresented: $showLive, onDismiss: MobileOrientationDelegate.endLiveRotation) {
             LiveScreen(onClose: { showLive = false })
                 .pulseNavigationZoom("live-player", in: liveTransition)
@@ -373,13 +670,15 @@ struct RootView: View {
             }
             if url.host == "calendar" {
                 showLive = false
-                selectTab(DashboardTab.home.rawValue)
-                showCalendar = true
+                selectTab(isPad ? DashboardTab.calendar.rawValue : DashboardTab.home.rawValue)
+                if !isPad { showCalendar = true }
             }
         }
     }
 
     private func selectTab(_ destination: Int) {
+        let destination = isPad && destination == DashboardTab.drivers.rawValue
+            ? DashboardTab.driverStandings.rawValue : destination
         guard destination != selection, DashboardTab(rawValue: destination) != nil else { return }
         let now = Date.now
         let outgoing = titleChange.flatMap { now.timeIntervalSince($0.start) < 0.13 ? $0.outgoing : nil }
@@ -393,8 +692,14 @@ struct RootView: View {
     }
 
     private func header(for tab: DashboardTab) -> some View {
-        DashboardHeader(title: tab.headerTitle, change: selection == tab.rawValue ? titleChange : nil)
-            .background(PulseStyle.background)
+        DashboardHeader(
+            title: isPad && tab == .home ? "Home" : isPad && tab == .constructors ? "Constructor Standings" : tab.headerTitle,
+            change: selection == tab.rawValue ? titleChange : nil,
+            sidebarExpanded: isPad ? $padSidebarExpanded : nil,
+            allowsSidebarExpansion: padSidebarFits,
+            consistencyFilter: isPad && tab == .consistency ? $excludeConsistencyRetirements : nil
+        )
+            .background(isPad ? webWorkspaceBackground : PulseStyle.background)
     }
 
     private func openLiveNotice(_ notice: LiveNotice) {
@@ -569,17 +874,37 @@ private struct DashboardHeader: View {
     @ScaledMetric(relativeTo: .title3) private var titleSize = 22.0
     let title: String
     let change: DashboardTitleChange?
+    var sidebarExpanded: Binding<Bool>? = nil
+    var allowsSidebarExpansion = true
+    var consistencyFilter: Binding<Bool>? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
-            MotorsportImages.image(named: MotorsportAssetName.brandLogoName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 44, height: 44)
-                .scaleEffect(1.65)
-                .accessibilityHidden(true)
+        HStack(spacing: sidebarExpanded == nil ? 10 : 18) {
+            if let sidebarExpanded, allowsSidebarExpansion {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                        sidebarExpanded.wrappedValue.toggle()
+                    }
+                } label: {
+                    Image("web-nav-navigation-toggle")
+                        .resizable()
+                        .frame(width: 18, height: 18)
+                        .frame(width: 36, height: 36)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(sidebarExpanded.wrappedValue ? "Collapse navigation" : "Expand navigation")
+                .accessibilityIdentifier("dashboard.navigationToggle")
+            } else if sidebarExpanded == nil {
+                MotorsportImages.image(named: MotorsportAssetName.brandLogoName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+                    .scaleEffect(1.65)
+                    .accessibilityHidden(true)
+            }
             ViewThatFits(in: .horizontal) {
-                if let change, change.outgoing != title, !reduceMotion, !typeSize.isAccessibilitySize {
+                if sidebarExpanded == nil, let change, change.outgoing != title, !reduceMotion, !typeSize.isAccessibilitySize {
                     TimelineView(.animation) { context in
                         let elapsed = context.date.timeIntervalSince(change.start)
                         ZStack(alignment: .leading) {
@@ -588,30 +913,49 @@ private struct DashboardHeader: View {
                         }
                         .clipped()
                     }
-                } else if !typeSize.isAccessibilitySize {
+                } else if sidebarExpanded == nil, !typeSize.isAccessibilitySize {
                     letters(title, elapsed: 1, entering: true)
                 }
                 Text(title).lineLimit(1).minimumScaleFactor(0.55)
             }
-            .font(.system(size: titleSize, weight: .bold))
+            .font(.system(size: sidebarExpanded == nil ? titleSize : 16, weight: .bold))
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(title)
             .accessibilityAddTraits(.isHeader)
             .accessibilityIdentifier("dashboard.title")
 
-            Button { model.settingsPresented = true } label: {
-                Image(systemName: "gauge.open.with.lines.needle.67percent.and.arrowtriangle")
-                    .font(.system(size: 20, weight: .medium))
-                    .frame(width: 44, height: 44)
-                    .foregroundStyle(.primary)
+            if let consistencyFilter {
+                Button("Exclude DNF, DNS, DSQ and NC",
+                       systemImage: consistencyFilter.wrappedValue ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle") {
+                    consistencyFilter.wrappedValue.toggle()
+                }
+                .labelStyle(.iconOnly)
+                .font(.system(size: 20))
+                .foregroundStyle(consistencyFilter.wrappedValue ? PulseStyle.red : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(consistencyFilter.wrappedValue ? .isSelected : [])
+                .accessibilityIdentifier("consistency.excludeDNF")
+                .help("Exclude DNF, DNS, DSQ and NC")
             }
-            .buttonStyle(.plain)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .accessibilityLabel("Open PitPulse settings")
+
+            if sidebarExpanded == nil {
+                Button { model.settingsPresented = true } label: {
+                    Image(systemName: "gauge.open.with.lines.needle.67percent.and.arrowtriangle")
+                        .font(.system(size: 20, weight: .medium))
+                        .frame(width: 44, height: 44)
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .accessibilityLabel("Open PitPulse settings")
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, sidebarExpanded == nil || !allowsSidebarExpansion ? 12 : 24)
+        .padding(.vertical, sidebarExpanded == nil ? 6 : 0)
+        .frame(minHeight: sidebarExpanded == nil ? nil : 64)
     }
 
     private func letters(_ text: String, elapsed: TimeInterval, entering: Bool) -> some View {
@@ -640,11 +984,26 @@ private struct DashboardLiveControl: View {
     let isCompact: Bool
     let detailFrame: CGRect?
     let transitionNamespace: Namespace.ID
+    var dockToAllEdges = false
+    var compactSeries: LiveSeries? = nil
     let open: () -> Void
     @EnvironmentObject private var model: MobileModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var dockedOnRight = true
-    @State private var dockHeight: CGFloat = 1
+    private enum DockEdge: CaseIterable {
+        case right, left, top, bottom
+
+        var title: String {
+            switch self {
+            case .right: "Dock Right"
+            case .left: "Dock Left"
+            case .top: "Dock Top"
+            case .bottom: "Dock Bottom"
+            }
+        }
+    }
+
+    @State private var dockEdge: DockEdge = .right
+    @State private var dockFraction: CGFloat = 1
     @State private var dragPosition: CGPoint?
     @GestureState private var isDragging = false
     @Namespace private var dragSpace
@@ -653,7 +1012,8 @@ private struct DashboardLiveControl: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if model.hasActiveLive, let frame = barFrame ?? detailFrame {
+            let visible = dockToAllEdges ? compactSeries != nil : model.hasActiveLive
+            if visible, let frame = barFrame ?? detailFrame {
                 let root = geometry.frame(in: .global)
                 let topInset = detailFrame.map { $0.minY - root.minY } ?? 110
                 let safeBottom = detailFrame?.maxY ?? (barFrame.map { $0.maxY + 56 } ?? root.maxY - 34)
@@ -661,7 +1021,8 @@ private struct DashboardLiveControl: View {
                 let right = max(left, root.width - geometry.safeAreaInsets.trailing - 44)
                 let top = min(root.height / 2, max(0, topInset) + 36)
                 let bottom = max(top, min(root.height, safeBottom - root.minY) - 36)
-                let dockPoint = CGPoint(x: dockedOnRight ? right : left, y: top + dockHeight * (bottom - top))
+                let bounds = CGRect(x: left, y: top, width: right - left, height: bottom - top)
+                let dockPoint = dockPosition(in: bounds)
                 let barPoint = CGPoint(x: frame.midX - root.minX, y: frame.midY - root.minY)
 
                 Button(action: open) {
@@ -669,12 +1030,13 @@ private struct DashboardLiveControl: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(isCompact ? "live.floating" : "live.open")
-                .accessibilityLabel(isCompact ? (model.series == .wec ? "Open WEC Live" : "Open F1 Live") : model.liveMeetingName)
+                .accessibilityLabel(isCompact ? ((compactSeries ?? model.series) == .wec ? "Open WEC Live" : "Open F1 Live") : model.liveMeetingName)
                 .accessibilityHint("Open live timing")
                 .accessibilityActions {
                     if isCompact {
-                        Button("Dock Left") { dock(onRight: false, height: dockHeight) }
-                        Button("Dock Right") { dock(onRight: true, height: dockHeight) }
+                        ForEach(availableEdges, id: \.self) { edge in
+                            Button(edge.title) { dock(edge, fraction: dockFraction) }
+                        }
                     }
                 }
                 .matchedTransitionSource(id: "live-player", in: transitionNamespace)
@@ -688,10 +1050,9 @@ private struct DashboardLiveControl: View {
                             )
                         }
                         .onEnded { value in
-                            let x = dockPoint.x + value.translation.width
-                            let y = min(bottom, max(top, dockPoint.y + value.translation.height))
-                            dock(onRight: x >= (left + right) / 2,
-                                 height: bottom > top ? (y - top) / (bottom - top) : dockHeight)
+                            let translation = dockToAllEdges ? value.predictedEndTranslation : value.translation
+                            snap(CGPoint(x: dockPoint.x + translation.width,
+                                         y: dockPoint.y + translation.height), in: bounds)
                         },
                     including: isCompact ? .all : .none
                 )
@@ -699,25 +1060,52 @@ private struct DashboardLiveControl: View {
                 .animation(animation, value: isCompact)
                 .onChange(of: isDragging) { _, active in
                     guard !active, let point = dragPosition else { return }
-                    dock(onRight: point.x >= (left + right) / 2,
-                         height: bottom > top ? (point.y - top) / (bottom - top) : dockHeight)
+                    snap(point, in: bounds)
                 }
             }
         }
         .coordinateSpace(name: dragSpace)
         .onChange(of: isCompact) { _, compact in
             guard !compact else { return }
-            dockedOnRight = true
-            dockHeight = 1
+            dockEdge = .right
+            dockFraction = 1
             dragPosition = nil
         }
     }
 
-    private func dock(onRight: Bool, height: CGFloat) {
-        // Keep the drag position displayed until the same transaction installs the new dock.
+    private var availableEdges: [DockEdge] {
+        dockToAllEdges ? DockEdge.allCases : [.right, .left]
+    }
+
+    private func dockPosition(in bounds: CGRect) -> CGPoint {
+        let x = bounds.minX + dockFraction * bounds.width
+        let y = bounds.minY + dockFraction * bounds.height
+        switch dockEdge {
+        case .right: return CGPoint(x: bounds.maxX, y: y)
+        case .left: return CGPoint(x: bounds.minX, y: y)
+        case .top: return CGPoint(x: x, y: bounds.minY)
+        case .bottom: return CGPoint(x: x, y: bounds.maxY)
+        }
+    }
+
+    private func snap(_ point: CGPoint, in bounds: CGRect) {
+        let x = min(bounds.maxX, max(bounds.minX, point.x))
+        let y = min(bounds.maxY, max(bounds.minY, point.y))
+        let distances: [DockEdge: CGFloat] = [
+            .right: bounds.maxX - x, .left: x - bounds.minX,
+            .top: y - bounds.minY, .bottom: bounds.maxY - y
+        ]
+        guard let edge = availableEdges.min(by: { distances[$0, default: 0] < distances[$1, default: 0] }) else { return }
+        let horizontal = edge == .top || edge == .bottom
+        let length = horizontal ? bounds.width : bounds.height
+        let offset = horizontal ? x - bounds.minX : y - bounds.minY
+        dock(edge, fraction: length > 0 ? offset / length : dockFraction)
+    }
+
+    private func dock(_ edge: DockEdge, fraction: CGFloat) {
         withAnimation(animation) {
-            dockedOnRight = onRight
-            dockHeight = height
+            dockEdge = edge
+            dockFraction = fraction
             dragPosition = nil
         }
     }
@@ -731,7 +1119,7 @@ private struct DashboardLiveControl: View {
                 .opacity(isCompact ? 0 : 1)
                 .accessibilityHidden(isCompact)
 
-            MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: model.series == .wec))
+            MotorsportImages.image(named: MotorsportAssetName.seriesLogoName(isWec: (compactSeries ?? model.series) == .wec))
                 .renderingMode(.template)
                 .resizable().scaledToFit()
                 .frame(width: isCompact ? 34 : 62, height: isCompact ? 18 : 28)

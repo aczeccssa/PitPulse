@@ -12,9 +12,9 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
     public let sessionName: String?
     public var meetingName: String? = nil
     public var countryCode: String? = nil
-    public let sourceStatus: LiveSourceStatus
+    public private(set) var sourceStatus: LiveSourceStatus
     public let sourceMode: LiveSourceMode
-    public let statusReason: String?
+    public private(set) var statusReason: String?
     public let sessionType: String?
     public let sessionStatus: String?
     public let trackStatus: String?
@@ -114,6 +114,17 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
             drivers: [],
             raceControl: nil
         )
+    }
+
+    public func retainingTiming(from lastSnapshot: LiveSnapshot?) -> LiveSnapshot {
+        guard sessionId == nil,
+              let statusReason, ["connecting", "reconnecting", "server_unavailable"].contains(statusReason),
+              var lastSnapshot, lastSnapshot.sessionId != nil, !lastSnapshot.drivers.isEmpty,
+              !LiveIslandLogic.isFinished(lastSnapshot.sessionStatus) else { return self }
+        lastSnapshot.sourceStatus = .stale
+        lastSnapshot.statusReason = statusReason
+        lastSnapshot.clockRunning = false
+        return lastSnapshot
     }
 
     public var statusLabel: String {

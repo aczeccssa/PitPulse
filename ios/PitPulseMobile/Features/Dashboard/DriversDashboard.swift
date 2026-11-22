@@ -6,11 +6,21 @@ struct DriversDashboard: View {
     @EnvironmentObject private var model: MobileModel
     @Environment(\.dynamicTypeSize) private var typeSize
     @Binding var showsStandings: Bool
+    var showsSectionPicker = true
+    @State private var selectedStanding: StandingEntry?
+    @State private var wideStandings = false
+    @State private var compactStanding = false
     @State private var query = ""
     @State private var rosterLoading = true
     @State private var constructors: [ConstructorStanding] = []
     @FocusState private var searchFocused: Bool
     @Namespace private var transition
+
+    init(showsStandings: Binding<Bool>, showsSectionPicker: Bool = true, initialStanding: StandingEntry? = nil) {
+        _showsStandings = showsStandings
+        self.showsSectionPicker = showsSectionPicker
+        _selectedStanding = State(initialValue: initialStanding)
+    }
 
     private var roster: [DriverStanding] {
         model.driverRoster.sorted { $0.position < $1.position }
@@ -18,10 +28,31 @@ struct DriversDashboard: View {
 
     private var archive: APIEnvelope<[SeasonResultWeekend]>? { model.seasonArchive }
 
+    private var displayedStanding: StandingEntry? {
+        guard !showsSectionPicker else { return selectedStanding }
+        let id = selectedStanding?.id
+        return (roster.first { $0.id == id } ?? roster.first).map(StandingEntry.init(driver:))
+    }
+
     var body: some View {
+        StandingColumns(wide: $wideStandings, selected: displayedStanding, driversDesign: true,
+                        tabletDriverProfile: !showsSectionPicker) {
+            driverList
+        }
+        .onChange(of: wideStandings) { _, wide in
+            compactStanding = !wide && selectedStanding != nil
+        }
+        .navigationDestination(isPresented: $compactStanding) {
+            if let selectedStanding { StandingProfile(entry: selectedStanding, driversDesign: true) }
+        }
+    }
+
+    private var driverList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
-                PulseSectionPicker(sections: [(true, "Standings"), (false, "Directory")], selection: $showsStandings)
+                if showsSectionPicker {
+                    PulseSectionPicker(sections: [(true, "Standings"), (false, "Directory")], selection: $showsStandings)
+                }
                 Group {
                     if roster.isEmpty {
                         rosterStatus
@@ -149,22 +180,8 @@ struct DriversDashboard: View {
 
     @ViewBuilder private var standings: some View {
         if let leader = roster.first {
-            driverLink(leader, source: "leader") {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("\(model.season.formatted(.number.grouping(.never))) Championship Leader")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        driverIdentity(leader, subtitle: leader.seasonTeamName, helmetSize: 54)
-                        VStack(alignment: .trailing, spacing: 1) {
-                            PulseNumber(leader.points.formatted()).font(.title2.bold().monospacedDigit())
-                            Text("Points").font(.caption).foregroundStyle(.secondary)
-                        }
-                        chevron
-                    }
-                }
-                .padding(14)
-                .dashboardPanel(WebDashboardStyle.homePanel)
-            }
+            standingsLeader(leader)
+            if !showsSectionPicker { standingsTable(leader: leader) }
 
             NavigationLink {
                 DriversSeasonCharts(entries: roster.map(StandingEntry.init(driver:)))
@@ -181,18 +198,44 @@ struct DriversDashboard: View {
             }
             .buttonStyle(PulsePressStyle())
             .accessibilityIdentifier("drivers.seasonCharts")
+            if showsSectionPicker { standingsTable(leader: leader) }
+        }
+    }
 
-            standingsTable(leader: leader)
+    private func standingsLeader(_ leader: DriverStanding) -> some View {
+        driverLink(leader, source: "leader") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("\(model.season.formatted(.number.grouping(.never))) Championship Leader")
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    driverIdentity(leader, subtitle: leader.seasonTeamName, helmetSize: 54)
+                    VStack(alignment: .trailing, spacing: 1) {
+                        PulseNumber(leader.points.formatted()).font(.title2.bold().monospacedDigit())
+                        Text("Points").font(.caption).foregroundStyle(.secondary)
+                    }
+                    chevron
+                }
+            }
+            .padding(14)
+            .dashboardPanel(WebDashboardStyle.homePanel)
         }
     }
 
     private func standingsTable(leader: DriverStanding) -> some View {
         let movement = archive.flatMap { $0.meta.stale ? nil : RoundMovement(entries: roster.map(StandingEntry.init(driver:)), weekends: $0.data, teams: false) }
         return VStack(alignment: .leading, spacing: 0) {
+            if !showsSectionPicker {
+                let title = "\(String(model.season)) F1 Driver Standings"
+                Text(title).font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.top, 10)
+            }
+
             HStack(spacing: 8) {
                 Text("Driver").frame(maxWidth: .infinity, alignment: .leading)
                 Text("Points / Gap").multilineTextAlignment(.trailing)
             }
+            .padding(.horizontal, wideStandings ? 8 : 0)
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
             .accessibilityAddTraits(.isHeader)
@@ -231,15 +274,28 @@ struct DriversDashboard: View {
 
     private func driverLink<Label: View>(_ driver: DriverStanding, source: String, @ViewBuilder label: () -> Label) -> some View {
         let id = "\(source).\(driver.id)"
-        return NavigationLink {
-            StandingProfile(entry: StandingEntry(driver: driver), driversDesign: true)
-                .pulseNavigationZoom(id, in: transition)
-        } label: {
-            label().frame(minHeight: 54).contentShape(.rect)
-                .matchedTransitionSource(id: id, in: transition)
+        let entry = StandingEntry(driver: driver)
+        return Group {
+            if wideStandings {
+                let selected = displayedStanding?.id == entry.id
+                Button { selectedStanding = entry } label: {
+                    label().padding(.horizontal, source == "leader" ? 0 : 8)
+                        .frame(minHeight: 54).contentShape(.rect)
+                        .background(selected && source != "leader" ? PulseStyle.red.opacity(0.10) : .clear, in: .rect(cornerRadius: 6))
+                }
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            } else {
+                NavigationLink {
+                    StandingProfile(entry: entry, driversDesign: true)
+                        .pulseNavigationZoom(id, in: transition)
+                } label: {
+                    label().frame(minHeight: 54).contentShape(.rect)
+                        .matchedTransitionSource(id: id, in: transition)
+                }
+                .navigationLinkIndicatorVisibility(.hidden)
+            }
         }
         .buttonStyle(PulsePressStyle())
-        .navigationLinkIndicatorVisibility(.hidden)
         .accessibilityIdentifier("drivers.\(id)")
     }
 

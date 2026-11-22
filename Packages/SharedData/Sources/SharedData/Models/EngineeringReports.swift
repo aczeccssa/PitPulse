@@ -31,6 +31,7 @@ public struct SeasonFeatures: Codable, Sendable {
 }
 
 public struct TechnicalUpdate: Codable, Sendable {
+    public let major: Bool?
     public let round: Int?
     public let country: String?
     public let team: String?
@@ -45,6 +46,7 @@ public struct PowerUnitReport: Codable, Sendable {
     public let penalties: [Penalty]
 
     public struct Usage: Codable, Sendable {
+        public let driverCode: String?
         public let driverName: String?
         public let engineManufacturer: String?
         public let team: String?
@@ -62,15 +64,52 @@ public struct PowerUnitReport: Codable, Sendable {
     }
 
     public struct Penalty: Codable, Sendable {
+        public let driverCode: String?
+        public let constructorName: String?
+        public let elements: [String]?
         public let driverName: String?
         public let grandPrixName: String?
         public let gridPositions: Int?
         public let startsFromPitLane: Bool?
+        public let round: Int?
+        public let startingPosition: Int?
+        public let allocationDriverName: String?
+        public let pitLaneReason: String?
+        public let penaltyItems: [Item]?
+        public let sourceDocuments: [SourceDocument]?
+
+        public struct Item: Codable, Sendable {
+            public let elementCode: String?
+            public let elementNumber: Int?
+            public let gridPositions: Int?
+        }
+
+        public struct SourceDocument: Codable, Sendable {
+            public let url: String?
+        }
     }
 }
 
 public struct DamageReport: Codable, Sendable {
     public let rows: [Incident]
+    public let corrections: [Correction]?
+
+    public struct Correction: Codable, Sendable {
+        public let round: Int?
+        public let diff: String?
+        public let quantity: Int?
+        public let note: String?
+        public let driverSeason: DriverSeason?
+        public let components: Component?
+
+        public struct DriverSeason: Codable, Sendable {
+            public let driver: Driver?
+
+            public struct Driver: Codable, Sendable {
+                public let name: String?
+            }
+        }
+    }
 
     public struct Incident: Codable, Sendable {
         public let driverName: String?
@@ -101,14 +140,19 @@ public struct HomeFeatures: Codable, Sendable {
 
     public struct Count: Codable, Sendable {
         public let total: Int?
+        public let lastRace: Int?
+        public let latestRound: Int?
     }
 
     public struct Damage: Codable, Sendable {
         public let seasonTotal: Double?
+        public let lastRound: Double?
+        public let latestRound: Int?
     }
 
     public struct PitStop: Codable, Sendable {
         public let time: Double
+        public let team: String?
         public let driverName: String?
         public let country: String?
         public let round: Int?
