@@ -359,52 +359,50 @@ async fn response(
     job: Job,
     fallback: Option<Value>,
 ) -> Result<Json<Value>, ApiError> {
-    let cached = state.analysis.read(state, &job.key()).await?;
-    if let Some(value) = &cached
-        && fresh_value(value)
-        && let Ok(public) = public_value(state, job.clone(), value.clone()).await
-    {
-        return Ok(Json(public));
-    }
+    let cached = match state.analysis.read(state, &job.key()).await? {
+        Some(value) => match public_value(state, &job, value).await {
+            Ok(value) if fresh_value(&value) => return Ok(Json(value)),
+            Ok(value) => Some(value),
+            Err(_) => None,
+        },
+        None => None,
+    };
     queue(state, job.clone()).await;
     let now = state.database.utc_now().await?;
     let source = match job {
         Job::Session { .. } => "openf1",
         _ => "jolpica-ergast",
     };
-    let mut value = cached
-        .filter(|value| !is_shared_reference(value))
-        .or(fallback)
-        .unwrap_or_else(|| {
-            envelope(
-                if source == "openf1" {
-                    empty_session()
-                } else {
-                    json!({"rounds":[],"warnings":[]})
-                },
-                &now,
-                source,
-            )
-        });
+    let mut value = cached.or(fallback).unwrap_or_else(|| {
+        envelope(
+            if source == "openf1" {
+                empty_session()
+            } else {
+                json!({"rounds":[],"warnings":[]})
+            },
+            &now,
+            source,
+        )
+    });
     let stale = value["meta"]["stale"] == true || !fresh_value(&value);
     value["meta"]["analysisStatus"] = json!("loading");
     // Cached content keeps its timestamp and is readable during the background refresh.
     value["meta"]["stale"] = json!(stale);
-    Ok(Json(public_value(state, job, value).await?))
+    Ok(Json(value))
 }
 
 fn is_shared_reference(value: &Value) -> bool {
     value["meta"]["analysisCacheSchema"] == "pitpulse:v2:shared-reference"
 }
 
-async fn public_value(state: &AppState, job: Job, mut value: Value) -> Result<Value, ApiError> {
+async fn public_value(state: &AppState, job: &Job, mut value: Value) -> Result<Value, ApiError> {
     let meta = value["meta"].as_object_mut().unwrap();
     meta.remove("analysisCacheSchema");
     let fingerprint = meta.remove("bundleFingerprint");
     let Some(fingerprint) = fingerprint.and_then(|value| value.as_str().map(str::to_owned)) else {
         return Ok(value);
     };
-    let key = match &job {
+    let key = match job {
         Job::Session { session, .. } => format!("session:{session}:shared:{fingerprint}"),
         Job::Season { .. } => return Ok(value),
     };
