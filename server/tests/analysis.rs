@@ -205,6 +205,58 @@ async fn test_direct_bundle_readers_rehydrate_shared_snapshot() {
 }
 
 #[tokio::test]
+async fn test_expired_shared_cache_preserves_lap_telemetry_while_refreshing() {
+    let (mut state, _temp) = state().await;
+    state.openf1.enabled = false;
+    let laps = json!([{"driverNumber": 16, "lapNumber": 1, "lapDuration": 90.5}]);
+    let car_data = json!([{"speed": 240, "nGear": 7}]);
+    let location = json!([{"x": 1.0, "y": 2.0, "z": 0.0}]);
+    let fetched_at = "2000-01-01T00:00:00Z";
+    state
+        .database
+        .save_analysis_cache(
+            "session:2024:1:race:shared:fixture",
+            &json!({"data": {"laps": laps}, "meta": {"fetchedAt": fetched_at}}),
+        )
+        .await
+        .unwrap();
+
+    let entry = json!({
+        "data": {"selectedLap": 1, "carData": car_data, "location": location},
+        "meta": {
+            "fetchedAt": fetched_at,
+            "analysisStatus": "ready",
+            "stale": false,
+            "analysisCacheSchema": "pitpulse:v2:shared-reference",
+            "bundleFingerprint": "fixture"
+        }
+    });
+    for lap in [0, 1] {
+        state
+            .database
+            .save_analysis_cache(&format!("session:2024:1:race:leclerc:{lap}"), &entry)
+            .await
+            .unwrap();
+    }
+
+    let app = server::router(state);
+    for query in ["", "?lap=1"] {
+        let path = format!("/api/v1/sessions/2024:1:race/drivers/leclerc/analysis{query}");
+        let (status, response) = read(app.clone(), &path, false).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["data"]["carData"], car_data);
+        assert_eq!(response["data"]["location"], location);
+        assert_eq!(response["data"]["laps"], laps);
+        assert_eq!(response["data"]["selectedLap"], 1);
+        assert_eq!(response["meta"]["analysisStatus"], "loading");
+        assert_eq!(response["meta"]["stale"], true);
+        assert_eq!(response["meta"]["fetchedAt"], fetched_at);
+        assert!(response["meta"].get("analysisCacheSchema").is_none());
+        assert!(response["meta"].get("bundleFingerprint").is_none());
+    }
+}
+
+#[tokio::test]
 async fn test_analysis_historical_identity_bounded_telemetry_partial_sections_and_cache() {
     async fn upstream(
         State(count): State<Arc<AtomicUsize>>,
