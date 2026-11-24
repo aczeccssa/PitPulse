@@ -1,5 +1,6 @@
 pub(crate) mod dashboard_cache;
 pub mod dto;
+pub(crate) mod media;
 pub mod middleware;
 pub mod refresh;
 pub mod routes;

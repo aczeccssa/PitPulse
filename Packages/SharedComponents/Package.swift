@@ -15,8 +15,8 @@ let package = Package(
             name: "SharedComponents",
             dependencies: [
                 .product(name: "SharedData", package: "SharedData")
-            ],
-            resources: [.process("Resources")]
-        )
+            ]
+        ),
+        .testTarget(name: "SharedComponentsTests", dependencies: ["SharedComponents"])
     ]
 )

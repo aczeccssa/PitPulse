@@ -23,6 +23,8 @@ fn main() {
         false,
     );
     emit_asset_index("resources/motorsport", "motorsport_index.rs");
+    println!("cargo:rerun-if-changed=resources/media");
+    emit_asset_table("resources/media", "NATIVE_ASSETS", "native_assets.rs", true);
 }
 
 fn png_paths(root: &Path, relative: &Path, recursive: bool, out: &mut Vec<(String, String)>) {

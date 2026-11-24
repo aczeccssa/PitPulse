@@ -3,7 +3,8 @@ WORKDIR /src
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY resources ./resources
 COPY src ./src
 COPY tests ./tests
 RUN cargo build --release

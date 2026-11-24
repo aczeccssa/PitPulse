@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SharedComponents
 import SharedData
 
 // MARK: - Design tokens
@@ -78,7 +79,7 @@ struct MenuBarRootView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image("PitPulseMenuBar")
+            MotorsportImages.image(named: "PitPulseMenuBar")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 22, height: 18)

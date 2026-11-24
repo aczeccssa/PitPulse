@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 import SharedData
+import SharedComponents
 
 struct LiveNotice: Equatable {
     let id = UUID()
@@ -165,6 +166,10 @@ final class MobileModel: ObservableObject {
         for (series, store) in liveStores {
             store.onSnapshot = { [weak self] snapshot in self?.handle(snapshot, from: series) }
             store.onConnectionState = { [weak self] snapshot in self?.handle(snapshot, from: series) }
+            store.onStreamConnected = { [weak self] in
+                guard let self else { return }
+                MediaCache.shared.refresh(from: self.serverURL, token: self.currentToken)
+            }
         }
         #if DEBUG
         if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" {

@@ -32,7 +32,9 @@ pub async fn require_bearer_token(
     // bootstraps is a separate, derived credential and only admits reads, so a
     // cookie copied out of a browser cannot mutate server state.
     let authorized = bearer_matches(request.headers(), expected)
-        || (allows_read_only(request.method()) && cookie_matches(request.headers(), expected));
+        || (!request.uri().path().starts_with("/api/v1/media/")
+            && allows_read_only(request.method())
+            && cookie_matches(request.headers(), expected));
 
     if authorized {
         next.run(request).await

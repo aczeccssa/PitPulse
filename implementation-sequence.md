@@ -102,7 +102,7 @@ T12 SignalR Spike → T13 Live 链路 → T14 Notch → T15 部署与最终验�
 | T14 | Notch 紧凑 / 展开态与降级 | P1 | T13、T12 OpenNook 结论 |
 | T15 | 部署、运行证据与最终验收 | P1 | T11；V2 验收另需 T14 |
 
-素材研究记录见 [`docs/assets/collection-report.md`](docs/assets/collection-report.md)，来源与映射见 [`manifest.json`](macos/Resources/MotorsportAssets/manifest.json)。授权／下载待审项随素材记录维护。
+素材研究记录见 [`docs/assets/collection-report.md`](docs/assets/collection-report.md)，来源与映射见 [`manifest.json`](server/resources/motorsport-source/manifest.json)。授权／下载待审项随素材记录维护。
 
 ## 5. 可直接执行的任务卡
 

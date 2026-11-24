@@ -35,6 +35,11 @@ form-action 'none'; frame-ancestors 'none'";
 
 pub fn build_router(state: AppState) -> Router<AppState> {
     Router::new()
+        .route("/api/v1/media/manifest.json", get(super::media::manifest))
+        .route(
+            "/api/v1/media/blob/{digest}",
+            get(super::media::native_blob),
+        )
         .route("/api/v1/calendar", get(calendar))
         .route("/api/v1/home", get(crate::services::engineering::home))
         .route(
@@ -97,7 +102,7 @@ pub fn build_router(state: AppState) -> Router<AppState> {
 
 /// Web shell for the self-hosted dashboard, behind the browser session guard.
 pub async fn index() -> Response {
-    let mut response = INDEX_HTML.into_response();
+    let mut response = super::media::version_web_brand(INDEX_HTML).into_response();
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_TYPE,
@@ -133,7 +138,10 @@ pub async fn theme_js() -> Response {
 }
 
 pub async fn manifest() -> Response {
-    text_asset(MANIFEST, "application/manifest+json")
+    text_asset(
+        super::media::version_web_brand(MANIFEST),
+        "application/manifest+json",
+    )
 }
 
 pub async fn apple_touch_icon() -> Response {
@@ -199,7 +207,7 @@ fn script_asset(body: &'static str) -> Response {
     response
 }
 
-fn text_asset(body: &'static str, content_type: &'static str) -> Response {
+fn text_asset(body: impl IntoResponse, content_type: &'static str) -> Response {
     let mut response = body.into_response();
     let headers = response.headers_mut();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(content_type));
@@ -288,7 +296,10 @@ pub async fn spa_fallback(
     uri: Uri,
     headers: HeaderMap,
 ) -> Response {
-    if uri.path().starts_with("/api/") || uri.path().starts_with("/motorsport") {
+    if uri.path().starts_with("/api/")
+        || uri.path().starts_with("/motorsport")
+        || uri.path().starts_with("/media/")
+    {
         return (
             StatusCode::NOT_FOUND,
             Json(json!({"error": {"code": "not_found", "message": "unknown API path"}})),

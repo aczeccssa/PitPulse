@@ -393,7 +393,7 @@
     // Artwork is served per season as {kind}/{id}/{season}. The build emits an
     // index of what actually exists, so the page never asks for a missing file
     // and never shows another season's portrait in place of the real one.
-    const ASSETS = (typeof window !== "undefined" && window.PITPULSE_ASSETS) || {};
+    const ASSETS = (typeof window !== "undefined" && window.PITPULSE_MEDIA) || {};
     let artSeasonValue = null;
 
     function useSeason(value) { const year = Number(value); if (year) artSeasonValue = year; }
@@ -406,9 +406,18 @@
         return requestedSeason() || artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || new Date().getFullYear();
     }
     function hasAsset(season, kind, id) {
-        return Boolean(id) && Object.prototype.hasOwnProperty.call(ASSETS, `${season}/${kind}/${id}`);
+        return Boolean(id) && Object.prototype.hasOwnProperty.call(ASSETS, `${season}/${kind}/${id}.png`);
     }
-    function assetSrc(season, kind, id) { return `/motorsport/${season}/${kind}/${id}.png`; }
+    function mediaSrc(path, fallback) {
+        return Object.hasOwn(ASSETS, path) ? `/media/blob/${ASSETS[path]}` : fallback;
+    }
+    function assetSrc(season, kind, id) {
+        return mediaSrc(`${season}/${kind}/${id}.png`);
+    }
+
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/media-worker.js").catch(() => {});
+    }
 
     const TEAM_IDS = [
         [/red[\s_]?bull/i, "red_bull"],
@@ -1410,7 +1419,7 @@
         // The calendar carries an alpha-2 code; the engineering reports only
         // carry a country name, so fall back to the same table the server uses.
         const code = String(meeting?.countryCode || engineeringCountry(meeting?.country || "") || "").toLowerCase();
-        const image = artImage("flat-flag", `/motorsport/flag-${code}.png`);
+        const image = artImage("flat-flag", mediaSrc(`flag-${code}.png`, `/motorsport/flag-${code}.png`));
         image.alt = meeting?.country || "";
         image.onerror = () => image.remove();
         return image;
@@ -2467,7 +2476,7 @@
         techMetric.querySelector('.home-metric-note').textContent = coverageNote('tech'); cards.append(techMetric);
         const social = node('section', 'home-card home-social'); social.append(node('p', '', 'Support PitPulse and help us build a better racing companion.')); const support = node('a', 'home-support-button', 'Support Us on GitHub'); support.href = 'https://github.com/aczeccssa/PitPulse'; support.target = '_blank'; support.rel = 'noopener noreferrer'; support.append(svgIcon('M14 5h5v5m0-5-7 7M5 7v12h12v-5')); social.append(support); cards.append(social);
         const promo = node('a', 'home-card home-app-promo'); promo.href = 'https://github.com/aczeccssa/PitPulse'; promo.target = '_blank'; promo.rel = 'noopener noreferrer';
-        const appIcon = artImage('home-app-icon', '/icon-192.png'); appIcon.alt = ''; const promoCopy = node('div', 'home-app-copy'); promoCopy.append(node('span', 'home-app-platforms', 'macOS · iOS'), node('h2', '', 'PitPulse'), node('p', '', 'Your race. Always in reach.'), node('span', 'home-app-cta', 'Explore the App ↗')); promo.append(appIcon, promoCopy); cards.append(promo); root.append(cards);
+        const appIcon = artImage('home-app-icon', mediaSrc('icon-192.png', '/icon-192.png')); appIcon.alt = ''; const promoCopy = node('div', 'home-app-copy'); promoCopy.append(node('span', 'home-app-platforms', 'macOS · iOS'), node('h2', '', 'PitPulse'), node('p', '', 'Your race. Always in reach.'), node('span', 'home-app-cta', 'Explore the App ↗')); promo.append(appIcon, promoCopy); cards.append(promo); root.append(cards);
         const lower = node('div', 'home-detail-grid'); lower.append(homeStandings(data, false, season), homeStandings(data, true, season), homeRecordPanel(data, season)); root.append(lower); homeTrackOutline(scheduleCard, schedule.display, season); updateHomeCountdown(); installSeasonPopovers(root);
     }
 
@@ -2844,7 +2853,7 @@
             if (!link || link.target || link.hasAttribute("download")) return;
             const url = new URL(link.getAttribute("href"), location.origin);
             if (url.origin !== location.origin) return;
-            if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/motorsport/")) return;
+            if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/motorsport/") || url.pathname.startsWith("/media/")) return;
             if (/\.(png|ico|css|js|webmanifest|svg|json)$/i.test(url.pathname)) return;
             event.preventDefault();
             navigate(url.pathname + url.search);

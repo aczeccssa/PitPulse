@@ -298,7 +298,8 @@ struct RootView: View {
         Button(action: action) {
             HStack(spacing: 9) {
                 if let webIcon {
-                    Image("web-nav-" + webIcon)
+                    MotorsportImages.image(named: "web-nav-" + webIcon, fallback: symbol)
+                        .renderingMode(.template)
                         .resizable()
                         .frame(width: 17, height: 17)
                 } else {
@@ -499,7 +500,7 @@ struct RootView: View {
             selectTab(DashboardTab.home.rawValue)
         } label: {
             HStack(spacing: 9) {
-                Image("web-brand-mark")
+                MotorsportImages.image(named: "web-brand-mark")
                     .resizable().scaledToFit()
                     .frame(width: 24, height: 20)
                     .accessibilityHidden(true)
@@ -628,6 +629,7 @@ struct RootView: View {
                 model.settingsPresented = true
             }
             #endif
+            MediaCache.shared.refresh(from: model.serverURL, token: model.currentToken)
             model.startLive()
             async let roster: Void = model.loadF1Roster()
             async let liveCalendar: Void = model.loadCurrentSeasonLiveCalendar()
@@ -638,6 +640,7 @@ struct RootView: View {
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
+            MediaCache.shared.refresh(from: model.serverURL, token: model.currentToken)
             while !Task.isCancelled {
                 model.updateScheduledLiveSession()
                 do { try await Task.sleep(for: .seconds(5)) } catch { break }
@@ -886,7 +889,8 @@ private struct DashboardHeader: View {
                         sidebarExpanded.wrappedValue.toggle()
                     }
                 } label: {
-                    Image("web-nav-navigation-toggle")
+                    MotorsportImages.image(named: "web-nav-navigation-toggle", fallback: "sidebar.left")
+                        .renderingMode(.template)
                         .resizable()
                         .frame(width: 18, height: 18)
                         .frame(width: 36, height: 36)

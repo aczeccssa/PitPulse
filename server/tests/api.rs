@@ -340,13 +340,44 @@ async fn test_web_shell_is_served_directly_with_an_issued_session_and_icons_stay
     assert!(html.contains("src=\"/app.js\""));
     assert!(html.contains("href=\"/manifest.webmanifest\""));
     // The topbar carries the real brand mark, not an inline placeholder.
-    assert!(html.contains("src=\"/brand-mark.png\""));
+    let brand = html
+        .split("class=\"brand-mark\" src=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(brand.starts_with("/media/blob/"));
+    let response = router.clone().oneshot(get(brand)).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers()[header::CACHE_CONTROL],
+        "public, max-age=31536000, immutable"
+    );
+    let response = router.clone().oneshot(get("/media/web.js")).await.unwrap();
+    let etag = response.headers()[header::ETAG].clone();
+    let mut request = get("/media/web.js");
+    request.headers_mut().insert(header::IF_NONE_MATCH, etag);
+    assert_eq!(
+        router.clone().oneshot(request).await.unwrap().status(),
+        StatusCode::NOT_MODIFIED
+    );
+    let native_manifest = "/api/v1/media/manifest.json";
+    assert_eq!(
+        router
+            .clone()
+            .oneshot(get_with_cookie(native_manifest, &session_cookie))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
     assert!(!html.contains("auth-dialog"));
     assert!(!html.contains("lock-btn"));
     assert!(!html.contains("api-meta"));
     assert!(!html.contains("<footer"));
     // Icons are versioned so a restyled set is fetched instead of cached.
-    assert!(html.contains("/favicon.png?v=2"));
+    assert!(html.contains("rel=\"icon\" type=\"image/png\" href=\"/media/blob/"));
 
     let response = router
         .clone()
@@ -425,7 +456,7 @@ async fn test_web_shell_is_served_directly_with_an_issued_session_and_icons_stay
     }
 
     // Scripted and CLI callers keep full access with the bearer token.
-    for path in ["/", "/api/v1/health"] {
+    for path in ["/", "/api/v1/health", native_manifest] {
         let response = router
             .clone()
             .oneshot(
