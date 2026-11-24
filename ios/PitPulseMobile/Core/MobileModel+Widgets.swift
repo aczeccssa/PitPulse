@@ -16,6 +16,6 @@ extension MobileModel {
             season: season, savedAt: savedAt, recentRaces: recentRaceSources)
     }
     func publishLiveWidget(_ snapshot: LiveSnapshot) {
-        widgetPublisher.publishLive(snapshot)
+        widgetPublisher.publishLive(snapshot, replaySeason: season)
     }
 }

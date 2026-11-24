@@ -1242,7 +1242,7 @@ struct AssetImage: View {
         if let image = DashboardArt.image(named: name, traits: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)) {
             Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().accessibilityHidden(true)
         } else {
-            Image(systemName: "person.crop.circle").resizable().scaledToFit().foregroundStyle(.secondary).accessibilityHidden(true)
+            Image(systemName: MotorsportImages.fallbackSymbol(named: name) ?? "person.crop.circle").resizable().scaledToFit().foregroundStyle(.secondary).accessibilityHidden(true)
         }
     }
 }

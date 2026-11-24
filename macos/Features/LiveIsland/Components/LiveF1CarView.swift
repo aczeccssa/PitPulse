@@ -34,14 +34,14 @@ struct LiveF1CarView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             HStack(spacing: 8) {
                 if let driver {
-                    LiveHelmetView(model: model, driver: driver, size: 30, isWec: false)
+                    LiveHelmetView(model: model, driver: driver, size: 30, snapshot: snapshot)
                     if let teamID = LiveIslandLogic.carSideAssetID(for: driver, isWec: false),
-                       let image = MotorsportAsset.image(kind: .carSide, id: teamID, season: model.selectedSeason) {
+                       let image = MotorsportAsset.image(kind: .carSide, id: teamID, season: snapshot.artworkSeason(replaySeason: model.selectedSeason)) {
                         Image(nsImage: image)
                             .resizable().scaledToFit()
                             .frame(width: 132, height: 32)
                     }
-                    LiveTeamLogo(driver: driver, season: model.selectedSeason, isWec: false, size: 18)
+                    LiveTeamLogo(driver: driver, season: snapshot.artworkSeason(replaySeason: model.selectedSeason), isWec: false, size: 18)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text("#\(driver.number) \(driver.name ?? "车手")")

@@ -20,9 +20,12 @@ public struct RaceTimingSnapshot: Codable, Equatable, Sendable {
     public var updatedAt: Date
     public var stale: Bool
     public var drivers: [RaceTimingDriver]
-    public init(meeting: String, session: String, lap: String, status: String, updatedAt: Date, stale: Bool, drivers: [RaceTimingDriver]) {
+    public var season: Int?
+    public init(meeting: String, session: String, lap: String, status: String, updatedAt: Date, stale: Bool,
+                drivers: [RaceTimingDriver], season: Int? = nil) {
         self.meeting = meeting; self.session = session; self.lap = lap; self.status = status
         self.updatedAt = updatedAt; self.stale = stale; self.drivers = drivers
+        self.season = season
     }
     public func isStale(at date: Date) -> Bool { stale || date.timeIntervalSince(updatedAt) > 90 }
 }

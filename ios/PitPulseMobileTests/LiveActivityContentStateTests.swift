@@ -16,6 +16,22 @@ final class LiveActivityContentStateTests: XCTestCase {
         XCTAssertNil(MotorsportImages.uiImage(named: "nonexistent-preview-test-image"))
     }
 
+    @MainActor
+    func testSeasonArchiveResolvesDriverAndConstructorAliases() throws {
+        let assets: [(MotorsportAssetName.Kind, String, Int)] = [
+            (.driverPhoto, "verstappen", 2024), (.driverPhoto, "lindblad", 2026),
+            (.driverPhoto, "camara", 2026), (.teamLogo, "kick_sauber", 2025),
+            (.carSide, "mclaren", 2025), (.teamLogo, "racing_bulls", 2026),
+            (.carSide, "red-bull-racing", 2026), (.helmet, "verstappen", 2026)
+        ]
+        for (kind, id, season) in assets {
+            let name = MotorsportAssetName.name(kind: kind, id: id, season: season)
+            XCTAssertNotNil(MotorsportImages.uiImage(named: name), name)
+        }
+        XCTAssertNil(MotorsportImages.uiImage(named: "helmet-leclerc-2025"))
+        XCTAssertNil(MotorsportImages.uiImage(named: "helmet-rafael_camara-2026"))
+    }
+
     func testPositionFocusFollowsContinuingLossBeyondTenSeconds() {
         var focus = IslandPositionFocus()
         focus.update(positions: ["a": 1, "b": 2, "c": 3, "d": 4, "e": 5], now: 0)

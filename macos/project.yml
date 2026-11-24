@@ -39,6 +39,9 @@ targets:
         buildPhase: resources
       - path: Features/Maps/map.html
         buildPhase: resources
+      - path: ../server/resources/motorsport
+        type: folder
+        buildPhase: resources
     settings:
       base:
         SDKROOT: macosx

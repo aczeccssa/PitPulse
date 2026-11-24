@@ -84,7 +84,7 @@ extension LiveIslandExpandedView {
     var followControls: some View {
         HStack(spacing: 10) {
             if let favorite {
-                LiveHelmetView(model: model, driver: favorite, size: 28, isWec: snapshot.isWec)
+                LiveHelmetView(model: model, driver: favorite, size: 28, snapshot: snapshot)
             }
             Menu {
                 Button("不关注") { model.setFavoriteDriver(nil, series: snapshot.isWec ? .wec : .f1) }

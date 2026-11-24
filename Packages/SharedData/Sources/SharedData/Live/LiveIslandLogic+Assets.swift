@@ -13,20 +13,24 @@ extension LiveIslandLogic {
 
     private static func f1TeamAssetID(for driver: LiveDriver) -> String? {
         let known = [
-            "red bull": "red_bull",
+            "red-bull": "red_bull",
             "mercedes": "mercedes",
             "mclaren": "mclaren",
             "ferrari": "ferrari",
             "williams": "williams",
-            "racing bulls": "rb",
-            "aston martin": "aston_martin",
+            "racing-bulls": "rb",
+            "sauber": "sauber",
+            "aston-martin": "aston_martin",
             "alpine": "alpine",
             "haas": "haas",
             "audi": "audi",
             "cadillac": "cadillac"
         ]
-        for source in [driver.manufacturer, driver.team].compactMap({ $0?.lowercased() }) {
-            if let id = known.first(where: { source.contains($0.key) })?.value {
+        for source in [driver.team, driver.manufacturer].compactMap({ $0 }) {
+            let slug = assetSlug(source)
+            let canonical = MotorsportAssetName.canonicalID(kind: .teamLogo, id: slug)
+            if canonical == "rb" || known.values.contains(canonical) { return canonical }
+            if let id = known.first(where: { slug.contains($0.key) })?.value {
                 return id
             }
         }

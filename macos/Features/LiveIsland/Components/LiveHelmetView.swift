@@ -1,20 +1,24 @@
 import AppKit
 import SwiftUI
 import SharedData
+import SharedComponents
 
 struct LiveHelmetView: View {
     @ObservedObject var model: AppModel
     let driver: LiveDriver
     let size: CGFloat
-    var isWec = false
+    let snapshot: LiveSnapshot
 
     private var image: NSImage? {
-        if isWec {
+        let season = snapshot.artworkSeason(replaySeason: model.selectedSeason)
+        if snapshot.isWec {
             guard let id = LiveIslandLogic.driverAssetID(for: driver) else { return nil }
-            return MotorsportAsset.image(kind: .driverPhoto, id: id, season: model.selectedSeason)
+            return MotorsportAsset.image(kind: .driverPhoto, id: id, season: season)
         }
-        guard let id = LiveIslandLogic.rosterID(for: driver, favorites: model.favoriteDrivers) else { return nil }
-        return MotorsportAsset.f1DriverImage(id: id, season: model.selectedSeason)
+        let id = LiveIslandLogic.rosterID(for: driver, favorites: model.favoriteDrivers)
+        return MotorsportImages.nsImage(named: MotorsportAssetName.helmetName(
+            driverID: id, name: driver.name ?? "", season: season
+        ))
     }
 
     var body: some View {

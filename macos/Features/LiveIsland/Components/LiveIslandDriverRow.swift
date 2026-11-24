@@ -109,9 +109,9 @@ struct LiveIslandDriverRow: View {
                 .frame(width: 24)
                 .accessibilityLabel("名次 P\(driver.position.map(String.init) ?? "未知")")
             if snapshot.isWec {
-                LiveManufacturerLogo(driver: driver, season: model.selectedSeason)
+                LiveManufacturerLogo(driver: driver, season: snapshot.artworkSeason(replaySeason: model.selectedSeason))
             } else {
-                LiveHelmetView(model: model, driver: driver, size: 32, isWec: false)
+                LiveHelmetView(model: model, driver: driver, size: 32, snapshot: snapshot)
             }
             identityText
         }

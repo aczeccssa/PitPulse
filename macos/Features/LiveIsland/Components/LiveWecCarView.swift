@@ -5,6 +5,7 @@ import SharedData
 struct LiveWecCarView: View {
     @ObservedObject var model: AppModel
     let driver: LiveDriver?
+    let snapshot: LiveSnapshot
     let showTire: Bool
     let showEnergy: Bool
 
@@ -25,14 +26,14 @@ struct LiveWecCarView: View {
     var body: some View {
         HStack(spacing: 8) {
             if let driver {
-                LiveHelmetView(model: model, driver: driver, size: 30, isWec: true)
+                LiveHelmetView(model: model, driver: driver, size: 30, snapshot: snapshot)
                 if let carID = LiveIslandLogic.carSideAssetID(for: driver, isWec: true),
-                   let image = MotorsportAsset.image(kind: .carSide, id: carID, season: model.selectedSeason) {
+                   let image = MotorsportAsset.image(kind: .carSide, id: carID, season: snapshot.artworkSeason(replaySeason: model.selectedSeason)) {
                     Image(nsImage: image)
                         .resizable().scaledToFit()
                         .frame(width: 120, height: 35)
                 }
-                LiveTeamLogo(driver: driver, season: model.selectedSeason, isWec: true, size: 18)
+                LiveTeamLogo(driver: driver, season: snapshot.artworkSeason(replaySeason: model.selectedSeason), isWec: true, size: 18)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text("#\(driver.number) \(driver.name ?? "车手")")

@@ -61,6 +61,7 @@
 		5DB2B5313C22EC235169F28F /* LiveIslandExpandedView+Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79C6740E696573DC15A19573 /* LiveIslandExpandedView+Controls.swift */; };
 		6425FF1ABCEF4BC38778CAA9 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61C7E4945392C1F76162C12 /* MapView.swift */; };
 		64F5F58403C0248987C28131 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 0E9FF30A9E31BDCE21E03738 /* SharedData */; };
+		653B96FF1ECBDF0D56634A54 /* motorsport in Resources */ = {isa = PBXBuildFile; fileRef = 7F61C0E47C6EC6266F081983 /* motorsport */; };
 		6676AA66D522854730BB0F91 /* AppSymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4D91847E5BEC99C2CF65CA /* AppSymbol.swift */; };
 		686A83C34F277F9C04C43FBD /* MeetingDetailView+Analysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604F5D1C19F571090349464B /* MeetingDetailView+Analysis.swift */; };
 		6A30D8AA2447D8E709194AFA /* LiveIslandDriverRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F8A2F141608E1B7851BABA /* LiveIslandDriverRow.swift */; };
@@ -236,6 +237,7 @@
 		79C6740E696573DC15A19573 /* LiveIslandExpandedView+Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveIslandExpandedView+Controls.swift"; sourceTree = "<group>"; };
 		7CE0741B093C555DA6214F92 /* StatusMenuLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuLabel.swift; sourceTree = "<group>"; };
 		7F34FF4036FAC59ECCDB8428 /* LiveIslandExpandedView+Computed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveIslandExpandedView+Computed.swift"; sourceTree = "<group>"; };
+		7F61C0E47C6EC6266F081983 /* motorsport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = motorsport; path = ../server/resources/motorsport; sourceTree = SOURCE_ROOT; };
 		809F6975722C032EFDCEDDAA /* PitPulseTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseTheme.swift; sourceTree = "<group>"; };
 		8115B2830F7E41288A80FFA4 /* LiveTireInline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTireInline.swift; sourceTree = "<group>"; };
 		8153A9FE994D22152F1A9C61 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
@@ -349,6 +351,14 @@
 				86DD9CC82802CBFAC40CC331 /* Models */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		20562EA3B11EF08E6DD4FEA3 /* resources */ = {
+			isa = PBXGroup;
+			children = (
+				7F61C0E47C6EC6266F081983 /* motorsport */,
+			);
+			path = resources;
 			sourceTree = "<group>";
 		};
 		327F8F134745D21A2E7306B9 /* DesignSystem */ = {
@@ -491,6 +501,7 @@
 			isa = PBXGroup;
 			children = (
 				671C079749313AE80B1F7811 /* Packages */,
+				93B6E7B409D6C3C5360C976A /* server */,
 			);
 			name = PitPulse;
 			path = ..;
@@ -514,6 +525,14 @@
 				F2519E2579AE1ED5C0B9F8B9 /* SettingsWindowPresentation.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		93B6E7B409D6C3C5360C976A /* server */ = {
+			isa = PBXGroup;
+			children = (
+				20562EA3B11EF08E6DD4FEA3 /* resources */,
+			);
+			path = server;
 			sourceTree = "<group>";
 		};
 		9FE929E90FF7B8C7B922919B /* LiveIsland */ = {
@@ -863,6 +882,7 @@
 				086EABCDFFE4B964BD7834F1 /* AppAssets.xcassets in Resources */,
 				4169158A69C62B230CCBC013 /* AppIcon.icon in Resources */,
 				3D544C7D976265FB9A7D8405 /* map.html in Resources */,
+				653B96FF1ECBDF0D56634A54 /* motorsport in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

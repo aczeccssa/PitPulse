@@ -47,7 +47,12 @@ final class MobileModel: ObservableObject {
     @Published var serverText: String {
         didSet {
             defaults.set(serverText, forKey: PreferenceKeys.serverAddress)
-            if oldValue != serverText { invalidateCalendar(); if liveStarted { startLive() } }
+            if oldValue != serverText {
+                invalidateCalendar()
+                if liveStarted { startLive() }
+                let coordinator = reminderCoordinator
+                Task { try? await coordinator.sync([]) }
+            }
         }
     }
 
@@ -93,12 +98,19 @@ final class MobileModel: ObservableObject {
     var recentLiveLaps: [LiveSeries: [String: [LiveCompletedLap]]] = [:]
     var liveConnectionContext: String?
 
+    @Published var remindersEnabled = UserDefaults.standard.bool(forKey: PreferenceKeys.remindersEnabled)
+    @Published var reminderPermissionDenied = false
+    @Published var reminderMessage: String?
+    @Published var updatingReminderPreference = false
+    let reminderCoordinator = SessionReminderCoordinator(center: UserNotificationReminderCenter())
+
     let defaults = UserDefaults.standard
     let keychain = KeychainStore(service: "com.pitpulse.mobile")
     let cache = DiskCalendarCache()
     let activity = LiveActivityController()
     var liveStarted = false
     var calendarRequestID = UUID()
+    var liveCalendarRequestID = UUID()
     let widgetPublisher = WidgetSnapshotPublisher()
     var widgetHighlightsContext: String?
     var rosterSavedAt: Date = .distantPast

@@ -29,7 +29,7 @@ final class AppModel: ObservableObject {
     @Published var isTokenStored = false
     @Published var settingsMessage: String?
     @Published var remindersEnabled = false
-    @Published var reminderMinutes = 15
+    @Published var reminderMinutes = SessionReminderPlanner.defaultMinutes
     @Published var reminderMessage: String?
     @Published var reminderPermissionDenied = false
     @Published var favoriteDriverId: String?
@@ -49,7 +49,7 @@ final class AppModel: ObservableObject {
     let defaults: UserDefaults
     let credentials: any CredentialStore
     let cache: DiskCalendarCache
-    let reminderCenter: any SessionReminderCenter
+    let reminderCoordinator: SessionReminderCoordinator
     let networkMonitor: any NetworkPathMonitoring
     let liveStore = LiveStore()
     let mapStore = MapStore()
@@ -89,14 +89,14 @@ final class AppModel: ObservableObject {
         self.defaults = defaults
         self.credentials = credentials
         self.cache = cache
-        self.reminderCenter = reminderCenter ?? UserNotificationReminderCenter()
+        self.reminderCoordinator = SessionReminderCoordinator(center: reminderCenter ?? UserNotificationReminderCenter())
         self.networkMonitor = networkMonitor ?? SystemNetworkPathMonitor()
         self.session = session
         self.popupRefreshInterval = max(popupRefreshInterval, 0.001)
         self.retryDelays = retryDelays.isEmpty ? [5, 15, 30, 60, 300] : retryDelays
         self.remindersEnabled = defaults.bool(forKey: PreferenceKeys.remindersEnabled)
-        let savedMinutes = defaults.object(forKey: PreferenceKeys.reminderMinutes) as? Int ?? 15
-        self.reminderMinutes = SessionReminderPlanner.allowedMinutes.contains(savedMinutes) ? savedMinutes : 15
+        let savedMinutes = defaults.object(forKey: PreferenceKeys.reminderMinutes) as? Int ?? SessionReminderPlanner.defaultMinutes
+        self.reminderMinutes = SessionReminderPlanner.allowedMinutes.contains(savedMinutes) ? savedMinutes : SessionReminderPlanner.defaultMinutes
         self.favoriteDriverId = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         self.favoriteWecDriverId = defaults.string(forKey: PreferenceKeys.favoriteWecDriverId)
         self.favoriteWecDriverName = defaults.string(forKey: PreferenceKeys.favoriteWecDriverName)
@@ -115,7 +115,7 @@ final class AppModel: ObservableObject {
         self.selectedSeason = defaults.object(forKey: PreferenceKeys.selectedSeason) as? Int ?? currentYear
         self.widgetSubscription = liveStore.$snapshot.sink { [weak self] snapshot in
             guard let self, self.liveSeries == .f1 else { return }
-            self.widgetPublisher?.publishLive(snapshot)
+            self.widgetPublisher?.publishLive(snapshot, replaySeason: self.selectedSeason)
         }
         self.liveStore.onDataRefresh = { [weak self] event in
             Task { @MainActor [weak self] in await self?.handleDataRefresh(event) }

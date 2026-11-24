@@ -589,7 +589,7 @@ struct LiveBattleDashboard: View {
             Text((driver.position ?? driver.classPosition).map { "P\($0)" } ?? "—")
                 .font(.caption.bold().monospacedDigit())
             if let team {
-                AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: team, season: model.season))
+                AssetImage(name: MotorsportAssetName.name(kind: .teamLogo, id: team, season: model.liveArtSeason))
                     .frame(width: 24, height: 20)
             }
             Text(driver.name ?? "#\(driver.number)")
