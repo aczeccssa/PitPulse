@@ -642,3 +642,138 @@ async fn test_analysis_archive_retains_history_and_migration_keeps_results() {
         1
     );
 }
+
+#[tokio::test]
+async fn test_missing_session_laps_respect_persisted_cooldown() {
+    async fn upstream(
+        State(laps_calls): State<Arc<AtomicUsize>>,
+        Path(resource): Path<String>,
+    ) -> impl IntoResponse {
+        if resource == "laps" {
+            laps_calls.fetch_add(1, Ordering::SeqCst);
+            return StatusCode::NOT_FOUND.into_response();
+        }
+        Json(json!([])).into_response()
+    }
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let upstream_app = Router::new()
+        .route("/v1/{resource}", get(upstream))
+        .with_state(calls.clone());
+    let task = tokio::spawn(async move { axum::serve(listener, upstream_app).await.unwrap() });
+
+    let (mut state, temp) = state().await;
+    state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), &base);
+    let url = "/api/v1/sessions/2024:1:race/drivers/leclerc/analysis";
+    let (_, first) = ready(server::router(state.clone()), url).await;
+    assert_eq!(first["meta"]["analysisStatus"], "failed");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+    let five_minutes_ago: String = rusqlite::Connection::open(temp.path().join("test.sqlite"))
+        .unwrap()
+        .query_row(
+            "SELECT strftime('%Y-%m-%dT%H:%M:%SZ','now','-5 minutes')",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    for key in [
+        "session:2024:1:race:bundle",
+        "session:2024:1:race:leclerc:0",
+    ] {
+        let mut value = state.database.analysis_cache(key).await.unwrap().unwrap();
+        value["meta"]["fetchedAt"] = json!(five_minutes_ago);
+        state
+            .database
+            .save_analysis_cache(key, &value)
+            .await
+            .unwrap();
+    }
+
+    let mut restarted = AppState::new((*state.config).clone(), state.database.clone());
+    restarted.openf1 = state.openf1.clone();
+    let (_, result) = ready(server::router(restarted), url).await;
+    assert_eq!(result["meta"]["analysisStatus"], "failed");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    task.abort();
+}
+
+#[tokio::test]
+async fn test_historical_backfill_prefers_unattempted_session_to_expired_failure() {
+    let (mut state, _temp) = state().await;
+    let (meetings, _) = state.database.calendar(Some(2024)).await.unwrap();
+    let mut meeting = meetings.into_iter().next().unwrap();
+    let mut later = meeting.sessions[0].clone();
+    later.id = "2024:1:qualifying".into();
+    later.session_type = pitpulse_server::domain::calendar::SessionType::Qualifying;
+    later.openf1_session_key = Some(11);
+    later.start_time = "2024-03-02T15:01:00Z".into();
+    let mut result = state
+        .database
+        .session_results("2024:1:race")
+        .await
+        .unwrap()
+        .0
+        .remove(0);
+    result.session_id = later.id.clone();
+    meeting.sessions.push(later);
+    state
+        .database
+        .replace_calendar(&[meeting], "2024-03-02T18:00:00Z")
+        .await
+        .unwrap();
+    state
+        .database
+        .replace_session_results(vec![result], "partial")
+        .await
+        .unwrap();
+    let failed = json!({
+        "data": {"laps": []},
+        "meta": {"fetchedAt": "2024-03-03T00:00:00Z", "analysisStatus": "failed"}
+    });
+    state
+        .database
+        .save_analysis_cache("session:2024:1:race:bundle", &failed)
+        .await
+        .unwrap();
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let upstream = Router::new().route(
+        "/v1/{resource}",
+        get(|Path(resource): Path<String>, Query(params): Query<HashMap<String, String>>| async move {
+            assert_eq!(params["session_key"], "11");
+            Json(if resource == "laps" { json!([{"driver_number":16,"lap_number":1}]) } else { json!([]) })
+        }),
+    );
+    let upstream_task = tokio::spawn(async move { axum::serve(listener, upstream).await.unwrap() });
+    state.openf1 = OpenF1Provider::with_base_url(reqwest::Client::new(), &base);
+    let database = state.database.clone();
+    let preload_task = tokio::spawn(pitpulse_server::services::analysis::preload(state));
+    let bundle = tokio::time::timeout(std::time::Duration::from_secs(25), async {
+        loop {
+            if let Some(value) = database
+                .analysis_cache("session:2024:1:qualifying:bundle")
+                .await
+                .unwrap()
+            {
+                break value;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(bundle["meta"]["analysisStatus"], "ready");
+    assert_eq!(
+        database
+            .analysis_cache("session:2024:1:race:bundle")
+            .await
+            .unwrap(),
+        Some(failed)
+    );
+    preload_task.abort();
+    upstream_task.abort();
+}

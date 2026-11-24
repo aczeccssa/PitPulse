@@ -6,7 +6,7 @@ use pitpulse_server::{
     providers::jolpica::decode_alpha_schedule,
     storage::sqlite::Database,
 };
-use serde_json::Value;
+use serde_json::{Value, json};
 use tempfile::TempDir;
 
 #[tokio::test]
@@ -672,4 +672,83 @@ async fn test_partial_refresh_enriches_missing_fields_without_downgrading_classi
             .iter()
             .all(|r| r.q1.is_none())
     );
+}
+
+#[tokio::test]
+async fn test_analysis_retention_keeps_history_and_referenced_snapshots() {
+    let temp = TempDir::new().unwrap();
+    let path = temp.path().join("retention.sqlite");
+    let database = Database::open(&path).await.unwrap();
+    database.migrate().await.unwrap();
+    let old = "2026-08-01T00:00:00Z";
+    let recent = "2026-11-22T00:00:00Z";
+    let session = "session:2026:1:race";
+    let records = [
+        ("bundle", old, "archived", true),
+        ("driver:base", old, "", true),
+        ("driver:0", old, "obsolete", false),
+        ("driver:44", recent, "recent-lap", true),
+        ("shared:archived", old, "", true),
+        ("shared:obsolete", old, "", false),
+        ("shared:recent-lap", old, "", true),
+        ("shared:recent-snapshot", recent, "", true),
+    ];
+    for (entry, fetched_at, fingerprint, _) in records {
+        let mut value = json!({
+            "data": {"payload": "x".repeat(2048)},
+            "meta": {"fetchedAt": fetched_at}
+        });
+        if !fingerprint.is_empty() {
+            value["meta"]["bundleFingerprint"] = json!(fingerprint);
+        }
+        database
+            .save_analysis_cache(&format!("{session}:{entry}"), &value)
+            .await
+            .unwrap();
+    }
+    database
+        .save_analysis_cache(
+            "season:2026:drivers:driver",
+            &json!({"meta":{"fetchedAt":old}}),
+        )
+        .await
+        .unwrap();
+    let cutoff = "2026-10-24T00:00:00Z";
+    assert_eq!(
+        database.prune_analysis_cache(cutoff).await.unwrap(),
+        [
+            format!("{session}:driver:0"),
+            format!("{session}:shared:obsolete")
+        ]
+    );
+    for (entry, _, _, keep) in records {
+        assert_eq!(
+            database
+                .analysis_cache(&format!("{session}:{entry}"))
+                .await
+                .unwrap()
+                .is_some(),
+            keep,
+            "{entry}"
+        );
+    }
+    assert!(
+        database
+            .analysis_cache("season:2026:drivers:driver")
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        database
+            .prune_analysis_cache(cutoff)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let integrity: String = rusqlite::Connection::open(path)
+        .unwrap()
+        .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
 }
