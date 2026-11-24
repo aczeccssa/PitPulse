@@ -164,9 +164,10 @@ public final class WidgetSnapshotPublisher {
         return periods.isEmpty ? nil : periods.count
     }
 
-    public func publishLive(_ snapshot: LiveSnapshot, now: Date = .now) {
+    public func publishLive(_ snapshot: LiveSnapshot, replaySeason: Int? = nil, now: Date = .now) {
         guard !snapshot.isWec else { return }
-        let identity = "\(snapshot.sessionId ?? "")|\(snapshot.statusLabel)"
+        let season = snapshot.artworkSeason(replaySeason: replaySeason, now: now)
+        let identity = "\(snapshot.sessionId ?? "")|\(snapshot.statusLabel)|\(season)"
         if let lastLivePublish, identity == lastLiveIdentity, now.timeIntervalSince(lastLivePublish) < 30 { return }
         lastLivePublish = now
         lastLiveIdentity = identity
@@ -186,8 +187,10 @@ public final class WidgetSnapshotPublisher {
                 drivers: snapshot.drivers.sorted { ($0.position ?? Int.max) < ($1.position ?? Int.max) }.prefix(8).map { driver in
                     RaceTimingDriver(id: driver.number, position: driver.position, name: driver.name ?? driver.number,
                         gap: driver.gap ?? driver.interval ?? "—", tire: driver.tireShortLabel,
-                        teamAsset: LiveIslandLogic.teamAssetID(for: driver, isWec: false).map { "team-logo-\($0)-2026" })
-                }), to: defaults)
+                        teamAsset: LiveIslandLogic.teamAssetID(for: driver, isWec: false).map {
+                            MotorsportAssetName.name(kind: .teamLogo, id: $0, season: season)
+                        })
+                }, season: season), to: defaults)
         }
         reload(RaceWidgetCache.timingKind)
     }

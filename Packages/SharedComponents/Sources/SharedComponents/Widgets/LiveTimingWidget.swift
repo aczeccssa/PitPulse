@@ -52,7 +52,7 @@ struct LiveTimingWidgetView: View {
             Text(widgetDisplayLabel(timing.lap)).font(.system(size: 28, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1)
             Text(timing.meeting).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
             Spacer(minLength: 0)
-            ForEach(Array(timing.drivers.prefix(2))) { row in driverRow(row, compact: true) }
+            ForEach(Array(timing.drivers.prefix(2))) { row in driverRow(row, timing: timing, compact: true) }
         }
     }
     private func medium(_ timing: RaceTimingSnapshot) -> some View {
@@ -66,7 +66,7 @@ struct LiveTimingWidgetView: View {
             Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 1)
             VStack(alignment: .leading, spacing: 10) {
                 Text(timing.meeting).font(.system(size: 10, weight: .semibold)).lineLimit(1).foregroundStyle(.secondary)
-                ForEach(Array(timing.drivers.prefix(3))) { row in driverRow(row, compact: true) }
+                ForEach(Array(timing.drivers.prefix(3))) { row in driverRow(row, timing: timing, compact: true) }
             }.frame(maxWidth: .infinity)
         }
     }
@@ -87,7 +87,7 @@ struct LiveTimingWidgetView: View {
                 }
             }.frame(height: 135).chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) }
             Divider()
-            ForEach(Array(timing.drivers.prefix(3))) { row in driverRow(row, compact: false) }
+            ForEach(Array(timing.drivers.prefix(3))) { row in driverRow(row, timing: timing, compact: false) }
             Spacer(minLength: 0)
             HStack { Text(widgetDisplayLabel(timing.session)); Spacer(); Text(widgetCopy("Updated ", "更新 ")); Text(timing.updatedAt, style: .time) }.font(.system(size: 9)).foregroundStyle(.secondary)
         }
@@ -97,10 +97,13 @@ struct LiveTimingWidgetView: View {
         guard let value = Double(text.replacingOccurrences(of: "+", with: "")), value.isFinite, value >= 0 else { return nil }
         return value
     }
-    private func driverRow(_ driver: RaceTimingDriver, compact: Bool) -> some View {
-        HStack(spacing: compact ? 5 : 9) {
+    private func driverRow(_ driver: RaceTimingDriver, timing: RaceTimingSnapshot, compact: Bool) -> some View {
+        let season = timing.season ?? Calendar(identifier: .gregorian).component(
+            .year, from: timing.updatedAt == .distantPast ? entry.date : timing.updatedAt
+        )
+        return HStack(spacing: compact ? 5 : 9) {
             Text(driver.position.map(String.init) ?? "—").fontWeight(.semibold).frame(width: compact ? 10 : 16, alignment: .leading)
-            MotorsportImages.image(named: MotorsportAssetName.helmetName(name: driver.name, season: 2026)).resizable().scaledToFit()
+            MotorsportImages.image(named: MotorsportAssetName.helmetName(name: driver.name, season: season)).resizable().scaledToFit()
                 .frame(width: compact ? 18 : 25, height: compact ? 16 : 24).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(MotorsportAssetName.abbreviation(driver.name)).fontWeight(.bold).lineLimit(1)

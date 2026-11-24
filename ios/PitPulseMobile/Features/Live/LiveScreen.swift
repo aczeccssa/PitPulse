@@ -1330,7 +1330,7 @@ struct LiveScreen: View {
         let isFocusedDriver = isPad && isLandscape && !selecting && selectedNumber == driver.number
         let isFavorite = model.favoriteDriverID.map { model.driverID(for: driver) == $0 } ?? false
         let logo = teamID.flatMap {
-            DashboardArt.image(named: MotorsportAssetName.name(kind: .teamLogo, id: $0, season: model.season),
+            DashboardArt.image(named: MotorsportAssetName.name(kind: .teamLogo, id: $0, season: model.liveArtSeason),
                                traits: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light))
         }
 

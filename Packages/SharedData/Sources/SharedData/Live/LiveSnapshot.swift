@@ -96,6 +96,13 @@ public struct LiveSnapshot: Codable, Equatable, Sendable {
         self.isTimeBased = isTimeBased
     }
 
+    public func artworkSeason(replaySeason: Int? = nil, now: Date = .now) -> Int {
+        if sourceMode == .replay, let replaySeason { return replaySeason }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar.component(.year, from: updatedAt.flatMap(RFC3339.parse) ?? now)
+    }
+
     public static func disconnected(reason: String = "not_connected") -> LiveSnapshot {
         LiveSnapshot(
             schemaVersion: 1,

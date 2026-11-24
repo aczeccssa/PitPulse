@@ -60,6 +60,7 @@ struct LiveIslandExpandedView: View {
                     LiveWecCarView(
                         model: model,
                         driver: selectedDriver,
+                        snapshot: snapshot,
                         showTire: actions.showTire,
                         showEnergy: actions.showEnergy
                     )

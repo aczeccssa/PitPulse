@@ -10,11 +10,29 @@ public enum MotorsportAssetName {
         case .teamLogo: "team-logo"
         case .carSide: "car-side"
         }
-        let mapped = kind == .helmet
-            ? ["verstappen": "max_verstappen", "lindblad": "arvid_lindblad"][id] ?? id
-            : id
+        let mapped = canonicalID(kind: kind, id: id)
         return "\(prefix)-\(mapped)-\(season)"
     }
+    public static func canonicalID(kind: Kind, id: String) -> String {
+        let slug = LiveIslandLogic.assetSlug(id).replacingOccurrences(of: "-", with: "_")
+        switch kind {
+        case .helmet, .driverPhoto:
+            let aliases = [
+                "verstappen": "max_verstappen", "lindblad": "arvid_lindblad",
+                "magnussen": "kevin_magnussen", "camara": "rafael_camara", "hirakawa": "ryo_hirakawa",
+                "checo_perez": "perez", "kimi_antonelli": "antonelli", "andrea_kimi_antonelli": "antonelli"
+            ]
+            return aliases[slug] ?? id
+        case .teamLogo, .carSide:
+            let aliases = [
+                "racing_bulls": "rb", "visa_cash_app_rb": "rb", "rb_f1_team": "rb",
+                "red_bull_racing": "red_bull", "oracle_red_bull_racing": "red_bull",
+                "haas_f1_team": "haas", "kick_sauber": "sauber", "stake_f1_team_kick_sauber": "sauber"
+            ]
+            return aliases[slug] ?? slug
+        }
+    }
+
     public static func seriesLogoName(isWec: Bool) -> String {
         isWec ? "series-wec" : "series-f1"
     }
@@ -31,7 +49,7 @@ extension MotorsportAssetName {
         let surname = String(name.split(whereSeparator: \.isWhitespace).last ?? "")
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .lowercased()
-        let id = driverID ?? ["camara": "rafael_camara"][surname] ?? surname
+        let id = driverID ?? surname
         return self.name(kind: .helmet, id: id, season: season)
     }
 }

@@ -246,8 +246,7 @@ extension MobileModel {
     }
 
     var liveArtSeason: Int {
-        if liveSnapshot.sourceMode == .replay { return season }
-        return Calendar(identifier: .gregorian).component(.year, from: .now)
+        liveSnapshot.artworkSeason(replaySeason: season)
     }
 
     func refreshLiveActivityWhenLeavingForeground() {

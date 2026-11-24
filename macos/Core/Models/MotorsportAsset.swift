@@ -19,11 +19,6 @@ enum MotorsportAsset {
         MotorsportImages.nsImage(named: name(kind: kind, id: id, season: season))
     }
 
-    static func f1DriverImage(id: String, season: Int) -> NSImage? {
-        image(kind: .helmet, id: id, season: season)
-            ?? image(kind: .driverPhoto, id: id, season: season)
-    }
-
     /// Popup pages always show the driver's helmet; a portrait is never used as
     /// a stand-in. Drivers without a helmet asset fall back to abbreviations.
     static func f1HelmetImage(id: String, season: Int) -> NSImage? {

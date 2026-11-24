@@ -225,6 +225,16 @@ final class WidgetSnapshotPublisherTests: XCTestCase {
         }
     }
 
+    func testTimingArtworkUsesFeedYearAndKeepsReplayYear() throws {
+        try isolated { defaults, publisher, _ in
+            let now = Date(timeIntervalSince1970: 1000)
+            publisher.publishLive(try live(id: "live", lap: 1), replaySeason: 2024, now: now)
+            XCTAssertEqual(RaceWidgetCache.readTiming(from: defaults)?.season, 2026)
+            publisher.publishLive(try live(id: "replay", lap: 1, mode: "replay"), replaySeason: 2025, now: now)
+            XCTAssertEqual(RaceWidgetCache.readTiming(from: defaults)?.season, 2025)
+        }
+    }
+
     func testWidgetDestinationOnlyAcceptsKnownRoutes() throws {
         XCTAssertEqual(WidgetDestination(url: try XCTUnwrap(URL(string: "pitpulse-desktop://calendar"))), .calendar)
         XCTAssertEqual(WidgetDestination(url: try XCTUnwrap(URL(string: "pitpulse://live?series=f1"))), .live)

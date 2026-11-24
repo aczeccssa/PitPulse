@@ -36,7 +36,7 @@ struct LiveIslandCompactTrailing: View {
                             .font(.system(size: 9))
                     }
                     if let favorite {
-                        LiveHelmetView(model: model, driver: favorite, size: 18, isWec: actions.snapshot.isWec)
+                        LiveHelmetView(model: model, driver: favorite, size: 18, snapshot: actions.snapshot)
                         Text("\(actions.snapshot.isWec ? "#\(favorite.number)" : MotorsportAsset.abbreviation(favorite.name ?? favorite.number)) P\(favorite.position.map(String.init) ?? "—")")
                             .monospacedDigit()
                     } else if favoriteID == nil {

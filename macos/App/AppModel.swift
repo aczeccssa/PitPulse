@@ -115,7 +115,7 @@ final class AppModel: ObservableObject {
         self.selectedSeason = defaults.object(forKey: PreferenceKeys.selectedSeason) as? Int ?? currentYear
         self.widgetSubscription = liveStore.$snapshot.sink { [weak self] snapshot in
             guard let self, self.liveSeries == .f1 else { return }
-            self.widgetPublisher?.publishLive(snapshot)
+            self.widgetPublisher?.publishLive(snapshot, replaySeason: self.selectedSeason)
         }
         self.liveStore.onDataRefresh = { [weak self] event in
             Task { @MainActor [weak self] in await self?.handleDataRefresh(event) }
