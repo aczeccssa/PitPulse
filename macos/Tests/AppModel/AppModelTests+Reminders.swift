@@ -101,7 +101,7 @@ extension AppModelTests {
         await model.refreshNow()
         XCTAssertEqual(center.scheduled.count, 1)
         XCTAssertEqual(center.scheduled[original.identifier]?.fireDate.timeIntervalSince1970 ?? 0,
-                       movedSession.startTime.addingTimeInterval(-15 * 60).timeIntervalSince1970, accuracy: 1)
+                       movedSession.startTime.addingTimeInterval(-60 * 60).timeIntervalSince1970, accuracy: 1)
 
         XCTAssertTrue(model.updateServerAddress("https://b.example"))
         await model.refreshNow()

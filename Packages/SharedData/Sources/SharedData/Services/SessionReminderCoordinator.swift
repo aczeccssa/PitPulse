@@ -22,14 +22,17 @@ public protocol SessionReminderCenter: AnyObject {
     func pendingIdentifiers() async -> [String]
     func schedule(_ reminder: SessionReminder) async throws
     func removePending(identifiers: [String]) async
-    func removeAllPending() async
 }
 
 @MainActor
 public final class UserNotificationReminderCenter: SessionReminderCenter {
     private let center = UNUserNotificationCenter.current()
 
-    public init() {}
+    public init() {
+        center.delegate = Self.presentationDelegate
+    }
+
+    private static let presentationDelegate = ReminderPresentationDelegate()
 
     public func authorization() async -> ReminderAuthorization {
         switch await center.notificationSettings().authorizationStatus {
@@ -74,14 +77,63 @@ public final class UserNotificationReminderCenter: SessionReminderCenter {
     public func removePending(identifiers: [String]) async {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
+}
 
-    public func removeAllPending() async {
-        let identifiers = await pendingIdentifiers().filter { $0.hasPrefix("pitpulse.") }
-        await removePending(identifiers: identifiers)
+private final class ReminderPresentationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        notification.request.identifier.hasPrefix("pitpulse.") ? [.banner, .sound] : []
+    }
+}
+
+@MainActor
+public final class SessionReminderCoordinator {
+    private let center: any SessionReminderCenter
+    private var pendingSync: Task<Result<Void, any Error>, Never>?
+
+    public init(center: any SessionReminderCenter) {
+        self.center = center
+    }
+
+    public func authorize() async throws -> Bool {
+        switch await center.authorization() {
+        case .authorized: true
+        case .denied: false
+        case .notDetermined: try await center.requestAuthorization()
+        }
+    }
+
+    public func authorization() async -> ReminderAuthorization {
+        await center.authorization()
+    }
+
+    public func sync(_ reminders: [SessionReminder]) async throws {
+        let previous = pendingSync
+        let task = Task { [center] in
+            _ = await previous?.value
+            let desired = Set(reminders.map(\.identifier))
+            let obsolete = await center.pendingIdentifiers().filter {
+                $0.hasPrefix("pitpulse.") && !desired.contains($0)
+            }
+            if !obsolete.isEmpty { await center.removePending(identifiers: obsolete) }
+            do {
+                for reminder in reminders where reminder.fireDate > .now {
+                    try await center.schedule(reminder)
+                }
+                return Result<Void, any Error>.success(())
+            } catch {
+                return .failure(error)
+            }
+        }
+        pendingSync = task
+        try await task.value.get()
     }
 }
 
 public enum SessionReminderPlanner {
+    public static let defaultMinutes = 60
     public static let allowedMinutes = [5, 15, 30, 60]
 
     public static func reminders(

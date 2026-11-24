@@ -1,6 +1,7 @@
 import SharedComponents
 import SwiftUI
 import SharedData
+import UIKit
 
 struct SettingsScreen: View {
     var embedded = false
@@ -9,6 +10,7 @@ struct SettingsScreen: View {
     @State private var serverReachable: Bool?
     @State private var widgetPreviewPresented = false
     @State private var islandPreviewPresented = false
+    @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @AppStorage("mobileAppearance") private var appearance = "system"
 
@@ -103,6 +105,31 @@ struct SettingsScreen: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("settings.favorite")
+                    }
+
+                    settingsPanel("Notifications") {
+                        Toggle("Session reminders", isOn: Binding(
+                            get: { model.remindersEnabled },
+                            set: { enabled in Task { await model.setRemindersEnabled(enabled) } }
+                        ))
+                        .disabled(model.updatingReminderPreference)
+
+                        Text("Get a reminder one hour before each F1 session.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if model.reminderPermissionDenied {
+                            Button("Allow notifications in Settings") {
+                                if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                                    openURL(url)
+                                }
+                            }
+                        }
+                        if let message = model.reminderMessage {
+                            Text(message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     settingsPanel("Widgets") {

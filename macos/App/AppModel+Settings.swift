@@ -16,7 +16,6 @@ extension AppModel {
         nextMeetingOverride = nil
         errorMessage = nil
         Task {
-            await reminderCenter.removeAllPending()
             await loadCachedIfAvailable()
             await refreshCalendar(server: configuredServer, season: season)
         }
@@ -37,7 +36,7 @@ extension AppModel {
             errorMessage = nil
             settingsMessage = "服务器已更新"
             Task {
-                await reminderCenter.removeAllPending()
+                try? await reminderCoordinator.sync([])
                 await loadCachedIfAvailable()
                 await refreshTokenStatus()
                 startLiveStream()
@@ -117,22 +116,12 @@ extension AppModel {
             remindersEnabled = false
             defaults.set(false, forKey: PreferenceKeys.remindersEnabled)
             reminderMessage = nil
-            await reminderCenter.removeAllPending()
+            try? await reminderCoordinator.sync([])
             return
         }
 
         do {
-            let authorization = await reminderCenter.authorization()
-            let allowed: Bool
-            switch authorization {
-            case .authorized:
-                allowed = true
-            case .denied:
-                allowed = false
-            case .notDetermined:
-                allowed = try await reminderCenter.requestAuthorization()
-            }
-            guard allowed else {
+            guard try await reminderCoordinator.authorize() else {
                 reminderPermissionDenied = true
                 reminderMessage = "通知权限未开启；可在系统设置中允许 PitPulse 通知。"
                 return
@@ -141,7 +130,7 @@ extension AppModel {
             remindersEnabled = true
             defaults.set(true, forKey: PreferenceKeys.remindersEnabled)
             reminderMessage = "已开启全部 Session 提前 \(reminderMinutes) 分钟提醒。"
-            if let configuredServer { await syncReminders(meetings, server: configuredServer, season: selectedSeason) }
+            await refreshReminderSettings()
         } catch {
             reminderMessage = "无法开启通知：\(error.localizedDescription)"
         }
@@ -151,9 +140,7 @@ extension AppModel {
         guard SessionReminderPlanner.allowedMinutes.contains(minutes) else { return }
         reminderMinutes = minutes
         defaults.set(minutes, forKey: PreferenceKeys.reminderMinutes)
-        if remindersEnabled, let configuredServer {
-            await syncReminders(meetings, server: configuredServer, season: selectedSeason)
-        }
+        await refreshReminderSettings()
     }
 
     func favoriteDriverId(for series: LiveSeries) -> String? {
@@ -200,22 +187,48 @@ extension AppModel {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") else { return }
         NSWorkspace.shared.open(url)
     }
+    private func refreshReminderSettings() async {
+        guard remindersEnabled, let server = configuredServer else { return }
+        if selectedSeason == reminderSeason, lastSuccessfulAttemptAt != nil, meta?.stale == false {
+            await syncReminders(meetings, server: server, season: selectedSeason)
+        } else if didBootstrap {
+            await refreshCalendar()
+        }
+    }
+
+    var reminderSeason: Int { Calendar(identifier: .gregorian).component(.year, from: .now) }
+
+    func loadCurrentSeasonReminders(server: ServerAddress) async {
+        let season = reminderSeason
+        guard remindersEnabled, networkAvailable, configuredServer == server else { return }
+        do {
+            let token = try credentials.token(for: server.url)
+            let response = try await APIClient(baseURL: server.url, session: session).calendar(season: season, token: token)
+            guard !Task.isCancelled, !response.meta.stale, remindersEnabled, configuredServer == server else { return }
+            await syncReminders(response.data, server: server, season: season)
+        } catch {
+            guard !Task.isCancelled, remindersEnabled, configuredServer == server else { return }
+            reminderMessage = "提醒赛历同步失败：\(error.localizedDescription)"
+        }
+    }
+
     func syncReminders(_ meetings: [Meeting], server: ServerAddress, season: Int) async {
-        guard remindersEnabled else { return }
+        let authorized = await reminderCoordinator.authorization() == .authorized
+        guard !Task.isCancelled, remindersEnabled, configuredServer == server, season == reminderSeason else { return }
+        reminderPermissionDenied = !authorized
+        guard authorized else {
+            reminderMessage = "通知权限未开启；可在系统设置中允许 PitPulse 通知。"
+            return
+        }
         let desired = SessionReminderPlanner.reminders(
             meetings: meetings, serverIdentity: server.identity, season: season,
-            minutesBefore: reminderMinutes, now: Date()
+            minutesBefore: reminderMinutes, now: .now
         )
         do {
-            for reminder in desired { try await reminderCenter.schedule(reminder) }
-            let desiredIDs = Set(desired.map(\.identifier))
-            let staleIDs = (await reminderCenter.pendingIdentifiers()).filter {
-                $0.hasPrefix("pitpulse.") && !desiredIDs.contains($0)
-            }
-            await reminderCenter.removePending(identifiers: staleIDs)
-            reminderMessage = nil
+            try await reminderCoordinator.sync(desired)
+            if remindersEnabled, configuredServer == server { reminderMessage = nil }
         } catch {
-            reminderMessage = "提醒安排失败：\(error.localizedDescription)"
+            if remindersEnabled, configuredServer == server { reminderMessage = "提醒安排失败：\(error.localizedDescription)" }
         }
     }
 }

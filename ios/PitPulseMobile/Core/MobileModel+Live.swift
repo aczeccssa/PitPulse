@@ -178,13 +178,20 @@ extension MobileModel {
     }
 
     func loadCurrentSeasonLiveCalendar() async {
-        let currentYear = Calendar(identifier: .gregorian).component(.year, from: .now)
+        let currentYear = reminderSeason
         guard season != currentYear, let serverURL else { return }
         let context = dataContext
+        let requestID = UUID()
+        liveCalendarRequestID = requestID
         guard let response = try? await APIClient(baseURL: serverURL).calendar(season: currentYear, token: currentToken),
-              !Task.isCancelled, dataContext == context else { return }
+              !Task.isCancelled, dataContext == context, liveCalendarRequestID == requestID else { return }
         currentSeasonLiveMeetings = response.data
         updateScheduledLiveSession()
+        if !response.meta.stale {
+            await syncReminders(response.data, server: serverURL, season: currentYear) {
+                self.dataContext == context && self.liveCalendarRequestID == requestID
+            }
+        }
     }
 
     func updateScheduledLiveSession(now: Date = .now) {

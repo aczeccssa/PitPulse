@@ -28,12 +28,66 @@ extension MobileModel {
                 ? .failed("The server has no F1 calendar for \(selectedSeason). Check the server address or sync status.")
                 : .loaded(Date())
             publishWidget(savedAt: envelope.meta.stale ? .distantPast : (envelope.meta.fetchedAt ?? .distantPast))
+            if !envelope.meta.stale, selectedSeason == reminderSeason {
+                await syncReminders(envelope.data, server: serverURL, season: selectedSeason) {
+                    self.dataContext == context && self.calendarRequestID == requestID
+                }
+            }
             try? await cache.save(server: serverURL, season: selectedSeason, envelope: envelope)
         } catch {
             guard dataContext == context, calendarRequestID == requestID, !Task.isCancelled else { return }
             loadState = .failed((meetings.isEmpty ? "" : "Cached data · ") + Self.message(for: error))
         }
     }
+    var reminderSeason: Int { Calendar(identifier: .gregorian).component(.year, from: .now) }
+
+    func setRemindersEnabled(_ enabled: Bool) async {
+        guard !updatingReminderPreference else { return }
+        updatingReminderPreference = true
+        defer { updatingReminderPreference = false }
+        reminderMessage = nil
+        do {
+            if enabled {
+                let allowed = try await reminderCoordinator.authorize()
+                reminderPermissionDenied = !allowed
+                guard !reminderPermissionDenied else { return }
+            }
+            remindersEnabled = enabled
+            defaults.set(enabled, forKey: PreferenceKeys.remindersEnabled)
+            if !enabled {
+                reminderPermissionDenied = false
+                try await reminderCoordinator.sync([])
+            } else if season == reminderSeason {
+                await loadCalendar(force: true)
+            } else {
+                await loadCurrentSeasonLiveCalendar()
+            }
+        } catch {
+            reminderMessage = Self.message(for: error)
+        }
+    }
+
+    func syncReminders(
+        _ meetings: [Meeting], server: URL, season: Int, isCurrent: () -> Bool
+    ) async {
+        guard remindersEnabled else { return }
+        let authorized = await reminderCoordinator.authorization() == .authorized
+        guard !Task.isCancelled, remindersEnabled, isCurrent() else { return }
+        reminderPermissionDenied = !authorized
+        guard authorized else { return }
+        let reminders = SessionReminderPlanner.reminders(
+            meetings: meetings, serverIdentity: server.absoluteString, season: season,
+            minutesBefore: SessionReminderPlanner.defaultMinutes, now: .now
+        )
+        do {
+            // Keep the nearest sessions within iOS's pending notification budget.
+            try await reminderCoordinator.sync(Array(reminders.prefix(48)))
+            if remindersEnabled, isCurrent() { reminderMessage = nil }
+        } catch {
+            if remindersEnabled, isCurrent() { reminderMessage = Self.message(for: error) }
+        }
+    }
+
     func loadSeasonArchive(force: Bool = false) async {
         if let seasonArchiveTask {
             await seasonArchiveTask.value

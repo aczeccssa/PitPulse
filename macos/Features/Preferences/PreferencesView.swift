@@ -164,7 +164,7 @@ struct PreferencesView: View {
             .toggleStyle(.switch)
             .accessibilityIdentifier("preferences.reminders")
 
-            Text("PitPulse 会在每个 Session 开始前提醒你。开启时 macOS 会请求通知权限；默认提前 15 分钟。")
+            Text("PitPulse 会在每个 Session 开始前提醒你。开启时 macOS 会请求通知权限；默认提前 60 分钟。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Divider()

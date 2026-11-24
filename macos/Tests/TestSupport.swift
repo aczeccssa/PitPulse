@@ -22,6 +22,7 @@ final class TestReminderCenter: SessionReminderCenter {
     func authorization() async -> ReminderAuthorization { authorizationStatus }
     func requestAuthorization() async throws -> Bool {
         permissionRequests += 1
+        authorizationStatus = authorizationGranted ? .authorized : .denied
         return authorizationGranted
     }
     func pendingIdentifiers() async -> [String] { Array(scheduled.keys) }
@@ -30,7 +31,6 @@ final class TestReminderCenter: SessionReminderCenter {
         scheduled[reminder.identifier] = reminder
     }
     func removePending(identifiers: [String]) async { identifiers.forEach { scheduled.removeValue(forKey: $0) } }
-    func removeAllPending() async { scheduled.removeAll() }
 }
 
 enum TestData {

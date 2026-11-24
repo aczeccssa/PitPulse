@@ -20,7 +20,9 @@ extension AppModel {
         activeRefreshID = requestID
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
+            async let currentReminders: Void = self.refreshRemindersIfBrowsingAnotherSeason(server: targetServer, season: targetSeason)
             await self.performRefresh(server: targetServer, season: targetSeason)
+            await currentReminders
         }
         activeRefreshTask = task
         await task.value
@@ -28,6 +30,11 @@ extension AppModel {
             activeRefreshTask = nil
             activeRefreshID = nil
         }
+    }
+
+    private func refreshRemindersIfBrowsingAnotherSeason(server: ServerAddress?, season: Int) async {
+        guard let server, season != reminderSeason else { return }
+        await loadCurrentSeasonReminders(server: server)
     }
 
     func invalidateConnection() {
@@ -76,8 +83,12 @@ extension AppModel {
             let client = APIClient(baseURL: server.url, session: session)
             async let calendarEnvelope = client.calendar(season: season, token: token)
             async let nextEnvelope = client.nextMeeting(season: season, token: token)
-            let (calendarResponse, nextResponse) = try await (calendarEnvelope, nextEnvelope)
-
+            let calendarResponse = try await calendarEnvelope
+            guard requestGeneration == generation else { return }
+            if season == reminderSeason, remindersEnabled, !calendarResponse.meta.stale {
+                await syncReminders(calendarResponse.data, server: server, season: season)
+            }
+            let nextResponse = try await nextEnvelope
             guard requestGeneration == generation else { return }
             meetings = calendarResponse.data
             meta = calendarResponse.meta
@@ -101,7 +112,6 @@ extension AppModel {
                     settingsMessage = "数据已读取，但缓存写入失败：\(error.localizedDescription)"
                 }
             }
-            if remindersEnabled { await syncReminders(calendarResponse.data, server: server, season: season) }
             Task {
                 await refreshPageData()
                 await refreshWidgetHighlights()
