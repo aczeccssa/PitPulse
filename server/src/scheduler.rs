@@ -84,7 +84,45 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
     let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
     let wec_live = tokio::spawn(run_wec_live_supervisor(state.clone()));
     let live = tokio::spawn(run_live_supervisor(state));
-    SchedulerTasks(vec![scheduler, live, wec_live, analysis])
+    let tasks = vec![scheduler, live, wec_live, analysis];
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    let tasks = {
+        let mut tasks = tasks;
+        tasks.push(tokio::spawn(reclaim_idle_heap()));
+        tasks
+    };
+    SchedulerTasks(tasks)
+}
+
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+async fn reclaim_idle_heap() {
+    const TRIM_THRESHOLD_KIB: u64 = 45_000_000 / 1024;
+    let mut interval = tokio::time::interval(Duration::from_secs(5));
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        interval.tick().await;
+        let result = tokio::task::spawn_blocking(|| {
+            let rss_kib = std::fs::read_to_string("/proc/self/status")
+                .ok()
+                .and_then(|status| {
+                    status.lines().find_map(|line| {
+                        line.strip_prefix("VmRSS:")?
+                            .split_ascii_whitespace()
+                            .next()?
+                            .parse::<u64>()
+                            .ok()
+                    })
+                });
+            if rss_kib.is_some_and(|rss| rss >= TRIM_THRESHOLD_KIB) {
+                // glibc synchronizes the arenas and releases only unused pages.
+                unsafe { libc::malloc_trim(0) };
+            }
+        })
+        .await;
+        if let Err(error) = result {
+            tracing::warn!(%error, "idle heap reclamation failed");
+        }
+    }
 }
 
 async fn refresh_target(

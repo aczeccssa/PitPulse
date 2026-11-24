@@ -7,20 +7,51 @@ use crate::{
 use axum::{
     Json,
     extract::{Path, Query, State},
+    response::{IntoResponse, Response},
 };
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet},
+    future::Future,
+    mem::size_of,
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AnalysisCache {
-    entries: Arc<Mutex<HashMap<String, (Instant, Value)>>>,
+    entries: Arc<Mutex<AnalysisEntries>>,
     pending: Arc<Mutex<HashSet<String>>>,
     worker: Arc<Mutex<()>>,
+    readers: Arc<Semaphore>,
+}
+
+impl Default for AnalysisCache {
+    fn default() -> Self {
+        Self {
+            entries: Arc::default(),
+            pending: Arc::default(),
+            worker: Arc::default(),
+            readers: Arc::new(Semaphore::new(4)),
+        }
+    }
+}
+
+const MAX_ANALYSIS_ENTRIES: usize = 128;
+const MAX_ANALYSIS_BYTES: usize = 8 * 1024 * 1024;
+const TELEMETRY_RETENTION_SECONDS: i64 = 30 * 24 * 60 * 60;
+
+#[derive(Default)]
+struct AnalysisEntries {
+    values: HashMap<String, CacheEntry>,
+    bytes: usize,
+}
+
+struct CacheEntry {
+    inserted_at: Instant,
+    bytes: usize,
+    value: Value,
 }
 
 fn invalid(error: impl Into<String>) -> ApiError {
@@ -30,9 +61,15 @@ fn invalid(error: impl Into<String>) -> ApiError {
     }
 }
 
-fn fresh(at: &Instant, value: &Value) -> bool {
-    let failed = value["meta"]["analysisStatus"] == "failed";
-    at.elapsed() < Duration::from_secs(if failed { 120 } else { 1800 })
+fn fresh(age_seconds: u64, value: &Value) -> bool {
+    let ttl = if value["meta"]["analysisStatus"] != "failed" {
+        1800
+    } else if let Some(attempt) = value["meta"]["missingLapsAttempts"].as_u64() {
+        (3600_u64 << attempt.saturating_sub(1).min(5)).min(86400)
+    } else {
+        120
+    };
+    age_seconds < ttl
 }
 
 fn camel(value: Value) -> Value {
@@ -144,17 +181,55 @@ fn envelope(data: Value, now: &str, source: &str) -> Value {
     json!({"data":data,"meta":{"schemaVersion":1,"revision":1,"quality":"partial","stale":false,"source":source,"fetchedAt":now,"analysisStatus":"ready"}})
 }
 
-fn insert(cache: &mut HashMap<String, (Instant, Value)>, key: String, value: Value) {
-    if cache.len() >= 128
-        && !cache.contains_key(&key)
-        && let Some(oldest) = cache
+// Approximate the heap retained by the JSON tree, including map storage.
+fn value_bytes(value: &Value) -> usize {
+    match value {
+        Value::String(text) => text.capacity(),
+        Value::Array(items) => {
+            items.capacity() * size_of::<Value>() + items.iter().map(value_bytes).sum::<usize>()
+        }
+        Value::Object(fields) => fields
             .iter()
-            .min_by_key(|(_, v)| v.0)
-            .map(|(k, _)| k.clone())
-    {
-        cache.remove(&oldest);
+            .map(|(key, child)| {
+                2 * size_of::<(String, Value)>() + key.capacity() + value_bytes(child)
+            })
+            .sum(),
+        _ => 0,
     }
-    cache.insert(key, (Instant::now(), value));
+}
+
+impl AnalysisEntries {
+    fn remove(&mut self, key: &str) {
+        if let Some(previous) = self.values.remove(key) {
+            self.bytes -= previous.bytes;
+        }
+    }
+
+    fn insert(&mut self, key: String, value: Value) {
+        self.remove(&key);
+        let bytes = size_of::<(String, CacheEntry)>() + key.capacity() + value_bytes(&value);
+        if bytes > MAX_ANALYSIS_BYTES {
+            return;
+        }
+        while self.bytes + bytes > MAX_ANALYSIS_BYTES || self.values.len() >= MAX_ANALYSIS_ENTRIES {
+            let oldest = self
+                .values
+                .iter()
+                .min_by_key(|(_, entry)| entry.inserted_at)
+                .map(|(key, _)| key.clone())
+                .unwrap();
+            self.bytes -= self.values.remove(&oldest).unwrap().bytes;
+        }
+        self.values.insert(
+            key,
+            CacheEntry {
+                inserted_at: Instant::now(),
+                bytes,
+                value,
+            },
+        );
+        self.bytes += bytes;
+    }
 }
 
 fn retain_sections(data: &mut Value, previous: &Value) -> bool {
@@ -222,23 +297,19 @@ impl Job {
 
 impl AnalysisCache {
     async fn read(&self, state: &AppState, key: &str) -> Result<Option<Value>, ApiError> {
-        let cached = { self.entries.lock().await.get(key).cloned() };
-        if let Some((_, value)) = cached {
-            return Ok(Some(value));
+        let mut entries = self.entries.lock().await;
+        if let Some(entry) = entries.values.get(key) {
+            return Ok(Some(entry.value.clone()));
         }
         let value = state.database.analysis_cache(key).await?;
         if let Some(value) = &value {
-            insert(
-                &mut *self.entries.lock().await,
-                key.to_string(),
-                value.clone(),
-            );
+            entries.insert(key.to_string(), value.clone());
         }
         Ok(value)
     }
     async fn put(&self, state: &AppState, key: String, value: Value) -> Result<(), ApiError> {
         state.database.save_analysis_cache(&key, &value).await?;
-        insert(&mut *self.entries.lock().await, key, value);
+        self.entries.lock().await.insert(key, value);
         Ok(())
     }
 }
@@ -252,11 +323,7 @@ fn fresh_value(value: &Value) -> bool {
         .as_str()
         .and_then(parse_utc_seconds)
         .map(|at| now.saturating_sub(at).max(0) as u64);
-    age.is_some_and(|age| {
-        Instant::now()
-            .checked_sub(Duration::from_secs(age))
-            .is_some_and(|at| fresh(&at, value))
-    })
+    age.is_some_and(|age| fresh(age, value))
 }
 
 fn empty_session() -> Value {
@@ -357,23 +424,29 @@ async fn execute(state: &AppState, job: Job) {
 async fn response(
     state: &AppState,
     job: Job,
-    fallback: Option<Value>,
+    fallback: impl Future<Output = Result<Option<Value>, ApiError>>,
 ) -> Result<Json<Value>, ApiError> {
     let cached = match state.analysis.read(state, &job.key()).await? {
-        Some(value) => match public_value(state, &job, value).await {
-            Ok(value) if fresh_value(&value) => return Ok(Json(value)),
-            Ok(value) => Some(value),
-            Err(_) => None,
-        },
+        Some(value) => {
+            let fresh = fresh_value(&value);
+            match public_value(state, &job, value).await {
+                Ok(value) if fresh => return Ok(Json(value)),
+                Ok(value) => Some(value),
+                Err(_) => None,
+            }
+        }
         None => None,
     };
-    queue(state, job.clone()).await;
     let now = state.database.utc_now().await?;
-    let source = match job {
+    let source = match &job {
         Job::Session { .. } => "openf1",
         _ => "jolpica-ergast",
     };
-    let mut value = cached.or(fallback).unwrap_or_else(|| {
+    let value = match cached {
+        Some(value) => Some(value),
+        None => fallback.await?,
+    };
+    let mut value = value.unwrap_or_else(|| {
         envelope(
             if source == "openf1" {
                 empty_session()
@@ -384,6 +457,7 @@ async fn response(
             source,
         )
     });
+    queue(state, job).await;
     let stale = value["meta"]["stale"] == true || !fresh_value(&value);
     value["meta"]["analysisStatus"] = json!("loading");
     // Cached content keeps its timestamp and is readable during the background refresh.
@@ -398,6 +472,7 @@ fn is_shared_reference(value: &Value) -> bool {
 async fn public_value(state: &AppState, job: &Job, mut value: Value) -> Result<Value, ApiError> {
     let meta = value["meta"].as_object_mut().unwrap();
     meta.remove("analysisCacheSchema");
+    meta.remove("missingLapsAttempts");
     let fingerprint = meta.remove("bundleFingerprint");
     let Some(fingerprint) = fingerprint.and_then(|value| value.as_str().map(str::to_owned)) else {
         return Ok(value);
@@ -406,13 +481,13 @@ async fn public_value(state: &AppState, job: &Job, mut value: Value) -> Result<V
         Job::Session { session, .. } => format!("session:{session}:shared:{fingerprint}"),
         Job::Season { .. } => return Ok(value),
     };
-    let Some(shared) = state.analysis.read(state, &key).await? else {
+    let Some(mut shared) = state.analysis.read(state, &key).await? else {
         // A stripped entry is only valid while its immutable snapshot is
         // available. Trigger the normal refresh path instead of exposing nulls.
         return Err(ApiError::NotFound);
     };
     let mut data = std::mem::take(&mut value["data"]);
-    restore_shared_fields(&mut data, &shared["data"]);
+    restore_shared_fields(&mut data, &mut shared);
     value["data"] = data;
     Ok(value)
 }
@@ -421,7 +496,7 @@ pub async fn session_analysis(
     State(state): State<AppState>,
     Path((session, driver)): Path<(String, String)>,
     Query(query): Query<HashMap<String, String>>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Response, ApiError> {
     let lap = query
         .get("lap")
         .map(|s| s.parse::<i64>().map_err(|_| invalid("invalid lap")))
@@ -429,8 +504,40 @@ pub async fn session_analysis(
     if lap.is_some_and(|n| !(1..=200).contains(&n)) {
         return Err(invalid("lap must be 1...200"));
     }
+    let _permit = state
+        .analysis
+        .readers
+        .acquire()
+        .await
+        .expect("analysis readers");
     session_context(&state, &session, &driver).await?;
-    let mut base = load_session_base(&state, &session, &driver).await?;
+    let base = if lap.is_some() {
+        session_fallback(&state, &session, &driver, lap).await?
+    } else {
+        None
+    };
+    let fallback = async {
+        if lap.is_none() {
+            session_fallback(&state, &session, &driver, None).await
+        } else {
+            Ok(base)
+        }
+    };
+    let job = Job::Session {
+        session: session.clone(),
+        driver: driver.clone(),
+        lap,
+    };
+    Ok(response(&state, job, fallback).await?.into_response())
+}
+
+async fn session_fallback(
+    state: &AppState,
+    session: &str,
+    driver: &str,
+    lap: Option<i64>,
+) -> Result<Option<Value>, ApiError> {
+    let mut base = load_session_base(state, session, driver).await?;
     if let Some(value) = &mut base
         && let Some(laps) = value["data"]["laps"].as_array()
     {
@@ -441,23 +548,14 @@ pub async fn session_analysis(
             .map(|r| r["lapNumber"].clone())
             .unwrap_or(Value::Null);
     }
-    response(
-        &state,
-        Job::Session {
-            session,
-            driver,
-            lap,
-        },
-        base,
-    )
-    .await
+    Ok(base)
 }
 
 pub async fn season_analysis(
     State(state): State<AppState>,
     Path((kind, id)): Path<(String, String)>,
     Query(query): Query<HashMap<String, String>>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Response, ApiError> {
     let season = query
         .get("season")
         .and_then(|s| s.parse::<i64>().ok())
@@ -500,7 +598,17 @@ pub async fn season_analysis(
     if !known {
         return Err(ApiError::NotFound);
     }
-    response(&state, Job::Season { season, kind, id }, None).await
+    let _permit = state
+        .analysis
+        .readers
+        .acquire()
+        .await
+        .expect("analysis readers");
+    Ok(
+        response(&state, Job::Season { season, kind, id }, async { Ok(None) })
+            .await?
+            .into_response(),
+    )
 }
 
 /// Read a persisted session bundle for read-only projections.
@@ -527,12 +635,12 @@ pub(crate) async fn cached_session_bundle(
         return Ok(None);
     };
     let shared_key = format!("session:{session_id}:shared:{fingerprint}");
-    let Some(shared) = state.analysis.read(state, &shared_key).await? else {
+    let Some(mut shared) = state.analysis.read(state, &shared_key).await? else {
         return Ok(None);
     };
     let mut restored = value;
     let mut data = std::mem::take(&mut restored["data"]);
-    restore_shared_fields(&mut data, &shared["data"]);
+    restore_shared_fields(&mut data, &mut shared);
     restored["data"] = data;
     Ok(Some(restored))
 }
@@ -543,30 +651,11 @@ async fn session_bundle(
     session: &crate::domain::calendar::Session,
 ) -> Result<Value, ApiError> {
     let key = format!("session:{}:bundle", session.id);
-    let previous = state.analysis.read(state, &key).await?;
-    let normalized = if let Some(value) = &previous
-        && value["meta"]["analysisCacheSchema"] == "pitpulse:v2:shared-reference"
-    {
-        if let Some(fingerprint) = value["meta"]["bundleFingerprint"].as_str() {
-            let key = format!("session:{}:shared:{fingerprint}", session.id);
-            state.analysis.read(state, &key).await?.map(|shared| {
-                let mut restored = value.clone();
-                let mut data = value["data"].clone();
-                restore_shared_fields(&mut data, &shared["data"]);
-                restored["data"] = data;
-                restored
-            })
-        } else {
-            None
-        }
-    } else {
-        previous.clone()
-    };
-    let previous = normalized;
+    let previous = cached_session_bundle(state, &session.id).await?;
     if let Some(value) = &previous
         && fresh_value(value)
     {
-        return Ok(value["data"].clone());
+        return Ok(value.clone());
     }
     let now = state.database.utc_now().await?;
     let mut warnings = Vec::new();
@@ -648,10 +737,16 @@ async fn session_bundle(
     value["meta"]["bundleFingerprint"] = json!(fp);
     value["meta"]["stale"] = json!(stale);
     if data["laps"].as_array().is_none_or(Vec::is_empty) {
+        let attempts = previous
+            .as_ref()
+            .and_then(|value| value["meta"]["missingLapsAttempts"].as_u64())
+            .unwrap_or(0);
+        value["meta"]["missingLapsAttempts"] = json!(attempts.saturating_add(1));
         value["meta"]["analysisStatus"] = json!("failed");
     }
-    state.analysis.put(state, key, value).await?;
-    Ok(data)
+    state.analysis.put(state, key, value.clone()).await?;
+    value["data"] = data;
+    Ok(value)
 }
 
 async fn load_session_base(
@@ -673,8 +768,8 @@ async fn load_session_base(
     let mut bundle_data = bundle["data"].clone();
     if let Some(fingerprint) = bundle["meta"]["bundleFingerprint"].as_str() {
         let key = format!("session:{session}:shared:{fingerprint}");
-        if let Some(shared) = state.analysis.read(state, &key).await? {
-            restore_shared_fields(&mut bundle_data, &shared["data"]);
+        if let Some(mut shared) = state.analysis.read(state, &key).await? {
+            restore_shared_fields(&mut bundle_data, &mut shared);
         }
     }
     let Some(result) = state
@@ -755,9 +850,13 @@ fn strip_shared_fields(data: &mut Value) {
     }
 }
 
-fn restore_shared_fields(data: &mut Value, shared: &Value) {
+fn restore_shared_fields(data: &mut Value, shared: &mut Value) {
+    let mut fields = shared.get_mut("data").and_then(Value::as_object_mut);
     for field in SHARED_FIELDS {
-        data[field] = shared[field].clone();
+        data[field] = fields
+            .as_mut()
+            .and_then(|fields| fields.remove(field))
+            .unwrap_or_default();
     }
 }
 
@@ -840,7 +939,7 @@ async fn refresh_session(
         .as_ref()
         .and_then(|result| result.driver_number.as_deref().and_then(|n| n.parse().ok()));
     let mut data = project_session(
-        &bundle,
+        &bundle["data"],
         driver,
         identity.as_ref(),
         session_number,
@@ -859,10 +958,10 @@ async fn refresh_session(
     {
         if let Some(fingerprint) = value["meta"]["bundleFingerprint"].as_str() {
             let key = format!("session:{session_id}:shared:{fingerprint}");
-            state.analysis.read(state, &key).await?.map(|shared| {
+            state.analysis.read(state, &key).await?.map(|mut shared| {
                 let mut restored = value.clone();
                 let mut data = value["data"].clone();
-                restore_shared_fields(&mut data, &shared["data"]);
+                restore_shared_fields(&mut data, &mut shared);
                 restored["data"] = data;
                 restored
             })
@@ -906,8 +1005,8 @@ async fn refresh_session(
     let failed = data["laps"].as_array().is_none_or(Vec::is_empty);
     let fp = fingerprint(&shared_fields(&data));
     let shared_key = format!("session:{}:shared:{fp}", session_id);
-    if let Some(shared) = state.analysis.read(state, &shared_key).await? {
-        restore_shared_fields(&mut data, &shared["data"]);
+    if let Some(mut shared) = state.analysis.read(state, &shared_key).await? {
+        restore_shared_fields(&mut data, &mut shared);
     } else {
         let mut shared = envelope(shared_fields(&data), &now, "openf1");
         shared["meta"]["bundleFingerprint"] = json!(fp);
@@ -916,6 +1015,10 @@ async fn refresh_session(
     let mut value = envelope(data, &now, "openf1");
     value["meta"]["stale"] = json!(stale);
     if failed {
+        if bundle["meta"]["missingLapsAttempts"].is_u64() {
+            value["meta"]["missingLapsAttempts"] = bundle["meta"]["missingLapsAttempts"].clone();
+            value["meta"]["fetchedAt"] = bundle["meta"]["fetchedAt"].clone();
+        }
         value["meta"]["analysisStatus"] = json!("failed");
         value["meta"]["analysisError"] = json!("圈速来源暂未提供数据，可稍后重试。");
     }
@@ -1113,12 +1216,35 @@ pub(super) async fn refresh_season(
 pub async fn preload(state: AppState) {
     let mut interval = tokio::time::interval(Duration::from_secs(60));
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let mut backfilled = HashSet::new();
+    let mut next_prune = Instant::now();
     loop {
         interval.tick().await;
-        if let Err(error) = preload_cycle(&state).await {
-            tracing::warn!(%error,"analysis preload failed");
+        if Instant::now() >= next_prune {
+            if let Err(error) = prune_analysis_cache(&state).await {
+                tracing::warn!(%error, "analysis cache pruning failed");
+            }
+            next_prune = Instant::now() + Duration::from_secs(24 * 60 * 60);
+        }
+        if let Err(error) = preload_cycle(&state, &mut backfilled).await {
+            tracing::warn!(%error, "analysis preload failed");
         }
     }
+}
+
+async fn prune_analysis_cache(state: &AppState) -> Result<(), ApiError> {
+    let now = state.database.utc_now().await?;
+    let cutoff = add_seconds(&now, -TELEMETRY_RETENTION_SECONDS)
+        .ok_or_else(|| invalid("invalid analysis retention cutoff"))?;
+    // A refresh must not create a reference to a snapshot being pruned.
+    let _worker = state.analysis.worker.lock().await;
+    let mut entries = state.analysis.entries.lock().await;
+    let deleted = state.database.prune_analysis_cache(&cutoff).await?;
+    for key in &deleted {
+        entries.remove(key);
+    }
+    tracing::info!(rows = deleted.len(), "analysis cache pruning completed");
+    Ok(())
 }
 
 async fn preload_job(state: &AppState, job: Job) {
@@ -1140,7 +1266,7 @@ async fn preload_job(state: &AppState, job: Job) {
     execute(state, job).await;
 }
 
-async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
+async fn preload_cycle(state: &AppState, backfilled: &mut HashSet<String>) -> Result<(), ApiError> {
     let now = state.database.utc_now().await?;
     let season: i64 = now[..4].parse().map_err(|_| invalid("invalid year"))?;
     let mut sessions: Vec<_> = state
@@ -1150,13 +1276,13 @@ async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
         .0
         .iter()
         .flat_map(|m| m.sessions.clone())
-        .filter(|s| s.start_time <= now)
+        .filter(|s| state.openf1.enabled && s.start_time <= now && s.openf1_session_key.is_some())
         .collect();
     sessions.sort_by(|a, b| b.start_time.cmp(&a.start_time));
     let mut latest = None;
     for session in sessions {
         let mut results = state.database.session_results(&session.id).await?.0;
-        if !results.is_empty() && session.openf1_session_key.is_some() {
+        if !results.is_empty() {
             results.sort_by_key(|r| (r.position.unwrap_or(i64::MAX), r.driver_id.clone()));
             latest = Some((session, results));
             break;
@@ -1192,7 +1318,11 @@ async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
         )
         .await;
     }
-    if let Some((session, results)) = latest {
+    if let Some((session, results)) = latest
+        && cached_session_bundle(state, &session.id)
+            .await?
+            .is_some_and(|bundle| has_laps(&bundle))
+    {
         for row in results.into_iter().skip(1) {
             preload_job(
                 state,
@@ -1207,48 +1337,66 @@ async fn preload_cycle(state: &AppState) -> Result<(), ApiError> {
     }
     // Backfill one historical session per cycle, retaining the latest-session
     // priority above and avoiding an unbounded upstream burst at startup.
-    let mut history: Vec<_> = state
-        .database
-        .calendar(None)
-        .await?
-        .0
-        .into_iter()
-        .flat_map(|meeting| meeting.sessions)
-        .filter(|session| {
-            session.start_time <= now
-                && session.status != crate::domain::calendar::SessionStatus::Cancelled
-                && session.openf1_session_key.is_some()
-        })
-        .collect();
-    history.sort_by(|a, b| a.start_time.cmp(&b.start_time));
-    for session in history {
-        let key = format!("session:{}:bundle", session.id);
-        let cached = state.analysis.read(state, &key).await?;
-        if cached.as_ref().is_some_and(|value| {
-            value["data"]["laps"]
-                .as_array()
-                .is_some_and(|rows| !rows.is_empty())
-        }) {
-            continue;
+    if !state.openf1.enabled {
+        return Ok(());
+    }
+    let (meetings, _) = state.database.calendar(None).await?;
+    let mut candidate = None;
+    for meeting in &meetings {
+        for session in &meeting.sessions {
+            if session.start_time > now
+                || session.status == crate::domain::calendar::SessionStatus::Cancelled
+                || session.openf1_session_key.is_none()
+                || backfilled.contains(&session.id)
+            {
+                continue;
+            }
+            let cached = cached_session_bundle(state, &session.id).await?;
+            if cached.as_ref().is_some_and(has_laps) {
+                backfilled.insert(session.id.clone());
+                continue;
+            }
+            if cached.as_ref().is_some_and(fresh_value) {
+                continue;
+            }
+            let last_attempt = cached.as_ref().and_then(|value| {
+                value["meta"]["fetchedAt"]
+                    .as_str()
+                    .and_then(parse_utc_seconds)
+            });
+            // Unattempted sessions come first, then the least recently attempted.
+            let priority = (last_attempt, &session.start_time);
+            if candidate
+                .as_ref()
+                .is_some_and(|(best, _, _)| priority >= *best)
+            {
+                continue;
+            }
+            if state
+                .database
+                .session_results(&session.id)
+                .await?
+                .0
+                .is_empty()
+            {
+                continue;
+            }
+            candidate = Some((priority, meeting, session));
         }
-        if cached.as_ref().is_some_and(fresh_value) {
-            continue;
-        }
-        let results = state.database.session_results(&session.id).await?.0;
-        if let Some(result) = results.first() {
-            preload_job(
-                state,
-                Job::Session {
-                    session: session.id,
-                    driver: result.driver_id.clone(),
-                    lap: None,
-                },
-            )
-            .await;
-            break;
+    }
+    if let Some((_, meeting, session)) = candidate {
+        let _worker = state.analysis.worker.lock().await;
+        if has_laps(&session_bundle(state, meeting, session).await?) {
+            backfilled.insert(session.id.clone());
         }
     }
     Ok(())
+}
+
+fn has_laps(value: &Value) -> bool {
+    value["data"]["laps"]
+        .as_array()
+        .is_some_and(|rows| !rows.is_empty())
 }
 
 #[cfg(test)]
@@ -1374,23 +1522,38 @@ mod tests {
     }
     #[test]
     fn test_cache_failure_retries_before_complete_data_expires() {
-        let at = Instant::now() - Duration::from_secs(121);
-        assert!(fresh(&at, &json!({"data":{"warnings":[]}})));
-        assert!(!fresh(
-            &at,
-            &json!({"meta":{"analysisStatus":"failed"},"data":{"warnings":["unavailable"]}})
-        ));
-        assert!(!fresh(
-            &(Instant::now() - Duration::from_secs(1801)),
-            &json!({"data":{"warnings":[]}})
-        ));
+        let ready = json!({"meta":{"analysisStatus":"ready"}});
+        assert!(fresh(121, &ready));
+        assert!(!fresh(1800, &ready));
+
+        let mut failed = json!({"meta":{"analysisStatus":"failed"}});
+        assert!(!fresh(120, &failed));
+        for (attempt, ttl) in [(1, 3600), (2, 7200), (5, 57600), (6, 86400), (100, 86400)] {
+            failed["meta"]["missingLapsAttempts"] = json!(attempt);
+            assert!(fresh(ttl - 1, &failed));
+            assert!(!fresh(ttl, &failed));
+        }
     }
     #[test]
     fn test_analysis_cache_bound() {
-        let mut cache = HashMap::new();
+        let mut cache = AnalysisEntries::default();
         for n in 0..200 {
-            insert(&mut cache, n.to_string(), json!({}));
+            cache.insert(n.to_string(), json!({}));
         }
-        assert_eq!(cache.len(), 128);
+        assert_eq!(cache.values.len(), MAX_ANALYSIS_ENTRIES);
+
+        let large = Value::String("x".repeat(MAX_ANALYSIS_BYTES / 2));
+        cache.insert("first".into(), large.clone());
+        cache.insert("second".into(), large);
+        assert!(!cache.values.contains_key("first"));
+        assert!(cache.values.contains_key("second"));
+        assert!(cache.bytes <= MAX_ANALYSIS_BYTES);
+
+        cache.insert(
+            "second".into(),
+            Value::String("x".repeat(MAX_ANALYSIS_BYTES)),
+        );
+        assert!(!cache.values.contains_key("second"));
+        assert_eq!(cache.bytes, 0);
     }
 }

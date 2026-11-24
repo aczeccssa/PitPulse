@@ -183,6 +183,62 @@ impl Database {
         Ok(())
     }
 
+    pub async fn prune_analysis_cache(&self, cutoff: &str) -> Result<Vec<String>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let cutoff = cutoff.to_owned();
+        spawn_blocking(move || {
+            let mut connection = connection.blocking_lock();
+            let tx = connection.transaction()?;
+            let mut expired = Vec::new();
+            let mut snapshots = BTreeSet::new();
+            {
+                let mut statement = tx.prepare(
+                    "SELECT cache_key FROM analysis_cache WHERE fetched_at < ?1 AND cache_key GLOB 'session:*'",
+                )?;
+                for key in statement.query_map([cutoff], |row| row.get::<_, String>(0))? {
+                    let key = key?;
+                    if let Some((_, entry)) = analysis_session_entry(&key)
+                        && let Some((kind, suffix)) = entry.split_once(':')
+                    {
+                        if kind == "shared" {
+                            snapshots.insert(key);
+                        } else if suffix.parse::<u16>().is_ok() {
+                            expired.push(key);
+                        }
+                    }
+                }
+            }
+            for key in &expired {
+                tx.execute("DELETE FROM analysis_cache WHERE cache_key = ?1", [key])?;
+            }
+            if !snapshots.is_empty() {
+                let mut statement = tx.prepare(
+                    "SELECT cache_key, value_json FROM analysis_cache
+                     WHERE cache_key GLOB 'session:*' AND cache_key NOT GLOB 'session:*:shared:*'
+                       AND (typeof(value_json) = 'blob' OR instr(value_json, 'bundleFingerprint') > 0)",
+                )?;
+                let mut rows = statement.query([])?;
+                while let Some(row) = rows.next()? {
+                    let key: String = row.get(0)?;
+                    let Some((session, _)) = analysis_session_entry(&key) else {
+                        continue;
+                    };
+                    let value = decode_analysis_value(row.get_ref(1)?.as_bytes().map_err(rusqlite::Error::from)?.to_vec())?;
+                    if let Some(fingerprint) = value["meta"]["bundleFingerprint"].as_str() {
+                        snapshots.remove(&format!("{session}:shared:{fingerprint}"));
+                    }
+                }
+            }
+            for key in &snapshots {
+                tx.execute("DELETE FROM analysis_cache WHERE cache_key = ?1", [key])?;
+            }
+            tx.commit()?;
+            expired.extend(snapshots);
+            Ok(expired)
+        })
+        .await?
+    }
+
     pub async fn sync_status(
         &self,
         provider: &str,
@@ -982,6 +1038,11 @@ fn calendar_meta(connection: &Connection, season: Option<i64>) -> Result<Meta, r
             ))
         },
     )
+}
+
+fn analysis_session_entry(key: &str) -> Option<(&str, &str)> {
+    let (session, entry) = key.split_at(key.match_indices(':').nth(3)?.0);
+    Some((session, &entry[1..]))
 }
 
 fn encode_analysis_value(json: String) -> rusqlite::types::Value {
