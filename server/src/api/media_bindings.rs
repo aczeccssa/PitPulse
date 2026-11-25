@@ -115,6 +115,19 @@ impl Bindings {
                 }
             }
         }
+        for kind in ["helmet-", "driver-photo-"] {
+            let avatars: Vec<_> = bindings
+                .assets
+                .iter()
+                .filter_map(|(key, media)| {
+                    key.strip_prefix(kind)
+                        .map(|id_and_year| (format!("avatar-helmet-{id_and_year}"), media.clone()))
+                })
+                .collect();
+            for (key, media) in avatars {
+                bindings.assets.entry(key).or_insert(media);
+            }
+        }
         bindings
     }
 
@@ -128,6 +141,7 @@ impl Bindings {
 
     pub fn driver(&self, season: i64, id: &str) -> Value {
         json!({
+            "avatar": self.get("avatar-helmet", season, id).or_else(|| self.placeholders.get("driver-photo")),
             "helmet": self.get("helmet", season, id),
             "driverPhoto": self.get("driver-photo", season, id),
         })

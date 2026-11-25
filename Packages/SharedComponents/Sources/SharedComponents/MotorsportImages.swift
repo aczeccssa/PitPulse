@@ -46,7 +46,9 @@ public enum MotorsportImages {
     #endif
 
     static func artworkURL(named name: String, dark: Bool, cache: MediaCache = .shared) -> URL? {
-        let name = name.hasPrefix("avatar-") ? String(name.dropFirst("avatar-".count)) : name
+        if name.hasPrefix("avatar-helmet-") {
+            return cache.file(named: name, kind: "driver-photo")
+        }
         let kind = ["helmet", "driver-photo", "team-logo", "car-side"].first {
             name.hasPrefix($0 + "-")
         }

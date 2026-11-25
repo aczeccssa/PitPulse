@@ -798,7 +798,7 @@ struct ResultsScreen<WeekendTools: View>: View {
     private func helmet(_ row: SessionResult) -> some View {
         AssetImage(
             name: MotorsportAssetName.driverAvatarName(driverID: row.driverId, name: row.driverName, season: meeting.season),
-            media: row.media?.driver.helmet
+            media: row.media?.driver.avatar
         )
     }
 

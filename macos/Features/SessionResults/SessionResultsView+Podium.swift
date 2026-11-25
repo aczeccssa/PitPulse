@@ -8,7 +8,7 @@ extension SessionResultsView {
             name: result.driverName,
             season: model.selectedSeason,
             size: size,
-            media: result.media?.driver.helmet
+            media: result.media?.driver.avatar
         )
     }
 
@@ -121,7 +121,7 @@ struct ResultsPodium: View {
             name: result.driverName,
             season: season,
             size: size,
-            media: result.media?.driver.helmet
+            media: result.media?.driver.avatar
         )
     }
 

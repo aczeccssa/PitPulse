@@ -46,7 +46,7 @@ public enum MotorsportAssetName {
 
 extension MotorsportAssetName {
     public static func driverAvatarName(driverID: String? = nil, name: String, season: Int) -> String {
-        helmetName(driverID: driverID, name: name, season: season)
+        "avatar-" + helmetName(driverID: driverID, name: name, season: season)
     }
 
     public static func helmetName(driverID: String? = nil, name: String, season: Int) -> String {

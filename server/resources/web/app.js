@@ -503,19 +503,15 @@
         return DRIVER_ALIASES[surname] || surname || null;
     }
 
-    function helmetImage(season, ...values) {
+    function driverAvatarImage(season, ...values) {
         const year = Number(season) || artSeason();
         for (const value of values) {
             const id = driverAssetId(value);
-            if (id && hasAsset(year, "helmet", id)) return artImage("avatar", assetSrc(year, "helmet", id));
+            const source = id && assetRef(year, "avatar-helmet", id)?.url;
+            if (source) return artImage("avatar", source);
         }
-        return null;
-    }
-
-    function driverAvatarImage(season, ...values) {
-        const image = helmetImage(season, ...values);
-        const placeholder = MEDIA_BINDINGS.placeholders?.helmet?.url;
-        return image || (placeholder ? artImage("avatar", placeholder) : null);
+        const placeholder = MEDIA_BINDINGS.placeholders?.["driver-photo"]?.url;
+        return placeholder ? artImage("avatar", placeholder) : null;
     }
 
     function teamLogoImage(season, ...values) {

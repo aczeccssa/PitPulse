@@ -41,18 +41,19 @@ console.log('PASS: requested season survives bootstrap; racing number comes from
 context.MEDIA_BINDINGS = {
  assets: {
   'driver-photo-max_verstappen-2024': {url: '/media/blob/2024-photo'},
-  'helmet-max_verstappen-2024': {url: '/media/blob/2024-helmet'},
-  'helmet-max_verstappen-2025': {url: '/media/blob/2025-helmet'},
+  'avatar-helmet-max_verstappen-2024': {url: '/media/blob/2024-photo'},
+  'avatar-helmet-max_verstappen-2025': {url: '/media/blob/2025-photo'},
+  'avatar-helmet-max_verstappen-2026': {url: '/media/blob/2026-helmet'},
   'driver-photo-max_verstappen-2026': {url: '/media/blob/2026-photo'},
  },
- placeholders: {helmet: {url: '/media/blob/gray-helmet'}},
+ placeholders: {'driver-photo': {url: '/media/blob/gray-portrait'}},
 };
 context.DRIVER_ALIASES = { verstappen: 'max_verstappen' };
 context.artImage = (className, src) => ({className, src});
-for (const name of ['hasAsset', 'assetRef', 'assetSrc', 'driverAssetId', 'helmetImage', 'driverAvatarImage']) {
+for (const name of ['assetRef', 'driverAssetId', 'driverAvatarImage']) {
  vm.runInContext(functionSource(name), context);
 }
-for (const [year, digest] of [[2024, '2024-helmet'], [2025, '2025-helmet'], [2026, 'gray-helmet']]) {
+for (const [year, digest] of [[2024, '2024-photo'], [2025, '2025-photo'], [2026, '2026-helmet'], [2023, 'gray-portrait']]) {
  assert.equal(vm.runInContext(`driverAvatarImage(${year}, 'verstappen').src`, context), `/media/blob/${digest}`);
 }
-console.log('PASS: driver avatars use the server bindings and never substitute portraits for helmets');
+console.log('PASS: driver avatars use the server-selected same-season image or portrait placeholder');

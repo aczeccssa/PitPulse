@@ -10,6 +10,7 @@ public struct MediaReference: Codable, Equatable, Sendable {
 }
 
 public struct DriverMedia: Codable, Equatable, Sendable {
+    public let avatar: MediaReference?
     public let helmet: MediaReference
     public let driverPhoto: MediaReference
 }

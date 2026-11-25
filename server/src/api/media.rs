@@ -340,10 +340,10 @@ mod tests {
             assert_eq!(unresolved["helmet"]["file"], "helmet.png");
             assert_eq!(unresolved["helmet"]["isPlaceholder"], true);
             assert_eq!(unresolved["driverPhoto"]["group"], "2025/driver-photo");
-            assert_eq!(
-                bindings.driver(2026, "max_verstappen")["helmet"]["isPlaceholder"],
-                false
-            );
+            assert_eq!(unresolved["avatar"], unresolved["driverPhoto"]);
+            let current = bindings.driver(2026, "verstappen");
+            assert_eq!(current["helmet"]["isPlaceholder"], false);
+            assert_eq!(current["avatar"], current["helmet"]);
         }
     }
 
