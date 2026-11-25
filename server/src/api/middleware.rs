@@ -17,6 +17,23 @@ pub async fn require_bearer_token(
     request: Request,
     next: Next,
 ) -> Response {
+    authorize(&state, request, next, true).await
+}
+
+pub(super) async fn require_mcp_token(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    authorize(&state, request, next, false).await
+}
+
+async fn authorize(
+    state: &AppState,
+    request: Request,
+    next: Next,
+    allow_web_session: bool,
+) -> Response {
     if !state.config.security.require_token {
         return next.run(request).await;
     }
@@ -32,7 +49,8 @@ pub async fn require_bearer_token(
     // bootstraps is a separate, derived credential and only admits reads, so a
     // cookie copied out of a browser cannot mutate server state.
     let authorized = bearer_matches(request.headers(), expected)
-        || (!request.uri().path().starts_with("/api/v1/media/")
+        || (allow_web_session
+            && !request.uri().path().starts_with("/api/v1/media/")
             && allows_read_only(request.method())
             && cookie_matches(request.headers(), expected));
 
