@@ -132,11 +132,17 @@ impl Catalog {
     }
 }
 
-async fn season_catalog(state: &AppState) -> Result<Vec<serde_json::Value>, ApiError> {
-    Ok(state
-        .database
-        .racing_seasons_before(10_000)
-        .await?
+async fn season_catalog(
+    state: &AppState,
+    include_published_schedule: bool,
+) -> Result<Vec<serde_json::Value>, ApiError> {
+    let mut years = state.database.racing_seasons_before(10_000).await?;
+    if include_published_schedule {
+        years.extend(state.database.published_schedule_seasons().await?);
+        years.sort_unstable();
+        years.dedup();
+    }
+    Ok(years
         .into_iter()
         .rev()
         .map(|year| {
@@ -159,7 +165,7 @@ pub async fn seasons(
     State(state): State<AppState>,
 ) -> Result<axum::Json<serde_json::Value>, ApiError> {
     Ok(axum::Json(
-        serde_json::json!({ "data": season_catalog(&state).await? }),
+        serde_json::json!({ "data": season_catalog(&state, false).await? }),
     ))
 }
 
@@ -175,7 +181,10 @@ pub async fn manifest(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
-    Ok(manifest_response(headers, &season_catalog(&state).await?))
+    Ok(manifest_response(
+        headers,
+        &season_catalog(&state, true).await?,
+    ))
 }
 
 fn manifest_response(headers: HeaderMap, seasons: &[serde_json::Value]) -> Response {

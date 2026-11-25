@@ -1,33 +1,70 @@
 use std::time::Duration;
 
-use axum::{Json, extract::State};
-use serde_json::{Value, json};
-
 use crate::{
     api::{dto::Meta, routes::current_year},
     app_state::AppState,
-    error::ApiError,
+    domain::{
+        calendar::{Meeting, MeetingStatus},
+        country::country_code,
+    },
+    error::StorageError,
     providers::{f1_schedule, http},
     storage::sqlite::Database,
 };
 
-pub async fn get(State(state): State<AppState>) -> Result<Json<Value>, ApiError> {
-    let year = current_year(&state).await? + 1;
-    let source_url = f1_schedule::source_url(year);
-    let snapshot = state.database.next_season_schedule(year).await?;
-    let mut meta = Meta::empty();
-    let mut data = json!({ "year": year, "sourceUrl": source_url, "events": [] });
-    if let Some(snapshot) = snapshot {
-        meta = Meta::from_cache(
-            Some("formula1".into()),
-            Some(snapshot.checked_at),
-            snapshot.revision,
-            false,
-        );
-        data["events"] = snapshot.events;
-        data["updatedAt"] = snapshot.updated_at.into();
-    }
-    Ok(Json(json!({ "data": data, "meta": meta })))
+const SOURCE: &str = "formula1";
+
+pub async fn calendar(
+    database: &Database,
+    season: i64,
+) -> Result<Option<(Vec<Meeting>, Meta)>, StorageError> {
+    let Some(snapshot) = database.next_season_schedule(season).await? else {
+        return Ok(None);
+    };
+    let meetings = snapshot
+        .events
+        .into_iter()
+        .map(|event| {
+            let country = match event.id.as_str() {
+                "miami" | "las-vegas" => "United States",
+                "united-arab-emirates" => "United Arab Emirates",
+                _ => &event.location,
+            }
+            .to_owned();
+            let flag = match country.as_str() {
+                "Portugal" => Some("PT".into()),
+                "Türkiye" => Some("TR".into()),
+                _ => country_code(&country),
+            };
+            Meeting {
+                // Venue ids survive reordering. They cannot collide with Jolpica round ids.
+                id: format!("{season}:formula1:{}", event.id),
+                season,
+                round: event.round.map(|round| round as i64),
+                name: event.name,
+                country,
+                country_code: flag,
+                location: event.location,
+                start_date: format!("{}T00:00:00Z", event.start_date),
+                end_date: format!("{}T23:59:59Z", event.end_date),
+                status: MeetingStatus::Scheduled,
+                sessions: Vec::new(),
+                circuit: None,
+                jolpica_round_id: None,
+                source: Some(SOURCE.into()),
+                fetched_at: Some(snapshot.checked_at.clone()),
+                source_updated_at: None,
+                revision: i64::try_from(snapshot.revision).ok(),
+            }
+        })
+        .collect();
+    let meta = Meta::from_cache(
+        Some(SOURCE.into()),
+        Some(snapshot.checked_at),
+        snapshot.revision,
+        false,
+    );
+    Ok(Some((meetings, meta)))
 }
 
 pub async fn run(state: AppState) {
@@ -81,7 +118,7 @@ mod tests {
     use axum::{Router, routing::get};
 
     use super::*;
-    use crate::providers::f1_schedule::tests::calendar;
+    use crate::providers::f1_schedule::tests::calendar as calendar_html;
 
     #[tokio::test]
     async fn refresh_revisions_change_only_for_valid_schedule_changes() {
@@ -90,8 +127,8 @@ mod tests {
         let database = Database::open(&db_path).await.unwrap();
         database.migrate().await.unwrap();
         let fixture = Router::new()
-            .route("/published", get(|| async { calendar("12 - 14 Mar") }))
-            .route("/changed", get(|| async { calendar("19 - 21 Mar") }))
+            .route("/published", get(|| async { calendar_html("12 - 14 Mar") }))
+            .route("/changed", get(|| async { calendar_html("19 - 21 Mar") }))
             .route("/invalid", get(|| async { "<html>Temporary error</html>" }));
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -107,9 +144,10 @@ mod tests {
         ] {
             let result = refresh(&database, &client, &format!("{url}/{path}"), 2027).await;
             assert_eq!(result.is_ok(), matches!(path, "published" | "changed"));
-            let snapshot = database.next_season_schedule(2027).await.unwrap().unwrap();
-            assert_eq!(snapshot.revision, revision);
-            assert_eq!(snapshot.events[0]["startDate"], first_date);
+            let (meetings, meta) = calendar(&database, 2027).await.unwrap().unwrap();
+            assert_eq!(meta.revision, revision);
+            assert_eq!(meetings[0].start_date, format!("{first_date}T00:00:00Z"));
+            assert!(meetings[0].sessions.is_empty());
         }
         drop(database);
         let reopened = Database::open(&db_path).await.unwrap();

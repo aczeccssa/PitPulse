@@ -646,6 +646,13 @@ struct RootView: View {
                 do { try await Task.sleep(for: .seconds(5)) } catch { break }
             }
         }
+        .task(id: "\(model.dataContext)|\(scenePhase)") {
+            guard scenePhase == .active, model.season > model.reminderSeason else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                await model.loadCalendar(force: true)
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
                 returningFromBackground = true

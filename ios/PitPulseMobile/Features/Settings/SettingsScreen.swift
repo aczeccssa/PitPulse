@@ -52,22 +52,20 @@ struct SettingsScreen: View {
                     }
 
                     settingsPanel("Preferences") {
-                        if !embedded {
-                            Menu {
-                                Picker("Season", selection: $model.season) {
-                                    ForEach(MediaCache.shared.seasons.map(\.year), id: \.self) { year in
-                                        Text(String(year)).tag(year)
-                                    }
+                        Menu {
+                            Picker("Season", selection: $model.season) {
+                                ForEach(MediaCache.shared.seasons.map(\.year), id: \.self) { year in
+                                    Text(String(year)).tag(year)
                                 }
-                            } label: {
-                                settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
                             }
-                            .tint(.primary)
-                            .accessibilityLabel("Season")
-                            .accessibilityValue(String(model.season))
-
-                            Divider()
+                        } label: {
+                            settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
                         }
+                        .tint(.primary)
+                        .accessibilityLabel("Season")
+                        .accessibilityValue(String(model.season))
+
+                        Divider()
 
                         Menu {
                             Picker("Appearance", selection: $appearance) {

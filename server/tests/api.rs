@@ -505,6 +505,66 @@ async fn test_calendar_returns_stale_empty_meta() {
 }
 
 #[tokio::test]
+async fn test_published_season_is_selectable_in_native_calendar() {
+    let (state, _temp) = test_state().await;
+    let now = state.database.utc_now().await.unwrap();
+    let year = now[..4].parse::<i64>().unwrap() + 1;
+    let calendar_path = format!("/api/v1/calendar?season={year}");
+    let router = server::router(state.clone());
+
+    for (revision, start) in [(1, "03-12"), (2, "03-19")] {
+        let dates = serde_json::json!([{
+            "id": "bahrain", "round": 1, "name": "Bahrain Grand Prix", "location": "Bahrain",
+            "startDate": format!("{year}-{start}"), "endDate": format!("{year}-03-21")
+        }]);
+        state
+            .database
+            .save_next_season_schedule(year, dates.to_string(), now.clone())
+            .await
+            .unwrap();
+        for (path, field, expected) in [
+            (
+                calendar_path.as_str(),
+                "/data/0/startDate",
+                serde_json::json!(format!("{year}-{start}T00:00:00Z")),
+            ),
+            (
+                calendar_path.as_str(),
+                "/data/0/sessions",
+                serde_json::json!([]),
+            ),
+            (
+                calendar_path.as_str(),
+                "/meta/revision",
+                serde_json::json!(revision),
+            ),
+            (
+                "/api/v1/media/manifest.json",
+                "/seasons/0/year",
+                serde_json::json!(year),
+            ),
+            ("/api/v1/seasons", "/data", serde_json::json!([])),
+        ] {
+            let response = router.clone().oneshot(get(path)).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            let payload: Value = serde_json::from_slice(&body).unwrap();
+            assert_eq!(payload.pointer(field), Some(&expected), "{path} {field}");
+        }
+    }
+    assert_eq!(
+        router
+            .oneshot(get("/api/v1/schedule/next"))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
 async fn test_calendar_meta_includes_persisted_sync_status_when_available() {
     let (state, _temp) = test_state().await;
     state

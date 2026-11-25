@@ -74,10 +74,6 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             super::dashboard_cache::cache_response,
         ))
         .route("/api/v1/health", get(health))
-        .route(
-            "/api/v1/schedule/next",
-            get(crate::services::next_schedule::get),
-        )
         .route("/api/v1/meetings/next", get(next_meeting))
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route(
@@ -338,10 +334,15 @@ async fn calendar(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
     let (meetings, mut meta) = state.database.calendar(season).await?;
-    let season_id = match season {
-        Some(season) => season,
-        None => current_year(&state).await?,
-    };
+    let current_year = current_year(&state).await?;
+    let season_id = season.unwrap_or(current_year);
+    if season.is_some()
+        && (meetings.is_empty() || season_id > current_year)
+        && let Some((official, meta)) =
+            crate::services::next_schedule::calendar(&state.database, season_id).await?
+    {
+        return Ok(Json(json!({"data": official, "meta": meta})));
+    }
     meta.sync_status = state
         .database
         .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))

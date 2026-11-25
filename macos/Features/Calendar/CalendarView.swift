@@ -8,7 +8,6 @@ struct CalendarView: View {
     @State var selectedMeetingID: String?
     @State var detailMeeting: Meeting?
     @State var showMap = false
-    @State private var showNextSeasonSchedule = false
 
     var selectedMeeting: Meeting? {
         if let selectedMeetingID, let match = model.meetings.first(where: { $0.id == selectedMeetingID }) {
@@ -34,11 +33,6 @@ struct CalendarView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $showNextSeasonSchedule) {
-            let token = model.serverURL.flatMap { try? model.credentials.token(for: $0) }
-            NextSeasonScheduleView(serverURL: model.serverURL, token: token)
-                .frame(minWidth: 460, minHeight: 520)
-        }
         .task(id: "\(model.serverAddress)-\(model.selectedSeason)-\(showMap)") {
             if showMap {
                 await model.mapStore.load(model: model, meeting: nil)
@@ -115,10 +109,6 @@ struct CalendarView: View {
                 .monospacedDigit()
 
             Spacer(minLength: 8)
-
-            Button("Next Season Schedule", systemImage: "calendar.badge.clock") {
-                showNextSeasonSchedule = true
-            }
 
             if model.isRefreshing {
                 ProgressView().controlSize(.mini)

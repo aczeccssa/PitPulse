@@ -26,6 +26,20 @@ public struct Meeting: Codable, Identifiable, Equatable, Sendable {
     public let sourceUpdatedAt: Date?
     public let revision: Int?
 
+    public var hasPublishedWeekendDatesOnly: Bool { source == "formula1" && sessions.isEmpty }
+
+    public func calendarDateRange(in calendar: Calendar = .current) -> ClosedRange<Date> {
+        guard hasPublishedWeekendDatesOnly else { return startDate...max(startDate, endDate) }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        var display = utc
+        display.timeZone = calendar.timeZone
+        // The source supplies local civil dates. UTC is only their API representation.
+        let first = display.date(from: utc.dateComponents([.year, .month, .day], from: startDate)) ?? startDate
+        let last = display.date(from: utc.dateComponents([.year, .month, .day], from: endDate)) ?? endDate
+        return first...max(first, last)
+    }
+
     public var nextScheduledSession: Session? {
         sessions
             .filter { $0.status == .scheduled }

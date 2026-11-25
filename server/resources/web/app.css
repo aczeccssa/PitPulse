@@ -364,38 +364,6 @@ input {
     color: var(--muted);
 }
 
-.schedule-events {
-    display: grid;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.schedule-events > li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 2px;
-    border-bottom: 1px solid var(--line);
-}
-
-.schedule-events h2 {
-    margin: 3px 0;
-    font-size: 17px;
-}
-
-.schedule-events p, .schedule-events li div > span {
-    margin: 0;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.schedule-dates {
-    text-align: end;
-    font-variant-numeric: tabular-nums;
-}
-
 .page-actions {
     display: flex;
     align-items: center;

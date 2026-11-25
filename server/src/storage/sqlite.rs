@@ -19,6 +19,7 @@ use crate::{
         standings::{ConstructorStanding, DriverStanding},
     },
     error::StorageError,
+    providers::f1_schedule::ScheduleEvent,
 };
 
 const ANALYSIS_CACHE_GZIP_PREFIX: &[u8] = b"\x00PULSEGZ\x01";
@@ -56,7 +57,7 @@ pub struct Database {
 }
 
 pub struct ScheduleSnapshot {
-    pub events: Value,
+    pub events: Vec<ScheduleEvent>,
     pub revision: u64,
     pub checked_at: String,
     pub updated_at: String,
@@ -465,6 +466,18 @@ impl Database {
             .transpose()
         })
         .await?
+    }
+
+    pub async fn published_schedule_seasons(&self) -> Result<Vec<i64>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            let mut years = connection.prepare("SELECT season FROM next_season_schedule")?;
+            years
+                .query_map([], |row| row.get(0))?
+                .collect::<rusqlite::Result<_>>()
+        })
+        .await??)
     }
 
     pub async fn save_next_season_schedule(

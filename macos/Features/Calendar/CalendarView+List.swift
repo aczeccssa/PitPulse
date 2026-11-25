@@ -189,10 +189,11 @@ extension CalendarView {
 
     func dateRange(_ meeting: Meeting) -> String {
         let calendar = Calendar.current
-        let start = meeting.startDate.formatted(.dateTime.month().day())
-        let end = calendar.isDate(meeting.startDate, equalTo: meeting.endDate, toGranularity: .month)
-            ? meeting.endDate.formatted(.dateTime.day())
-            : meeting.endDate.formatted(.dateTime.month().day())
+        let dates = meeting.calendarDateRange(in: calendar)
+        let start = dates.lowerBound.formatted(.dateTime.month().day())
+        let end = calendar.isDate(dates.lowerBound, equalTo: dates.upperBound, toGranularity: .month)
+            ? dates.upperBound.formatted(.dateTime.day())
+            : dates.upperBound.formatted(.dateTime.month().day())
         return start == end ? start : "\(start)–\(end)"
     }
 }

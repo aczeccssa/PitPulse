@@ -426,7 +426,10 @@ struct WebHomeScreen<Header: View>: View {
                     ($0.endTime ?? $0.startTime.addingTimeInterval(7200)) > now
             }.map { NextSession(meeting: meeting, session: $0) }
         }.sorted { $0.session.startTime < $1.session.startTime }
-        return (sessions.first, sessions.first?.meeting ?? meetings.last)
+        let nextPublished = meetings.first {
+            $0.hasPublishedWeekendDatesOnly && $0.status == .scheduled && $0.endDate >= now
+        }
+        return (sessions.first, sessions.first?.meeting ?? nextPublished ?? meetings.last)
     }
 
     private func countdown(_ active: NextSession?, now: Date, minHeight: CGFloat = 126) -> some View {
@@ -452,9 +455,9 @@ struct WebHomeScreen<Header: View>: View {
                     }
                 } else {
                     Text("\(String(model.season)) Season").font(.headline)
-                    Text(meetings.isEmpty ? "Schedule unavailable" : "Season complete")
+                    Text(meetings.isEmpty ? "Schedule unavailable" : meetings.contains(where: \.hasPublishedWeekendDatesOnly) ? "Session times pending" : "Season complete")
                         .font(.system(size: 21, weight: .bold))
-                    Text(meetings.isEmpty ? "No sessions have been published." : "Explore this season’s results and records.")
+                    Text(meetings.isEmpty || meetings.contains(where: \.hasPublishedWeekendDatesOnly) ? "No sessions have been published." : "Explore this season’s results and records.")
                         .font(.system(size: 12))
                 }
             }.foregroundStyle(.white)
@@ -1323,8 +1326,6 @@ struct TabletRaceCalendar: View {
     @FocusState private var searchFocused: Bool
     @State private var filter = RaceCalendarFilter.all
 
-    @State private var showNextSeasonSchedule = false
-
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
@@ -1338,7 +1339,14 @@ struct TabletRaceCalendar: View {
         }
     }
 
-    private var displayedMonth: Int { month == 0 ? calendar.component(.month, from: .now) : month }
+    private var openingRace: Meeting? {
+        model.meetings.first { $0.round != nil && $0.hasPublishedWeekendDatesOnly }
+    }
+
+    private var displayedMonth: Int {
+        if month != 0 { return month }
+        return calendar.component(.month, from: openingRace?.calendarDateRange(in: calendar).lowerBound ?? .now)
+    }
     private var selectedMeeting: Meeting? { model.meetings.first { $0.id == selectedMeetingID } }
 
     var body: some View {
@@ -1376,8 +1384,9 @@ struct TabletRaceCalendar: View {
         }
         .background(WebDashboardStyle.homeBackground)
         .foregroundStyle(WebDashboardStyle.homeText)
-        .sheet(isPresented: $showNextSeasonSchedule) {
-            NextSeasonScheduleView(serverURL: model.serverURL, token: model.currentToken)
+        .onChange(of: model.season) { _, _ in
+            month = 0
+            selectedMeetingID = nil
         }
         .navigationDestination(isPresented: Binding(
             get: { sessionResult != nil },
@@ -1439,22 +1448,13 @@ struct TabletRaceCalendar: View {
             HStack(spacing: 12) {
                 monthTitle(date).fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 0)
-                nextSeasonButton
                 monthNavigation
             }
             VStack(alignment: .leading, spacing: 8) {
                 monthTitle(date)
                 monthNavigation
-                nextSeasonButton
             }
         }
-    }
-
-    private var nextSeasonButton: some View {
-        Button("Next Season Schedule", systemImage: "calendar.badge.clock") {
-            showNextSeasonSchedule = true
-        }
-        .buttonStyle(.bordered)
     }
 
     private func monthTitle(_ date: Date) -> some View {
@@ -1466,7 +1466,7 @@ struct TabletRaceCalendar: View {
     private var monthNavigation: some View {
         HStack(spacing: 0) {
             monthButton("Previous month", symbol: "chevron.left", change: -1)
-            Button("Today") { showMonth(0) }
+            Button(openingRace == nil ? "Today" : "First Race") { showMonth(0) }
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 8)
                 .frame(minHeight: 44)
@@ -1570,8 +1570,9 @@ struct TabletRaceCalendar: View {
     }
 
     private func raceDays(_ meeting: Meeting) -> ClosedRange<Date> {
-        let start = calendar.startOfDay(for: meeting.startDate)
-        return start...max(start, calendar.startOfDay(for: meeting.endDate))
+        let dates = meeting.calendarDateRange(in: calendar)
+        let start = calendar.startOfDay(for: dates.lowerBound)
+        return start...max(start, calendar.startOfDay(for: dates.upperBound))
     }
 
     private func weekSpans(_ dates: [Date], month: Date, meetings: [Meeting]) -> [RaceSpan] {
@@ -1710,7 +1711,7 @@ struct TabletRaceCalendar: View {
                 if meeting.id != meetings.first?.id { Divider() }
                 Button {
                     if searching {
-                        showMonth(calendar.component(.month, from: meeting.startDate), meeting: meeting.id)
+                        showMonth(calendar.component(.month, from: raceDays(meeting).lowerBound), meeting: meeting.id)
                     } else {
                         selectedMeetingID = meeting.id
                     }
@@ -1773,7 +1774,6 @@ struct TabletRaceCalendar: View {
 struct CalendarScreen: View {
     @EnvironmentObject private var model: MobileModel
     @State private var filter = RaceCalendarFilter.all
-    @State private var showNextSeasonSchedule = false
     @State private var search = ""
     @FocusState private var searchFocused: Bool
     @State private var position = ScrollPosition(idType: Meeting.ID.self)
@@ -1797,11 +1797,6 @@ struct CalendarScreen: View {
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Next Season Schedule", systemImage: "calendar.badge.clock") {
-                        showNextSeasonSchedule = true
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Calendar Range", selection: $filter) {
                             ForEach(RaceCalendarFilter.allCases) { range in
@@ -1812,9 +1807,6 @@ struct CalendarScreen: View {
                         Label("Filter Races", systemImage: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
-            }
-            .sheet(isPresented: $showNextSeasonSchedule) {
-                NextSeasonScheduleView(serverURL: model.serverURL, token: model.currentToken)
             }
             .dashboardDetail()
             .safeAreaInset(edge: .bottom, spacing: 0) { searchBar }
@@ -1933,7 +1925,15 @@ struct CalendarScreen: View {
                     Text(meeting.location).font(.caption.weight(.semibold))
                 }
                 Text(meeting.name).font(.headline).lineLimit(2)
-                Text(meeting.startDate, format: .dateTime.month().day()).font(.caption).foregroundStyle(.secondary)
+                Group {
+                    if meeting.hasPublishedWeekendDatesOnly {
+                        let dates = meeting.calendarDateRange()
+                        Text(dates.lowerBound..<dates.upperBound, format: .interval.month().day())
+                    } else {
+                        Text(meeting.startDate, format: .dateTime.month().day())
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
             CircuitOutlineView(meetingID: meeting.id)
@@ -2129,7 +2129,8 @@ struct WeekendScreen: View {
                 }
             }
 
-            Text(meeting.startDate..<max(meeting.startDate, meeting.endDate),
+            let dates = meeting.calendarDateRange()
+            Text(dates.lowerBound..<dates.upperBound,
                  format: Date.IntervalFormatStyle().month(.abbreviated).day().locale(.pulseEnglish))
                 .font(.subheadline)
                 .foregroundStyle(WebDashboardStyle.homeMuted)

@@ -161,7 +161,7 @@ final class MobileModel: ObservableObject {
         favoriteDriverID = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         islandMode = defaults.string(forKey: "mobileIslandMode").flatMap(IslandContentMode.init(rawValue:)) ?? .overview
         let currentYear = Calendar(identifier: .gregorian).component(.year, from: .now)
-        season = UIDevice.current.userInterfaceIdiom != .pad && storedSeason > 2000 ? storedSeason : currentYear
+        season = storedSeason > 2000 ? storedSeason : currentYear
         serverText = storedServer?.isEmpty == false ? storedServer! : "http://localhost:38701"
         for (series, store) in liveStores {
             store.onSnapshot = { [weak self] snapshot in self?.handle(snapshot, from: series) }

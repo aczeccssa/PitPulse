@@ -40,7 +40,8 @@ struct MeetingPreviewCard: View {
                 Rectangle().fill(Color.primary.opacity(0.07)).frame(height: 1)
 
                 VStack(alignment: .leading, spacing: 7) {
-                    fact(icon: "calendar", value: "\(meeting.startDate.formatted(.dateTime.month().day())) – \(meeting.endDate.formatted(.dateTime.month().day()))")
+                    let dates = meeting.calendarDateRange()
+                    fact(icon: "calendar", value: "\(dates.lowerBound.formatted(.dateTime.month().day())) – \(dates.upperBound.formatted(.dateTime.month().day()))")
                     if let circuit = meeting.circuit {
                         fact(icon: "mappin.and.ellipse", value: circuit.name ?? meeting.location)
                     }
