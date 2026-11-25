@@ -30,6 +30,7 @@ Central readers keep a shared, process-local cache of canonical query results. R
 | `PITPULSE_SEASON_CACHE_TTL_SECONDS` | 60 | Fresh age of a key since its last successful read, up to 3600. |
 | `PITPULSE_SEASON_CACHE_MAX_STALE_SECONDS` | 21600 | Maximum total age since the last successful read for outage fallback, up to 86400. Zero disables fallback. |
 | `PITPULSE_SEASON_CACHE_REVISION_SECONDS` | 5 | Minimum interval between successful shared generation checks on active readers, 1–60 seconds. |
+| `PITPULSE_SEASON_QUERY_DEADLINE_SECONDS` | 4 | End-to-end deadline for each reader query operation or generation probe, 1–30 seconds. |
 
 A generation change invalidates the fresh copy on the next check. An unavailable center triggers a coalesced retry after one second. A last successful eligible value is served within the stale window, with existing `meta.stale` and `meta.quality` fields updated where the response has metadata. An uncached key, exhausted stale window or cached negative lookup during an outage returns `503` with `season_data_unavailable` and `Retry-After`. Live recovery, health and SSE use local state.
 
@@ -75,3 +76,26 @@ Each row is the median of three 2,400-request runs for each displayed metric. Al
 The one-key cold burst returned 64/64 HTTP 200 with 63 hits and one origin load. Its p50/p95/p99 were 7.941/31.540/31.687 ms at 1,963 requests/s. Warm p95 was 61%, 26%, and 23% of the SQLite baseline at concurrency 1, 16, and 64. Single-client cold p95 was 2.44× the SQLite baseline. These loopback results measure application and database work on one VM. Hosted latency depends on the instance-to-Supabase network path.
 
 After checkpoint and vacuum, the seeded SQLite was 2,772,992 bytes and the clean cutover SQLite was 143,360 bytes (−94.8%). After HTTP runs and checkpoint, those files were 2,785,280 and 155,648 bytes respectively. Each central-mode copy retained zero rows across the 11 canonical tables. This comparison uses a clean SQLite database with seeded local sync state. Existing full SQLite files retain their original size and contents until a separate cutover.
+
+## Supabase development smoke test (2026-11-25 UTC)
+
+From the Local VM, both development roles established TLS 1.3 to the Supabase session pooler with `sslmode=verify-full` and the provisioned CA. `psql -XAt -c '\conninfo'` confirmed TLS on the client-to-pooler connection for each role. Supply the connection settings via the environment and redact the `\conninfo` destination before sharing the output.
+
+The migration role owns the preprovisioned `pitpulse_dev` schema and does not need database-level `CREATE`. Inspect the schema before running this test. Use only a dedicated, empty fixture schema or the exact fixture from an interrupted import at revision 2. The test publishes a new revision and leaves the fixture in place.
+
+```sh
+# Source the private development env file outside the repository with shell tracing off.
+export PITPULSE_TEST_DATABASE_URL="$PITPULSE_DEV_DATABASE_URL"
+export PITPULSE_TEST_READ_DATABASE_URL="$PITPULSE_DEV_READ_DATABASE_URL"
+export PITPULSE_TEST_PREPROVISIONED_SCHEMA=pitpulse_dev
+# Set PITPULSE_TEST_READER_ROLE privately to the read login's SELECT current_user result.
+export PITPULSE_SEASON_QUERY_DEADLINE_SECONDS=20
+# For an interrupted run, first check that only the expected fixture is present at revision 2.
+# Then set PITPULSE_TEST_RESUME_IMPORT=1 to require zero inserted rows on the first import.
+cargo +1.94.1 test --manifest-path server/Cargo.toml --locked --test season_postgres \
+  imported_history_matches_http_contract_with_clean_sqlite -- --ignored --exact
+```
+
+The first run installed v1 and imported eight fixture rows, then exceeded the default reader deadline. The resumed run reapplied the migration twice and checked all eight source rows. Re-import inserted zero rows and verify-only checked the same values. Through Axum's router with a clean SQLite, six status/body comparisons matched the baseline. The reader saw result revision 2 then 3 (26 points). Duplicate and late older submissions stayed at revision 3. The publisher and reader SQLite files each held zero rows in all 11 canonical tables. The full resumed test passed in 87.42 seconds. The read login could `SELECT` all 13 tables and had no table mutation or schema creation privilege. A direct no-op `UPDATE` in a transaction returned `ERROR: permission denied for table session_results`.
+
+The development network intermittently returned `SSL SYSCALL error: EOF detected`, `server closed the connection unexpectedly`, and `SeasonUnavailable` at the default four-second reader deadline. An earlier run reported a transient HTTP 500 on next meeting. The successful run used a 20-second reader deadline. Hosted availability and production latency still need separate validation.

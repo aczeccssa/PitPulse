@@ -29,18 +29,22 @@ async fn response(router: &axum::Router, path: &str) -> (StatusCode, Value) {
 #[tokio::test]
 #[ignore = "requires a disposable Postgres database and PITPULSE_TEST_DATABASE_URL"]
 async fn imported_history_matches_http_contract_with_clean_sqlite() {
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     let dsn = std::env::var("PITPULSE_TEST_DATABASE_URL").expect("set PITPULSE_TEST_DATABASE_URL");
     let read_dsn = std::env::var("PITPULSE_TEST_READ_DATABASE_URL").unwrap_or_else(|_| dsn.clone());
     let read_role = std::env::var("PITPULSE_TEST_READER_ROLE").ok();
-    let schema = format!(
-        "pitpulse_test_{}_{}",
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    );
+    let schema = std::env::var("PITPULSE_TEST_PREPROVISIONED_SCHEMA").unwrap_or_else(|_| {
+        format!(
+            "pitpulse_test_{}_{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )
+    });
     let postgres = Postgres::new(&dsn, &schema, false).unwrap();
+    postgres.migrate(read_role.as_deref()).await.unwrap();
     postgres.migrate(read_role.as_deref()).await.unwrap();
     let temp = tempfile::tempdir().unwrap();
     let fixture = temp.path().join("fixture.sqlite");
@@ -65,11 +69,16 @@ async fn imported_history_matches_http_contract_with_clean_sqlite() {
          VALUES (2025, '[{\"round\":1,\"startDate\":\"2025-03-01\"}]', 1, '2024-11-01T00:00:00Z', '2024-11-01T00:00:00Z');"
     ).unwrap();
     let report = postgres.import_sqlite(&fixture, false).await.unwrap();
-    assert!(
-        report
-            .iter()
-            .any(|table| table.inserted == 2 && table.verified == 2)
+    let expected_inserted = if std::env::var_os("PITPULSE_TEST_RESUME_IMPORT").is_some() {
+        0
+    } else {
+        8
+    };
+    assert_eq!(
+        report.iter().map(|table| table.inserted).sum::<u64>(),
+        expected_inserted
     );
+    assert_eq!(report.iter().map(|table| table.verified).sum::<u64>(), 8);
     for verify_only in [false, true] {
         let report = postgres.import_sqlite(&fixture, verify_only).await.unwrap();
         assert!(
@@ -81,7 +90,16 @@ async fn imported_history_matches_http_contract_with_clean_sqlite() {
     let clean_path = temp.path().join("clean.sqlite");
     let clean = Database::open(&clean_path).await.unwrap();
     clean.migrate().await.unwrap();
-    let reader = clean.with_season_reader(Postgres::new(&read_dsn, &schema, true).unwrap());
+    // Disable caching here to verify the stored revision immediately. Cache
+    // generation propagation is covered by the loopback outage test.
+    let reader = clean.clone().with_season_reader(
+        Postgres::new(&read_dsn, &schema, true).unwrap().with_cache(
+            pitpulse_server::storage::postgres::SeasonCacheConfig {
+                capacity: 0,
+                ..pitpulse_server::storage::postgres::SeasonCacheConfig::from_env().unwrap()
+            },
+        ),
+    );
     let instant = "2024-03-03T08:59:59Z";
     let (expected_next, _) = legacy.next_meeting_at(Some(2024), instant).await.unwrap();
     let (actual_next, _) = reader.next_meeting_at(Some(2024), instant).await.unwrap();
@@ -115,14 +133,54 @@ async fn imported_history_matches_http_contract_with_clean_sqlite() {
             "{path}"
         );
     }
-    let clean = rusqlite::Connection::open(&clean_path).unwrap();
-    assert_eq!(
-        clean
-            .query_row("SELECT count(*) FROM meetings", [], |row| row
-                .get::<_, i64>(0))
-            .unwrap(),
-        0
-    );
+    let path = "/api/v1/sessions/2024:1:race/results";
+    let (_, before) = response(&reader_router, path).await;
+    assert_eq!(before["meta"]["revision"], 2);
+    let publisher_state = temp.path().join("publisher.sqlite");
+    let publisher = Database::open(&publisher_state).await.unwrap();
+    publisher.migrate().await.unwrap();
+    let publisher = publisher.with_season_publisher(postgres);
+    let (original, _) = publisher.session_results("2024:1:race").await.unwrap();
+    let mut revised = original.clone();
+    revised[0].points = Some(26.0);
+    revised[0].fetched_at = "2024-03-04T00:00:00Z".into();
+    for records in [revised.clone(), revised, original] {
+        assert_eq!(
+            publisher
+                .replace_session_results(records, "final")
+                .await
+                .unwrap(),
+            3
+        );
+    }
+    let (status, after) = response(&reader_router, path).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(after["meta"]["revision"], 3);
+    assert_eq!(after["data"][0]["points"], 26.0);
+    for sqlite_path in [clean_path, publisher_state] {
+        let db = rusqlite::Connection::open(sqlite_path).unwrap();
+        for table in [
+            "meetings",
+            "sessions",
+            "session_results",
+            "driver_standings",
+            "constructor_standings",
+            "provider_mappings",
+            "driver_mappings",
+            "constructor_mappings",
+            "provider_identity_cache",
+            "calendar_snapshots",
+            "next_season_schedule",
+        ] {
+            assert_eq!(
+                db.query_row(&format!("SELECT count(*) FROM {table}"), [], |row| row
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                0,
+                "{table}"
+            );
+        }
+    }
 }
 
 #[tokio::test]
@@ -486,6 +544,7 @@ async fn cache_refreshes_revised_data_and_live_stream_survives_outage() {
             ttl: Duration::from_secs(30),
             max_stale: Duration::from_secs(4),
             revision_interval: Duration::from_millis(250),
+            ..Default::default()
         });
     let db = Database::open(std::path::Path::new(":memory:"))
         .await

@@ -17,6 +17,7 @@ use crate::error::StorageError;
 
 const MIGRATION: &str = include_str!("migrations/0001_season_data.sql");
 const TIMEOUT: Duration = Duration::from_secs(3);
+const POOL_CREATE_TIMEOUT: Duration = Duration::from_secs(15);
 pub const DEFAULT_SCHEMA: &str = "pitpulse_season";
 
 /// Lazy pool so a central outage cannot keep the local server or Live offline.
@@ -57,7 +58,7 @@ impl Postgres {
             .runtime(Runtime::Tokio1)
             .max_size(8)
             .wait_timeout(Some(TIMEOUT))
-            .create_timeout(Some(TIMEOUT))
+            .create_timeout(Some(POOL_CREATE_TIMEOUT))
             .recycle_timeout(Some(TIMEOUT))
             .build()
             .map_err(|_| StorageError::SeasonConfig("could not configure Postgres pool"))?;
@@ -122,11 +123,19 @@ impl Postgres {
         let mut client = self.client().await?;
         let tx = client.transaction().await?;
         self.lock_writes(&tx).await?;
-        tx.batch_execute(&format!(
-            "CREATE SCHEMA IF NOT EXISTS {}; REVOKE ALL ON SCHEMA {} FROM PUBLIC",
-            self.schema, self.schema
-        ))
-        .await?;
+        let schema_exists: bool = tx
+            .query_one(
+                "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = $1)",
+                &[&self.schema],
+            )
+            .await?
+            .get(0);
+        if !schema_exists {
+            tx.batch_execute(&format!("CREATE SCHEMA {}", self.schema))
+                .await?;
+        }
+        tx.batch_execute(&format!("REVOKE ALL ON SCHEMA {} FROM PUBLIC", self.schema))
+            .await?;
         let installed: bool = tx
             .query_one(
                 "SELECT to_regclass(format('%I.schema_migrations', $1::text)) IS NOT NULL",

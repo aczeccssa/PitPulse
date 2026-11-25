@@ -25,6 +25,7 @@ pub struct SeasonCacheConfig {
     /// Total age since the last successful query, including the fresh TTL.
     pub max_stale: Duration,
     pub revision_interval: Duration,
+    pub query_deadline: Duration,
 }
 
 impl Default for SeasonCacheConfig {
@@ -34,6 +35,7 @@ impl Default for SeasonCacheConfig {
             ttl: Duration::from_secs(60),
             max_stale: Duration::from_secs(6 * 3600),
             revision_interval: Duration::from_secs(5),
+            query_deadline: QUERY_DEADLINE,
         }
     }
 }
@@ -74,6 +76,14 @@ impl SeasonCacheConfig {
                     "PITPULSE_SEASON_CACHE_REVISION_SECONDS",
                     default.revision_interval.as_secs(),
                     60,
+                )?
+                .max(1),
+            ),
+            query_deadline: Duration::from_secs(
+                value(
+                    "PITPULSE_SEASON_QUERY_DEADLINE_SECONDS",
+                    default.query_deadline.as_secs(),
+                    30,
                 )?
                 .max(1),
             ),
@@ -197,7 +207,7 @@ impl Cache {
             };
         }
         self.revision_checks.fetch_add(1, Relaxed);
-        match within_deadline(probe).await {
+        match within_deadline(self.config.query_deadline, probe).await {
             Ok(value) => {
                 *state = Generation {
                     value: Some(value),
@@ -297,7 +307,7 @@ impl Cache {
         load: impl Future<Output = Result<T, StorageError>>,
     ) -> Result<T, StorageError> {
         self.origin_loads.fetch_add(1, Relaxed);
-        within_deadline(load).await
+        within_deadline(self.config.query_deadline, load).await
     }
 }
 
@@ -310,9 +320,10 @@ fn clone_value<T: Clone + 'static>(entry: &Entry) -> T {
 }
 
 async fn within_deadline<T>(
+    deadline: Duration,
     operation: impl Future<Output = Result<T, StorageError>>,
 ) -> Result<T, StorageError> {
-    tokio::time::timeout(QUERY_DEADLINE, operation)
+    tokio::time::timeout(deadline, operation)
         .await
         .map_err(|_| StorageError::SeasonUnavailable)?
 }
@@ -328,6 +339,7 @@ mod tests {
             ttl: Duration::from_secs(4),
             max_stale: Duration::from_secs(10),
             revision_interval: Duration::from_secs(2),
+            ..Default::default()
         })
     }
 
