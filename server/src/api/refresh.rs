@@ -46,10 +46,20 @@ pub async fn refresh(
         _ => {}
     }
     if state.database.uses_central_season_data() {
+        #[cfg(unix)]
+        if let Some(publisher) = &state.publisher {
+            return publisher.refresh(&request).await.map(Json);
+        }
         return Err(ApiError::RefreshUnavailable);
     }
-    let completion = state
-        .refresh_queue
+    run_manual_refresh(&state.refresh_queue, request).await
+}
+
+pub(crate) async fn run_manual_refresh(
+    queue: &RefreshQueue,
+    request: RefreshRequest,
+) -> Result<Json<DataRefreshEvent>, ApiError> {
+    let completion = queue
         .enqueue_manual(request)
         .await
         .map_err(|_| ApiError::RefreshQueueFull)?;

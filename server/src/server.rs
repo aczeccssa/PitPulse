@@ -69,7 +69,7 @@ pub async fn serve(state: AppState) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn shutdown_signal() {
+pub(crate) async fn shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await

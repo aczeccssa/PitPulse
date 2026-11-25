@@ -667,3 +667,112 @@ async fn cache_refreshes_revised_data_and_live_stream_survives_outage() {
     assert_eq!(reader.cache_stats().origin_loads, 3);
     proxy.abort();
 }
+
+#[tokio::test]
+#[ignore = "requires an isolated loopback Postgres and PITPULSE_TEST_DATABASE_URL"]
+async fn generation_lock_timeout_serves_stale_warm_key_and_retryable_cold_key() {
+    use pitpulse_server::storage::postgres::SeasonCacheConfig;
+    use std::time::Duration;
+    use tokio_postgres::error::SqlState;
+
+    let dsn = std::env::var("PITPULSE_TEST_DATABASE_URL").expect("set PITPULSE_TEST_DATABASE_URL");
+    let read_dsn = std::env::var("PITPULSE_TEST_READ_DATABASE_URL").unwrap_or_else(|_| dsn.clone());
+    let read_role = std::env::var("PITPULSE_TEST_READER_ROLE").ok();
+    let url = url::Url::parse(&dsn).expect("test URL");
+    assert_eq!(url.host_str(), Some("127.0.0.1"));
+    let schema = format!(
+        "pitpulse_test_lock_{}_{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let writer = Postgres::new(&dsn, &schema, false).unwrap();
+    writer.migrate(read_role.as_deref()).await.unwrap();
+    let publisher = Database::open(std::path::Path::new(":memory:"))
+        .await
+        .unwrap()
+        .with_season_publisher(writer);
+    let meeting = serde_json::from_value(serde_json::json!({
+        "id":"2024:1", "season":2024, "round":1, "name":"Fixture GP", "country":"Fixture Country",
+        "location":"Fixture City", "startDate":"2024-03-01", "endDate":"2024-03-03", "status":"scheduled", "sessions":[]
+    })).unwrap();
+    publisher
+        .replace_calendar(&[meeting], "2024-03-01T00:00:00Z")
+        .await
+        .unwrap();
+    let reader = Postgres::new(&read_dsn, &schema, true)
+        .unwrap()
+        .with_cache(SeasonCacheConfig {
+            revision_interval: Duration::from_millis(50),
+            max_stale: Duration::from_secs(30),
+            ..Default::default()
+        });
+    let db = Database::open(std::path::Path::new(":memory:"))
+        .await
+        .unwrap();
+    db.migrate().await.unwrap();
+    let router = server::router(AppState::new(
+        AppConfig::default(),
+        db.with_season_reader(reader.clone()),
+    ));
+    let warm = "/api/v1/calendar?season=2024";
+    let empty_warm = "/api/v1/calendar?season=2027";
+    let cold = "/api/v1/calendar?season=2025";
+    let (status, initial) = response(&router, warm).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(initial["data"][0]["name"], "Fixture GP");
+    assert_eq!(response(&router, empty_warm).await.0, StatusCode::OK);
+
+    let (mut locker, conn) = tokio_postgres::connect(&dsn, tokio_postgres::NoTls)
+        .await
+        .unwrap();
+    let lock_connection = tokio::spawn(conn);
+    let tx = locker.transaction().await.unwrap();
+    tx.batch_execute(&format!(
+        "LOCK TABLE {schema}.dataset_generation IN ACCESS EXCLUSIVE MODE"
+    ))
+    .await
+    .unwrap();
+    let (probe, conn) = tokio_postgres::connect(&read_dsn, tokio_postgres::NoTls)
+        .await
+        .unwrap();
+    let probe_connection = tokio::spawn(conn);
+    probe.batch_execute("SET lock_timeout = 50").await.unwrap();
+    let error = probe
+        .query_one(
+            &format!("SELECT generation FROM {schema}.dataset_generation"),
+            &[],
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(error.code(), Some(&SqlState::LOCK_NOT_AVAILABLE));
+
+    let (status, stale) = response(&router, warm).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(stale["data"], initial["data"]);
+    assert_eq!(stale["meta"]["stale"], true);
+    assert_eq!(stale["meta"]["quality"], "stale");
+    assert_eq!(reader.cache_stats().stale_hits, 1);
+    let (status, stale_empty) = response(&router, empty_warm).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(stale_empty["data"], serde_json::json!([]));
+    assert_eq!(stale_empty["meta"]["stale"], true);
+    assert_eq!(stale_empty["meta"]["quality"], "stale");
+    let result = router
+        .clone()
+        .oneshot(Request::get(cold).body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(result.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(result.headers()["retry-after"], "5");
+    let body: Value =
+        serde_json::from_slice(&to_bytes(result.into_body(), 4096).await.unwrap()).unwrap();
+    assert_eq!(body["error"]["code"], "season_data_unavailable");
+    tx.rollback().await.unwrap();
+    tokio::time::sleep(Duration::from_millis(1100)).await;
+    assert_eq!(response(&router, cold).await.0, StatusCode::OK);
+    lock_connection.abort();
+    probe_connection.abort();
+}

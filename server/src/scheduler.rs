@@ -45,47 +45,16 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
     let scheduler_state = state.clone();
     let mut tasks = vec![];
     if !state.database.uses_central_season_data() {
-        tasks.push(tokio::spawn(async move {
-        let sync = ResultsSync {
-            jolpica: scheduler_state.jolpica.clone(),
-            openf1: scheduler_state.openf1.clone(),
-            timeout: Duration::from_secs(8),
-        };
-        let mut identities = if let Some(season) = current_season(&scheduler_state).await {
-            sync.cached_identity_maps(&scheduler_state.database, season)
-                .await
-                .ok()
-                .flatten()
-        } else {
-            None
-        };
-        let mut interval = tokio::time::interval(TICK);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            tokio::select! {
-                biased;
-                job = scheduler_state.refresh_queue.next() => {
-                    let request = job.request.clone();
-                    let in_progress = refresh_event(&scheduler_state, &request, RefreshStatus::InProgress, None).await;
-                    let _ = scheduler_state.refresh_events.send(in_progress);
-                    let event = refresh_target(&scheduler_state, &sync, &mut identities, &request).await;
-                    let _ = scheduler_state.refresh_events.send(event.clone());
-                    let manual = scheduler_state.refresh_queue.finish(job, event).await;
-                    if manual {
-                        enqueue_background_refreshes(&scheduler_state, &request).await;
-                    }
-                }
-                _ = interval.tick() => {
-                    if let Err(error) = sync_cycle(&scheduler_state, &sync, &mut identities).await {
-                        tracing::warn!(%error, "scheduled sync cycle failed");
-                    }
-                }
-            }
-        }
-        }));
+        tasks.push(tokio::spawn(run_season_scheduler(scheduler_state)));
         tasks.push(tokio::spawn(crate::services::next_schedule::run(
             state.clone(),
         )));
+    }
+    #[cfg(unix)]
+    if let Some(publisher) = state.publisher.clone() {
+        tasks.push(tokio::spawn(
+            publisher.relay_events(state.refresh_events.clone()),
+        ));
     }
     let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
     let wec_live = tokio::spawn(run_wec_live_supervisor(state.clone()));
@@ -902,40 +871,64 @@ async fn apply_live_update(
     state.live.publish(snapshot, data_updated);
 }
 
-/// The isolated publisher runs the canonical provider sync without starting
-/// the HTTP listener, analysis preload, manual refresh queue, or Live clients.
-pub async fn run_publisher(state: AppState) -> anyhow::Result<()> {
-    anyhow::ensure!(
-        state.jolpica.enabled,
-        "publish-sync requires the Jolpica provider"
-    );
-    let results = ResultsSync {
+/// The isolated publisher runs canonical sync and an optional private IPC
+/// listener. It never starts the public server, analysis preload or Live clients.
+#[cfg(unix)]
+pub async fn run_publisher(
+    state: AppState,
+    socket: Option<&std::path::Path>,
+) -> anyhow::Result<()> {
+    let bridge = socket
+        .map(|path| crate::publisher_bridge::serve(path, state.clone()))
+        .transpose()?;
+    let official = tokio::spawn(crate::services::next_schedule::run(state.clone()));
+    let scheduler = tokio::spawn(run_season_scheduler(state));
+    crate::server::shutdown_signal().await;
+    scheduler.abort();
+    official.abort();
+    let _ = scheduler.await;
+    let _ = official.await;
+    drop(bridge);
+    Ok(())
+}
+
+pub(crate) async fn run_season_scheduler(state: AppState) {
+    let sync = ResultsSync {
         jolpica: state.jolpica.clone(),
         openf1: state.openf1.clone(),
         timeout: Duration::from_secs(8),
     };
-    let official = tokio::spawn(crate::services::next_schedule::run(state.clone()));
-    let mut identities = None;
+    let mut identities = if let Some(season) = current_season(&state).await {
+        sync.cached_identity_maps(&state.database, season)
+            .await
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
     let mut interval = tokio::time::interval(TICK);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-    let stop = tokio::signal::ctrl_c();
-    tokio::pin!(stop);
-    let result = loop {
+    loop {
         tokio::select! {
-            result = &mut stop => break result,
-            _ = interval.tick() => {
-                if identities.is_none() && let Some(season) = current_season(&state).await {
-                    identities = results.cached_identity_maps(&state.database, season).await.ok().flatten();
+            biased;
+            job = state.refresh_queue.next() => {
+                let request = job.request.clone();
+                let in_progress = refresh_event(&state, &request, RefreshStatus::InProgress, None).await;
+                let _ = state.refresh_events.send(in_progress);
+                let event = refresh_target(&state, &sync, &mut identities, &request).await;
+                let _ = state.refresh_events.send(event.clone());
+                let manual = state.refresh_queue.finish(job, event).await;
+                if manual {
+                    enqueue_background_refreshes(&state, &request).await;
                 }
-                if let Err(error) = sync_cycle(&state, &results, &mut identities).await {
-                    tracing::warn!(%error, "publish-sync cycle failed");
+            }
+            _ = interval.tick() => {
+                if let Err(error) = sync_cycle(&state, &sync, &mut identities).await {
+                    tracing::warn!(%error, "scheduled season sync cycle failed");
                 }
             }
         }
-    };
-    official.abort();
-    let _ = official.await;
-    Ok(result?)
+    }
 }
 
 async fn sync_cycle(

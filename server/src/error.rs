@@ -70,7 +70,7 @@ impl From<tokio_postgres::Error> for StorageError {
         // Do not propagate database diagnostics: payloads and authentication
         // details may appear in driver errors.
         match error.code().map(|code| code.code()) {
-            None | Some("57014" | "57P01" | "57P02" | "57P03") => Self::SeasonUnavailable,
+            None | Some("57014" | "57P01" | "57P02" | "57P03" | "55P03") => Self::SeasonUnavailable,
             Some(code) if code.starts_with("08") => Self::SeasonUnavailable,
             Some(code) => Self::SeasonPostgres(code.to_owned()),
         }

@@ -17,13 +17,20 @@ async fn main() -> anyhow::Result<()> {
     let config_path = std::env::var("F1_COMPANION_CONFIG").ok().map(PathBuf::from);
     let config = AppConfig::load(config_path.as_deref())?;
     if args.as_slice() == ["publish-sync"] {
-        let path = std::env::var_os("PITPULSE_PUBLISH_STATE_PATH")
-            .context("PITPULSE_PUBLISH_STATE_PATH must name an isolated SQLite file")?;
-        let publisher = season_writer()?;
-        let database = Database::open(&PathBuf::from(path)).await?;
-        database.migrate().await?;
-        let database = database.with_season_publisher(publisher);
-        return scheduler::run_publisher(AppState::new(config, database)).await;
+        #[cfg(unix)]
+        {
+            let path = std::env::var_os("PITPULSE_PUBLISH_STATE_PATH")
+                .context("PITPULSE_PUBLISH_STATE_PATH must name an isolated SQLite file")?;
+            let publisher = season_writer()?;
+            let database = Database::open(&PathBuf::from(path)).await?;
+            database.migrate().await?;
+            let database = database.with_season_publisher(publisher);
+            let socket = std::env::var_os("PITPULSE_PUBLISH_SOCKET").map(PathBuf::from);
+            return scheduler::run_publisher(AppState::new(config, database), socket.as_deref())
+                .await;
+        }
+        #[cfg(not(unix))]
+        anyhow::bail!("publish-sync requires a Unix host");
     }
     let (args, resume) = match args.strip_suffix(&[String::from("--resume")]) {
         Some(prefix) if !prefix.is_empty() => (prefix, true),
@@ -59,6 +66,14 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = AppState::new(config, database);
+    #[cfg(unix)]
+    let state = if state.database.uses_central_season_data()
+        && let Some(socket) = std::env::var_os("PITPULSE_PUBLISH_SOCKET")
+    {
+        state.with_publisher_socket(&PathBuf::from(socket))?
+    } else {
+        state
+    };
     if let Some(seasons) = seasons {
         return pitpulse_server::services::backfill::run(state, seasons, resume).await;
     }
