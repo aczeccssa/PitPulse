@@ -616,7 +616,8 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
     """Describe what is on disk, and what the roster expects but is missing."""
     collected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entries: list[dict] = []
-    helmets = {(row["season"], row["driverId"]): row for row in json.loads(HELMET_SOURCES.read_text())}
+    historical_helmets = json.loads(HELMET_SOURCES.read_text()) if HELMET_SOURCES.exists() else []
+    helmets = {(row["season"], row["driverId"]): row for row in historical_helmets}
     present: set[tuple[str, str, int]] = set()
     for season in SEASONS:
         season_dir = HERE / str(season)

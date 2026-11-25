@@ -25,12 +25,6 @@
    "path": "server/resources/media",
    "scope": "2026 helmets",
    "rightsStatus": "restricted"
-  },
-  {
-   "name": "historical-helmets",
-   "path": "server/resources/motorsport/historical-helmets.json",
-   "scope": "approved 2025 helmet source attribution",
-   "rightsStatus": "restricted"
   }
  ],
  "policy": {
@@ -1798,636 +1792,6 @@
    "height": 320,
    "collectedAt": "2026-11-18T05:25:04+00:00",
    "sourcePageUrl": "https://www.formula1.com/en/drivers",
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "albon",
-   "season": 2025,
-   "file": "2025/helmet/albon.png",
-   "bytes": 30350,
-   "sha256": "aa293abf642e0fb3a12c8f7ea141bb8c4ba8e408f40047e574c9eebb2459c22b",
-   "width": 123,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "albon",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "aa293abf642e0fb3a12c8f7ea141bb8c4ba8e408f40047e574c9eebb2459c22b",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "alonso",
-   "season": 2025,
-   "file": "2025/helmet/alonso.png",
-   "bytes": 31060,
-   "sha256": "e2579df9d18f822f39f08b6080ba54c58397e50ee40f42e115a17a71ebeac73f",
-   "width": 126,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "alonso",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "e2579df9d18f822f39f08b6080ba54c58397e50ee40f42e115a17a71ebeac73f",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "antonelli",
-   "season": 2025,
-   "file": "2025/helmet/antonelli.png",
-   "bytes": 32290,
-   "sha256": "865bb56dcf16b43d2ddad034ee7f0271e6daf0a3c837699d49a9025ed131ba75",
-   "width": 123,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "antonelli",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "865bb56dcf16b43d2ddad034ee7f0271e6daf0a3c837699d49a9025ed131ba75",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "bearman",
-   "season": 2025,
-   "file": "2025/helmet/bearman.png",
-   "bytes": 30834,
-   "sha256": "b1f562faaeb60220b669f58f724b39520c1d5aea0232f1f611ce48c003ae13da",
-   "width": 118,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "bearman",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "b1f562faaeb60220b669f58f724b39520c1d5aea0232f1f611ce48c003ae13da",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "bortoleto",
-   "season": 2025,
-   "file": "2025/helmet/bortoleto.png",
-   "bytes": 29284,
-   "sha256": "22cfde80a625fdb87aaef768db37d041afda6a254290146586bd5a25751a9bc9",
-   "width": 122,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "bortoleto",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "22cfde80a625fdb87aaef768db37d041afda6a254290146586bd5a25751a9bc9",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "colapinto",
-   "season": 2025,
-   "file": "2025/helmet/colapinto.png",
-   "bytes": 27808,
-   "sha256": "03c8a6e9acc1926ce8590e3d62bea3dc9ecfdfc84d43775b77798c29cbe4375b",
-   "width": 120,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "colapinto",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "03c8a6e9acc1926ce8590e3d62bea3dc9ecfdfc84d43775b77798c29cbe4375b",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "doohan",
-   "season": 2025,
-   "file": "2025/helmet/doohan.png",
-   "bytes": 30184,
-   "sha256": "c513d8ab549804ba35c23bfe02be041907ca3690bb6def2d2aa043266d8be890",
-   "width": 121,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://helmetarchive.com/f1/2025/jack-doohan-miami/",
-   "provenance": {
-    "season": 2025,
-    "driverId": "doohan",
-    "sourcePage": "https://helmetarchive.com/f1/2025/jack-doohan-miami/",
-    "document": "2025 Miami Grand Prix helmet photograph; isolated original design and aligned canvas",
-    "sourceImage": "https://helmetarchive.com/photos/instagram/f1-2025-jack-doohan-miami.jpg",
-    "rightsStatus": "source attribution retained, local use",
-    "sha256": "c513d8ab549804ba35c23bfe02be041907ca3690bb6def2d2aa043266d8be890",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "gasly",
-   "season": 2025,
-   "file": "2025/helmet/gasly.png",
-   "bytes": 30948,
-   "sha256": "58981043417113c4fdb5715cf9ca35779500c42a9c1ca87103182bd0e2ba5d8e",
-   "width": 118,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "gasly",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "58981043417113c4fdb5715cf9ca35779500c42a9c1ca87103182bd0e2ba5d8e",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "hadjar",
-   "season": 2025,
-   "file": "2025/helmet/hadjar.png",
-   "bytes": 28132,
-   "sha256": "88f143f1d0d18483086932ddb7893a16bea55f9b583c27afd020ad4dbe4840cd",
-   "width": 114,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "hadjar",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "88f143f1d0d18483086932ddb7893a16bea55f9b583c27afd020ad4dbe4840cd",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "hamilton",
-   "season": 2025,
-   "file": "2025/helmet/hamilton.png",
-   "bytes": 27136,
-   "sha256": "409a7c29c4fa762372a9d80c3b94170b19c07471f21266a8160468f58a67859d",
-   "width": 112,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "hamilton",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "409a7c29c4fa762372a9d80c3b94170b19c07471f21266a8160468f58a67859d",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "hulkenberg",
-   "season": 2025,
-   "file": "2025/helmet/hulkenberg.png",
-   "bytes": 27391,
-   "sha256": "d5bce2c8af5879778ffc6a033c8913b41bed6caf17129c1e1d0d7cbe6d76a946",
-   "width": 120,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "hulkenberg",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "d5bce2c8af5879778ffc6a033c8913b41bed6caf17129c1e1d0d7cbe6d76a946",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "lawson",
-   "season": 2025,
-   "file": "2025/helmet/lawson.png",
-   "bytes": 29786,
-   "sha256": "74cbc5f27c9fbde28e258f94ddc84eafe788dbdd6e85da213d4e6fbf05b9f697",
-   "width": 117,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "lawson",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "74cbc5f27c9fbde28e258f94ddc84eafe788dbdd6e85da213d4e6fbf05b9f697",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "leclerc",
-   "season": 2025,
-   "file": "2025/helmet/leclerc.png",
-   "bytes": 28352,
-   "sha256": "4666e92cd74822800b4a42cf30906221c5c76e62120ae203a1297b57b8721854",
-   "width": 114,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "leclerc",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "4666e92cd74822800b4a42cf30906221c5c76e62120ae203a1297b57b8721854",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "max_verstappen",
-   "season": 2025,
-   "file": "2025/helmet/max_verstappen.png",
-   "bytes": 29824,
-   "sha256": "d70ccb1fe8371f3b475a27fb634c9a582940620a8bb1d9f4a9c3f544f4e6b870",
-   "width": 112,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "max_verstappen",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "d70ccb1fe8371f3b475a27fb634c9a582940620a8bb1d9f4a9c3f544f4e6b870",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "norris",
-   "season": 2025,
-   "file": "2025/helmet/norris.png",
-   "bytes": 31055,
-   "sha256": "047e2962b2224288a138f9698f9e69568a0015a48629b90b3382f939db17dcde",
-   "width": 111,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "norris",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "047e2962b2224288a138f9698f9e69568a0015a48629b90b3382f939db17dcde",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "ocon",
-   "season": 2025,
-   "file": "2025/helmet/ocon.png",
-   "bytes": 30478,
-   "sha256": "165917fb1e4e951e8c527421aadcd02b12d387bd698268da7b3fd6babb95c4d2",
-   "width": 128,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "ocon",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "165917fb1e4e951e8c527421aadcd02b12d387bd698268da7b3fd6babb95c4d2",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "piastri",
-   "season": 2025,
-   "file": "2025/helmet/piastri.png",
-   "bytes": 29289,
-   "sha256": "a00ee279877576f8b901d0bd2faa74d331e0614a6746abbbf8d0f93acdc45610",
-   "width": 115,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "piastri",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "a00ee279877576f8b901d0bd2faa74d331e0614a6746abbbf8d0f93acdc45610",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "russell",
-   "season": 2025,
-   "file": "2025/helmet/russell.png",
-   "bytes": 30314,
-   "sha256": "b7a70ce2fbe3a2f2d921a9000c611e30e547fbc5b96d34f9d94141d57ef98a4a",
-   "width": 123,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "russell",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "b7a70ce2fbe3a2f2d921a9000c611e30e547fbc5b96d34f9d94141d57ef98a4a",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "sainz",
-   "season": 2025,
-   "file": "2025/helmet/sainz.png",
-   "bytes": 30542,
-   "sha256": "0aede016d0b08cd89e31906f668d2c3ef73efcb9a032974e850aeb61bf399db5",
-   "width": 128,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "sainz",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "0aede016d0b08cd89e31906f668d2c3ef73efcb9a032974e850aeb61bf399db5",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "stroll",
-   "season": 2025,
-   "file": "2025/helmet/stroll.png",
-   "bytes": 26911,
-   "sha256": "00f32e6ee402957e5a7f121a248919481fa9f71e2705d0b654022efc1b860c3f",
-   "width": 112,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "stroll",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "00f32e6ee402957e5a7f121a248919481fa9f71e2705d0b654022efc1b860c3f",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
-   "license": "restricted",
-   "rightsStatus": "restricted",
-   "downloadStatus": "downloaded",
-   "applicability": {
-    "requestedSeason": 2025,
-    "designSeason": 2025,
-    "status": "seasonExact"
-   }
-  },
-  {
-   "kind": "helmet",
-   "id": "tsunoda",
-   "season": 2025,
-   "file": "2025/helmet/tsunoda.png",
-   "bytes": 30491,
-   "sha256": "2e811d99cb7a8730c50dbeb266794cd55189b49b1bb4ac1cf4688e729bf9c2b1",
-   "width": 128,
-   "height": 120,
-   "collectedAt": "2026-11-25T02:08:40+00:00",
-   "sourcePageUrl": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-   "provenance": {
-    "season": 2025,
-    "driverId": "tsunoda",
-    "sourcePage": "https://www.fia.com/sites/default/files/dossier_media_2025_gb_-_bat2.pdf",
-    "pdfPage": 30,
-    "document": "Official Formula 1 Monaco Grand Prix media kit",
-    "rightsStatus": "FOWC, local use",
-    "sha256": "2e811d99cb7a8730c50dbeb266794cd55189b49b1bb4ac1cf4688e729bf9c2b1",
-    "presentation": "transparent background, left-facing, 120 px height"
-   },
    "license": "restricted",
    "rightsStatus": "restricted",
    "downloadStatus": "downloaded",
@@ -4932,7 +4296,7 @@
        }
       ],
       "photo": "2025/driver-photo/max_verstappen.png",
-      "helmet": "2025/helmet/max_verstappen.png"
+      "helmet": null
      },
      "2026": {
       "name": "Max Verstappen",
@@ -5680,7 +5044,7 @@
        }
       ],
       "photo": "2025/driver-photo/sainz.png",
-      "helmet": "2025/helmet/sainz.png"
+      "helmet": null
      },
      "2026": {
       "name": "Carlos Sainz",
@@ -6136,7 +5500,7 @@
        }
       ],
       "photo": "2025/driver-photo/leclerc.png",
-      "helmet": "2025/helmet/leclerc.png"
+      "helmet": null
      },
      "2026": {
       "name": "Charles Leclerc",
@@ -6592,7 +5956,7 @@
        }
       ],
       "photo": "2025/driver-photo/russell.png",
-      "helmet": "2025/helmet/russell.png"
+      "helmet": null
      },
      "2026": {
       "name": "George Russell",
@@ -7048,7 +6412,7 @@
        }
       ],
       "photo": "2025/driver-photo/norris.png",
-      "helmet": "2025/helmet/norris.png"
+      "helmet": null
      },
      "2026": {
       "name": "Lando Norris",
@@ -7504,7 +6868,7 @@
        }
       ],
       "photo": "2025/driver-photo/hamilton.png",
-      "helmet": "2025/helmet/hamilton.png"
+      "helmet": null
      },
      "2026": {
       "name": "Lewis Hamilton",
@@ -7960,7 +7324,7 @@
        }
       ],
       "photo": "2025/driver-photo/piastri.png",
-      "helmet": "2025/helmet/piastri.png"
+      "helmet": null
      },
      "2026": {
       "name": "Oscar Piastri",
@@ -8416,7 +7780,7 @@
        }
       ],
       "photo": "2025/driver-photo/alonso.png",
-      "helmet": "2025/helmet/alonso.png"
+      "helmet": null
      },
      "2026": {
       "name": "Fernando Alonso",
@@ -8866,7 +8230,7 @@
        }
       ],
       "photo": "2025/driver-photo/stroll.png",
-      "helmet": "2025/helmet/stroll.png"
+      "helmet": null
      },
      "2026": {
       "name": "Lance Stroll",
@@ -9767,7 +9131,7 @@
        }
       ],
       "photo": "2025/driver-photo/tsunoda.png",
-      "helmet": "2025/helmet/tsunoda.png"
+      "helmet": null
      },
      "2026": {
       "name": "Yuki Tsunoda",
@@ -10121,7 +9485,7 @@
        }
       ],
       "photo": "2025/driver-photo/albon.png",
-      "helmet": "2025/helmet/albon.png"
+      "helmet": null
      },
      "2026": {
       "name": "Alexander Albon",
@@ -10577,7 +9941,7 @@
        }
       ],
       "photo": "2025/driver-photo/hulkenberg.png",
-      "helmet": "2025/helmet/hulkenberg.png"
+      "helmet": null
      },
      "2026": {
       "name": "Nico H\u00fclkenberg",
@@ -11027,7 +10391,7 @@
        }
       ],
       "photo": "2025/driver-photo/ocon.png",
-      "helmet": "2025/helmet/ocon.png"
+      "helmet": null
      },
      "2026": {
       "name": "Esteban Ocon",
@@ -11471,7 +10835,7 @@
        }
       ],
       "photo": "2025/driver-photo/gasly.png",
-      "helmet": "2025/helmet/gasly.png"
+      "helmet": null
      },
      "2026": {
       "name": "Pierre Gasly",
@@ -12205,7 +11569,7 @@
        }
       ],
       "photo": "2025/driver-photo/bearman.png",
-      "helmet": "2025/helmet/bearman.png"
+      "helmet": null
      },
      "2026": {
       "name": "Oliver Bearman",
@@ -12535,7 +11899,7 @@
        }
       ],
       "photo": "2025/driver-photo/colapinto.png",
-      "helmet": "2025/helmet/colapinto.png"
+      "helmet": null
      },
      "2026": {
       "name": "Franco Colapinto",
@@ -12884,7 +12248,7 @@
        }
       ],
       "photo": "2025/driver-photo/lawson.png",
-      "helmet": "2025/helmet/lawson.png"
+      "helmet": null
      },
      "2026": {
       "name": "Liam Lawson",
@@ -13095,7 +12459,7 @@
        }
       ],
       "photo": "2025/driver-photo/doohan.png",
-      "helmet": "2025/helmet/doohan.png"
+      "helmet": null
      }
     }
    },
@@ -13259,7 +12623,7 @@
        }
       ],
       "photo": "2025/driver-photo/antonelli.png",
-      "helmet": "2025/helmet/antonelli.png"
+      "helmet": null
      },
      "2026": {
       "name": "Andrea Kimi Antonelli",
@@ -13557,7 +12921,7 @@
        }
       ],
       "photo": "2025/driver-photo/bortoleto.png",
-      "helmet": "2025/helmet/bortoleto.png"
+      "helmet": null
      },
      "2026": {
       "name": "Gabriel Bortoleto",
@@ -13855,7 +13219,7 @@
        }
       ],
       "photo": "2025/driver-photo/hadjar.png",
-      "helmet": "2025/helmet/hadjar.png"
+      "helmet": null
      },
      "2026": {
       "name": "Isack Hadjar",
@@ -14588,6 +13952,153 @@
   },
   {
    "kind": "helmet",
+   "id": "albon",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "alonso",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "antonelli",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "bearman",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "bortoleto",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "colapinto",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "doohan",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "gasly",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "hadjar",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "hamilton",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "hulkenberg",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "lawson",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "leclerc",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "max_verstappen",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "norris",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "ocon",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "piastri",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "russell",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "sainz",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "stroll",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
+   "id": "tsunoda",
+   "season": 2025,
+   "status": "missing",
+   "reason": "Matching reference camera angle has not been verified"
+  },
+  {
+   "kind": "helmet",
    "id": "rafael_camara",
    "season": 2026,
    "status": "missing",
@@ -14617,8 +14128,7 @@
   "2025": {
    "car-side": 10,
    "driver-photo": 21,
-   "team-logo": 10,
-   "helmet": 21
+   "team-logo": 10
   },
   "2026": {
    "car-side": 11,

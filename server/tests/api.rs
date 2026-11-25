@@ -926,9 +926,12 @@ async fn test_historical_results_return_server_bound_media_and_typed_placeholder
 
     assert_eq!(media["driver"]["helmet"]["isPlaceholder"], true);
     assert_eq!(media["driver"]["helmet"]["file"], "helmet.png");
-    let verified = json_get(&router, "/api/v1/seasons/2025/drivers/max_verstappen/media").await;
-    assert_eq!(verified["data"]["helmet"]["isPlaceholder"], false);
-    assert_eq!(verified["data"]["helmet"]["group"], "2025/helmet");
+    let unresolved = json_get(&router, "/api/v1/seasons/2025/drivers/max_verstappen/media").await;
+    assert_eq!(unresolved["data"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(
+        unresolved["data"]["driverPhoto"]["group"],
+        "2025/driver-photo"
+    );
 
     let missing = json_get(&router, "/api/v1/seasons/2024/drivers/no_such_driver/media").await;
     assert_eq!(missing["data"]["helmet"]["isPlaceholder"], true);

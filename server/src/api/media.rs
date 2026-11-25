@@ -333,27 +333,17 @@ mod tests {
     }
 
     #[test]
-    fn approved_2025_helmet_bindings_cover_every_race_driver_and_source_digest() {
-        let roster: serde_json::Value =
-            serde_json::from_str(include_str!("../../resources/motorsport/roster.json")).unwrap();
-        let sources: Vec<serde_json::Value> = serde_json::from_str(include_str!(
-            "../../resources/motorsport/historical-helmets.json"
-        ))
-        .unwrap();
-        let year = 2025;
-        let year_key = year.to_string();
-        let drivers = roster["seasons"][&year_key]["drivers"].as_object().unwrap();
-        for id in drivers.keys() {
-            let public = CATALOG.web_bindings.driver(year, id);
-            let native = CATALOG.bindings.driver(year, id);
-            let reference = &public["helmet"];
-            assert_eq!(reference["isPlaceholder"], false, "{year}/{id}");
-            assert_eq!(reference["sha256"], native["helmet"]["sha256"]);
-            let source = sources
-                .iter()
-                .find(|source| source["season"] == year && source["driverId"] == id.as_str())
-                .unwrap();
-            assert_eq!(reference["sha256"], source["sha256"]);
+    fn missing_helmet_never_binds_to_a_portrait_or_another_season() {
+        for bindings in [&CATALOG.bindings, &CATALOG.web_bindings] {
+            let unresolved = bindings.driver(2025, "max_verstappen");
+            assert_eq!(unresolved["helmet"]["group"], "placeholders");
+            assert_eq!(unresolved["helmet"]["file"], "helmet.png");
+            assert_eq!(unresolved["helmet"]["isPlaceholder"], true);
+            assert_eq!(unresolved["driverPhoto"]["group"], "2025/driver-photo");
+            assert_eq!(
+                bindings.driver(2026, "max_verstappen")["helmet"]["isPlaceholder"],
+                false
+            );
         }
     }
 
