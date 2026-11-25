@@ -14,6 +14,27 @@
 
 Postgres uses natural keys from the SQLite uniqueness constraints. SQLite surrogate `id` values on results and standings are internal row IDs. Date strings and JSON text are preserved from the source database. Unsupported archived years are excluded by the product season floor, with explicit counts in the import report. An existing SQLite file remains a rollback artifact until the operator verifies a separate SQLite cutover. The application must never use its old history as a silent fallback in Postgres mode.
 
+## Migrate, switch, and roll back
+
+Rehearse on an isolated copy first. Keep the previous binary, configuration and database backup together. Use private service environment files with shell tracing disabled. Keep the writer URL out of HTTP process environments and use TLS hostname verification for non-loopback connections.
+
+1. Stop legacy season writers and keep `publish-sync` stopped. Make a consistent backup of the current SQLite database with SQLite's backup API or CLI `.backup`. A raw copy of an active WAL database is insufficient. Save the source file, manifest of supported seasons and representative API responses. The import expects SQLite schema v11. Upgrade a copy with the legacy schema v11 binary before import if necessary.
+2. Use a dedicated `pitpulse_…` Postgres schema owned by the migration role. Ask the database administrator to preprovision the schema if the role cannot create schemas. The reader must be a separate login without DDL, mutation privileges or writer-role membership. With the schema, writer DSN and reader role set in the operator's private environment, run:
+
+   ```sh
+   pitpulse-server season-data migrate
+   pitpulse-server season-data import "$LEGACY_SQLITE_SNAPSHOT" > import-report.json
+   pitpulse-server season-data verify "$LEGACY_SQLITE_SNAPSHOT" > verify-report.json
+   ```
+
+   Check every table's `source == verified`, intended `excluded` counts and Postgres counts against the manifest. On a fresh target `inserted == source` for the first import. Re-importing the same snapshot must insert zero rows. Each import is atomic across the canonical tables. If a run is interrupted, repeat `migrate`, `import`, and `verify` from the same immutable snapshot before starting any publisher. A conflict fails the whole import. Inspect the affected keys or retry in a separate staging schema rather than changing authoritative rows to force a match. Once a publisher has advanced the data, the historical snapshot is no longer a suitable verify-only reference for revised keys.
+3. Start a canary reader with `PITPULSE_SEASON_READ_DATABASE_URL`, `PITPULSE_SEASON_SCHEMA` and `F1_COMPANION_DATABASE_PATH` pointing at a separate, new SQLite path. The binary initializes the v11 schema. To carry local state forward, stop the canary and copy `sync_state` and `live_snapshot_cache` from a consistent v11 backup to the new file in one transaction. Keep `analysis_cache` only when needed and apply its normal retention. Keep the existing TOML, token, and local media paths. Give the publisher a different SQLite path. If moving publisher retry state, seed its `sync_state` from the same snapshot before starting it.
+4. Compare status/body on captured season endpoints and verify `/api/v1/health`, `/api/v1/live/snapshot` and the SSE first event. Check that canonical SQLite tables are empty and `/api/v1/diagnostics/season-cache` reports origin loads on first read and hits on repeat. The central reader disables legacy season writes and backfill. `POST /api/v1/refresh` returns the existing refresh-unavailable `503` for otherwise-valid requests in this mode. Switch traffic only after these checks. Start one isolated `publish-sync`, confirm one intended revision appears on a reader, and verify the HTTP and publisher SQLite files still hold no canonical rows. Keep the old SQLite backup for rollback.
+
+**Rollback.** Stop the publisher before promoting the SQLite path, and record the final Postgres generation and recent publication revisions. Stop the central reader and start the prior release with its previous configuration and a working copy of the preserved v11 SQLite snapshot. Remove `PITPULSE_SEASON_READ_DATABASE_URL` from that service environment and restore `F1_COMPANION_DATABASE_PATH` to the rollback copy. If the central reader ran long enough to hold newer live recovery data, snapshot its SQLite and copy `live_snapshot_cache` into the rollback copy before it starts. Check health, representative season endpoints, and Live/SSE before switching traffic. The restored history is current through the SQLite snapshot. Post-cutover Postgres revisions remain in Postgres and require reconciliation before any later cutover. Keep both stores and the import reports intact during rollback.
+
+The Local VM rollback drill used the same 2024–2026 fixture as the load comparison. It switched the actual release processes from the baseline binary to the Postgres reader and back to the baseline binary on a copy of the SQLite backup. The first import verified and inserted 15,318 rows. Re-import and verify each matched all 15,318 rows and inserted none. Calendar, driver standings, and session results returned identical status and bodies across all three phases. Health, Live snapshot, and the first SSE event passed at each phase. The central SQLite retained zero canonical rows. The drill did not run any production services.
+
 ## Isolated publisher
 
 Run `pitpulse-server publish-sync` as a separate process with `PITPULSE_SEASON_WRITE_DATABASE_URL`, the shared `PITPULSE_SEASON_SCHEMA`, and a dedicated `PITPULSE_PUBLISH_STATE_PATH`. Provision the write credential to the publisher and migration operator only. HTTP instances use `PITPULSE_SEASON_READ_DATABASE_URL` and never consult the write variable. The publisher reuses the periodic Jolpica/OpenF1 sync and official schedule refresh, without opening an HTTP listener. SQLite holds the restartable retry state. Empty or unavailable upstream responses leave stored classifications and standings intact. Revision and reader generation changes commit with canonical payloads. The previous SQLite-backed server mode remains available by starting HTTP without `PITPULSE_SEASON_READ_DATABASE_URL` against the pre-cutover SQLite snapshot.
@@ -59,7 +80,7 @@ The script sends a four-way mix of calendar, driver standings, constructor stand
 
 Rust 1.94.1 release builds (`39f7c759` and `31f8999`), PostgreSQL 15.20 on loopback, AMD Ryzen 7 H 255, 16 logical CPUs. The fixture contains 72 meetings, 360 sessions and 14,400 classification rows (two revisions for each 20-driver field), plus standings and identity/mapping data. The import verified all 15,318 canonical rows. No remote load was generated.
 
-Each row is the median of three 2,400-request runs for each displayed metric. All 64,800 requests returned HTTP 200.
+Each row is the median of three 2,400-request runs for each displayed metric. All 64,800 requests returned HTTP 200. The [raw measurement JSON](evidence/pp-57-local-benchmark.json) contains each run, including status counts and error rates.
 
 | Concurrency | Mode | p50 ms | p95 ms | p99 ms | Requests/s | Query hits / origin loads per run |
 |---:|---|---:|---:|---:|---:|---:|

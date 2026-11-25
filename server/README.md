@@ -36,6 +36,10 @@ F1_COMPANION_DATABASE_PATH=/tmp/pitpulse.sqlite \
 ```
 
 
+## Canonical season storage
+
+See [season-data storage, migration, and rollback](season-data.md) for the Postgres reader and isolated publisher.
+
 ## Historical season import
 
 Run the server executable with the same database configuration as the service. The range is inclusive. The command also accepts a single year.

@@ -1,0 +1,950 @@
+{
+  "schema": "pitpulse_bench_1795624993_40324",
+  "repeats": 3,
+  "rows": [
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.819567,
+      "p95_ms": 1.134728,
+      "p99_ms": 1.273008,
+      "requests_per_second": 1222.891962795995,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 1
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 4.87802,
+      "p95_ms": 6.732991,
+      "p99_ms": 7.519444,
+      "requests_per_second": 3069.65082223516,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 1
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 20.206166,
+      "p95_ms": 27.948603,
+      "p99_ms": 30.122595,
+      "requests_per_second": 2985.65178599311,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 1
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 1.329837,
+      "p95_ms": 2.892652,
+      "p99_ms": 3.437057,
+      "requests_per_second": 661.7010288934372,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 1
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 2.085203,
+      "p95_ms": 4.387619,
+      "p99_ms": 7.283092,
+      "requests_per_second": 4284.885374695756,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 1
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 8.992423,
+      "p95_ms": 17.585571,
+      "p99_ms": 18.697919,
+      "requests_per_second": 5458.826030106188,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 1
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.487016,
+      "p95_ms": 0.688284,
+      "p99_ms": 0.819536,
+      "requests_per_second": 2021.5273560079522,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 1
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 1.356207,
+      "p95_ms": 2.025558,
+      "p99_ms": 2.425343,
+      "requests_per_second": 10741.996949062057,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 1
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 4.951853,
+      "p95_ms": 7.286017,
+      "p99_ms": 8.497656,
+      "requests_per_second": 12109.55740556403,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 1
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.841463,
+      "p95_ms": 1.162244,
+      "p99_ms": 1.341205,
+      "requests_per_second": 1184.5071984185174,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 2
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 4.809948,
+      "p95_ms": 6.493099,
+      "p99_ms": 7.031584,
+      "requests_per_second": 3149.179655704322,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 2
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 20.500349,
+      "p95_ms": 28.766643,
+      "p99_ms": 32.554027,
+      "requests_per_second": 2924.4182282097936,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 2
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 1.295417,
+      "p95_ms": 2.775087,
+      "p99_ms": 3.159566,
+      "requests_per_second": 691.6934997408882,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 2
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 1.875871,
+      "p95_ms": 4.059291,
+      "p99_ms": 5.072983,
+      "requests_per_second": 4606.472588110162,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 2
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 8.374966,
+      "p95_ms": 16.42461,
+      "p99_ms": 17.424756,
+      "requests_per_second": 5799.37134282509,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 2
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.489959,
+      "p95_ms": 0.656727,
+      "p99_ms": 0.736144,
+      "requests_per_second": 2051.216752481401,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 2
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 1.03791,
+      "p95_ms": 1.553149,
+      "p99_ms": 1.807522,
+      "requests_per_second": 13486.136960269525,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 2
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 4.350595,
+      "p95_ms": 6.594859,
+      "p99_ms": 7.818934,
+      "requests_per_second": 13141.04214329996,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 2
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.84675,
+      "p95_ms": 1.134684,
+      "p99_ms": 1.324612,
+      "requests_per_second": 1191.0388304697465,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 3
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 4.804455,
+      "p95_ms": 6.362673,
+      "p99_ms": 6.832016,
+      "requests_per_second": 3157.304823536642,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 3
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 20.921669,
+      "p95_ms": 28.716242,
+      "p99_ms": 30.995873,
+      "requests_per_second": 2878.998241012874,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": null,
+      "mode": "sqlite",
+      "repeat": 3
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 1.308361,
+      "p95_ms": 2.741262,
+      "p99_ms": 3.088459,
+      "requests_per_second": 693.2327071697753,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 3
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 1.859256,
+      "p95_ms": 4.005515,
+      "p99_ms": 4.964734,
+      "requests_per_second": 4615.330269880511,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 3
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 10.544779,
+      "p95_ms": 20.888605,
+      "p99_ms": 28.590965,
+      "requests_per_second": 4785.527349797894,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 0,
+        "originLoads": 3000,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_cold",
+      "repeat": 3
+    },
+    {
+      "concurrency": 1,
+      "requests": 2400,
+      "p50_ms": 0.506845,
+      "p95_ms": 0.705483,
+      "p99_ms": 0.850137,
+      "requests_per_second": 1948.7391759640661,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 3
+    },
+    {
+      "concurrency": 16,
+      "requests": 2400,
+      "p50_ms": 1.240278,
+      "p95_ms": 1.705293,
+      "p99_ms": 1.97858,
+      "requests_per_second": 12070.327947544849,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 3
+    },
+    {
+      "concurrency": 64,
+      "requests": 2400,
+      "p50_ms": 5.002662,
+      "p95_ms": 6.134088,
+      "p99_ms": 8.049648,
+      "requests_per_second": 12118.438529122159,
+      "errors": 0,
+      "error_rate": 0.0,
+      "statuses": {
+        "200": 2400
+      },
+      "cache": {
+        "evictions": 0,
+        "hits": 3000,
+        "originLoads": 0,
+        "revisionChecks": 0,
+        "staleHits": 0,
+        "unavailable": 0
+      },
+      "mode": "pg_warm",
+      "repeat": 3
+    }
+  ],
+  "sqlite_after_load": [
+    {
+      "bytes": 2785280,
+      "rows": {
+        "meetings": 72,
+        "sessions": 360,
+        "session_results": 14400,
+        "driver_standings": 60,
+        "constructor_standings": 30,
+        "provider_mappings": 360,
+        "driver_mappings": 20,
+        "constructor_mappings": 10,
+        "provider_identity_cache": 3,
+        "calendar_snapshots": 3,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "sqlite",
+      "repeat": 1
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_cold",
+      "repeat": 1
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_warm",
+      "repeat": 1
+    },
+    {
+      "bytes": 2785280,
+      "rows": {
+        "meetings": 72,
+        "sessions": 360,
+        "session_results": 14400,
+        "driver_standings": 60,
+        "constructor_standings": 30,
+        "provider_mappings": 360,
+        "driver_mappings": 20,
+        "constructor_mappings": 10,
+        "provider_identity_cache": 3,
+        "calendar_snapshots": 3,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "sqlite",
+      "repeat": 2
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_cold",
+      "repeat": 2
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_warm",
+      "repeat": 2
+    },
+    {
+      "bytes": 2785280,
+      "rows": {
+        "meetings": 72,
+        "sessions": 360,
+        "session_results": 14400,
+        "driver_standings": 60,
+        "constructor_standings": 30,
+        "provider_mappings": 360,
+        "driver_mappings": 20,
+        "constructor_mappings": 10,
+        "provider_identity_cache": 3,
+        "calendar_snapshots": 3,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "sqlite",
+      "repeat": 3
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_cold",
+      "repeat": 3
+    },
+    {
+      "bytes": 155648,
+      "rows": {
+        "meetings": 0,
+        "sessions": 0,
+        "session_results": 0,
+        "driver_standings": 0,
+        "constructor_standings": 0,
+        "provider_mappings": 0,
+        "driver_mappings": 0,
+        "constructor_mappings": 0,
+        "provider_identity_cache": 0,
+        "calendar_snapshots": 0,
+        "next_season_schedule": 0,
+        "sync_state": 1
+      },
+      "mode": "pg_warm",
+      "repeat": 3
+    }
+  ],
+  "legacy_sqlite": {
+    "bytes": 2772992,
+    "rows": {
+      "meetings": 72,
+      "sessions": 360,
+      "session_results": 14400,
+      "driver_standings": 60,
+      "constructor_standings": 30,
+      "provider_mappings": 360,
+      "driver_mappings": 20,
+      "constructor_mappings": 10,
+      "provider_identity_cache": 3,
+      "calendar_snapshots": 3,
+      "next_season_schedule": 0,
+      "sync_state": 1
+    }
+  },
+  "central_sqlite": {
+    "bytes": 143360,
+    "rows": {
+      "meetings": 0,
+      "sessions": 0,
+      "session_results": 0,
+      "driver_standings": 0,
+      "constructor_standings": 0,
+      "provider_mappings": 0,
+      "driver_mappings": 0,
+      "constructor_mappings": 0,
+      "provider_identity_cache": 0,
+      "calendar_snapshots": 0,
+      "next_season_schedule": 0,
+      "sync_state": 1
+    }
+  },
+  "import": [
+    {
+      "table": "meetings",
+      "source": 72,
+      "excluded": 0,
+      "inserted": 72,
+      "verified": 72
+    },
+    {
+      "table": "sessions",
+      "source": 360,
+      "excluded": 0,
+      "inserted": 360,
+      "verified": 360
+    },
+    {
+      "table": "session_results",
+      "source": 14400,
+      "excluded": 0,
+      "inserted": 14400,
+      "verified": 14400
+    },
+    {
+      "table": "driver_standings",
+      "source": 60,
+      "excluded": 0,
+      "inserted": 60,
+      "verified": 60
+    },
+    {
+      "table": "constructor_standings",
+      "source": 30,
+      "excluded": 0,
+      "inserted": 30,
+      "verified": 30
+    },
+    {
+      "table": "provider_mappings",
+      "source": 360,
+      "excluded": 0,
+      "inserted": 360,
+      "verified": 360
+    },
+    {
+      "table": "driver_mappings",
+      "source": 20,
+      "excluded": 0,
+      "inserted": 20,
+      "verified": 20
+    },
+    {
+      "table": "constructor_mappings",
+      "source": 10,
+      "excluded": 0,
+      "inserted": 10,
+      "verified": 10
+    },
+    {
+      "table": "provider_identity_cache",
+      "source": 3,
+      "excluded": 0,
+      "inserted": 3,
+      "verified": 3
+    },
+    {
+      "table": "calendar_snapshots",
+      "source": 3,
+      "excluded": 0,
+      "inserted": 3,
+      "verified": 3
+    },
+    {
+      "table": "next_season_schedule",
+      "source": 0,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 0
+    }
+  ],
+  "verify": [
+    {
+      "table": "meetings",
+      "source": 72,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 72
+    },
+    {
+      "table": "sessions",
+      "source": 360,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 360
+    },
+    {
+      "table": "session_results",
+      "source": 14400,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 14400
+    },
+    {
+      "table": "driver_standings",
+      "source": 60,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 60
+    },
+    {
+      "table": "constructor_standings",
+      "source": 30,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 30
+    },
+    {
+      "table": "provider_mappings",
+      "source": 360,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 360
+    },
+    {
+      "table": "driver_mappings",
+      "source": 20,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 20
+    },
+    {
+      "table": "constructor_mappings",
+      "source": 10,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 10
+    },
+    {
+      "table": "provider_identity_cache",
+      "source": 3,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 3
+    },
+    {
+      "table": "calendar_snapshots",
+      "source": 3,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 3
+    },
+    {
+      "table": "next_season_schedule",
+      "source": 0,
+      "excluded": 0,
+      "inserted": 0,
+      "verified": 0
+    }
+  ],
+  "cold_same_key_burst": {
+    "concurrency": 64,
+    "requests": 64,
+    "p50_ms": 7.941096,
+    "p95_ms": 31.539532,
+    "p99_ms": 31.687476,
+    "requests_per_second": 1962.5031860125855,
+    "errors": 0,
+    "error_rate": 0.0,
+    "statuses": {
+      "200": 64
+    },
+    "cache": {
+      "evictions": 0,
+      "hits": 63,
+      "originLoads": 1,
+      "revisionChecks": 0,
+      "staleHits": 0,
+      "unavailable": 0
+    }
+  }
+}
