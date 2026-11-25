@@ -34,3 +34,44 @@ Central readers keep a shared, process-local cache of canonical query results. R
 A generation change invalidates the fresh copy on the next check. An unavailable center triggers a coalesced retry after one second. A last successful eligible value is served within the stale window, with existing `meta.stale` and `meta.quality` fields updated where the response has metadata. An uncached key, exhausted stale window or cached negative lookup during an outage returns `503` with `season_data_unavailable` and `Retry-After`. Live recovery, health and SSE use local state.
 
 `GET /api/v1/diagnostics/season-cache` uses the existing API authentication and reports aggregate `hits`, `staleHits`, `originLoads`, `revisionChecks`, `evictions` and `unavailable` counters for the running process. An origin load is one canonical query operation, which can use several SQL statements. Generation probes are tracked separately. A session results request can touch both the session lookup and classification keys. SQLite-only mode returns `data: null`.
+
+## Reproduce the local load comparison
+
+Build the original SQLite baseline and the candidate with the same toolchain and release profile. Use a fresh local Postgres database or a dedicated disposable database. `PITPULSE_BENCH_LOCAL_URL` names its loopback connection. Optionally set `PITPULSE_BENCH_LOCAL_READ_URL` and `PITPULSE_BENCH_LOCAL_READER_ROLE` to a separate login already created on that database. The script creates a uniquely named fixture schema and leaves it for inspection. SQLite files are temporary and the JSON report includes the name of the fixture schema.
+
+```sh
+base=39f7c759
+bench=$(mktemp -d)
+git worktree add --detach "$bench/baseline" "$base"
+export CARGO_TARGET_DIR="$bench/target"
+cargo +1.94.1 build --manifest-path "$bench/baseline/server/Cargo.toml" --locked --release --bin pitpulse-server
+cp "$CARGO_TARGET_DIR/release/pitpulse-server" "$bench/sqlite-server"
+cargo +1.94.1 build --manifest-path server/Cargo.toml --locked --release --bin pitpulse-server
+python3 scripts/bench-season-storage.py \
+  --legacy "$bench/sqlite-server" --central "$CARGO_TARGET_DIR/release/pitpulse-server" \
+  --out "$bench/results" --requests 2400 --repeats 3
+```
+
+The script sends a four-way mix of calendar, driver standings, constructor standings and session results over loopback HTTP/1.1 keep-alive at concurrency 1, 16 and 64. It checks all 81 distinct URLs against the baseline response. Cold means application caching is disabled and Postgres may already have data and connections in memory. Warm uses the default cache and primes the same URLs before measuring. The separate 64-request burst targets one previously unrequested calendar key. Both modes use the same generated 2024–2026 fixture, disable the live and racing providers in config, and point environment-aware outbound HTTP through an unavailable loopback proxy. They run sequentially with eight Tokio worker threads. Cache counters are per canonical query, so one HTTP request can account for several hits or origin loads. Percentiles in `results.json` use nearest rank and exclude fixture setup, connection setup, priming and correctness checks.
+
+### Local VM measurements (2026-11-25 UTC)
+
+Rust 1.94.1 release builds (`39f7c759` and `31f8999`), PostgreSQL 15.20 on loopback, AMD Ryzen 7 H 255, 16 logical CPUs. The fixture contains 72 meetings, 360 sessions and 14,400 classification rows (two revisions for each 20-driver field), plus standings and identity/mapping data. The import verified all 15,318 canonical rows. No remote load was generated.
+
+Each row is the median of three 2,400-request runs for each displayed metric. All 64,800 requests returned HTTP 200.
+
+| Concurrency | Mode | p50 ms | p95 ms | p99 ms | Requests/s | Query hits / origin loads per run |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | SQLite baseline | 0.841 | 1.135 | 1.325 | 1,191 | — |
+| 1 | Postgres cold | 1.308 | 2.775 | 3.160 | 692 | 0 / 3,000 |
+| 1 | Postgres warm | 0.490 | 0.688 | 0.820 | 2,022 | 3,000 / 0 |
+| 16 | SQLite baseline | 4.810 | 6.493 | 7.032 | 3,149 | — |
+| 16 | Postgres cold | 1.876 | 4.059 | 5.073 | 4,606 | 0 / 3,000 |
+| 16 | Postgres warm | 1.240 | 1.705 | 1.979 | 12,070 | 3,000 / 0 |
+| 64 | SQLite baseline | 20.500 | 28.716 | 30.996 | 2,924 | — |
+| 64 | Postgres cold | 8.992 | 17.586 | 18.698 | 5,459 | 0 / 3,000 |
+| 64 | Postgres warm | 4.952 | 6.595 | 8.050 | 12,118 | 3,000 / 0 |
+
+The one-key cold burst returned 64/64 HTTP 200 with 63 hits and one origin load. Its p50/p95/p99 were 7.941/31.540/31.687 ms at 1,963 requests/s. Warm p95 was 61%, 26%, and 23% of the SQLite baseline at concurrency 1, 16, and 64. Single-client cold p95 was 2.44× the SQLite baseline. These loopback results measure application and database work on one VM. Hosted latency depends on the instance-to-Supabase network path.
+
+After checkpoint and vacuum, the seeded SQLite was 2,772,992 bytes and the clean cutover SQLite was 143,360 bytes (−94.8%). After HTTP runs and checkpoint, those files were 2,785,280 and 155,648 bytes respectively. Each central-mode copy retained zero rows across the 11 canonical tables. This comparison uses a clean SQLite database with seeded local sync state. Existing full SQLite files retain their original size and contents until a separate cutover.
