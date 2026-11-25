@@ -37,11 +37,7 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-CATALOG = (
-    REPO
-    / "Packages/SharedComponents/Sources/SharedComponents/Resources"
-    / "PitPulseAssets.xcassets"
-)
+NATIVE_MEDIA = HERE.parent / "media"
 
 ROSTER = HERE / "roster.json"
 MANIFEST = HERE / "manifest.json"
@@ -565,7 +561,7 @@ class Collector:
         for driver_id in self.roster[str(season)]["drivers"]:
             if self.skip("helmet", driver_id, season):
                 continue
-            source = CATALOG / f"helmet-{driver_id}-{season}.imageset" / "image.png"
+            source = NATIVE_MEDIA / f"native-{season}" / "helmet" / f"helmet-{driver_id}-{season}.png"
             if not source.exists():
                 continue
             image = fit_height(trim(Image.open(source).convert("RGBA")), HELMET_HEIGHT)
@@ -586,7 +582,7 @@ def gap_reason(kind: str, season: int) -> str:
         )
     if kind == "helmet":
         return (
-            "no public season-scoped helmet artwork; only the 2026 app "
+            "no public season-scoped helmet artwork; only the 2026 native media "
             "catalog carries helmets"
         )
     return "no official artwork answered for this entry"
@@ -597,7 +593,7 @@ def provenance_for(asset_id: str, kind: str, season: int) -> dict:
         "driver-photo": f"{F1_SITE}/en/drivers",
         "car-side": f"{F1_SITE}/en/teams",
         "team-logo": f"{F1_SITE}/en/teams",
-        "helmet": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+        "helmet": "https://turn1visuals.com/f1-2026-assets/ (native media import)",
     }[kind]
     return {
         "sourcePageUrl": page,
@@ -771,7 +767,7 @@ def write_manifest(roster: dict) -> None:
             },
             {
                 "name": "pitpulse-app-catalog",
-                "path": str(CATALOG.relative_to(REPO)),
+                "path": str(NATIVE_MEDIA.relative_to(REPO)),
                 "scope": "2026 helmets",
                 "rightsStatus": "restricted",
             },

@@ -29,7 +29,7 @@ struct DriverAnalysisScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
                     AssetImage(
-                        name: MotorsportAssetName.helmetName(
+                        name: MotorsportAssetName.driverAvatarName(
                             driverID: driver.driverId, name: driver.driverName, season: season)
                     )
                     .frame(width: 56, height: 50)

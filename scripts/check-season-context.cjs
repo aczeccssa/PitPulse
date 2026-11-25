@@ -34,3 +34,21 @@ vm.runInContext(functionSource('renderStandingsPage'), context);
 assert.throws(() => vm.runInContext('renderStandingsPage()', context), /season captured/);
 assert.equal(context.loadedSeason, 2024, 'standings must load the requested season');
 console.log('PASS: requested season survives bootstrap; racing number comes from that season results');
+
+// Historical driver avatars use artwork from the selected season.
+context.ASSETS = {
+ '2024/driver-photo/max_verstappen.png': '2024-portrait',
+ '2025/driver-photo/max_verstappen.png': '2025-portrait',
+ '2026/driver-photo/max_verstappen.png': '2026-portrait',
+ '2026/helmet/max_verstappen.png': '2026-helmet',
+};
+context.DRIVER_ALIASES = { verstappen: 'max_verstappen' };
+context.artImage = (className, src) => ({className, src});
+for (const name of ['hasAsset', 'mediaSrc', 'assetSrc', 'driverAssetId', 'helmetImage', 'driverPhotoArt', 'driverAvatarImage']) {
+ vm.runInContext(functionSource(name), context);
+}
+for (const [year, digest] of [[2024, '2024-portrait'], [2025, '2025-portrait'], [2026, '2026-helmet']]) {
+ assert.equal(vm.runInContext(`driverAvatarImage(${year}, 'verstappen').src`, context), `/media/blob/${digest}`);
+}
+assert.equal(vm.runInContext("driverAvatarImage(2023, 'verstappen')", context), null);
+console.log('PASS: driver avatars use only the selected season assets and prefer its helmet');

@@ -65,7 +65,7 @@ struct StandingDetailView: View {
                         .accessibilityHidden(true)
                 }
             } else {
-                DriverHelmetAvatar(
+                DriverAvatar(
                     driverID: target.id,
                     name: target.title,
                     season: target.season,

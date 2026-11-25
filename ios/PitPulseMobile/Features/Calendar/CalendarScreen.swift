@@ -348,7 +348,7 @@ struct WebHomeScreen<Header: View>: View {
         let name = stop.driverName ?? "Unknown driver"
         let surname = name.split(separator: " ").last.map(String.init)
         let driverID = model.driverRoster.first { $0.driverName.caseInsensitiveCompare(name) == .orderedSame }?.driverId
-        let helmet = MotorsportAssetName.helmetName(driverID: driverID, name: name, season: model.season)
+        let helmet = MotorsportAssetName.driverAvatarName(driverID: driverID, name: name, season: model.season)
         return HStack(spacing: 6) {
             AssetImage(name: helmet)
                 .frame(width: abbreviated ? 29 : 44, height: abbreviated ? 32 : 40)
@@ -512,7 +512,7 @@ struct WebHomeScreen<Header: View>: View {
                 }
                 if let driver = model.favoriteStanding {
                     HStack(spacing: 7) {
-                        AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.id, name: driver.driverName, season: driver.season))
+                        AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: driver.id, name: driver.driverName, season: driver.season))
                             .frame(width: 36, height: 36).accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 3) {
                             let abbreviation = MotorsportAssetName.abbreviation(driver.driverName)
@@ -1271,7 +1271,7 @@ private struct HomeSeasonRecords: View {
                     Label(record.category.rawValue, systemImage: record.category.symbol)
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer(minLength: 4)
-                    AssetImage(name: MotorsportAssetName.helmetName(driverID: record.row.id,
+                    AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: record.row.id,
                         name: record.row.driverName, season: record.weekend.meeting.season))
                         .frame(width: 28, height: 26)
                 }

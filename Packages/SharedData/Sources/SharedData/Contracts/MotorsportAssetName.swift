@@ -45,6 +45,10 @@ public enum MotorsportAssetName {
 }
 
 extension MotorsportAssetName {
+    public static func driverAvatarName(driverID: String? = nil, name: String, season: Int) -> String {
+        "avatar-" + helmetName(driverID: driverID, name: name, season: season)
+    }
+
     public static func helmetName(driverID: String? = nil, name: String, season: Int) -> String {
         let surname = String(name.split(whereSeparator: \.isWhitespace).last ?? "")
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))

@@ -22,7 +22,7 @@
   },
   {
    "name": "pitpulse-app-catalog",
-   "path": "Packages/SharedComponents/Sources/SharedComponents/Resources/PitPulseAssets.xcassets",
+   "path": "server/resources/media",
    "scope": "2026 helmets",
    "rightsStatus": "restricted"
   }

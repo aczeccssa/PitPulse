@@ -46,7 +46,7 @@ struct SessionResultDetailView: View {
             .accessibilityIdentifier("results.back")
             .keyboardShortcut(.cancelAction)
 
-            DriverHelmetAvatar(
+            DriverAvatar(
                 driverID: result.driverId,
                 name: result.driverName,
                 season: season,

@@ -21,7 +21,7 @@ public enum MotorsportImages {
     nonisolated public static func fallbackSymbol(named name: String) -> String? {
         if name.hasPrefix("team-logo-") { return "shield" }
         if name.hasPrefix("car-side-") { return "car.side" }
-        if name.hasPrefix("helmet-") || name.hasPrefix("driver-photo-") { return "person.crop.circle" }
+        if name.hasPrefix("helmet-") || name.hasPrefix("driver-photo-") || name.hasPrefix("avatar-") { return "person.crop.circle" }
         return nil
     }
 
@@ -37,13 +37,20 @@ public enum MotorsportImages {
     }
     #endif
 
-    private static func artworkURL(named name: String, dark: Bool) -> URL? {
+    static func artworkURL(named name: String, dark: Bool, cache: MediaCache = .shared) -> URL? {
+        if name.hasPrefix("avatar-helmet-") {
+            let helmet = String(name.dropFirst("avatar-".count))
+            if let file = artworkURL(named: helmet, dark: dark, cache: cache) { return file }
+            // Historical rosters may have a portrait without helmet artwork.
+            let photo = "driver-photo-" + helmet.dropFirst("helmet-".count)
+            return artworkURL(named: photo, dark: dark, cache: cache)
+        }
         if name.hasPrefix("flag-") {
-            return cachedImage(stems: [name], group: "native-flags")
-                ?? cachedImage(stems: [name], group: "flags")
+            return cachedImage(stems: [name], group: "native-flags", cache: cache)
+                ?? cachedImage(stems: [name], group: "flags", cache: cache)
         }
         if name.hasPrefix("web-nav-") || name.hasPrefix("web-result-") {
-            return cachedImage(stems: [name], group: "native-navigation")
+            return cachedImage(stems: [name], group: "native-navigation", cache: cache)
         }
         let kinds: [(String, MotorsportAssetName.Kind)] = [
             ("driver-photo", .driverPhoto), ("team-logo", .teamLogo), ("car-side", .carSide), ("helmet", .helmet)
@@ -52,20 +59,20 @@ public enum MotorsportImages {
               let split = name.lastIndex(of: "-"),
               name.distance(from: name.startIndex, to: split) > prefix.count + 1,
               let season = Int(name[name.index(after: split)...]) else {
-            return cachedImage(stems: [name], group: "native-brand")
+            return cachedImage(stems: [name], group: "native-brand", cache: cache)
         }
         let nativeNames = kind == .teamLogo && dark ? [name + "-dark", name] : [name]
-        if let url = cachedImage(stems: nativeNames, group: "native-\(season)/\(prefix)") { return url }
+        if let url = cachedImage(stems: nativeNames, group: "native-\(season)/\(prefix)", cache: cache) { return url }
         let id = String(name[name.index(name.startIndex, offsetBy: prefix.count + 1)..<split])
         let slug = LiveIslandLogic.assetSlug(id).replacingOccurrences(of: "-", with: "_")
         let candidates = [MotorsportAssetName.canonicalID(kind: kind, id: slug), id, slug]
         let stems = kind == .teamLogo && dark ? candidates.map { $0 + "-dark" } + candidates : candidates
-        return cachedImage(stems: stems, group: "\(season)/\(prefix)")
+        return cachedImage(stems: stems, group: "\(season)/\(prefix)", cache: cache)
     }
 
-    private static func cachedImage(stems: [String], group: String) -> URL? {
+    private static func cachedImage(stems: [String], group: String, cache: MediaCache) -> URL? {
         for stem in stems {
-            if let file = MediaCache.shared.file(group: group, name: stem + ".png") { return file }
+            if let file = cache.file(group: group, name: stem + ".png") { return file }
         }
         return nil
     }

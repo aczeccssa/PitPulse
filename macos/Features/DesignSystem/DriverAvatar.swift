@@ -2,9 +2,8 @@ import AppKit
 import SwiftUI
 import SharedData
 
-/// Drivers are always represented by a helmet. A portrait is never used as a
-/// stand-in; drivers without a helmet asset get a neutral helmet glyph.
-struct DriverHelmetAvatar: View {
+/// Season-specific driver artwork for standings and historical results.
+struct DriverAvatar: View {
     let driverID: String
     let name: String
     let season: Int
@@ -12,7 +11,7 @@ struct DriverHelmetAvatar: View {
 
     var body: some View {
         Group {
-            if let image = MotorsportAsset.f1HelmetImage(id: driverID, season: season) {
+            if let image = MotorsportAsset.driverAvatar(id: driverID, season: season) {
                 Image(nsImage: image).resizable().scaledToFit()
             } else {
                 Image(systemName: "helmet.fill")

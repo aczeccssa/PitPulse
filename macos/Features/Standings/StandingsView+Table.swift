@@ -49,7 +49,7 @@ extension StandingsView {
                             wins: row.wins,
                             points: row.points,
                             selected: effectiveSelection == row.driverId,
-                            image: MotorsportAsset.f1HelmetImage(id: row.driverId, season: model.selectedSeason),
+                            image: MotorsportAsset.driverAvatar(id: row.driverId, season: model.selectedSeason),
                             isLast: index == sortedDrivers.count - 1
                         ) {
                             selectedID = row.driverId

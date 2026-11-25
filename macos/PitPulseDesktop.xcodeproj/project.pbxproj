@@ -55,7 +55,7 @@
 		53F7337F6962FC5EED20C59A /* AppModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B72CAB65B9584D89B3F9C2 /* AppModel+Lifecycle.swift */; };
 		55DCBB0BBB28B3F744108A67 /* ServerAddressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D64E9C68B4DDE9577C4B43 /* ServerAddressTests.swift */; };
 		5600EBD251FF0BCA6C840843 /* AppModel+Refresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F09BF5A0AF3263021154BB /* AppModel+Refresh.swift */; };
-		5A2F353EC4A3095B80CD3674 /* DriverHelmetAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */; };
+		5A2F353EC4A3095B80CD3674 /* DriverAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */; };
 		5D8624624C44DE898D566BC5 /* LiveIslandExpandedView+Computed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F34FF4036FAC59ECCDB8428 /* LiveIslandExpandedView+Computed.swift */; };
 		5DB2B5313C22EC235169F28F /* LiveIslandExpandedView+Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79C6740E696573DC15A19573 /* LiveIslandExpandedView+Controls.swift */; };
 		6425FF1ABCEF4BC38778CAA9 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61C7E4945392C1F76162C12 /* MapView.swift */; };
@@ -258,7 +258,7 @@
 		B40BAE272BEB822820E40689 /* AppModelTests+Results.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModelTests+Results.swift"; sourceTree = "<group>"; };
 		B4BC764E9F1B724DE9183A4A /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		B61C7E4945392C1F76162C12 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
-		B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverHelmetAvatar.swift; sourceTree = "<group>"; };
+		B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverAvatar.swift; sourceTree = "<group>"; };
 		B8A8F05F43A85A127D5048F7 /* LiveIslandActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandActions.swift; sourceTree = "<group>"; };
 		B8EDB12972786BE5FB43E489 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		BD007297260B6612207E9C4F /* MenuBarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRootView.swift; sourceTree = "<group>"; };
@@ -352,7 +352,7 @@
 		327F8F134745D21A2E7306B9 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
-				B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */,
+				B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */,
 				14F829C7C1550F8B3730BB3A /* EmptyStateCard.swift */,
 				F9E460474244935F4A8C9DFF /* GlassCard.swift */,
 				0C8A824010B90DF53F76CBED /* GlassIconButton.swift */,
@@ -870,7 +870,7 @@
 				1915860CA32B4FC34FDF5778 /* CalendarView+List.swift in Sources */,
 				FE9CCFE2B7AC8CD78AC646C7 /* CalendarView.swift in Sources */,
 				2EA78B7A8AB417E8B3474786 /* CountdownView.swift in Sources */,
-				5A2F353EC4A3095B80CD3674 /* DriverHelmetAvatar.swift in Sources */,
+				5A2F353EC4A3095B80CD3674 /* DriverAvatar.swift in Sources */,
 				DCAAA3797C842F9B9E145C53 /* DriverRaceFactsCard.swift in Sources */,
 				490B5743362D529F91C7ABB9 /* EmptyStateCard.swift in Sources */,
 				FE1B40BF57DB9E73511C0D57 /* F1CompanionApp.swift in Sources */,

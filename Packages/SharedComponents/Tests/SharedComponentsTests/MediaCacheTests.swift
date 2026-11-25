@@ -1,4 +1,5 @@
 import Foundation
+import SharedData
 import Testing
 @testable import SharedComponents
 
@@ -77,6 +78,42 @@ struct MediaCacheTests {
         #expect(recovered.file(group: "native-brand", name: "logo.png") == nil)
         recovered.refresh(from: origin, online: false)
         #expect(recovered.file(group: "native-brand", name: "logo.png") == new)
+    }
+
+    @Test func driverAvatarsPreferHelmetsThenSameSeasonPortraits() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let origin = try #require(URL(string: "https://media.test/pitpulse"))
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MediaTransport.self]
+        let session = URLSession(configuration: config)
+        defer { session.invalidateAndCancel() }
+
+        let photo2024 = Data("2024 portrait".utf8)
+        let photo2025 = Data("2025 portrait".utf8)
+        let helmet2026 = Data("2026 helmet".utf8)
+        let images = [photo2024, photo2025, helmet2026]
+        let hashes = images.map(MediaCache.digest)
+        let manifest = try JSONEncoder().encode(MediaCache.Manifest(groups: [
+            "2024/driver-photo": .init(hash: "2024", files: ["max_verstappen.png": hashes[0]]),
+            "2025/driver-photo": .init(hash: "2025", files: ["max_verstappen.png": hashes[1]]),
+            "2026/driver-photo": .init(hash: "2026-photo", files: ["max_verstappen.png": hashes[1]]),
+            "native-2026/helmet": .init(hash: "2026-helmet", files: ["helmet-max_verstappen-2026.png": hashes[2]])
+        ]))
+        MediaTransport.fixture.install(manifest, etag: "avatars", blobs: Dictionary(uniqueKeysWithValues: zip(hashes, images)))
+        let cache = MediaCache(root: root, session: session, onPublish: {})
+        cache.refresh(from: origin)
+        await cache.pending?.value
+
+        for (season, expected) in zip(2024...2026, images) {
+            let avatar = MotorsportAssetName.driverAvatarName(driverID: "verstappen", name: "Max Verstappen", season: season)
+            let file = try #require(MotorsportImages.artworkURL(named: avatar, dark: false, cache: cache))
+            #expect(try Data(contentsOf: file) == expected)
+        }
+        let historicalHelmet = MotorsportAssetName.helmetName(driverID: "verstappen", name: "Max Verstappen", season: 2025)
+        #expect(MotorsportImages.artworkURL(named: historicalHelmet, dark: false, cache: cache) == nil)
+        let missingSeason = MotorsportAssetName.driverAvatarName(driverID: "verstappen", name: "Max Verstappen", season: 2023)
+        #expect(MotorsportImages.artworkURL(named: missingSeason, dark: false, cache: cache) == nil)
     }
 
     private func manifest(version: String, image: String, shared: String) throws -> Data {

@@ -509,6 +509,16 @@
         return null;
     }
 
+    function driverAvatarImage(season, ...values) {
+        const helmet = helmetImage(season, ...values);
+        if (helmet) return helmet;
+        for (const value of values) {
+            const portrait = driverPhotoArt({ driverId: value, season }, "avatar");
+            if (portrait) return portrait;
+        }
+        return null;
+    }
+
     function teamLogoImage(season, ...values) {
         const year = Number(season) || artSeason();
         const id = values.map(teamAssetId).find(Boolean);
@@ -921,8 +931,8 @@
             item.style.setProperty("--team", teamColor(row.constructor));
             item.title = [row.driverName, row.constructor, `${row.wins ?? 0} wins`].filter(Boolean).join(" · ");
             const who = node("div", "who");
-            const helmet = helmetImage(artSeason(), row.driverId, row.driverName);
-            if (helmet) who.append(helmet);
+            const avatar = driverAvatarImage(row.season || artSeason(), row.driverId, row.driverName);
+            if (avatar) who.append(avatar);
             who.append(node("b", "", row.driverName), node("span", "col-team", row.constructor || ""));
             const bar = node("span", "bar col-bar");
             const fill = node("i", "");
@@ -1380,8 +1390,8 @@
                 }
             } else if (cell) {
                 const head = node("div", "popover-score-head");
-                const helmet = helmetImage(artSeason(), cell.dataset.popoverDriverId, cell.dataset.popoverDriver);
-                if (helmet) { helmet.className = "popover-helmet"; head.append(helmet); }
+                const avatar = driverAvatarImage(artSeason(), cell.dataset.popoverDriverId, cell.dataset.popoverDriver);
+                if (avatar) { avatar.className = "popover-helmet"; head.append(avatar); }
                 const identity = node("div", "popover-score-identity");
                 identity.append(node("b", "", cell.dataset.popoverDriver), node("span", "", cell.dataset.popoverTeam));
                 head.append(identity, node("b", "popover-round", cell.dataset.popoverRound)); popover.append(head);
@@ -1496,12 +1506,12 @@
     function driverPhoto(driver, className = 'driver-portrait') {
         const photo = driverPhotoArt(driver, className);
         if (!photo) {
-            const fallback = helmetImage(artSeason(), driver?.driverId, driver?.driverName);
+            const fallback = helmetImage(driver?.season || artSeason(), driver?.driverId, driver?.driverName);
             if (fallback) fallback.className = className + ' is-helmet';
             return fallback;
         }
         photo.onerror = () => {
-            const fallback = helmetImage(artSeason(), driver?.driverId, driver?.driverName);
+            const fallback = helmetImage(driver?.season || artSeason(), driver?.driverId, driver?.driverName);
             if (fallback) { fallback.className = className + ' is-helmet'; photo.replaceWith(fallback); } else photo.remove();
         };
         return photo;

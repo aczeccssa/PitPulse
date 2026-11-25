@@ -1245,7 +1245,7 @@ private struct RoundPointsSheet: View {
         var color: Color { DashboardArt.teamColor(results.first?.constructorId ?? id) }
         func asset(season: Int) -> String {
             byDriver
-                ? MotorsportAssetName.helmetName(driverID: id, name: name, season: season)
+                ? MotorsportAssetName.driverAvatarName(driverID: id, name: name, season: season)
                 : MotorsportAssetName.name(kind: .teamLogo, id: id, season: season)
         }
     }
@@ -1321,7 +1321,7 @@ private struct RoundPointsSheet: View {
                                         let raceResult = race.first { $0.driverId == driver.driverId && $0.constructorId == team.id }
                                         HStack(spacing: 8) {
                                             if !byDriver {
-                                                AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.driverId, name: driver.driverName, season: season))
+                                                AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: driver.driverId, name: driver.driverName, season: season))
                                                 .frame(width: 26, height: 23).accessibilityHidden(true)
                                             }
                                             Text(byDriver ? driver.team : driver.driverName)
@@ -1443,7 +1443,7 @@ struct StandingEntry: Hashable {
         points = driver.points
         wins = driver.wins
         number = driver.driverNumber
-        asset = MotorsportAssetName.helmetName(driverID: driver.id, name: driver.driverName, season: driver.season)
+        asset = MotorsportAssetName.driverAvatarName(driverID: driver.id, name: driver.driverName, season: driver.season)
     }
 
     init(team: ConstructorStanding) {
@@ -1553,7 +1553,7 @@ private struct ConstructorFinishingChart: View {
         ForEach(Array(entries.enumerated()), id: \.offset) { _, result in
             let name = result.driverName ?? "—"
             HStack(spacing: 6) {
-                AssetImage(name: MotorsportAssetName.helmetName(driverID: result.driverId, name: name, season: season))
+                AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: result.driverId, name: name, season: season))
                     .frame(width: 26, height: 24).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(name).font(.caption.weight(.medium)).lineLimit(1).fixedSize(horizontal: true, vertical: false)
@@ -2469,7 +2469,10 @@ struct StandingProfile: View {
                     .frame(width: 73, height: 78)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .top, spacing: 6) {
-                        AssetImage(name: entry.asset).frame(width: profileHelmetSize, height: profileHelmetSize)
+                        let helmet = MotorsportAssetName.helmetName(driverID: entry.id, name: entry.name, season: entry.season)
+                        if DashboardArt.image(named: helmet) != nil {
+                            AssetImage(name: helmet).frame(width: profileHelmetSize, height: profileHelmetSize)
+                        }
                         Text(entry.name).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
                     }
