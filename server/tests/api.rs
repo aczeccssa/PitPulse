@@ -340,13 +340,44 @@ async fn test_web_shell_is_served_directly_with_an_issued_session_and_icons_stay
     assert!(html.contains("src=\"/app.js\""));
     assert!(html.contains("href=\"/manifest.webmanifest\""));
     // The topbar carries the real brand mark, not an inline placeholder.
-    assert!(html.contains("src=\"/brand-mark.png\""));
+    let brand = html
+        .split("class=\"brand-mark\" src=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(brand.starts_with("/media/blob/"));
+    let response = router.clone().oneshot(get(brand)).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers()[header::CACHE_CONTROL],
+        "public, max-age=31536000, immutable"
+    );
+    let response = router.clone().oneshot(get("/media/web.js")).await.unwrap();
+    let etag = response.headers()[header::ETAG].clone();
+    let mut request = get("/media/web.js");
+    request.headers_mut().insert(header::IF_NONE_MATCH, etag);
+    assert_eq!(
+        router.clone().oneshot(request).await.unwrap().status(),
+        StatusCode::NOT_MODIFIED
+    );
+    let native_manifest = "/api/v1/media/manifest.json";
+    assert_eq!(
+        router
+            .clone()
+            .oneshot(get_with_cookie(native_manifest, &session_cookie))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
     assert!(!html.contains("auth-dialog"));
     assert!(!html.contains("lock-btn"));
     assert!(!html.contains("api-meta"));
     assert!(!html.contains("<footer"));
     // Icons are versioned so a restyled set is fetched instead of cached.
-    assert!(html.contains("/favicon.png?v=2"));
+    assert!(html.contains("rel=\"icon\" type=\"image/png\" href=\"/media/blob/"));
 
     let response = router
         .clone()
@@ -425,7 +456,7 @@ async fn test_web_shell_is_served_directly_with_an_issued_session_and_icons_stay
     }
 
     // Scripted and CLI callers keep full access with the bearer token.
-    for path in ["/", "/api/v1/health"] {
+    for path in ["/", "/api/v1/health", native_manifest] {
         let response = router
             .clone()
             .oneshot(
@@ -471,6 +502,82 @@ async fn test_calendar_returns_stale_empty_meta() {
     assert_eq!(value["meta"]["schemaVersion"], 1);
     assert_eq!(value["meta"]["stale"], true);
     assert!(value["meta"].get("syncStatus").is_none());
+}
+
+#[tokio::test]
+async fn test_published_season_is_selectable_in_native_calendar() {
+    let (state, _temp) = test_state().await;
+    let now = state.database.utc_now().await.unwrap();
+    let year = now[..4].parse::<i64>().unwrap() + 1;
+    let calendar_path = format!("/api/v1/calendar?season={year}");
+    let geometry_path = format!("/api/v1/meetings/{year}:formula1:bahrain/geometry");
+    let router = server::router(state.clone());
+
+    for (revision, start) in [(1, "03-12"), (2, "03-19")] {
+        let dates = serde_json::json!([{
+            "id": "bahrain", "round": 1, "name": "Bahrain Grand Prix", "location": "Bahrain",
+            "startDate": format!("{year}-{start}"), "endDate": format!("{year}-03-21")
+        }]);
+        state
+            .database
+            .save_next_season_schedule(year, dates.to_string(), now.clone())
+            .await
+            .unwrap();
+        for (path, field, expected) in [
+            (
+                calendar_path.as_str(),
+                "/data/0/startDate",
+                serde_json::json!(format!("{year}-{start}T00:00:00Z")),
+            ),
+            (
+                calendar_path.as_str(),
+                "/data/0/sessions",
+                serde_json::json!([]),
+            ),
+            (
+                calendar_path.as_str(),
+                "/meta/revision",
+                serde_json::json!(revision),
+            ),
+            (
+                "/api/v1/media/manifest.json",
+                "/seasons/0/year",
+                serde_json::json!(year),
+            ),
+            (
+                "/api/v1/media/manifest.json",
+                "/seasons/0/firstRaceDate",
+                serde_json::json!(format!("{year}-{start}")),
+            ),
+            (
+                geometry_path.as_str(),
+                "/data/geometry/properties/id",
+                serde_json::json!("bh-2002"),
+            ),
+            (
+                geometry_path.as_str(),
+                "/data/calibrated",
+                serde_json::json!(false),
+            ),
+            ("/api/v1/seasons", "/data", serde_json::json!([])),
+        ] {
+            let response = router.clone().oneshot(get(path)).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            let payload: Value = serde_json::from_slice(&body).unwrap();
+            assert_eq!(payload.pointer(field), Some(&expected), "{path} {field}");
+        }
+    }
+    assert_eq!(
+        router
+            .oneshot(get("/api/v1/schedule/next"))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -826,4 +933,86 @@ async fn test_map_weather_radar_and_radio_routes_are_authenticated_and_lookup_on
             .unwrap();
         assert!(serde_json::from_slice::<Value>(&body).unwrap()["error"]["code"].is_string());
     }
+}
+
+#[tokio::test]
+async fn test_historical_results_return_server_bound_media_and_typed_placeholders() {
+    let (state, _temp) = test_state().await;
+    let meeting = serde_json::from_value(serde_json::json!({
+        "id": "2024:21", "season": 2024, "round": 21, "name": "São Paulo Grand Prix",
+        "country": "Brazil", "location": "Interlagos", "startDate": "2024-11-01",
+        "endDate": "2024-11-03", "status": "scheduled",
+        "sessions": [{
+            "id": "2024:21:race", "meetingId": "2024:21", "sessionType": "race",
+            "startTime": "2024-11-03T15:30:00Z", "status": "finished"
+        }]
+    }))
+    .unwrap();
+    state
+        .database
+        .replace_calendar(&[meeting], "2024-11-03T18:00:00Z")
+        .await
+        .unwrap();
+    let result = serde_json::from_value(serde_json::json!({
+        "sessionId": "2024:21:race", "position": 1, "classification": "classified",
+        "driverId": "verstappen", "driverName": "Max Verstappen", "constructorId": "red_bull_racing",
+        "team": "Red Bull Racing", "source": "fixture", "fetchedAt": "2024-11-03T18:00:00Z",
+        "revision": 1, "quality": "official"
+    })).unwrap();
+    state
+        .database
+        .replace_session_results(vec![result], "official")
+        .await
+        .unwrap();
+
+    async fn json_get(router: &axum::Router, path: &str) -> Value {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    let router = server::router(state);
+    let seasons = json_get(&router, "/api/v1/seasons").await;
+    assert_eq!(seasons["data"][0]["year"], 2024);
+    assert_eq!(
+        seasons["data"][0]["mediaKinds"],
+        serde_json::json!(["car-side", "driver-photo", "team-logo"])
+    );
+
+    let rows = json_get(&router, "/api/v1/sessions/2024:21:race/results").await;
+    let media = &rows["data"][0]["media"];
+    let driver = json_get(&router, "/api/v1/seasons/2024/drivers/max_verstappen/media").await;
+    assert_eq!(media["driver"], driver["data"]);
+    for (image, group) in [
+        (&media["driver"]["driverPhoto"], "2024/driver-photo"),
+        (&media["constructor"]["teamLogo"], "2024/team-logo"),
+        (&media["constructor"]["carSide"], "2024/car-side"),
+    ] {
+        assert_eq!(image["group"], group);
+        assert_eq!(image["isPlaceholder"], false);
+        let path = image["url"].as_str().unwrap();
+        assert!(path.starts_with("/media/blob/"), "{path}");
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], "image/png");
+    }
+
+    assert_eq!(media["driver"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(media["driver"]["helmet"]["file"], "helmet.png");
+    assert_eq!(media["driver"]["avatar"], media["driver"]["driverPhoto"]);
+    let unresolved = json_get(&router, "/api/v1/seasons/2025/drivers/max_verstappen/media").await;
+    assert_eq!(unresolved["data"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(
+        unresolved["data"]["driverPhoto"]["group"],
+        "2025/driver-photo"
+    );
+
+    let missing = json_get(&router, "/api/v1/seasons/2024/drivers/no_such_driver/media").await;
+    assert_eq!(missing["data"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(missing["data"]["helmet"]["file"], "helmet.png");
+    assert_eq!(missing["data"]["driverPhoto"]["file"], "driver-photo.png");
+    assert_eq!(missing["data"]["avatar"], missing["data"]["driverPhoto"]);
 }

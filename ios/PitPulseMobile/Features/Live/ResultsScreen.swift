@@ -796,7 +796,10 @@ struct ResultsScreen<WeekendTools: View>: View {
     }
 
     private func helmet(_ row: SessionResult) -> some View {
-        AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: meeting.season))
+        AssetImage(
+            name: MotorsportAssetName.driverAvatarName(driverID: row.driverId, name: row.driverName, season: meeting.season),
+            media: row.media?.driver.avatar
+        )
     }
 
     private func mainValue(_ row: SessionResult) -> String {
@@ -1159,7 +1162,7 @@ private struct RaceFinishGaps: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
                 .frame(width: min(numberWidth, 46), alignment: .leading)
-            AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: season))
+            AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: row.driverId, name: row.driverName, season: season))
                 .frame(width: 31, height: 27)
             GeometryReader { geometry in
                 let reserved = min(gapValueWidth, geometry.size.width * 0.55)
@@ -1274,7 +1277,7 @@ private struct SessionPaceChart: View {
                     let scale = max(0.001, points.map(\.gap).max() ?? 0)
                     ForEach(points) { point in
                         ResultComparisonRow(
-                            asset: MotorsportAssetName.helmetName(
+                            asset: MotorsportAssetName.driverAvatarName(
                                 driverID: point.row.driverId, name: point.row.driverName, season: season
                             ),
                             name: point.row.driverName,

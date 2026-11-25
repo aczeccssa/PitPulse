@@ -4,6 +4,7 @@ use tokio::net::TcpListener;
 
 use crate::{
     api::{
+        media,
         middleware::require_bearer_token,
         routes::{self, build_router},
         web_auth::issue_web_session,
@@ -42,7 +43,10 @@ pub fn router(state: AppState) -> Router {
         .route("/icon-512.png", get(routes::icon_512))
         .route("/favicon.ico", get(routes::favicon_ico))
         .route("/favicon.png", get(routes::favicon_png))
-        .route("/motorsport/{*path}", get(routes::motorsport_asset));
+        .route("/motorsport/{*path}", get(routes::motorsport_asset))
+        .route("/media/blob/{digest}", get(media::public_blob))
+        .route("/media/web.js", get(media::web_index))
+        .route("/media-worker.js", get(media::worker));
 
     protected_router
         .merge(shell)

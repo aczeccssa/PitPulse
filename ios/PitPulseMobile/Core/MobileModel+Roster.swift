@@ -47,12 +47,14 @@ extension MobileModel {
             let response = try await APIClient(baseURL: serverURL).driverStandings(season: season, token: currentToken)
             guard context == dataContext, !Task.isCancelled else { return }
             driverRoster = response.data
-            rosterLoadError = driverRoster.isEmpty ? "当前服务器暂无 F1 车手数据，请检查服务地址。" : nil
+            rosterDidLoad = true
             let savedAt = response.meta.stale ? .distantPast : (response.meta.fetchedAt ?? .now)
             widgetPublisher.publishStandings(response.data, season: season, savedAt: savedAt)
             rosterSavedAt = savedAt
             publishFavoriteWidget()
             updateActivity()
-        } catch { if !Task.isCancelled { rosterLoadError = Self.message(for: error) } }
+        } catch {
+            if context == dataContext, !Task.isCancelled { rosterLoadError = Self.message(for: error) }
+        }
     }
 }

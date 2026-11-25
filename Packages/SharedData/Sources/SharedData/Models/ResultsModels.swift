@@ -1,6 +1,32 @@
 import Foundation
 
+/// A server-assigned media object. The URL is relative to the configured server.
+public struct MediaReference: Codable, Equatable, Sendable {
+    public let group: String
+    public let file: String
+    public let sha256: String
+    public let url: String
+    public let isPlaceholder: Bool
+}
+
+public struct DriverMedia: Codable, Equatable, Sendable {
+    public let avatar: MediaReference?
+    public let helmet: MediaReference
+    public let driverPhoto: MediaReference
+}
+
+public struct ConstructorMedia: Codable, Equatable, Sendable {
+    public let teamLogo: MediaReference
+    public let carSide: MediaReference
+}
+
+public struct ResultMedia: Codable, Equatable, Sendable {
+    public let driver: DriverMedia
+    public let constructor: ConstructorMedia
+}
+
 public struct SessionResult: Codable, Identifiable, Equatable, Sendable {
+    public var media: ResultMedia? = nil
     public var id: String { driverId }
     public var classificationLabel: String {
         switch classification.uppercased() {
@@ -39,6 +65,7 @@ public struct SessionResult: Codable, Identifiable, Equatable, Sendable {
 }
 
 public struct DriverStanding: Codable, Identifiable, Equatable, Sendable {
+    public var media: DriverMedia? = nil
     public var id: String { driverId }
     public let season: Int
     public let position: Int
@@ -55,6 +82,7 @@ public struct DriverStanding: Codable, Identifiable, Equatable, Sendable {
 }
 
 public struct ConstructorStanding: Codable, Identifiable, Equatable, Sendable {
+    public var media: ConstructorMedia? = nil
     public var id: String { constructorId }
     public let season: Int
     public let position: Int

@@ -19,11 +19,13 @@ use crate::{
         standings::{ConstructorStanding, DriverStanding},
     },
     error::StorageError,
+    providers::f1_schedule::ScheduleEvent,
 };
 
 const ANALYSIS_CACHE_GZIP_PREFIX: &[u8] = b"\x00PULSEGZ\x01";
 const MAX_DECOMPRESSED_ANALYSIS_BYTES: usize = 16 * 1024 * 1024;
 
+const MIGRATION_0011: &str = include_str!("migrations/0011_next_season_schedule.sql");
 const MIGRATION_0009: &str = include_str!("migrations/0009_live_snapshot_cache.sql");
 const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
 const MIGRATION_0007: &str = include_str!("migrations/0007_circuit_location.sql");
@@ -52,6 +54,13 @@ enum SyncStateOutcome<'a> {
 #[derive(Clone)]
 pub struct Database {
     connection: Arc<Mutex<Connection>>,
+}
+
+pub struct ScheduleSnapshot {
+    pub events: Vec<ScheduleEvent>,
+    pub revision: u64,
+    pub checked_at: String,
+    pub updated_at: String,
 }
 
 impl Database {
@@ -417,6 +426,87 @@ impl Database {
         Ok(now)
     }
 
+    pub async fn next_season_schedule(
+        &self,
+        season: i64,
+    ) -> Result<Option<ScheduleSnapshot>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        spawn_blocking(move || {
+            let row = connection
+                .blocking_lock()
+                .query_row(
+                    "SELECT events_json, revision, checked_at, updated_at
+                 FROM next_season_schedule WHERE season = ?1",
+                    [season],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get(1)?,
+                            row.get(2)?,
+                            row.get(3)?,
+                        ))
+                    },
+                )
+                .optional()?;
+            row.map(|(events, revision, checked_at, updated_at)| {
+                let events = serde_json::from_str(&events).map_err(|error| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        0,
+                        rusqlite::types::Type::Text,
+                        Box::new(error),
+                    )
+                })?;
+                Ok(ScheduleSnapshot {
+                    events,
+                    revision,
+                    checked_at,
+                    updated_at,
+                })
+            })
+            .transpose()
+        })
+        .await?
+    }
+
+    pub async fn published_schedule_openings(&self) -> Result<BTreeMap<i64, String>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        Ok(spawn_blocking(move || {
+            let connection = connection.blocking_lock();
+            let mut years = connection.prepare(
+                "SELECT schedule.season, MIN(json_extract(event.value, '$.startDate'))
+                 FROM next_season_schedule AS schedule, json_each(schedule.events_json) AS event
+                 WHERE json_type(event.value, '$.round') = 'integer'
+                 GROUP BY schedule.season",
+            )?;
+            years
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()
+        })
+        .await??)
+    }
+
+    pub async fn save_next_season_schedule(
+        &self,
+        season: i64,
+        events_json: String,
+        now: String,
+    ) -> Result<(), StorageError> {
+        let connection = Arc::clone(&self.connection);
+        spawn_blocking(move || {
+            connection.blocking_lock().execute(
+                "INSERT INTO next_season_schedule (season, events_json, revision, checked_at, updated_at)
+                 VALUES (?1, ?2, 1, ?3, ?3)
+                 ON CONFLICT(season) DO UPDATE SET
+                     revision = revision + (events_json <> excluded.events_json),
+                     updated_at = CASE WHEN events_json <> excluded.events_json THEN excluded.updated_at ELSE updated_at END,
+                     events_json = excluded.events_json,
+                     checked_at = excluded.checked_at",
+                rusqlite::params![season, events_json, now],
+            )
+        }).await??;
+        Ok(())
+    }
+
     pub async fn calendar(
         &self,
         season: Option<i64>,
@@ -543,6 +633,17 @@ impl Database {
         }).await??;
         let meta = self.session_results_meta(session_id).await?;
         Ok((results, meta))
+    }
+
+    pub async fn session_season(&self, session_id: &str) -> Result<Option<i64>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let session_id = session_id.to_owned();
+        Ok(spawn_blocking(move || {
+            connection.blocking_lock().query_row(
+                "SELECT meetings.season FROM sessions JOIN meetings ON meetings.id = sessions.meeting_id WHERE sessions.id = ?1",
+                [&session_id], |row| row.get(0),
+            ).optional()
+        }).await??)
     }
 
     pub async fn session_exists(&self, session_id: &str) -> Result<bool, StorageError> {
@@ -1135,6 +1236,9 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
         // The original analysis-cache branch also marked its local databases as v9.
         connection.execute_batch(MIGRATION_0009)?;
         connection.execute_batch("PRAGMA user_version = 10;")?;
+    }
+    if version < 11 {
+        connection.execute_batch(MIGRATION_0011)?;
     }
 
     Ok(())

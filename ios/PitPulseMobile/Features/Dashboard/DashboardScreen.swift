@@ -66,6 +66,19 @@ enum DriverProfileDestination: Hashable {
     case comparison(String, String?)
 }
 
+struct SeasonPendingView: View {
+    let season: Int
+    let symbol: String
+
+    var body: some View {
+        ContentUnavailableView(
+            "Season Not Started", systemImage: symbol,
+            description: Text("Data for \(String(season)) will appear once the season begins.")
+        )
+        .accessibilityIdentifier("season.pending")
+    }
+}
+
 struct DashboardScreen<Header: View>: View {
     let padWorkspace: Bool
     let tab: DashboardTab

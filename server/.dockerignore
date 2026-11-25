@@ -4,3 +4,7 @@ target/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Local source archives are kept outside the build context.
+resources/motorsport-source/
+resources/media-source/

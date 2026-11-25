@@ -35,6 +35,8 @@ public struct FlagBadge: View {
             if let code = CountryFlag.normalizedCode(countryCode)?.lowercased(),
                let flag = flagImage(named: "flag-\(code)") {
                 flag.resizable().scaledToFit().clipShape(.rect(cornerRadius: 2))
+            } else if let flag = CountryFlag.emoji(for: countryCode) {
+                Text(flag).font(.system(size: width * 0.75))
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: width * 0.65))

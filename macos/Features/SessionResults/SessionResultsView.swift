@@ -145,9 +145,10 @@ struct SessionResultsView: View {
     }
 
     var emptyResults: some View {
-        EmptyStateCard(
+        let pending = context == nil && model.seasonHasNotStarted && displayedError == nil
+        return EmptyStateCard(
             symbol: "list.number",
-            title: displayedError == nil ? "等待赛后成绩" : "无法读取成绩",
+            title: pending ? "赛季尚未开始" : displayedError == nil ? "等待赛后成绩" : "无法读取成绩",
             message: model.availableResultSessions.isEmpty
                 ? "比赛结束后显示实际成绩。"
                 : "成绩来源暂未提供结果，可用后自动更新。"

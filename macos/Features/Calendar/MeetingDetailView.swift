@@ -106,9 +106,10 @@ struct MeetingDetailView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 HStack(spacing: 6) {
+                    let dates = meeting.calendarDateRange()
                     Text("第 \(meeting.round.map(String.init) ?? "—") 站")
                     Text("·")
-                    Text("\(meeting.startDate.formatted(.dateTime.month().day())) – \(meeting.endDate.formatted(.dateTime.month().day()))")
+                    Text("\(dates.lowerBound.formatted(.dateTime.month().day())) – \(dates.upperBound.formatted(.dateTime.month().day()))")
                         .monospacedDigit()
                     Text("·")
                     Text(meeting.endDate < Date() && meeting.status != .cancelled && meeting.status != .postponed ? "比赛结果" : meeting.status.displayName)

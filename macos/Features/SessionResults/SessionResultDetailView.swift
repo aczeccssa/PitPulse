@@ -46,11 +46,12 @@ struct SessionResultDetailView: View {
             .accessibilityIdentifier("results.back")
             .keyboardShortcut(.cancelAction)
 
-            DriverHelmetAvatar(
+            DriverAvatar(
                 driverID: result.driverId,
                 name: result.driverName,
                 season: season,
-                size: 36
+                size: 36,
+                media: result.media?.driver.avatar
             )
 
             VStack(alignment: .leading, spacing: 2) {

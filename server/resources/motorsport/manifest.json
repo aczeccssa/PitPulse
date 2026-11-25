@@ -22,7 +22,7 @@
   },
   {
    "name": "pitpulse-app-catalog",
-   "path": "Packages/SharedComponents/Sources/SharedComponents/Resources/PitPulseAssets.xcassets",
+   "path": "server/resources/media",
    "scope": "2026 helmets",
    "rightsStatus": "restricted"
   }
@@ -324,6 +324,30 @@
    "height": 320,
    "collectedAt": "2026-11-18T05:25:04+00:00",
    "sourcePageUrl": "https://www.formula1.com/en/drivers",
+   "license": "restricted",
+   "rightsStatus": "restricted",
+   "downloadStatus": "downloaded",
+   "applicability": {
+    "requestedSeason": 2024,
+    "designSeason": 2024,
+    "status": "seasonExact"
+   }
+  },
+  {
+   "kind": "driver-photo",
+   "id": "doohan",
+   "season": 2024,
+   "file": "2024/driver-photo/doohan.png",
+   "bytes": 39000,
+   "sha256": "6110449af92322c84b583c9144c05bcee9ed8a1b4736763e8750ca326e07f0f0",
+   "width": 320,
+   "height": 320,
+   "collectedAt": "2026-11-25T01:55:44+00:00",
+   "sourcePageUrl": "https://app.formula1dashboard.com/driver-stats/doohan/2024/",
+   "provenance": {
+    "sourcePage": "https://app.formula1dashboard.com/driver-stats/doohan/2024/",
+    "sourceImage": "https://cdn.formula1dashboard.com/i/v1/w320-h320-fcontain-q85/drivers/2024/portrait/2024-doohan.png"
+   },
    "license": "restricted",
    "rightsStatus": "restricted",
    "downloadStatus": "downloaded",
@@ -12384,7 +12408,7 @@
         "constructorName": "Alpine F1 Team"
        }
       ],
-      "photo": null,
+      "photo": "2024/driver-photo/doohan.png",
       "helmet": null
      },
      "2025": {
@@ -13759,326 +13783,319 @@
  },
  "gaps": [
   {
-   "kind": "driver-photo",
-   "id": "doohan",
-   "season": 2024,
-   "status": "missing",
-   "reason": "no official artwork answered for this entry"
-  },
-  {
    "kind": "helmet",
    "id": "albon",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "alonso",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "bearman",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "bottas",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "colapinto",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "doohan",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "gasly",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "hamilton",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "hulkenberg",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "kevin_magnussen",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "lawson",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "leclerc",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "max_verstappen",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "norris",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "ocon",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "perez",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "piastri",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "ricciardo",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "russell",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "sainz",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "sargeant",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "stroll",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "tsunoda",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "zhou",
    "season": 2024,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "No approved 2024 helmet rendered at the required left-facing angle"
   },
   {
    "kind": "helmet",
    "id": "albon",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "alonso",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "antonelli",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "bearman",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "bortoleto",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "colapinto",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "doohan",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "gasly",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "hadjar",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "hamilton",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "hulkenberg",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "lawson",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "leclerc",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "max_verstappen",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "norris",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "ocon",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "piastri",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "russell",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "sainz",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "stroll",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
    "id": "tsunoda",
    "season": 2025,
    "status": "missing",
-   "reason": "no public season-scoped helmet artwork; only the 2026 app catalog carries helmets"
+   "reason": "Matching reference camera angle has not been verified"
   },
   {
    "kind": "helmet",
@@ -14105,7 +14122,7 @@
  "coverage": {
   "2024": {
    "car-side": 10,
-   "driver-photo": 23,
+   "driver-photo": 24,
    "team-logo": 10
   },
   "2025": {

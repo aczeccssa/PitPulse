@@ -70,7 +70,7 @@ struct StandingsWidgetView: View {
                           trailing: stale ? widgetCopy("Stale Cache", "缓存过期") : "\(snapshot.season)",
                           warning: stale)
             HStack(spacing: 7) {
-                MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: leader.driverID, name: leader.name, season: snapshot.season))
+                MotorsportImages.image(named: MotorsportAssetName.driverAvatarName(driverID: leader.driverID, name: leader.name, season: snapshot.season))
                     .resizable().scaledToFit().frame(width: 42, height: 36).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(widgetDriverLabel(leader.name, number: leader.driverNumber))
@@ -125,7 +125,7 @@ struct StandingsWidgetView: View {
                 .font(.system(size: 9, weight: .bold)).monospacedDigit()
                 .foregroundStyle(isLeader ? widgetRed : .secondary)
                 .frame(width: 12, alignment: .leading)
-            MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: driver.driverID, name: driver.name, season: season))
+            MotorsportImages.image(named: MotorsportAssetName.driverAvatarName(driverID: driver.driverID, name: driver.name, season: season))
                 .resizable().scaledToFit().frame(width: 20, height: 16).accessibilityHidden(true)
             Text(widgetDriverLabel(driver.name, number: driver.driverNumber))
                 .font(.system(size: 10, weight: .bold)).lineLimit(1)

@@ -348,7 +348,7 @@ struct WebHomeScreen<Header: View>: View {
         let name = stop.driverName ?? "Unknown driver"
         let surname = name.split(separator: " ").last.map(String.init)
         let driverID = model.driverRoster.first { $0.driverName.caseInsensitiveCompare(name) == .orderedSame }?.driverId
-        let helmet = MotorsportAssetName.helmetName(driverID: driverID, name: name, season: model.season)
+        let helmet = MotorsportAssetName.driverAvatarName(driverID: driverID, name: name, season: model.season)
         return HStack(spacing: 6) {
             AssetImage(name: helmet)
                 .frame(width: abbreviated ? 29 : 44, height: abbreviated ? 32 : 40)
@@ -426,7 +426,10 @@ struct WebHomeScreen<Header: View>: View {
                     ($0.endTime ?? $0.startTime.addingTimeInterval(7200)) > now
             }.map { NextSession(meeting: meeting, session: $0) }
         }.sorted { $0.session.startTime < $1.session.startTime }
-        return (sessions.first, sessions.first?.meeting ?? meetings.last)
+        let nextPublished = meetings.first {
+            $0.hasPublishedWeekendDatesOnly && $0.status == .scheduled && $0.endDate >= now
+        }
+        return (sessions.first, sessions.first?.meeting ?? nextPublished ?? meetings.last)
     }
 
     private func countdown(_ active: NextSession?, now: Date, minHeight: CGFloat = 126) -> some View {
@@ -452,9 +455,9 @@ struct WebHomeScreen<Header: View>: View {
                     }
                 } else {
                     Text("\(String(model.season)) Season").font(.headline)
-                    Text(meetings.isEmpty ? "Schedule unavailable" : "Season complete")
+                    Text(meetings.isEmpty ? "Schedule unavailable" : meetings.contains(where: \.hasPublishedWeekendDatesOnly) ? "Session times pending" : "Season complete")
                         .font(.system(size: 21, weight: .bold))
-                    Text(meetings.isEmpty ? "No sessions have been published." : "Explore this season’s results and records.")
+                    Text(meetings.isEmpty || meetings.contains(where: \.hasPublishedWeekendDatesOnly) ? "No sessions have been published." : "Explore this season’s results and records.")
                         .font(.system(size: 12))
                 }
             }.foregroundStyle(.white)
@@ -512,7 +515,7 @@ struct WebHomeScreen<Header: View>: View {
                 }
                 if let driver = model.favoriteStanding {
                     HStack(spacing: 7) {
-                        AssetImage(name: MotorsportAssetName.helmetName(driverID: driver.id, name: driver.driverName, season: driver.season))
+                        AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: driver.id, name: driver.driverName, season: driver.season))
                             .frame(width: 36, height: 36).accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 3) {
                             let abbreviation = MotorsportAssetName.abbreviation(driver.driverName)
@@ -538,7 +541,7 @@ struct WebHomeScreen<Header: View>: View {
                         PulseNumber(lovedDriverGap(driver)).fontWeight(.bold).monospacedDigit()
                     }.font(.caption2)
                 } else {
-                    Text(model.favoriteDriverID == nil ? "Choose a driver" : "Standings unavailable")
+                    Text(model.seasonHasNotStarted ? "Season not started" : model.favoriteDriverID == nil ? "Choose a driver" : "Standings unavailable")
                         .font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
                 }
             }
@@ -556,7 +559,10 @@ struct WebHomeScreen<Header: View>: View {
     }
 
     @ViewBuilder private func homeRecords(stretch: Bool = false) -> some View {
-        if model.seasonArchive == nil && model.seasonArchiveError == nil {
+        if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+            SeasonPendingView(season: model.season, symbol: "flag.checkered")
+                .webHomePanel(stretch: stretch)
+        } else if model.seasonArchive == nil && model.seasonArchiveError == nil {
             PulseSkeleton(rows: 3, label: "Loading race highlights")
         } else {
             WebHomeRecords(weekends: model.seasonArchive?.data ?? [], season: model.season, stretch: stretch) {
@@ -566,9 +572,12 @@ struct WebHomeScreen<Header: View>: View {
     }
 
     private func homeStandings(_ entries: [StandingEntry], teams: Bool, stretch: Bool = false) -> some View {
-        let loading = entries.isEmpty && (teams ? loadingConstructors : model.serverURL != nil && model.rosterLoadError == nil)
+        let loading = entries.isEmpty && (teams ? loadingConstructors : model.serverURL != nil && !model.rosterDidLoad && model.rosterLoadError == nil)
         return Group {
-            if loading {
+            if entries.isEmpty && model.seasonHasNotStarted {
+                SeasonPendingView(season: model.season, symbol: "trophy")
+                    .webHomePanel(stretch: stretch)
+            } else if loading {
                 PulseSkeleton(label: teams ? "Loading constructor standings…" : "Loading driver standings…")
             } else {
                 standings(entries, teams: teams, stretch: stretch)
@@ -1271,7 +1280,7 @@ private struct HomeSeasonRecords: View {
                     Label(record.category.rawValue, systemImage: record.category.symbol)
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer(minLength: 4)
-                    AssetImage(name: MotorsportAssetName.helmetName(driverID: record.row.id,
+                    AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: record.row.id,
                         name: record.row.driverName, season: record.weekend.meeting.season))
                         .frame(width: 28, height: 26)
                 }
@@ -1336,7 +1345,14 @@ struct TabletRaceCalendar: View {
         }
     }
 
-    private var displayedMonth: Int { month == 0 ? calendar.component(.month, from: .now) : month }
+    private var openingRace: Meeting? {
+        model.meetings.first { $0.round != nil && $0.hasPublishedWeekendDatesOnly }
+    }
+
+    private var displayedMonth: Int {
+        if month != 0 { return month }
+        return calendar.component(.month, from: openingRace?.calendarDateRange(in: calendar).lowerBound ?? .now)
+    }
     private var selectedMeeting: Meeting? { model.meetings.first { $0.id == selectedMeetingID } }
 
     var body: some View {
@@ -1374,6 +1390,10 @@ struct TabletRaceCalendar: View {
         }
         .background(WebDashboardStyle.homeBackground)
         .foregroundStyle(WebDashboardStyle.homeText)
+        .onChange(of: model.season) { _, _ in
+            month = 0
+            selectedMeetingID = nil
+        }
         .navigationDestination(isPresented: Binding(
             get: { sessionResult != nil },
             set: { if !$0 { sessionResult = nil } }
@@ -1452,7 +1472,7 @@ struct TabletRaceCalendar: View {
     private var monthNavigation: some View {
         HStack(spacing: 0) {
             monthButton("Previous month", symbol: "chevron.left", change: -1)
-            Button("Today") { showMonth(0) }
+            Button(openingRace == nil ? "Today" : "First Race") { showMonth(0) }
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 8)
                 .frame(minHeight: 44)
@@ -1556,8 +1576,9 @@ struct TabletRaceCalendar: View {
     }
 
     private func raceDays(_ meeting: Meeting) -> ClosedRange<Date> {
-        let start = calendar.startOfDay(for: meeting.startDate)
-        return start...max(start, calendar.startOfDay(for: meeting.endDate))
+        let dates = meeting.calendarDateRange(in: calendar)
+        let start = calendar.startOfDay(for: dates.lowerBound)
+        return start...max(start, calendar.startOfDay(for: dates.upperBound))
     }
 
     private func weekSpans(_ dates: [Date], month: Date, meetings: [Meeting]) -> [RaceSpan] {
@@ -1633,16 +1654,17 @@ struct TabletRaceCalendar: View {
         return Button {
             selectedMeetingID = meeting.id
         } label: {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    FlagBadge(countryCode: meeting.countryCode, width: 16, height: 10)
+            HStack(spacing: 4) {
+                FlagBadge(countryCode: meeting.countryCode, width: 16, height: 10)
+                    .accessibilityHidden(true)
+                ViewThatFits(in: .horizontal) {
                     Text(meeting.name).fixedSize()
+                    Text(meeting.location.isEmpty ? meeting.country : meeting.location)
+                        .fixedSize()
+                    Text(meeting.round.map { "R\($0)" } ?? meeting.countryCode ?? "GP")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                 }
-                Text(meeting.location.isEmpty ? meeting.country : meeting.location)
-                    .fixedSize()
-                Text(meeting.round.map { "R\($0)" } ?? meeting.countryCode ?? "GP")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
             }
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 3)
@@ -1696,7 +1718,7 @@ struct TabletRaceCalendar: View {
                 if meeting.id != meetings.first?.id { Divider() }
                 Button {
                     if searching {
-                        showMonth(calendar.component(.month, from: meeting.startDate), meeting: meeting.id)
+                        showMonth(calendar.component(.month, from: raceDays(meeting).lowerBound), meeting: meeting.id)
                     } else {
                         selectedMeetingID = meeting.id
                     }
@@ -1910,7 +1932,15 @@ struct CalendarScreen: View {
                     Text(meeting.location).font(.caption.weight(.semibold))
                 }
                 Text(meeting.name).font(.headline).lineLimit(2)
-                Text(meeting.startDate, format: .dateTime.month().day()).font(.caption).foregroundStyle(.secondary)
+                Group {
+                    if meeting.hasPublishedWeekendDatesOnly {
+                        let dates = meeting.calendarDateRange()
+                        Text(dates.lowerBound..<dates.upperBound, format: .interval.month().day())
+                    } else {
+                        Text(meeting.startDate, format: .dateTime.month().day())
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
             CircuitOutlineView(meetingID: meeting.id)
@@ -2106,7 +2136,8 @@ struct WeekendScreen: View {
                 }
             }
 
-            Text(meeting.startDate..<max(meeting.startDate, meeting.endDate),
+            let dates = meeting.calendarDateRange()
+            Text(dates.lowerBound..<dates.upperBound,
                  format: Date.IntervalFormatStyle().month(.abbreviated).day().locale(.pulseEnglish))
                 .font(.subheadline)
                 .foregroundStyle(WebDashboardStyle.homeMuted)

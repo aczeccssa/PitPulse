@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import SharedComponents
 import SharedData
 
 @MainActor
@@ -148,6 +149,13 @@ final class AppModel: ObservableObject {
 
     var serverURL: URL? {
         configuredServer?.url
+    }
+
+    var seasonHasNotStarted: Bool {
+        CalendarLogic.seasonHasNotStarted(
+            selectedSeason, meetings: meetings,
+            firstRaceDate: MediaCache.shared.seasons.first { $0.year == selectedSeason }?.firstRaceDate
+        )
     }
 
     var nextSession: NextSession? {

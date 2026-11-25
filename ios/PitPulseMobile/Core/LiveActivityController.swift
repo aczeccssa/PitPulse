@@ -48,7 +48,7 @@ final class LiveActivityController {
     func waitForLastUpdate() async { await lastUpdate?.value }
 
     func update(snapshot: LiveSnapshot, mode: IslandContentMode = .overview, favorite: LiveDriver? = nil,
-                favoriteName: String? = nil, selectedNumbers: [String] = [], season: Int = 2026, existingOnly: Bool = false) {
+                favoriteName: String? = nil, selectedNumbers: [String] = [], season: Int? = nil, existingOnly: Bool = false) {
         #if DEBUG
         if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" { return }
         #endif
@@ -115,7 +115,8 @@ final class LiveActivityController {
     }
 
     /// One projection for the system activity and the preview; opening a preview never starts an activity.
-    static func contentState(snapshot: LiveSnapshot, mode: IslandContentMode, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = [], focusedNumber: String? = nil, positionChanges: [String: Int] = [:], season: Int = 2026) -> PitPulseActivityAttributes.ContentState {
+    static func contentState(snapshot: LiveSnapshot, mode: IslandContentMode, favorite: LiveDriver? = nil, favoriteName: String? = nil, selectedNumbers: [String] = [], focusedNumber: String? = nil, positionChanges: [String: Int] = [:], season: Int? = nil) -> PitPulseActivityAttributes.ContentState {
+        let season = season ?? snapshot.artworkSeason()
         let leader = snapshot.drivers.first { $0.position == 1 }
         let challenger = snapshot.drivers.first { $0.position == 2 }
         let battle = IslandBattleSelection.drivers(in: snapshot.drivers, selected: selectedNumbers, favorite: favorite)

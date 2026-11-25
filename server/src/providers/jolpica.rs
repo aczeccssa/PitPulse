@@ -48,12 +48,12 @@ impl JolpicaProvider {
     pub async fn season_calendar(&self, season: i64) -> Result<Vec<Meeting>, ProviderError> {
         let url = format!("{}/f1/alpha/schedules/{season}/", self.base_url);
         let payload = get_json(&self.client, &url).await?;
-        decode_alpha_schedule(&payload)
+        decode_alpha_schedule_for(&payload, Some(season))
     }
 
     pub async fn season_calendar_once(&self, season: i64) -> Result<Vec<Meeting>, ProviderError> {
         let url = format!("{}/f1/alpha/schedules/{season}/", self.base_url);
-        decode_alpha_schedule(&get_json_once(&self.client, &url).await?)
+        decode_alpha_schedule_for(&get_json_once(&self.client, &url).await?, Some(season))
     }
 
     pub async fn ergast_races(&self, season: i64) -> Result<Vec<Value>, ProviderError> {
@@ -219,6 +219,13 @@ fn urlencoding_placeholder(value: &str) -> String {
 }
 
 pub fn decode_alpha_schedule(payload: &Value) -> Result<Vec<Meeting>, ProviderError> {
+    decode_alpha_schedule_for(payload, None)
+}
+
+fn decode_alpha_schedule_for(
+    payload: &Value,
+    requested_season: Option<i64>,
+) -> Result<Vec<Meeting>, ProviderError> {
     let events = payload
         .pointer("/data/events")
         .and_then(Value::as_array)
@@ -226,7 +233,24 @@ pub fn decode_alpha_schedule(payload: &Value) -> Result<Vec<Meeting>, ProviderEr
             field: "data.events".to_string(),
         })?;
     let season = payload.pointer("/data/year").and_then(Value::as_i64);
+    if season
+        .zip(requested_season)
+        .is_some_and(|(actual, requested)| actual != requested)
+    {
+        return Err(ProviderError::Decode {
+            url: "Jolpica calendar".into(),
+            error: "response year does not match the requested season".into(),
+        });
+    }
     let mut meetings = Vec::new();
+    if events.is_empty() {
+        return Ok(meetings);
+    }
+    let season = season
+        .or(requested_season)
+        .ok_or_else(|| ProviderError::MissingField {
+            field: "data.year".into(),
+        })?;
     for event in events {
         if let Some(meeting) = decode_event(event, season)? {
             meetings.push(meeting);
@@ -236,7 +260,7 @@ pub fn decode_alpha_schedule(payload: &Value) -> Result<Vec<Meeting>, ProviderEr
     Ok(meetings)
 }
 
-fn decode_event(event: &Value, season: Option<i64>) -> Result<Option<Meeting>, ProviderError> {
+fn decode_event(event: &Value, season: i64) -> Result<Option<Meeting>, ProviderError> {
     let round = event
         .get("round")
         .ok_or_else(|| ProviderError::MissingField {
@@ -246,7 +270,6 @@ fn decode_event(event: &Value, season: Option<i64>) -> Result<Option<Meeting>, P
     if name.to_ascii_lowercase().contains("testing") {
         return Ok(None);
     }
-    let season = season.unwrap_or(2026);
     let provider_round = text(round, "id").unwrap_or_else(|| name.clone());
     let round_number = round.get("number").and_then(Value::as_i64);
     let id = meeting_id(season, round_number, &provider_round);
@@ -474,7 +497,9 @@ mod tests {
     #[test]
     fn test_missing_session_field_is_not_invented() {
         let payload = serde_json::json!({"data": {"events": [{"round": {"id": "round_x", "number": 1, "name": "Test"}, "circuit": {"country": "Unknownland"}, "schedule": [{"code": "FP1"}]}]}});
-        let meetings = decode_alpha_schedule(&payload).unwrap();
+        let meetings = decode_alpha_schedule_for(&payload, Some(2028)).unwrap();
+        assert_eq!(meetings[0].season, 2028);
+        assert_eq!(meetings[0].id, "2028:1");
         assert_eq!(meetings[0].country_code, None);
         assert_eq!(meetings[0].sessions[0].end_time, None);
     }

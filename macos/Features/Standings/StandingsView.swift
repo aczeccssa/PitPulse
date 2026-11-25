@@ -2,6 +2,7 @@ import AppKit
 import Charts
 import SwiftUI
 import SharedData
+import SharedComponents
 
 struct StandingsView: View {
     @ObservedObject var model: AppModel
@@ -96,22 +97,32 @@ struct StandingsView: View {
     var toolbar: some View {
         HStack(spacing: 8) {
             HStack(spacing: 2) {
-                Button { model.selectSeason(model.selectedSeason - 1) } label: {
+                Button {
+                    if let year = MediaCache.shared.adjacentSeason(to: model.selectedSeason, newer: false) {
+                        model.selectSeason(year)
+                    }
+                } label: {
                     Image(systemName: "chevron.left").font(.system(size: 11.5, weight: .bold))
                         .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("上一年")
+                .disabled(MediaCache.shared.adjacentSeason(to: model.selectedSeason, newer: false) == nil)
                 Text(String(model.selectedSeason))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .frame(minWidth: 34)
-                Button { model.selectSeason(model.selectedSeason + 1) } label: {
+                Button {
+                    if let year = MediaCache.shared.adjacentSeason(to: model.selectedSeason, newer: true) {
+                        model.selectSeason(year)
+                    }
+                } label: {
                     Image(systemName: "chevron.right").font(.system(size: 11.5, weight: .bold))
                         .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("下一年")
+                .disabled(MediaCache.shared.adjacentSeason(to: model.selectedSeason, newer: true) == nil)
             }
             .padding(.horizontal, 5)
             .padding(.vertical, 3)
@@ -154,10 +165,11 @@ struct StandingsView: View {
     }
 
     var emptyStandings: some View {
-        EmptyStateCard(
+        let pending = model.seasonHasNotStarted && model.standingsError == nil
+        return EmptyStateCard(
             symbol: "trophy",
-            title: model.standingsError == nil ? "暂无积分" : "无法读取积分榜",
-            message: model.standingsError == nil ? "该赛季还没有可用的积分数据。" : "稍后重试，或检查服务器连接。"
+            title: pending ? "赛季尚未开始" : model.standingsError == nil ? "暂无积分" : "无法读取积分榜",
+            message: pending ? "开赛后将在这里显示积分。" : model.standingsError == nil ? "该赛季还没有可用的积分数据。" : "稍后重试，或检查服务器连接。"
         )
     }
 }

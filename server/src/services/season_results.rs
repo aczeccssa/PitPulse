@@ -135,6 +135,7 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
             }
             let mut rows = json!(rows);
             for row in rows.as_array_mut().into_iter().flatten() {
+                crate::api::media::public_bindings().add_result_media(row, meeting.season);
                 let number = row["driverNumber"]
                     .as_str()
                     .and_then(|n| n.parse::<i64>().ok());

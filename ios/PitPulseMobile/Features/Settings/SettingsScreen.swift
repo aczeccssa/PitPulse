@@ -52,22 +52,20 @@ struct SettingsScreen: View {
                     }
 
                     settingsPanel("Preferences") {
-                        if !embedded {
-                            Menu {
-                                Picker("Season", selection: $model.season) {
-                                    ForEach(2023...max(2027, model.season), id: \.self) { year in
-                                        Text(String(year)).tag(year)
-                                    }
+                        Menu {
+                            Picker("Season", selection: $model.season) {
+                                ForEach(MediaCache.shared.seasons.map(\.year), id: \.self) { year in
+                                    Text(String(year)).tag(year)
                                 }
-                            } label: {
-                                settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
                             }
-                            .tint(.primary)
-                            .accessibilityLabel("Season")
-                            .accessibilityValue(String(model.season))
-
-                            Divider()
+                        } label: {
+                            settingsRow("Season", symbol: "calendar") { menuValue(String(model.season)) }
                         }
+                        .tint(.primary)
+                        .accessibilityLabel("Season")
+                        .accessibilityValue(String(model.season))
+
+                        Divider()
 
                         Menu {
                             Picker("Appearance", selection: $appearance) {
@@ -338,6 +336,10 @@ struct DriverChoiceScreen: View {
                         } actions: {
                             Button("Retry") { Task { await model.loadF1Roster(force: true) } }
                         }
+                    } else if model.seasonHasNotStarted {
+                        SeasonPendingView(season: model.season, symbol: "person.crop.circle")
+                    } else if model.rosterDidLoad {
+                        ContentUnavailableView("No Driver Data Yet", systemImage: "person.crop.circle")
                     } else {
                         PulseSkeleton(label: "Loading drivers…").padding(24)
                             .frame(maxWidth: .infinity)

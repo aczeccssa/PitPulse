@@ -30,6 +30,15 @@ fn failure(code: &'static str) -> Response {
         .into_response()
 }
 async fn meeting(state: &AppState, id: &str) -> Result<Meeting, &'static str> {
+    if let Some((year, _)) = id.split_once(":formula1:")
+        && let Ok(year) = year.parse()
+    {
+        return crate::services::next_schedule::calendar(&state.database, year)
+            .await
+            .map_err(|_| "database_error")?
+            .and_then(|(meetings, _)| meetings.into_iter().find(|m| m.id == id))
+            .ok_or("not_found");
+    }
     state
         .database
         .calendar(None)

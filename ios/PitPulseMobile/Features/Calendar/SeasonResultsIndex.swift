@@ -22,7 +22,9 @@ struct SeasonResultsIndex: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let archive = model.seasonArchive {
+                if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+                    SeasonPendingView(season: model.season, symbol: "flag.checkered")
+                } else if let archive = model.seasonArchive {
                     let weekends = archive.data.sorted { $0.meeting.startDate > $1.meeting.startDate }
                     let entries = weekends.compactMap { weekend in
                         entrySession(weekend).map { (weekend: weekend, session: $0) }
@@ -85,7 +87,7 @@ struct SeasonResultsIndex: View {
                 if let error = model.seasonArchiveError {
                     Text(error.pulseEnglishError).foregroundStyle(.secondary)
                     Button("Retry") { Task { await model.loadSeasonArchive(force: true) } }
-                } else if model.seasonArchive == nil {
+                } else if model.seasonArchive == nil && !model.seasonHasNotStarted {
                     loadingResults
                 }
             }
@@ -468,7 +470,7 @@ struct SeasonResultsIndex: View {
                     .frame(height: 1)
                     .accessibilityHidden(true)
                 HStack(spacing: 10) {
-                    AssetImage(name: MotorsportAssetName.helmetName(
+                    AssetImage(name: MotorsportAssetName.driverAvatarName(
                         driverID: leader.driverId, name: leader.driverName, season: meeting.season
                     ))
                     .frame(width: 38, height: 34)
@@ -610,7 +612,7 @@ private struct ResultsPodiumPreview: View {
     }
 
     private func helmet(_ row: SessionResult, size: CGFloat) -> some View {
-        AssetImage(name: MotorsportAssetName.helmetName(driverID: row.driverId,
+        AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: row.driverId,
             name: row.driverName, season: weekend.meeting.season))
             .frame(width: size, height: size)
             .accessibilityHidden(true)
@@ -930,7 +932,7 @@ private struct SeasonRoundMatrix: View {
     }
 
     private func driverHelmet(_ entry: DriverScore) -> some View {
-        AssetImage(name: MotorsportAssetName.helmetName(driverID: entry.id,
+        AssetImage(name: MotorsportAssetName.driverAvatarName(driverID: entry.id,
             name: entry.driver.driverName, season: season))
             .accessibilityHidden(true)
     }
@@ -1289,7 +1291,7 @@ private struct SeasonLeaders: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                         if let best {
-                            AssetImage(name: MotorsportAssetName.helmetName(
+                            AssetImage(name: MotorsportAssetName.driverAvatarName(
                                 driverID: best.id, name: best.name, season: season
                             ))
                             .frame(width: 42, height: 36)
@@ -1317,7 +1319,7 @@ private struct SeasonLeaders: View {
             if let best {
                 AssetImage(name: teams
                     ? MotorsportAssetName.name(kind: .teamLogo, id: best.team, season: season)
-                    : MotorsportAssetName.helmetName(driverID: best.id, name: best.name, season: season))
+                    : MotorsportAssetName.driverAvatarName(driverID: best.id, name: best.name, season: season))
                     .frame(width: 24, height: 24)
                     .accessibilityHidden(true)
             }
@@ -2095,7 +2097,7 @@ struct MeetingResultsDashboard: View {
     private func recordAsset(_ lap: SeasonResultWeekend.FastestLaps.Record) -> String {
         let rows = weekend.sessions.values.lazy.flatMap(\.rows)
         let driver = rows.first { $0.driverName == lap.driverName }
-        let helmet = MotorsportAssetName.helmetName(driverID: driver?.driverId, name: lap.driverName, season: lap.year)
+        let helmet = MotorsportAssetName.driverAvatarName(driverID: driver?.driverId, name: lap.driverName, season: lap.year)
         if DashboardArt.image(named: helmet) != nil { return helmet }
 
         let team = LiveIslandLogic.assetSlug(lap.team)
@@ -2107,7 +2109,7 @@ struct MeetingResultsDashboard: View {
     }
 
     private func helmet(_ row: SessionResult, season: Int) -> String {
-        MotorsportAssetName.helmetName(driverID: row.driverId, name: row.driverName, season: season)
+        MotorsportAssetName.driverAvatarName(driverID: row.driverId, name: row.driverName, season: season)
     }
 
     private struct TrackLap: Identifiable {

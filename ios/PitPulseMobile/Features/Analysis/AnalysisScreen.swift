@@ -1028,7 +1028,7 @@ struct TeammateComparisonBoard: View {
         GeometryReader { viewport in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    popularComparisons
+                    if !model.seasonHasNotStarted { popularComparisons }
                     if tabletWebLayout, let left = tabletDrivers.first(where: { $0.id == first }),
                        let right = tabletDrivers.first(where: { $0.id == second }) {
                         let standings = model.driverRoster.filter { $0.season == model.season }
@@ -1048,7 +1048,9 @@ struct TeammateComparisonBoard: View {
                         .dashboardPanel(WebDashboardStyle.homePanel)
                     }
                     Group {
-                        if let archive = model.seasonArchive {
+                        if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+                            SeasonPendingView(season: model.season, symbol: "arrow.left.arrow.right")
+                        } else if let archive = model.seasonArchive {
                             if archive.meta.stale {
                                 Label("Season results may be out of date", systemImage: "clock.arrow.circlepath")
                                     .font(.caption).foregroundStyle(.secondary)
@@ -1893,7 +1895,9 @@ struct DriverConsistency: View {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     if !tabletWebLayout { consistencyOptions }
                     Group {
-                        if let archive = model.seasonArchive {
+                        if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+                            SeasonPendingView(season: model.season, symbol: "chart.box")
+                        } else if let archive = model.seasonArchive {
                             if archive.meta.stale {
                                 Label("Season results may be out of date", systemImage: "clock.arrow.circlepath")
                                     .font(.caption).foregroundStyle(.secondary)

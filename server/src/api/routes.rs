@@ -35,6 +35,16 @@ form-action 'none'; frame-ancestors 'none'";
 
 pub fn build_router(state: AppState) -> Router<AppState> {
     Router::new()
+        .route("/api/v1/media/manifest.json", get(super::media::manifest))
+        .route(
+            "/api/v1/media/blob/{digest}",
+            get(super::media::native_blob),
+        )
+        .route("/api/v1/seasons", get(super::media::seasons))
+        .route(
+            "/api/v1/seasons/{season}/drivers/{driver}/media",
+            get(super::media::driver_media),
+        )
         .route("/api/v1/calendar", get(calendar))
         .route("/api/v1/home", get(crate::services::engineering::home))
         .route(
@@ -97,7 +107,7 @@ pub fn build_router(state: AppState) -> Router<AppState> {
 
 /// Web shell for the self-hosted dashboard, behind the browser session guard.
 pub async fn index() -> Response {
-    let mut response = INDEX_HTML.into_response();
+    let mut response = super::media::version_web_brand(INDEX_HTML).into_response();
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_TYPE,
@@ -133,7 +143,10 @@ pub async fn theme_js() -> Response {
 }
 
 pub async fn manifest() -> Response {
-    text_asset(MANIFEST, "application/manifest+json")
+    text_asset(
+        super::media::version_web_brand(MANIFEST),
+        "application/manifest+json",
+    )
 }
 
 pub async fn apple_touch_icon() -> Response {
@@ -199,7 +212,7 @@ fn script_asset(body: &'static str) -> Response {
     response
 }
 
-fn text_asset(body: &'static str, content_type: &'static str) -> Response {
+fn text_asset(body: impl IntoResponse, content_type: &'static str) -> Response {
     let mut response = body.into_response();
     let headers = response.headers_mut();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(content_type));
@@ -288,7 +301,10 @@ pub async fn spa_fallback(
     uri: Uri,
     headers: HeaderMap,
 ) -> Response {
-    if uri.path().starts_with("/api/") || uri.path().starts_with("/motorsport") {
+    if uri.path().starts_with("/api/")
+        || uri.path().starts_with("/motorsport")
+        || uri.path().starts_with("/media/")
+    {
         return (
             StatusCode::NOT_FOUND,
             Json(json!({"error": {"code": "not_found", "message": "unknown API path"}})),
@@ -318,10 +334,15 @@ async fn calendar(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let season = parse_season(&params)?;
     let (meetings, mut meta) = state.database.calendar(season).await?;
-    let season_id = match season {
-        Some(season) => season,
-        None => current_year(&state).await?,
-    };
+    let current_year = current_year(&state).await?;
+    let season_id = season.unwrap_or(current_year);
+    if season.is_some()
+        && (meetings.is_empty() || season_id > current_year)
+        && let Some((official, meta)) =
+            crate::services::next_schedule::calendar(&state.database, season_id).await?
+    {
+        return Ok(Json(json!({"data": official, "meta": meta})));
+    }
     meta.sync_status = state
         .database
         .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))
@@ -350,9 +371,11 @@ async fn session_results(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    if !state.database.session_exists(&session_id).await? {
-        return Err(ApiError::NotFound);
-    }
+    let season = state
+        .database
+        .session_season(&session_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
     let (results, mut meta) = state.database.session_results(&session_id).await?;
     meta.sync_status = state
         .database
@@ -362,7 +385,11 @@ async fn session_results(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": results, "meta": meta})))
+    let mut rows = json!(results);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        super::media::public_bindings().add_result_media(row, season);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn driver_standings(
@@ -383,7 +410,13 @@ async fn driver_standings(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": standings, "meta": meta})))
+    let mut rows = json!(standings);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let id = row["driverId"].as_str().unwrap_or_default();
+        row["media"] =
+            super::media::public_bindings().driver(row["season"].as_i64().unwrap_or(season_id), id);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn constructor_standings(
@@ -407,7 +440,13 @@ async fn constructor_standings(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": standings, "meta": meta})))
+    let mut rows = json!(standings);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let id = row["constructorId"].as_str().unwrap_or_default();
+        row["media"] =
+            super::media::public_bindings().team(row["season"].as_i64().unwrap_or(season_id), id);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn live_snapshot(
@@ -494,7 +533,7 @@ fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiErro
     Ok(season)
 }
 
-async fn current_year(state: &AppState) -> Result<i64, ApiError> {
+pub(crate) async fn current_year(state: &AppState) -> Result<i64, ApiError> {
     let now = state.database.utc_now().await?;
     now.get(..4)
         .and_then(|year| year.parse().ok())

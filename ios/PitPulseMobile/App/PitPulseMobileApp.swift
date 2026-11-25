@@ -298,7 +298,8 @@ struct RootView: View {
         Button(action: action) {
             HStack(spacing: 9) {
                 if let webIcon {
-                    Image("web-nav-" + webIcon)
+                    MotorsportImages.image(named: "web-nav-" + webIcon, fallback: symbol)
+                        .renderingMode(.template)
                         .resizable()
                         .frame(width: 17, height: 17)
                 } else {
@@ -499,7 +500,7 @@ struct RootView: View {
             selectTab(DashboardTab.home.rawValue)
         } label: {
             HStack(spacing: 9) {
-                Image("web-brand-mark")
+                MotorsportImages.image(named: "web-brand-mark")
                     .resizable().scaledToFit()
                     .frame(width: 24, height: 20)
                     .accessibilityHidden(true)
@@ -628,6 +629,7 @@ struct RootView: View {
                 model.settingsPresented = true
             }
             #endif
+            MediaCache.shared.refresh(from: model.serverURL, token: model.currentToken)
             model.startLive()
             async let roster: Void = model.loadF1Roster()
             async let liveCalendar: Void = model.loadCurrentSeasonLiveCalendar()
@@ -638,9 +640,17 @@ struct RootView: View {
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
+            MediaCache.shared.refresh(from: model.serverURL, token: model.currentToken)
             while !Task.isCancelled {
                 model.updateScheduledLiveSession()
                 do { try await Task.sleep(for: .seconds(5)) } catch { break }
+            }
+        }
+        .task(id: "\(model.dataContext)|\(scenePhase)") {
+            guard scenePhase == .active, model.season > model.reminderSeason else { return }
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                await model.loadCalendar(force: true)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -886,7 +896,8 @@ private struct DashboardHeader: View {
                         sidebarExpanded.wrappedValue.toggle()
                     }
                 } label: {
-                    Image("web-nav-navigation-toggle")
+                    MotorsportImages.image(named: "web-nav-navigation-toggle", fallback: "sidebar.left")
+                        .renderingMode(.template)
                         .resizable()
                         .frame(width: 18, height: 18)
                         .frame(width: 36, height: 36)
@@ -1237,9 +1248,13 @@ struct PulseChevron: View {
 
 struct AssetImage: View {
     let name: String
+    var media: MediaReference? = nil
     @Environment(\.colorScheme) private var colorScheme
     var body: some View {
-        if let image = DashboardArt.image(named: name, traits: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)) {
+        let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+        let image = media.flatMap { MotorsportImages.uiImage(media: $0) }
+            ?? DashboardArt.image(named: name, traits: traits)
+        if let image {
             Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().accessibilityHidden(true)
         } else {
             Image(systemName: MotorsportImages.fallbackSymbol(named: name) ?? "person.crop.circle").resizable().scaledToFit().foregroundStyle(.secondary).accessibilityHidden(true)

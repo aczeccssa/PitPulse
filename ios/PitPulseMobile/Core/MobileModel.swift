@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 import SharedData
+import SharedComponents
 
 struct LiveNotice: Equatable {
     let id = UUID()
@@ -74,6 +75,7 @@ final class MobileModel: ObservableObject {
     var lastFinishedF1: LiveSnapshot?
     var displayedLiveSessionKey: String?
     @Published var driverRoster: [DriverStanding] = []
+    @Published var rosterDidLoad = false
     @Published var rosterLoadError: String?
     @Published var settingsPresented = false
     @Published var liveNotice: LiveNotice?
@@ -122,6 +124,12 @@ final class MobileModel: ObservableObject {
     @Published var credentialRevision = 0
 
     var dataContext: String { "\(serverURL?.absoluteString ?? serverText)|\(season)|\(credentialRevision)" }
+    var seasonHasNotStarted: Bool {
+        CalendarLogic.seasonHasNotStarted(
+            season, meetings: meetings,
+            firstRaceDate: MediaCache.shared.seasons.first { $0.year == season }?.firstRaceDate
+        )
+    }
 
     func invalidateCalendar() {
         calendarRequestID = UUID()
@@ -134,6 +142,8 @@ final class MobileModel: ObservableObject {
         healthText = nil
         liveHistory = [:]
         driverRoster = []
+        rosterDidLoad = false
+        rosterLoadError = nil
         historiesBySeries = [:]
         recentLiveLaps = [:]
         liveSnapshots = [:]
@@ -160,11 +170,15 @@ final class MobileModel: ObservableObject {
         favoriteDriverID = defaults.string(forKey: PreferenceKeys.favoriteDriverId)
         islandMode = defaults.string(forKey: "mobileIslandMode").flatMap(IslandContentMode.init(rawValue:)) ?? .overview
         let currentYear = Calendar(identifier: .gregorian).component(.year, from: .now)
-        season = UIDevice.current.userInterfaceIdiom != .pad && storedSeason > 2000 ? storedSeason : currentYear
+        season = storedSeason > 2000 ? storedSeason : currentYear
         serverText = storedServer?.isEmpty == false ? storedServer! : "http://localhost:38701"
         for (series, store) in liveStores {
             store.onSnapshot = { [weak self] snapshot in self?.handle(snapshot, from: series) }
             store.onConnectionState = { [weak self] snapshot in self?.handle(snapshot, from: series) }
+            store.onStreamConnected = { [weak self] in
+                guard let self else { return }
+                MediaCache.shared.refresh(from: self.serverURL, token: self.currentToken)
+            }
         }
         #if DEBUG
         if ProcessInfo.processInfo.environment["PITPULSE_DEMO_ACTIVITY"] == "1" {

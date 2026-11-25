@@ -308,7 +308,7 @@ struct FavoriteDriverWidgetView: View {
     }
 
     func helmet(_ driver: WidgetStandingDriver, season: Int, size: CGSize) -> some View {
-        MotorsportImages.image(named: MotorsportAssetName.helmetName(driverID: driver.driverID, name: driver.name, season: season))
+        MotorsportImages.image(named: MotorsportAssetName.driverAvatarName(driverID: driver.driverID, name: driver.name, season: season))
             .resizable().scaledToFit().frame(width: size.width, height: size.height).accessibilityHidden(true)
     }
 

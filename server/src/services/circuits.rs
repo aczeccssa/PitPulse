@@ -82,30 +82,85 @@ pub fn locate(key: Option<&str>, utc: &str, location: &mut LiveLocation) {
         location.latitude = Some(lat);
     }
 }
+
+fn features() -> &'static [Value] {
+    static COLLECTION: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
+    COLLECTION.get_or_init(|| serde_json::from_str(GEOMETRY).expect("bundled GeoJSON"))["features"]
+        .as_array()
+        .expect("bundled circuit features")
+}
+
+// Official event slug, venue name from the F1 calendar, and geometry dataset ID.
+const PUBLISHED_VENUES: &[(&str, &str, &str)] = &[
+    ("pre-season-testing", "Sakhir", "bh-2002"),
+    ("bahrain", "Bahrain", "bh-2002"),
+    ("saudi-arabia", "Jeddah", "sa-2021"),
+    ("australia", "Melbourne", "au-1953"),
+    ("japan", "Suzuka", "jp-1962"),
+    ("china", "Shanghai", "cn-2004"),
+    ("miami", "Miami Gardens", "us-2022"),
+    ("canada", "Montréal", "ca-1978"),
+    ("monaco", "Monte Carlo", "mc-1929"),
+    ("portugal", "Portimão", "pt-2008"),
+    ("great-britain", "Silverstone", "gb-1948"),
+    ("austria", "Spielberg", "at-1969"),
+    ("belgium", "Spa-Francorchamps", "be-1925"),
+    ("hungary", "Budapest", "hu-1986"),
+    ("italy", "Monza", "it-1922"),
+    ("spain", "Madrid", "es-2026"),
+    ("spain", "Barcelona", "es-1991"),
+    ("azerbaijan", "Baku", "az-2016"),
+    ("turkey", "Istanbul", "tr-2005"),
+    ("singapore", "Marina Bay", "sg-2008"),
+    ("united-states", "Austin", "us-2012"),
+    ("mexico", "Mexico City", "mx-1962"),
+    ("brazil", "São Paulo", "br-1940"),
+    ("las-vegas", "Las Vegas", "us-2023"),
+    ("qatar", "Lusail", "qa-2004"),
+    ("united-arab-emirates", "Yas Marina", "ae-2009"),
+];
+
+pub fn published_venue(slug: &str, track: Option<&str>) -> Option<Value> {
+    let (_, _, id) = PUBLISHED_VENUES.iter().find(|(event, name, _)| {
+        *event == slug && track.is_none_or(|track| name.eq_ignore_ascii_case(track))
+    })?;
+    let feature = features().iter().find(|f| f["properties"]["id"] == *id)?;
+    let coordinates = feature.pointer("/geometry/coordinates/0")?;
+    let properties = &feature["properties"];
+    Some(json!({
+        "id": id,
+        "geometryId": id,
+        "name": properties["Name"],
+        "longitude": coordinates[0],
+        "latitude": coordinates[1],
+        "lengthKm": properties["length"].as_f64().map(|meters| meters / 1000.0)
+    }))
+}
+
 pub fn geometry(circuit: &Value, season: i64) -> Value {
     let (Some(lon), Some(lat)) = (circuit["longitude"].as_f64(), circuit["latitude"].as_f64())
     else {
         return json!({"geometry":null,"status":"location_unavailable"});
     };
-    static COLLECTION: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
-    let collection =
-        COLLECTION.get_or_init(|| serde_json::from_str(GEOMETRY).expect("bundled GeoJSON"));
-    let feature = collection["features"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|f| {
-            let points = f.pointer("/geometry/coordinates")?.as_array()?;
-            let nearest = points
-                .iter()
-                .filter_map(|p| Some(distance(lon, lat, p[0].as_f64()?, p[1].as_f64()?)))
-                .fold(f64::INFINITY, f64::min);
-            (nearest < 5000.0).then_some((nearest, f))
-        })
-        .min_by(|a, b| a.0.total_cmp(&b.0))
-        .map(|(_, f)| f.clone());
+    let feature = if let Some(id) = circuit["geometryId"].as_str() {
+        features()
+            .iter()
+            .find(|feature| feature["properties"]["id"] == id)
+    } else {
+        features()
+            .iter()
+            .filter_map(|f| {
+                let points = f.pointer("/geometry/coordinates")?.as_array()?;
+                let nearest = points
+                    .iter()
+                    .filter_map(|p| Some(distance(lon, lat, p[0].as_f64()?, p[1].as_f64()?)))
+                    .fold(f64::INFINITY, f64::min);
+                (nearest < 5000.0).then_some((nearest, f))
+            })
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .map(|(_, f)| f)
+    };
     let id = feature
-        .as_ref()
         .and_then(|f| f.pointer("/properties/id"))
         .and_then(Value::as_str);
     let verified = calibrations()
@@ -116,6 +171,17 @@ pub fn geometry(circuit: &Value, season: i64) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn published_circuit_outlines_use_venue_and_never_guess_relocations() {
+        for &(slug, track, id) in PUBLISHED_VENUES {
+            let circuit = published_venue(slug, Some(track)).unwrap();
+            let result = geometry(&circuit, 2028);
+            assert_eq!(result["geometry"]["properties"]["id"], id);
+            assert_eq!(result["calibrated"], false);
+        }
+        assert!(published_venue("spain", Some("unrecognized location")).is_none());
+    }
+
     #[test]
     fn test_bundled_calibrations_pass_and_unverified_seasons_have_no_positions() {
         let values: Vec<Calibration> = serde_json::from_str(CALIBRATIONS).unwrap();

@@ -4,32 +4,11 @@ import UIKit
 @testable import SharedData
 
 final class LiveActivityContentStateTests: XCTestCase {
-    @MainActor
-    func testSharedCatalogLoadsHelmetsLogosAndPreservesMissingImageFallback() throws {
-        for style in [UIUserInterfaceStyle.light, .dark] {
-            let traits = UITraitCollection(userInterfaceStyle: style)
-            for name in ["helmet-leclerc-2026", "team-logo-ferrari-2026", "series-f1", "car-side-ferrari-2026", MotorsportAssetName.brandLogoName] {
-                let image = try XCTUnwrap(MotorsportImages.uiImage(named: name, traits: traits), name)
-                XCTAssertGreaterThan(image.size.width, 0)
-            }
-        }
-        XCTAssertNil(MotorsportImages.uiImage(named: "nonexistent-preview-test-image"))
-    }
-
-    @MainActor
-    func testSeasonArchiveResolvesDriverAndConstructorAliases() throws {
-        let assets: [(MotorsportAssetName.Kind, String, Int)] = [
-            (.driverPhoto, "verstappen", 2024), (.driverPhoto, "lindblad", 2026),
-            (.driverPhoto, "camara", 2026), (.teamLogo, "kick_sauber", 2025),
-            (.carSide, "mclaren", 2025), (.teamLogo, "racing_bulls", 2026),
-            (.carSide, "red-bull-racing", 2026), (.helmet, "verstappen", 2026)
-        ]
-        for (kind, id, season) in assets {
-            let name = MotorsportAssetName.name(kind: kind, id: id, season: season)
-            XCTAssertNotNil(MotorsportImages.uiImage(named: name), name)
-        }
-        XCTAssertNil(MotorsportImages.uiImage(named: "helmet-leclerc-2025"))
-        XCTAssertNil(MotorsportImages.uiImage(named: "helmet-rafael_camara-2026"))
+    func testRuntimeArtworkIsNotBundled() {
+        XCTAssertNil(Bundle.main.url(forResource: "motorsport", withExtension: nil))
+        XCTAssertNil(Bundle.main.url(forResource: "WebAssets", withExtension: nil))
+        XCTAssertNil(UIImage(named: "team-logo-ferrari-2026"))
+        XCTAssertNil(UIImage(named: "web-nav-home"))
     }
 
     func testPositionFocusFollowsContinuingLossBeyondTenSeconds() {

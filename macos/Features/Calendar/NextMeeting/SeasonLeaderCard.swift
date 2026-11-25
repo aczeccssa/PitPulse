@@ -30,7 +30,7 @@ struct SeasonLeaderCard: View {
                                     .monospacedDigit()
                                     .foregroundStyle(index == 0 ? PitPulseTheme.accent : .secondary)
                                     .frame(width: 18, alignment: .trailing)
-                                DriverHelmetAvatar(
+                                DriverAvatar(
                                     driverID: row.driverId,
                                     name: row.driverName,
                                     season: model.selectedSeason,

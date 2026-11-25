@@ -1,11 +1,13 @@
 import AppKit
 import Foundation
 import SharedData
+import SharedComponents
 
 extension AppModel {
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
+        refreshMedia()
         await loadCachedIfAvailable()
         await refreshTokenStatus()
         if networkAvailable {
@@ -16,6 +18,7 @@ extension AppModel {
     }
 
     func popupDidAppear() {
+        refreshMedia()
         startPopupRefresh()
         if !didBootstrap {
             Task { await bootstrap() }
@@ -80,7 +83,13 @@ extension AppModel {
         return result
     }
 
+    private func refreshMedia() {
+        let token = serverURL.flatMap { try? credentials.token(for: $0) }
+        MediaCache.shared.refresh(from: serverURL, token: token, online: networkAvailable)
+    }
+
     func startLiveStream() {
+        refreshMedia()
         guard didBootstrap, networkAvailable, let server = configuredServer else { return }
         do {
             liveStore.start(

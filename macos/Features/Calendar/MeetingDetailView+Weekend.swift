@@ -45,7 +45,7 @@ extension MeetingDetailView {
                 }
             }
             if sortedSessions.isEmpty {
-                EmptyStateCard(symbol: "calendar.badge.clock", title: "周末赛程未提供", message: "服务器返回的分站数据中没有 Session。")
+                EmptyStateCard(symbol: "calendar.badge.clock", title: "分节时间待公布", message: "已公布的比赛周末日期可在赛历查看。")
             }
         }
     }

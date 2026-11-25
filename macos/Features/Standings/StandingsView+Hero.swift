@@ -34,7 +34,7 @@ extension StandingsView {
                 name: row.driverName,
                 detail: "\(row.wins) 胜",
                 points: row.points,
-                image: MotorsportAsset.f1HelmetImage(id: row.driverId, season: model.selectedSeason)
+                image: MotorsportAsset.driverAvatar(id: row.driverId, season: model.selectedSeason)
             )
         }
     }
@@ -100,7 +100,7 @@ extension StandingsView {
             .frame(width: size, height: size)
             .accessibilityHidden(true)
         } else {
-            DriverHelmetAvatar(
+            DriverAvatar(
                 driverID: entry.id,
                 name: entry.name,
                 season: model.selectedSeason,

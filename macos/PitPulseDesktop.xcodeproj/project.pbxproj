@@ -12,7 +12,6 @@
 		067D5BC0E226D04400EC1325 /* GlassIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8A824010B90DF53F76CBED /* GlassIconButton.swift */; };
 		07353B099E2AAF64A231325B /* CalendarCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D46456C456970480099ACA /* CalendarCacheTests.swift */; };
 		079FAC18FB8174DBC7AC8C71 /* LiveIslandTests+Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA73BE28B8A070F17F15125 /* LiveIslandTests+Favorites.swift */; };
-		086EABCDFFE4B964BD7834F1 /* AppAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 978D0AC5B2D352B2888628B8 /* AppAssets.xcassets */; };
 		0A222CE7D314563816FD4088 /* MotorsportAssetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 088FFD19D15110817C58D070 /* MotorsportAssetTests.swift */; };
 		0B4044C9D7B3EE77EAC7EAA8 /* LiveExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47121787DE427453D818C854 /* LiveExtras.swift */; };
 		0CEA7DD6913FC4C1B3B77531 /* MeetingDetailView+Weekend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00077E51FAF4264427A47B53 /* MeetingDetailView+Weekend.swift */; };
@@ -56,12 +55,11 @@
 		53F7337F6962FC5EED20C59A /* AppModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B72CAB65B9584D89B3F9C2 /* AppModel+Lifecycle.swift */; };
 		55DCBB0BBB28B3F744108A67 /* ServerAddressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D64E9C68B4DDE9577C4B43 /* ServerAddressTests.swift */; };
 		5600EBD251FF0BCA6C840843 /* AppModel+Refresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F09BF5A0AF3263021154BB /* AppModel+Refresh.swift */; };
-		5A2F353EC4A3095B80CD3674 /* DriverHelmetAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */; };
+		5A2F353EC4A3095B80CD3674 /* DriverAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */; };
 		5D8624624C44DE898D566BC5 /* LiveIslandExpandedView+Computed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F34FF4036FAC59ECCDB8428 /* LiveIslandExpandedView+Computed.swift */; };
 		5DB2B5313C22EC235169F28F /* LiveIslandExpandedView+Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79C6740E696573DC15A19573 /* LiveIslandExpandedView+Controls.swift */; };
 		6425FF1ABCEF4BC38778CAA9 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61C7E4945392C1F76162C12 /* MapView.swift */; };
 		64F5F58403C0248987C28131 /* SharedData in Frameworks */ = {isa = PBXBuildFile; productRef = 0E9FF30A9E31BDCE21E03738 /* SharedData */; };
-		653B96FF1ECBDF0D56634A54 /* motorsport in Resources */ = {isa = PBXBuildFile; fileRef = 7F61C0E47C6EC6266F081983 /* motorsport */; };
 		6676AA66D522854730BB0F91 /* AppSymbol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4D91847E5BEC99C2CF65CA /* AppSymbol.swift */; };
 		686A83C34F277F9C04C43FBD /* MeetingDetailView+Analysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 604F5D1C19F571090349464B /* MeetingDetailView+Analysis.swift */; };
 		6A30D8AA2447D8E709194AFA /* LiveIslandDriverRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F8A2F141608E1B7851BABA /* LiveIslandDriverRow.swift */; };
@@ -237,7 +235,6 @@
 		79C6740E696573DC15A19573 /* LiveIslandExpandedView+Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveIslandExpandedView+Controls.swift"; sourceTree = "<group>"; };
 		7CE0741B093C555DA6214F92 /* StatusMenuLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuLabel.swift; sourceTree = "<group>"; };
 		7F34FF4036FAC59ECCDB8428 /* LiveIslandExpandedView+Computed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveIslandExpandedView+Computed.swift"; sourceTree = "<group>"; };
-		7F61C0E47C6EC6266F081983 /* motorsport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = motorsport; path = ../server/resources/motorsport; sourceTree = SOURCE_ROOT; };
 		809F6975722C032EFDCEDDAA /* PitPulseTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitPulseTheme.swift; sourceTree = "<group>"; };
 		8115B2830F7E41288A80FFA4 /* LiveTireInline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTireInline.swift; sourceTree = "<group>"; };
 		8153A9FE994D22152F1A9C61 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
@@ -249,7 +246,6 @@
 		9166C03E5CDB54307E827995 /* SessionResultsView+Podium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SessionResultsView+Podium.swift"; sourceTree = "<group>"; };
 		972E6DC30F132CE660E96401 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		9788E4E9DD86AC0645597D03 /* DriverRaceFactsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverRaceFactsCard.swift; sourceTree = "<group>"; };
-		978D0AC5B2D352B2888628B8 /* AppAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppAssets.xcassets; sourceTree = "<group>"; };
 		98DBE779FDFD1C39E5D48991 /* AppModel+Widgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Widgets.swift"; sourceTree = "<group>"; };
 		9BCB06C3BF2D0D212D890D77 /* NextMeetingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextMeetingCard.swift; sourceTree = "<group>"; };
 		A0962921FBC414E813CB0537 /* CalendarLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLogicTests.swift; sourceTree = "<group>"; };
@@ -262,7 +258,7 @@
 		B40BAE272BEB822820E40689 /* AppModelTests+Results.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModelTests+Results.swift"; sourceTree = "<group>"; };
 		B4BC764E9F1B724DE9183A4A /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		B61C7E4945392C1F76162C12 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
-		B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverHelmetAvatar.swift; sourceTree = "<group>"; };
+		B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverAvatar.swift; sourceTree = "<group>"; };
 		B8A8F05F43A85A127D5048F7 /* LiveIslandActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveIslandActions.swift; sourceTree = "<group>"; };
 		B8EDB12972786BE5FB43E489 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		BD007297260B6612207E9C4F /* MenuBarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRootView.swift; sourceTree = "<group>"; };
@@ -353,18 +349,10 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
-		20562EA3B11EF08E6DD4FEA3 /* resources */ = {
-			isa = PBXGroup;
-			children = (
-				7F61C0E47C6EC6266F081983 /* motorsport */,
-			);
-			path = resources;
-			sourceTree = "<group>";
-		};
 		327F8F134745D21A2E7306B9 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
-				B81697196B77D4C8E84BE9BC /* DriverHelmetAvatar.swift */,
+				B81697196B77D4C8E84BE9BC /* DriverAvatar.swift */,
 				14F829C7C1550F8B3730BB3A /* EmptyStateCard.swift */,
 				F9E460474244935F4A8C9DFF /* GlassCard.swift */,
 				0C8A824010B90DF53F76CBED /* GlassIconButton.swift */,
@@ -394,7 +382,6 @@
 				84E84B8FB0628AF5787BB1E1 /* Packages */,
 				8F56FF7CAAD7B54AB1A4531D /* PitPulse */,
 				C4AD62D925A4C8318DA8BEAD /* PitPulseWidgets */,
-				E108677A3CFCBAF37C20256C /* Resources */,
 				B6FD8EBBEDA11A3100C71C5E /* Tests */,
 				67ED2157E540BC95AFE0431F /* UITests */,
 				E24755CC2E4CA3CE6FABA0B0 /* Products */,
@@ -459,13 +446,6 @@
 			path = AppModel;
 			sourceTree = "<group>";
 		};
-		786FC87E9894B856706A2FC4 /* .claude */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = .claude;
-			sourceTree = "<group>";
-		};
 		792FE7680FB326CFE3CA590F /* Maps */ = {
 			isa = PBXGroup;
 			children = (
@@ -501,7 +481,6 @@
 			isa = PBXGroup;
 			children = (
 				671C079749313AE80B1F7811 /* Packages */,
-				93B6E7B409D6C3C5360C976A /* server */,
 			);
 			name = PitPulse;
 			path = ..;
@@ -527,14 +506,6 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		93B6E7B409D6C3C5360C976A /* server */ = {
-			isa = PBXGroup;
-			children = (
-				20562EA3B11EF08E6DD4FEA3 /* resources */,
-			);
-			path = server;
-			sourceTree = "<group>";
-		};
 		9FE929E90FF7B8C7B922919B /* LiveIsland */ = {
 			isa = PBXGroup;
 			children = (
@@ -542,7 +513,6 @@
 				B8A8F05F43A85A127D5048F7 /* LiveIslandActions.swift */,
 				569F011A9095488ADD468A4A /* LiveIslandController.swift */,
 				20A307808858B1EB71C47257 /* LiveIslandController+Presentation.swift */,
-				786FC87E9894B856706A2FC4 /* .claude */,
 				71425F6DA97C6F81C3745224 /* Compact */,
 				DF391FF027F16BD438472549 /* Components */,
 				CD56BF811E39C43F868AD431 /* Expanded */,
@@ -676,14 +646,6 @@
 				C133F1837BF5372C74E24F33 /* LiveWecTireEnergyCell.swift */,
 			);
 			path = Components;
-			sourceTree = "<group>";
-		};
-		E108677A3CFCBAF37C20256C /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				978D0AC5B2D352B2888628B8 /* AppAssets.xcassets */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 		E24755CC2E4CA3CE6FABA0B0 /* Products */ = {
@@ -879,10 +841,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				086EABCDFFE4B964BD7834F1 /* AppAssets.xcassets in Resources */,
 				4169158A69C62B230CCBC013 /* AppIcon.icon in Resources */,
 				3D544C7D976265FB9A7D8405 /* map.html in Resources */,
-				653B96FF1ECBDF0D56634A54 /* motorsport in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -910,7 +870,7 @@
 				1915860CA32B4FC34FDF5778 /* CalendarView+List.swift in Sources */,
 				FE9CCFE2B7AC8CD78AC646C7 /* CalendarView.swift in Sources */,
 				2EA78B7A8AB417E8B3474786 /* CountdownView.swift in Sources */,
-				5A2F353EC4A3095B80CD3674 /* DriverHelmetAvatar.swift in Sources */,
+				5A2F353EC4A3095B80CD3674 /* DriverAvatar.swift in Sources */,
 				DCAAA3797C842F9B9E145C53 /* DriverRaceFactsCard.swift in Sources */,
 				490B5743362D529F91C7ABB9 /* EmptyStateCard.swift in Sources */,
 				FE1B40BF57DB9E73511C0D57 /* F1CompanionApp.swift in Sources */,

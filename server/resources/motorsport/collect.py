@@ -37,14 +37,11 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-CATALOG = (
-    REPO
-    / "Packages/SharedComponents/Sources/SharedComponents/Resources"
-    / "PitPulseAssets.xcassets"
-)
+NATIVE_MEDIA = HERE.parent / "media"
 
 ROSTER = HERE / "roster.json"
 MANIFEST = HERE / "manifest.json"
+HELMET_SOURCES = HERE / "historical-helmets.json"
 
 CDN = "https://media.formula1.com/image/upload"
 F1_SITE = "https://www.formula1.com"
@@ -565,7 +562,7 @@ class Collector:
         for driver_id in self.roster[str(season)]["drivers"]:
             if self.skip("helmet", driver_id, season):
                 continue
-            source = CATALOG / f"helmet-{driver_id}-{season}.imageset" / "image.png"
+            source = NATIVE_MEDIA / f"native-{season}" / "helmet" / f"helmet-{driver_id}-{season}.png"
             if not source.exists():
                 continue
             image = fit_height(trim(Image.open(source).convert("RGBA")), HELMET_HEIGHT)
@@ -585,22 +582,25 @@ def gap_reason(kind: str, season: int) -> str:
             f"{FIRST_SEASON_WITH_ARTWORK}; every probed path returns 404"
         )
     if kind == "helmet":
-        return (
-            "no public season-scoped helmet artwork; only the 2026 app "
-            "catalog carries helmets"
-        )
+        return "no verified helmet image for this driver and season"
     return "no official artwork answered for this entry"
 
 
-def provenance_for(asset_id: str, kind: str, season: int) -> dict:
-    page = {
+def provenance_for(asset_id: str, kind: str, season: int, historical: dict | None = None) -> dict:
+    if (kind, season, asset_id) == ("driver-photo", 2024, "doohan"):
+        historical = {
+            "sourcePage": "https://app.formula1dashboard.com/driver-stats/doohan/2024/",
+            "sourceImage": "https://cdn.formula1dashboard.com/i/v1/w320-h320-fcontain-q85/drivers/2024/portrait/2024-doohan.png",
+        }
+    page = historical["sourcePage"] if historical else {
         "driver-photo": f"{F1_SITE}/en/drivers",
         "car-side": f"{F1_SITE}/en/teams",
         "team-logo": f"{F1_SITE}/en/teams",
-        "helmet": "https://turn1visuals.com/f1-2026-assets/ (app catalog import)",
+        "helmet": "https://turn1visuals.com/f1-2026-assets/ (native media import)",
     }[kind]
     return {
         "sourcePageUrl": page,
+        **({"provenance": historical} if historical else {}),
         "license": "restricted",
         "rightsStatus": "restricted",
         "downloadStatus": "downloaded",
@@ -616,6 +616,8 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
     """Describe what is on disk, and what the roster expects but is missing."""
     collected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entries: list[dict] = []
+    historical_helmets = json.loads(HELMET_SOURCES.read_text()) if HELMET_SOURCES.exists() else []
+    helmets = {(row["season"], row["driverId"]): row for row in historical_helmets}
     present: set[tuple[str, str, int]] = set()
     for season in SEASONS:
         season_dir = HERE / str(season)
@@ -639,7 +641,7 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
                     "width": image.width,
                     "height": image.height,
                     "collectedAt": collected_at,
-                    **provenance_for(base_id, kind, season),
+                    **provenance_for(base_id, kind, season, helmets.get((season, base_id)) if kind == "helmet" else None),
                 }
                 if base_id != asset_id:
                     entry["variant"] = asset_id[len(base_id) + 1 :]
@@ -771,7 +773,7 @@ def write_manifest(roster: dict) -> None:
             },
             {
                 "name": "pitpulse-app-catalog",
-                "path": str(CATALOG.relative_to(REPO)),
+                "path": str(NATIVE_MEDIA.relative_to(REPO)),
                 "scope": "2026 helmets",
                 "rightsStatus": "restricted",
             },

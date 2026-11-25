@@ -3,11 +3,12 @@ import SharedData
 
 extension SessionResultsView {
     func helmetImage(_ result: SessionResult, size: CGFloat) -> some View {
-        DriverHelmetAvatar(
+        DriverAvatar(
             driverID: result.driverId,
             name: result.driverName,
             season: model.selectedSeason,
-            size: size
+            size: size,
+            media: result.media?.driver.avatar
         )
     }
 
@@ -115,11 +116,12 @@ struct ResultsPodium: View {
     }
 
     func helmetImage(_ result: SessionResult, size: CGFloat) -> some View {
-        DriverHelmetAvatar(
+        DriverAvatar(
             driverID: result.driverId,
             name: result.driverName,
             season: season,
-            size: size
+            size: size,
+            media: result.media?.driver.avatar
         )
     }
 
