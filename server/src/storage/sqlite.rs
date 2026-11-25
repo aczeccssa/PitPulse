@@ -54,6 +54,7 @@ enum SyncStateOutcome<'a> {
 #[derive(Clone)]
 pub struct Database {
     connection: Arc<Mutex<Connection>>,
+    season_reader: Option<super::postgres::Postgres>,
 }
 
 pub struct ScheduleSnapshot {
@@ -79,7 +80,25 @@ impl Database {
         )?;
         Ok(Self {
             connection: Arc::new(Mutex::new(connection)),
+            season_reader: None,
         })
+    }
+
+    /// Attach the canonical reader. Canonical SQLite writes then fail closed.
+    pub fn with_season_reader(mut self, reader: super::postgres::Postgres) -> Self {
+        self.season_reader = Some(reader);
+        self
+    }
+
+    pub fn uses_central_season_data(&self) -> bool {
+        self.season_reader.is_some()
+    }
+
+    fn require_legacy_writer(&self) -> Result<(), StorageError> {
+        if self.uses_central_season_data() {
+            return Err(StorageError::SeasonReadOnly);
+        }
+        Ok(())
     }
 
     pub async fn migrate(&self) -> Result<(), StorageError> {
@@ -134,6 +153,9 @@ impl Database {
     }
 
     pub async fn racing_seasons_before(&self, season: i64) -> Result<Vec<i64>, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.racing_seasons_before(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         Ok(spawn_blocking(move || -> Result<Vec<i64>, rusqlite::Error> {
             let connection = connection.blocking_lock();
@@ -274,6 +296,7 @@ impl Database {
         constructors: &[serde_json::Value],
         fetched_at: &str,
     ) -> Result<(), StorageError> {
+        self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         let drivers = serde_json::to_string(drivers).unwrap_or_else(|_| "[]".to_string());
         let constructors = serde_json::to_string(constructors).unwrap_or_else(|_| "[]".to_string());
@@ -292,6 +315,9 @@ impl Database {
         &self,
         season: i64,
     ) -> Result<Option<(Vec<serde_json::Value>, Vec<serde_json::Value>)>, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.identity_cache(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         Ok(spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -430,6 +456,9 @@ impl Database {
         &self,
         season: i64,
     ) -> Result<Option<ScheduleSnapshot>, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.next_season_schedule(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         spawn_blocking(move || {
             let row = connection
@@ -469,6 +498,9 @@ impl Database {
     }
 
     pub async fn published_schedule_openings(&self) -> Result<BTreeMap<i64, String>, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.published_schedule_openings().await;
+        }
         let connection = Arc::clone(&self.connection);
         Ok(spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -491,6 +523,7 @@ impl Database {
         events_json: String,
         now: String,
     ) -> Result<(), StorageError> {
+        self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         spawn_blocking(move || {
             connection.blocking_lock().execute(
@@ -511,6 +544,9 @@ impl Database {
         &self,
         season: Option<i64>,
     ) -> Result<(Vec<Meeting>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.calendar(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         let result = spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -559,6 +595,9 @@ impl Database {
         &self,
         season: Option<i64>,
     ) -> Result<(Option<Meeting>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.next_meeting_at(season, &self.utc_now().await?).await;
+        }
         let connection = Arc::clone(&self.connection);
         let result = spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -580,6 +619,9 @@ impl Database {
         season: Option<i64>,
         now: &str,
     ) -> Result<(Option<Meeting>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.next_meeting_at(season, now).await;
+        }
         let connection = Arc::clone(&self.connection);
         let now = now.to_string();
         let result = spawn_blocking(move || {
@@ -595,6 +637,9 @@ impl Database {
         &self,
         session_id: &str,
     ) -> Result<(Vec<SessionResult>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.session_results(session_id).await;
+        }
         let connection = Arc::clone(&self.connection);
         let lookup_id = session_id.to_string();
         let results = spawn_blocking(move || {
@@ -636,6 +681,9 @@ impl Database {
     }
 
     pub async fn session_season(&self, session_id: &str) -> Result<Option<i64>, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.session_season(session_id).await;
+        }
         let connection = Arc::clone(&self.connection);
         let session_id = session_id.to_owned();
         Ok(spawn_blocking(move || {
@@ -647,6 +695,9 @@ impl Database {
     }
 
     pub async fn session_exists(&self, session_id: &str) -> Result<bool, StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return Ok(reader.session_season(session_id).await?.is_some());
+        }
         let connection = Arc::clone(&self.connection);
         let session_id = session_id.to_string();
         Ok(spawn_blocking(move || -> Result<bool, rusqlite::Error> {
@@ -692,6 +743,9 @@ impl Database {
         &self,
         season: Option<i64>,
     ) -> Result<(Vec<DriverStanding>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.driver_standings(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         let rows = spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -725,6 +779,9 @@ impl Database {
         &self,
         season: Option<i64>,
     ) -> Result<(Vec<ConstructorStanding>, Meta), StorageError> {
+        if let Some(reader) = &self.season_reader {
+            return reader.constructor_standings(season).await;
+        }
         let connection = Arc::clone(&self.connection);
         let rows = spawn_blocking(move || {
             let connection = connection.blocking_lock();
@@ -775,6 +832,7 @@ impl Database {
         mut rows: Vec<SessionResult>,
         quality: &str,
     ) -> Result<i64, StorageError> {
+        self.require_legacy_writer()?;
         let Some(session_id) = rows.first().map(|row| row.session_id.clone()) else {
             return Ok(0);
         };
@@ -851,6 +909,7 @@ impl Database {
         &self,
         rows: Vec<DriverStanding>,
     ) -> Result<i64, StorageError> {
+        self.require_legacy_writer()?;
         let Some(season) = rows.first().map(|row| row.season) else {
             return Ok(0);
         };
@@ -879,6 +938,7 @@ impl Database {
         &self,
         rows: Vec<ConstructorStanding>,
     ) -> Result<i64, StorageError> {
+        self.require_legacy_writer()?;
         let Some(season) = rows.first().map(|row| row.season) else {
             return Ok(0);
         };
@@ -908,6 +968,7 @@ impl Database {
         drivers: Vec<(String, String, String)>,
         constructors: Vec<(String, String, String)>,
     ) -> Result<(), StorageError> {
+        self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         spawn_blocking(move || {
             let mut connection = connection.blocking_lock();
@@ -928,6 +989,7 @@ impl Database {
         meetings: &[Meeting],
         fetched_at: &str,
     ) -> Result<u64, StorageError> {
+        self.require_legacy_writer()?;
         let meetings = meetings.to_vec();
         let fetched_at = fetched_at.to_string();
         let connection = Arc::clone(&self.connection);
@@ -949,7 +1011,7 @@ impl Database {
     }
 }
 
-fn meta_from_snapshot(
+pub(super) fn meta_from_snapshot(
     source: String,
     source_updated_at: Option<String>,
     fetched_at: String,

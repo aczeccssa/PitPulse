@@ -43,7 +43,9 @@ impl SchedulerTasks {
 
 pub fn spawn(state: AppState) -> SchedulerTasks {
     let scheduler_state = state.clone();
-    let scheduler = tokio::spawn(async move {
+    let mut tasks = vec![];
+    if !state.database.uses_central_season_data() {
+        tasks.push(tokio::spawn(async move {
         let sync = ResultsSync {
             jolpica: scheduler_state.jolpica.clone(),
             openf1: scheduler_state.openf1.clone(),
@@ -80,12 +82,15 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
                 }
             }
         }
-    });
+        }));
+        tasks.push(tokio::spawn(crate::services::next_schedule::run(
+            state.clone(),
+        )));
+    }
     let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
     let wec_live = tokio::spawn(run_wec_live_supervisor(state.clone()));
-    let next_schedule = tokio::spawn(crate::services::next_schedule::run(state.clone()));
     let live = tokio::spawn(run_live_supervisor(state));
-    let tasks = vec![scheduler, live, wec_live, analysis, next_schedule];
+    tasks.extend([live, wec_live, analysis]);
     #[cfg(all(target_os = "linux", target_env = "gnu"))]
     let tasks = {
         let mut tasks = tasks;

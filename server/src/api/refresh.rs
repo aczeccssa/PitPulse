@@ -45,6 +45,9 @@ pub async fn refresh(
         }
         _ => {}
     }
+    if state.database.uses_central_season_data() {
+        return Err(ApiError::RefreshUnavailable);
+    }
     let completion = state
         .refresh_queue
         .enqueue_manual(request)
