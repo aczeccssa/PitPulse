@@ -1241,9 +1241,13 @@ struct PulseChevron: View {
 
 struct AssetImage: View {
     let name: String
+    var media: MediaReference? = nil
     @Environment(\.colorScheme) private var colorScheme
     var body: some View {
-        if let image = DashboardArt.image(named: name, traits: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)) {
+        let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+        let image = media.flatMap { MotorsportImages.uiImage(media: $0) }
+            ?? DashboardArt.image(named: name, traits: traits)
+        if let image {
             Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().accessibilityHidden(true)
         } else {
             Image(systemName: MotorsportImages.fallbackSymbol(named: name) ?? "person.crop.circle").resizable().scaledToFit().foregroundStyle(.secondary).accessibilityHidden(true)

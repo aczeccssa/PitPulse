@@ -50,7 +50,8 @@ struct SessionResultDetailView: View {
                 driverID: result.driverId,
                 name: result.driverName,
                 season: season,
-                size: 36
+                size: 36,
+                media: result.media?.driver.helmet
             )
 
             VStack(alignment: .leading, spacing: 2) {

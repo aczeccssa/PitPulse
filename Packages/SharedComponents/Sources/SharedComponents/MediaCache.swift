@@ -17,6 +17,30 @@ public final class MediaCache {
 
     struct Manifest: Codable {
         let groups: [String: Group]
+        var bindings: Bindings?
+        var seasons: [Season]?
+    }
+
+    struct Bindings: Codable {
+        let assets: [String: MediaReference]
+        let placeholders: [String: MediaReference]
+    }
+
+    public struct Season: Codable, Equatable, Sendable {
+        public struct Features: Codable, Equatable, Sendable {
+            public let powerUnit: Bool
+            public let destructors: Bool
+        }
+
+        public let year: Int
+        public let features: Features
+    }
+
+    public var seasons: [Season] { catalog.target?.seasons ?? [] }
+
+    public func adjacentSeason(to year: Int, newer: Bool) -> Int? {
+        let years = seasons.map(\.year)
+        return newer ? years.filter { $0 > year }.min() : years.filter { $0 < year }.max()
     }
 
     private struct Catalog: Codable {
@@ -99,6 +123,19 @@ public final class MediaCache {
         }
     }
 
+    func file(named name: String, variant: String? = nil, kind: String? = nil) -> URL? {
+        if readsPublishedIndex { readPublishedIndex() }
+        guard let bindings = catalog.target?.bindings else { return nil }
+        if let variant,
+           let reference = bindings.assets[name + "-" + variant],
+           let cached = file(group: reference.group, name: reference.file) { return cached }
+        if let reference = bindings.assets[name] {
+            return file(group: reference.group, name: reference.file)
+        }
+        guard let kind, let placeholder = bindings.placeholders[kind] else { return nil }
+        return file(group: placeholder.group, name: placeholder.file)
+    }
+
     func file(group: String, name: String) -> URL? {
         if readsPublishedIndex { readPublishedIndex() }
         guard let directory, let digest = catalog.installed[group]?.files[name],
@@ -154,7 +191,7 @@ public final class MediaCache {
             guard let target = catalog.target else { return false }
             let groups = target.groups.filter { $0.key != "web-brand" }
             // Brand and navigation become available early on a fresh install.
-            let order = ["native-brand", "native-navigation", "flags", "native-flags"]
+            let order = ["placeholders", "native-brand", "native-navigation", "flags", "native-flags"]
             let keys = order.filter { groups[$0] != nil } + groups.keys.filter { !order.contains($0) }.sorted()
             for key in keys {
                 try Task.checkCancellation()

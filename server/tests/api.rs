@@ -858,3 +858,80 @@ async fn test_map_weather_radar_and_radio_routes_are_authenticated_and_lookup_on
         assert!(serde_json::from_slice::<Value>(&body).unwrap()["error"]["code"].is_string());
     }
 }
+
+#[tokio::test]
+async fn test_historical_results_return_server_bound_media_and_typed_placeholders() {
+    let (state, _temp) = test_state().await;
+    let meeting = serde_json::from_value(serde_json::json!({
+        "id": "2024:21", "season": 2024, "round": 21, "name": "São Paulo Grand Prix",
+        "country": "Brazil", "location": "Interlagos", "startDate": "2024-11-01",
+        "endDate": "2024-11-03", "status": "scheduled",
+        "sessions": [{
+            "id": "2024:21:race", "meetingId": "2024:21", "sessionType": "race",
+            "startTime": "2024-11-03T15:30:00Z", "status": "finished"
+        }]
+    }))
+    .unwrap();
+    state
+        .database
+        .replace_calendar(&[meeting], "2024-11-03T18:00:00Z")
+        .await
+        .unwrap();
+    let result = serde_json::from_value(serde_json::json!({
+        "sessionId": "2024:21:race", "position": 1, "classification": "classified",
+        "driverId": "verstappen", "driverName": "Max Verstappen", "constructorId": "red_bull_racing",
+        "team": "Red Bull Racing", "source": "fixture", "fetchedAt": "2024-11-03T18:00:00Z",
+        "revision": 1, "quality": "official"
+    })).unwrap();
+    state
+        .database
+        .replace_session_results(vec![result], "official")
+        .await
+        .unwrap();
+
+    async fn json_get(router: &axum::Router, path: &str) -> Value {
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    let router = server::router(state);
+    let seasons = json_get(&router, "/api/v1/seasons").await;
+    assert_eq!(seasons["data"][0]["year"], 2024);
+    assert_eq!(
+        seasons["data"][0]["mediaKinds"],
+        serde_json::json!(["car-side", "driver-photo", "team-logo"])
+    );
+
+    let rows = json_get(&router, "/api/v1/sessions/2024:21:race/results").await;
+    let media = &rows["data"][0]["media"];
+    let driver = json_get(&router, "/api/v1/seasons/2024/drivers/max_verstappen/media").await;
+    assert_eq!(media["driver"], driver["data"]);
+    for (image, group) in [
+        (&media["driver"]["driverPhoto"], "2024/driver-photo"),
+        (&media["constructor"]["teamLogo"], "2024/team-logo"),
+        (&media["constructor"]["carSide"], "2024/car-side"),
+    ] {
+        assert_eq!(image["group"], group);
+        assert_eq!(image["isPlaceholder"], false);
+        let path = image["url"].as_str().unwrap();
+        assert!(path.starts_with("/media/blob/"), "{path}");
+        let response = router.clone().oneshot(get(path)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], "image/png");
+    }
+
+    assert_eq!(media["driver"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(media["driver"]["helmet"]["file"], "helmet.png");
+    let verified = json_get(&router, "/api/v1/seasons/2025/drivers/max_verstappen/media").await;
+    assert_eq!(verified["data"]["helmet"]["isPlaceholder"], false);
+    assert_eq!(verified["data"]["helmet"]["group"], "2025/helmet");
+
+    let missing = json_get(&router, "/api/v1/seasons/2024/drivers/no_such_driver/media").await;
+    assert_eq!(missing["data"]["helmet"]["isPlaceholder"], true);
+    assert_eq!(missing["data"]["helmet"]["file"], "helmet.png");
+    assert_eq!(missing["data"]["driverPhoto"]["file"], "driver-photo.png");
+}

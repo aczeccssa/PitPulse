@@ -5,26 +5,28 @@ use std::{
 
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
+use super::media_bindings::Bindings;
 use super::routes::{MOTORSPORT_ASSETS, MOTORSPORT_LEGACY_ASSETS};
+use crate::{app_state::AppState, error::ApiError};
 
 include!(concat!(env!("OUT_DIR"), "/native_assets.rs"));
 
 #[derive(Serialize)]
-struct Group {
+pub(super) struct Group {
     hash: String,
-    files: BTreeMap<&'static str, String>,
+    pub(super) files: BTreeMap<&'static str, String>,
 }
 
 struct Catalog {
-    manifest: Vec<u8>,
-    etag: String,
+    bindings: Bindings,
+    web_bindings: Bindings,
     groups: BTreeMap<&'static str, Group>,
     blobs: BTreeMap<String, (&'static [u8], &'static str)>,
     web_index: String,
@@ -96,16 +98,13 @@ impl Catalog {
                 (group, Group { hash, files })
             })
             .collect();
-        let manifest = serde_json::to_vec(&serde_json::json!({ "groups": &groups }))
-            .expect("serialize media manifest");
-        let etag = format!("\"{}\"", hash(&manifest));
+        let bindings = Bindings::build(&groups, true);
+        let web_bindings = Bindings::build(&groups, false);
         let mut web_files = BTreeMap::new();
-        let mut web_group_hashes = BTreeMap::new();
         for (group, entry) in &groups {
             if group.starts_with("native-") {
                 continue;
             }
-            web_group_hashes.insert(group, &entry.hash);
             for (name, digest) in &entry.files {
                 let path = match *group {
                     "flags" | "web-brand" => (*name).to_owned(),
@@ -114,18 +113,16 @@ impl Catalog {
                 web_files.insert(path, digest);
             }
         }
-        let web_etag = format!(
-            "\"{}\"",
-            hash(&serde_json::to_vec(&web_group_hashes).expect("serialize web media group hashes"))
-        );
         let public_blobs = web_files.values().map(|digest| (*digest).clone()).collect();
         let web_index = format!(
-            "window.PITPULSE_MEDIA={};\n",
-            serde_json::to_string(&web_files).expect("serialize web media")
+            "window.PITPULSE_MEDIA={};\nwindow.PITPULSE_BINDINGS={};\n",
+            serde_json::to_string(&web_files).expect("serialize web media"),
+            serde_json::to_string(&web_bindings).expect("serialize web bindings"),
         );
+        let web_etag = format!(r#""{}""#, hash(web_index.as_bytes()));
         Self {
-            manifest,
-            etag,
+            bindings,
+            web_bindings,
             groups,
             blobs,
             web_index,
@@ -135,27 +132,80 @@ impl Catalog {
     }
 }
 
-pub async fn manifest(headers: HeaderMap) -> Response {
+async fn season_catalog(state: &AppState) -> Result<Vec<serde_json::Value>, ApiError> {
+    Ok(state
+        .database
+        .racing_seasons_before(10_000)
+        .await?
+        .into_iter()
+        .rev()
+        .map(|year| {
+            let prefix = format!("{year}/");
+            let media_kinds: Vec<_> = CATALOG
+                .groups
+                .keys()
+                .filter_map(|group| group.strip_prefix(&prefix))
+                .collect();
+            serde_json::json!({
+                "year": year,
+                "features": crate::services::engineering::features(year),
+                "mediaKinds": media_kinds
+            })
+        })
+        .collect())
+}
+
+pub async fn seasons(
+    State(state): State<AppState>,
+) -> Result<axum::Json<serde_json::Value>, ApiError> {
+    Ok(axum::Json(
+        serde_json::json!({ "data": season_catalog(&state).await? }),
+    ))
+}
+
+pub(crate) fn public_bindings() -> &'static Bindings {
+    &CATALOG.web_bindings
+}
+
+pub async fn driver_media(Path((year, id)): Path<(i64, String)>) -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!({ "data": public_bindings().driver(year, &id) }))
+}
+
+pub async fn manifest(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    Ok(manifest_response(headers, &season_catalog(&state).await?))
+}
+
+fn manifest_response(headers: HeaderMap, seasons: &[serde_json::Value]) -> Response {
+    let body = serde_json::to_vec(&serde_json::json!({
+        "groups": CATALOG.groups,
+        "bindings": CATALOG.bindings,
+        "seasons": seasons,
+    }))
+    .expect("serialize media manifest");
+    let etag = format!("\"{}\"", hash(&body));
     if headers
         .get(header::IF_NONE_MATCH)
-        .is_some_and(|value| value == CATALOG.etag.as_str())
+        .is_some_and(|value| value == etag.as_str())
     {
         return (
             StatusCode::NOT_MODIFIED,
             [
-                (header::ETAG, CATALOG.etag.as_str()),
-                (header::CACHE_CONTROL, "private, no-cache"),
+                (header::ETAG, etag),
+                (header::CACHE_CONTROL, "private, no-cache".to_owned()),
             ],
         )
             .into_response();
     }
     (
         [
-            (header::CONTENT_TYPE, "application/json"),
-            (header::CACHE_CONTROL, "private, no-cache"),
-            (header::ETAG, CATALOG.etag.as_str()),
+            (header::CONTENT_TYPE, "application/json".to_owned()),
+            (header::CACHE_CONTROL, "private, no-cache".to_owned()),
+            (header::ETAG, etag),
         ],
-        Body::from(CATALOG.manifest.as_slice()),
+        Body::from(body),
     )
         .into_response()
 }
@@ -243,7 +293,7 @@ mod tests {
 
     #[tokio::test]
     async fn manifest_revalidates_and_every_file_matches_its_sha256() {
-        let response = manifest(HeaderMap::new()).await;
+        let response = manifest_response(HeaderMap::new(), &[]);
         assert_eq!(response.status(), StatusCode::OK);
         let etag = response.headers()[header::ETAG].clone();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
@@ -251,7 +301,10 @@ mod tests {
 
         let mut request = HeaderMap::new();
         request.insert(header::IF_NONE_MATCH, etag);
-        assert_eq!(manifest(request).await.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(
+            manifest_response(request, &[]).status(),
+            StatusCode::NOT_MODIFIED
+        );
 
         for group in CATALOG.groups.values() {
             assert_eq!(group.hash, hash(&serde_json::to_vec(&group.files).unwrap()));
@@ -277,6 +330,31 @@ mod tests {
             native_blob(Path("missing".into())).await.status(),
             StatusCode::NOT_FOUND
         );
+    }
+
+    #[test]
+    fn approved_2025_helmet_bindings_cover_every_race_driver_and_source_digest() {
+        let roster: serde_json::Value =
+            serde_json::from_str(include_str!("../../resources/motorsport/roster.json")).unwrap();
+        let sources: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../resources/motorsport/historical-helmets.json"
+        ))
+        .unwrap();
+        let year = 2025;
+        let year_key = year.to_string();
+        let drivers = roster["seasons"][&year_key]["drivers"].as_object().unwrap();
+        for id in drivers.keys() {
+            let public = CATALOG.web_bindings.driver(year, id);
+            let native = CATALOG.bindings.driver(year, id);
+            let reference = &public["helmet"];
+            assert_eq!(reference["isPlaceholder"], false, "{year}/{id}");
+            assert_eq!(reference["sha256"], native["helmet"]["sha256"]);
+            let source = sources
+                .iter()
+                .find(|source| source["season"] == year && source["driverId"] == id.as_str())
+                .unwrap();
+            assert_eq!(reference["sha256"], source["sha256"]);
+        }
     }
 
     #[test]

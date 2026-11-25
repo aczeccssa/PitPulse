@@ -545,6 +545,17 @@ impl Database {
         Ok((results, meta))
     }
 
+    pub async fn session_season(&self, session_id: &str) -> Result<Option<i64>, StorageError> {
+        let connection = Arc::clone(&self.connection);
+        let session_id = session_id.to_owned();
+        Ok(spawn_blocking(move || {
+            connection.blocking_lock().query_row(
+                "SELECT meetings.season FROM sessions JOIN meetings ON meetings.id = sessions.meeting_id WHERE sessions.id = ?1",
+                [&session_id], |row| row.get(0),
+            ).optional()
+        }).await??)
+    }
+
     pub async fn session_exists(&self, session_id: &str) -> Result<bool, StorageError> {
         let connection = Arc::clone(&self.connection);
         let session_id = session_id.to_string();

@@ -4,15 +4,11 @@
     "use strict";
 
     const ROUTES = ["home", "standings", "results", "drivers", "head-to-head", "consistency", "tech-updates", "pu-elements", "destructors-championship"];
-    // The dashboard carries 2024 onward; older seasons were removed from the
-    // archive and the server never offers them.
-    const FIRST_SEASON = 2024;
-    const LAST_SEASON = () => Math.max(new Date().getFullYear(), Number(state.driversStandings[0]?.season) || 0);
+    let offeredSeasons = [];
     function seasonYears() {
-        const years = [];
-        for (let year = LAST_SEASON(); year >= FIRST_SEASON; year--) years.push(year);
-        return years;
+        return offeredSeasons.map(entry => entry.year);
     }
+    const defaultSeason = () => offeredSeasons[0]?.year || new Date().getFullYear();
     const VIEW_TITLES = {
         home: "Home",
         standings: "Standings",
@@ -390,29 +386,36 @@
         return parts[parts.length - 1].slice(0, 3).toUpperCase();
     }
 
-    // Artwork is served per season as {kind}/{id}/{season}. The build emits an
-    // index of what actually exists, so the page never asks for a missing file
-    // and never shows another season's portrait in place of the real one.
-    const ASSETS = (typeof window !== "undefined" && window.PITPULSE_MEDIA) || {};
+    // The server binds each driver and constructor to season-specific artwork.
+    const MEDIA_BINDINGS = (typeof window !== "undefined" && window.PITPULSE_BINDINGS) || {};
     let artSeasonValue = null;
 
     function useSeason(value) { const year = Number(value); if (year) artSeasonValue = year; }
     function requestedSeason() {
         const value = Number(new URLSearchParams(location.search).get('season'));
-        return Number.isInteger(value) && value >= 1950 && value <= 2100 ? value : null;
+        return Number.isInteger(value) && (offeredSeasons.length ? seasonYears().includes(value) : value >= 1950 && value <= 2100) ? value : null;
     }
 
     function artSeason() {
-        return requestedSeason() || artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || new Date().getFullYear();
+        return requestedSeason() || artSeasonValue || Number(driverPages.season) || Number(state.driversStandings[0]?.season) || defaultSeason();
     }
+    function assetRef(season, kind, id) {
+        if (!id) return null;
+        const variant = id.match(/-(dark|contrast)$/)?.[0] || "";
+        const base = variant ? id.slice(0, -variant.length) : id;
+        return MEDIA_BINDINGS.assets?.[`${kind}-${base}-${season}${variant}`] || null;
+    }
+
     function hasAsset(season, kind, id) {
-        return Boolean(id) && Object.prototype.hasOwnProperty.call(ASSETS, `${season}/${kind}/${id}.png`);
+        return Boolean(assetRef(season, kind, id));
     }
+
     function mediaSrc(path, fallback) {
-        return Object.hasOwn(ASSETS, path) ? `/media/blob/${ASSETS[path]}` : fallback;
+        return MEDIA_BINDINGS.assets?.[path]?.url || fallback;
     }
+
     function assetSrc(season, kind, id) {
-        return mediaSrc(`${season}/${kind}/${id}.png`);
+        return assetRef(season, kind, id)?.url || MEDIA_BINDINGS.placeholders?.[kind]?.url;
     }
 
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
@@ -510,20 +513,16 @@
     }
 
     function driverAvatarImage(season, ...values) {
-        const helmet = helmetImage(season, ...values);
-        if (helmet) return helmet;
-        for (const value of values) {
-            const portrait = driverPhotoArt({ driverId: value, season }, "avatar");
-            if (portrait) return portrait;
-        }
-        return null;
+        const image = helmetImage(season, ...values);
+        const placeholder = MEDIA_BINDINGS.placeholders?.helmet?.url;
+        return image || (placeholder ? artImage("avatar", placeholder) : null);
     }
 
     function teamLogoImage(season, ...values) {
         const year = Number(season) || artSeason();
         const id = values.map(teamAssetId).find(Boolean);
-        if (!id || !hasAsset(year, "team-logo", id)) return null;
         const light = assetSrc(year, "team-logo", id);
+        if (!light) return null;
         const image = artImage("team-logo", light);
         const dark = hasAsset(year, "team-logo", `${id}-dark`) ? assetSrc(year, "team-logo", `${id}-dark`) : null;
         const contrast = hasAsset(year, "team-logo", `${id}-contrast`) ? assetSrc(year, "team-logo", `${id}-contrast`) : null;
@@ -539,8 +538,9 @@
     function driverPhotoArt(driver, className = "driver-portrait") {
         const id = driverAssetId(driver?.driverId || driver?.id || driver?.driverName);
         const season = Number(driver?.season) || artSeason();
-        if (!id || !hasAsset(season, "driver-photo", id)) return null;
-        return artImage(className, assetSrc(season, "driver-photo", id));
+        const url = driver?.media?.driverPhoto?.url || driver?.media?.driver?.driverPhoto?.url
+            || assetSrc(season, "driver-photo", id);
+        return url ? artImage(className, url) : null;
     }
 
     function syncLogoTheme(theme) {
@@ -867,7 +867,7 @@
         if (state.view !== 'standings') return;
         const panel = el('standings-panel'), empty = el('standings-page-empty');
         const constructors = state.standingsKind === 'constructors', noun = constructors ? 'Constructor' : 'Driver';
-        const season = requestedSeason() || new Date().getFullYear();
+        const season = requestedSeason() || defaultSeason();
         const data = loadStandings(season);
         const rows = constructors ? data.constructors : data.drivers;
         state.driversStandings = data.drivers;
@@ -894,7 +894,9 @@
         hero.append(node('h2', '', constructors ? "Constructors’ Championship Leader" : "Drivers’ Championship Leader"), node('strong', '', constructors ? leader.name : leader.name.split(' ').at(-1)), node('span', '', `${leader.points} points`));
         const slug = constructors ? teamAssetId(leader.team) : driverAssetId(leader.id);
         const artKind = constructors ? 'car-side' : 'driver-photo';
-        if (slug && hasAsset(artSeason(), artKind, slug)) { const art = artImage(constructors ? 'standings-leader-car' : 'standings-leader-photo', assetSrc(artSeason(), artKind, slug)); art.loading = 'eager'; hero.append(art); }
+        const leaderArtwork = constructors ? leader.row?.media?.carSide?.url : leader.row?.media?.driverPhoto?.url;
+        const leaderSrc = leaderArtwork || assetSrc(artSeason(), artKind, slug);
+        if (leaderSrc) { const art = artImage(constructors ? 'standings-leader-car' : 'standings-leader-photo', leaderSrc); art.loading = 'eager'; hero.append(art); }
         if (constructors) { const logo = manufacturerLogo(leader.team); if (logo) { logo.className = 'standings-leader-logo'; hero.append(logo); } }
         side.append(hero);
         const tableSection = standingsCard(`${season} F1 ${noun} Standings`), table = node('table', 'standings-ranking'), head = table.createTHead().insertRow();['POS.', constructors ? 'CONSTRUCTOR' : 'DRIVER', 'POINTS', 'EVO.'].forEach(t => head.append(node('th', '', t))); const body = table.createTBody();
@@ -1000,7 +1002,7 @@
 
     function resultsSeason() {
         const meetingYear = state.results.detail && /^(\d{4}):/.exec(state.results.meetingId)?.[1];
-        return Number(meetingYear) || requestedSeason() || driverPages.season || new Date().getFullYear();
+        return Number(meetingYear) || requestedSeason() || driverPages.season || defaultSeason();
     }
 
 
@@ -1429,7 +1431,7 @@
         // The calendar carries an alpha-2 code; the engineering reports only
         // carry a country name, so fall back to the same table the server uses.
         const code = String(meeting?.countryCode || engineeringCountry(meeting?.country || "") || "").toLowerCase();
-        const image = artImage("flat-flag", mediaSrc(`flag-${code}.png`, `/motorsport/flag-${code}.png`));
+        const image = artImage("flat-flag", mediaSrc(`flag-${code}`, `/motorsport/flag-${code}.png`));
         image.alt = meeting?.country || "";
         image.onerror = () => image.remove();
         return image;
@@ -1447,7 +1449,7 @@
         const photo = driverPhotoArt({ driverId: id, driverName: name }, "driver-profile-photo");
         if (photo) { photo.onerror = () => photo.remove(); main.append(photo); }
         main.append(heading, metrics); const actions = node("div", "driver-profile-actions"), detail = node("div", "driver-profile-detail"); detail.hidden = true;
-        for (const [label, kind] of [["▥  Stats", "stats"], ["⚔  Head-to-head", "compare"]]) { const button = node("button", "", kind === "stats" ? "Stats" : "Head-to-head"); button.prepend(svgIcon(kind === "stats" ? "M5 20V10m7 10V4m7 16V8" : "m4 3 7 7-3 3-7-7m19-3-7 7 3 3 7-7M3 21l7-7m11 7-7-7")); button.type = "button"; button.onclick = () => { if (kind === 'stats') navigate(driverPageHref(`drivers/${encodeURIComponent(id)}`, { season: String(standing?.season || driverPages.season || new Date().getFullYear()) })); else { const teammate = state.driversStandings.find(d => d.driverId !== id && d.constructor === standing?.constructor); openDriverComparison(standing || { driverId: id, driverName: name, constructor: team }, teammate); } }; actions.append(button); }
+        for (const [label, kind] of [["▥  Stats", "stats"], ["⚔  Head-to-head", "compare"]]) { const button = node("button", "", kind === "stats" ? "Stats" : "Head-to-head"); button.prepend(svgIcon(kind === "stats" ? "M5 20V10m7 10V4m7 16V8" : "m4 3 7 7-3 3-7-7m19-3-7 7 3 3 7-7M3 21l7-7m11 7-7-7")); button.type = "button"; button.onclick = () => { if (kind === 'stats') navigate(driverPageHref(`drivers/${encodeURIComponent(id)}`, { season: String(standing?.season || driverPages.season || defaultSeason()) })); else { const teammate = state.driversStandings.find(d => d.driverId !== id && d.constructor === standing?.constructor); openDriverComparison(standing || { driverId: id, driverName: name, constructor: team }, teammate); } }; actions.append(button); }
         panel.append(main, actions, detail); return panel;
     }
 
@@ -1468,7 +1470,7 @@
     const pointsText = value => Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
 
     function driverPageHref(view, params = {}) {
-        const query = new URLSearchParams({ season: String(driverPages.season || state.driversStandings[0]?.season || new Date().getFullYear()), ...params });
+        const query = new URLSearchParams({ season: String(driverPages.season || state.driversStandings[0]?.season || defaultSeason()), ...params });
         return `/${view}?${query}`;
     }
 
@@ -1504,17 +1506,7 @@
     }
 
     function driverPhoto(driver, className = 'driver-portrait') {
-        const photo = driverPhotoArt(driver, className);
-        if (!photo) {
-            const fallback = helmetImage(driver?.season || artSeason(), driver?.driverId, driver?.driverName);
-            if (fallback) fallback.className = className + ' is-helmet';
-            return fallback;
-        }
-        photo.onerror = () => {
-            const fallback = helmetImage(driver?.season || artSeason(), driver?.driverId, driver?.driverName);
-            if (fallback) { fallback.className = className + ' is-helmet'; photo.replaceWith(fallback); } else photo.remove();
-        };
-        return photo;
+        return driverPhotoArt(driver, className);
     }
 
     function driverSelector(label, value, options, onchange) {
@@ -2486,7 +2478,7 @@
         techMetric.querySelector('.home-metric-note').textContent = coverageNote('tech'); cards.append(techMetric);
         const social = node('section', 'home-card home-social'); social.append(node('p', '', 'Support PitPulse and help us build a better racing companion.')); const support = node('a', 'home-support-button', 'Support Us on GitHub'); support.href = 'https://github.com/aczeccssa/PitPulse'; support.target = '_blank'; support.rel = 'noopener noreferrer'; support.append(svgIcon('M14 5h5v5m0-5-7 7M5 7v12h12v-5')); social.append(support); cards.append(social);
         const promo = node('a', 'home-card home-app-promo'); promo.href = 'https://github.com/aczeccssa/PitPulse'; promo.target = '_blank'; promo.rel = 'noopener noreferrer';
-        const appIcon = artImage('home-app-icon', mediaSrc('icon-192.png', '/icon-192.png')); appIcon.alt = ''; const promoCopy = node('div', 'home-app-copy'); promoCopy.append(node('span', 'home-app-platforms', 'macOS · iOS'), node('h2', '', 'PitPulse'), node('p', '', 'Your race. Always in reach.'), node('span', 'home-app-cta', 'Explore the App ↗')); promo.append(appIcon, promoCopy); cards.append(promo); root.append(cards);
+        const appIcon = artImage('home-app-icon', mediaSrc('icon-192', '/icon-192.png')); appIcon.alt = ''; const promoCopy = node('div', 'home-app-copy'); promoCopy.append(node('span', 'home-app-platforms', 'macOS · iOS'), node('h2', '', 'PitPulse'), node('p', '', 'Your race. Always in reach.'), node('span', 'home-app-cta', 'Explore the App ↗')); promo.append(appIcon, promoCopy); cards.append(promo); root.append(cards);
         const lower = node('div', 'home-detail-grid'); lower.append(homeStandings(data, false, season), homeStandings(data, true, season), homeRecordPanel(data, season)); root.append(lower); homeTrackOutline(scheduleCard, schedule.display, season); updateHomeCountdown(); installSeasonPopovers(root);
     }
 
@@ -2510,7 +2502,7 @@
         const toolbar = node("div", "record-toolbar"); const label = node("label", "", "Sort by: "); const select = node("select", "");
         for (const [value, text] of [["round", "Grand Prix"], ["gap", "Gap to record"]]) { const option = node("option", "", text); option.value = value; select.append(option); }
         label.append(select); const download = node("button", "record-download", "⇩"); download.type = "button"; download.setAttribute("aria-label", "Download chart as SVG"); toolbar.append(label, download); const recordBar = node("div", "results-titlebar"); recordBar.append(section.querySelector("h2"), toolbar); section.append(recordBar);
-        section.append(node("p", "record-description", `Each weekend’s fastest archived lap across all sessions, compared with the best lap from earlier weekends at the same circuit in the PitPulse archive (${FIRST_SEASON} onward).`));
+        section.append(node("p", "record-description", `Each weekend’s fastest archived lap across all sessions, compared with the best lap from earlier weekends at the same circuit in the PitPulse archive (since ${seasonYears().at(-1) || defaultSeason()}).`));
         const scroll = node("div", "season-scroll record-scroll"); section.append(scroll);
         const rows = entries.map(({ meeting, fastestLaps }) => {
             const best = fastestLaps?.weekend, record = fastestLaps?.previous;
@@ -2755,8 +2747,7 @@
         state.view = view;
         if (RACING_VIEWS.includes(view)) {
             const query = new URLSearchParams(location.search);
-            const requestedSeason = Number(query.get('season'));
-            driverPages.season = Number.isInteger(requestedSeason) && requestedSeason >= 1950 && requestedSeason <= 2100 ? requestedSeason : new Date().getFullYear();
+            driverPages.season = requestedSeason() || defaultSeason();
             driverPages.driver = view === 'driver-stats' ? parts[0] : null;
             driverPages.team = query.get('team') || '';
             driverPages.first = query.get('driver1') || '';
@@ -2779,7 +2770,7 @@
         document.body.dataset.view = view;
         if (view === "standings") {
             state.standingsKind = parts[0] === "constructors" ? "constructors" : "drivers";
-            driverPages.season = requestedSeason() || new Date().getFullYear();
+            driverPages.season = requestedSeason() || defaultSeason();
             syncSectionNav(driverPages.season);
         }
         if (view === "results") {
@@ -2871,8 +2862,14 @@
         window.addEventListener("popstate", applyRoute);
     }
 
-    function init() {
+    async function init() {
         wireTheme();
+        try {
+            const { body } = await api("/api/v1/seasons");
+            offeredSeasons = Array.isArray(body.data) ? body.data : [];
+            for (const entry of offeredSeasons) SEASON_FEATURES.set(entry.year, entry.features);
+        } catch { /* Data routes retain their own error state. */ }
+
         wireStandingsFilter();
         wireContentMotion();
         applyRoute();

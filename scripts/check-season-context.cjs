@@ -15,6 +15,8 @@ const context = vm.createContext({
  artSeasonValue: 2026,
  driverPages: {season: 2026},
  URLSearchParams,
+ offeredSeasons: [],
+ defaultSeason: () => 2026,
 });
 vm.runInContext(functionSource('requestedSeason'), context);
 vm.runInContext(functionSource('artSeason'), context);
@@ -35,20 +37,22 @@ assert.throws(() => vm.runInContext('renderStandingsPage()', context), /season c
 assert.equal(context.loadedSeason, 2024, 'standings must load the requested season');
 console.log('PASS: requested season survives bootstrap; racing number comes from that season results');
 
-// Historical driver avatars use artwork from the selected season.
-context.ASSETS = {
- '2024/driver-photo/max_verstappen.png': '2024-portrait',
- '2025/driver-photo/max_verstappen.png': '2025-portrait',
- '2026/driver-photo/max_verstappen.png': '2026-portrait',
- '2026/helmet/max_verstappen.png': '2026-helmet',
+// Driver avatars use the server's season bindings and typed placeholder.
+context.MEDIA_BINDINGS = {
+ assets: {
+  'driver-photo-max_verstappen-2024': {url: '/media/blob/2024-photo'},
+  'helmet-max_verstappen-2024': {url: '/media/blob/2024-helmet'},
+  'helmet-max_verstappen-2025': {url: '/media/blob/2025-helmet'},
+  'driver-photo-max_verstappen-2026': {url: '/media/blob/2026-photo'},
+ },
+ placeholders: {helmet: {url: '/media/blob/gray-helmet'}},
 };
 context.DRIVER_ALIASES = { verstappen: 'max_verstappen' };
 context.artImage = (className, src) => ({className, src});
-for (const name of ['hasAsset', 'mediaSrc', 'assetSrc', 'driverAssetId', 'helmetImage', 'driverPhotoArt', 'driverAvatarImage']) {
+for (const name of ['hasAsset', 'assetRef', 'assetSrc', 'driverAssetId', 'helmetImage', 'driverAvatarImage']) {
  vm.runInContext(functionSource(name), context);
 }
-for (const [year, digest] of [[2024, '2024-portrait'], [2025, '2025-portrait'], [2026, '2026-helmet']]) {
+for (const [year, digest] of [[2024, '2024-helmet'], [2025, '2025-helmet'], [2026, 'gray-helmet']]) {
  assert.equal(vm.runInContext(`driverAvatarImage(${year}, 'verstappen').src`, context), `/media/blob/${digest}`);
 }
-assert.equal(vm.runInContext("driverAvatarImage(2023, 'verstappen')", context), null);
-console.log('PASS: driver avatars use only the selected season assets and prefer its helmet');
+console.log('PASS: driver avatars use the server bindings and never substitute portraits for helmets');

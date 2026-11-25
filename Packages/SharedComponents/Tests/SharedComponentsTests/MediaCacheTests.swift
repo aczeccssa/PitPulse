@@ -80,7 +80,7 @@ struct MediaCacheTests {
         #expect(recovered.file(group: "native-brand", name: "logo.png") == new)
     }
 
-    @Test func driverAvatarsPreferHelmetsThenSameSeasonPortraits() async throws {
+    @Test func serverBindsSeasonHelmetsAndTypedPlaceholders() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let origin = try #require(URL(string: "https://media.test/pitpulse"))
@@ -89,31 +89,41 @@ struct MediaCacheTests {
         let session = URLSession(configuration: config)
         defer { session.invalidateAndCancel() }
 
-        let photo2024 = Data("2024 portrait".utf8)
-        let photo2025 = Data("2025 portrait".utf8)
-        let helmet2026 = Data("2026 helmet".utf8)
-        let images = [photo2024, photo2025, helmet2026]
-        let hashes = images.map(MediaCache.digest)
-        let manifest = try JSONEncoder().encode(MediaCache.Manifest(groups: [
-            "2024/driver-photo": .init(hash: "2024", files: ["max_verstappen.png": hashes[0]]),
-            "2025/driver-photo": .init(hash: "2025", files: ["max_verstappen.png": hashes[1]]),
-            "2026/driver-photo": .init(hash: "2026-photo", files: ["max_verstappen.png": hashes[1]]),
-            "native-2026/helmet": .init(hash: "2026-helmet", files: ["helmet-max_verstappen-2026.png": hashes[2]])
-        ]))
-        MediaTransport.fixture.install(manifest, etag: "avatars", blobs: Dictionary(uniqueKeysWithValues: zip(hashes, images)))
+        let real = Data("2025 helmet".utf8)
+        let photo = Data("2024 portrait".utf8)
+        let missing = Data("gray helmet".utf8)
+        let realHash = MediaCache.digest(real)
+        let photoHash = MediaCache.digest(photo)
+        let missingHash = MediaCache.digest(missing)
+        func entry(_ group: String, _ file: String, _ hash: String, placeholder: Bool = false) -> [String: Any] {
+            ["group": group, "file": file, "sha256": hash, "url": "/api/v1/media/blob/" + hash, "isPlaceholder": placeholder]
+        }
+        let manifest = try JSONSerialization.data(withJSONObject: [
+            "groups": [
+                "2025/helmet": ["hash": realHash, "files": ["max_verstappen.png": realHash]],
+                "2024/driver-photo": ["hash": photoHash, "files": ["max_verstappen.png": photoHash]],
+                "placeholders": ["hash": missingHash, "files": ["helmet.png": missingHash]]
+            ],
+            "bindings": [
+                "assets": [
+                    "helmet-max_verstappen-2025": entry("2025/helmet", "max_verstappen.png", realHash),
+                    "driver-photo-max_verstappen-2024": entry("2024/driver-photo", "max_verstappen.png", photoHash)
+                ],
+                "placeholders": ["helmet": entry("placeholders", "helmet.png", missingHash, placeholder: true)]
+            ],
+            "seasons": [["year": 2025, "features": ["powerUnit": true, "destructors": false]]]
+        ])
+        MediaTransport.fixture.install(manifest, etag: "bindings", blobs: [realHash: real, photoHash: photo, missingHash: missing])
         let cache = MediaCache(root: root, session: session, onPublish: {})
         cache.refresh(from: origin)
         await cache.pending?.value
 
-        for (season, expected) in zip(2024...2026, images) {
-            let avatar = MotorsportAssetName.driverAvatarName(driverID: "verstappen", name: "Max Verstappen", season: season)
-            let file = try #require(MotorsportImages.artworkURL(named: avatar, dark: false, cache: cache))
+        for (season, expected) in [(2025, real), (2024, missing)] {
+            let helmet = MotorsportAssetName.helmetName(driverID: "verstappen", name: "Max Verstappen", season: season)
+            let file = try #require(MotorsportImages.artworkURL(named: helmet, dark: false, cache: cache))
             #expect(try Data(contentsOf: file) == expected)
         }
-        let historicalHelmet = MotorsportAssetName.helmetName(driverID: "verstappen", name: "Max Verstappen", season: 2025)
-        #expect(MotorsportImages.artworkURL(named: historicalHelmet, dark: false, cache: cache) == nil)
-        let missingSeason = MotorsportAssetName.driverAvatarName(driverID: "verstappen", name: "Max Verstappen", season: 2023)
-        #expect(MotorsportImages.artworkURL(named: missingSeason, dark: false, cache: cache) == nil)
+        #expect(cache.seasons.map(\.year) == [2025])
     }
 
     private func manifest(version: String, image: String, shared: String) throws -> Data {

@@ -1670,7 +1670,7 @@ struct StandingProfile: View {
                     if analysis.meta.stale { Text(copy("Trend Data Is Stale", "趋势数据已过期")).foregroundStyle(.secondary) }
                     if !trend.isEmpty {
                         Text(copy("Cumulative Points", "累计积分")).font(.headline)
-                        if entry.season > 2023 {
+                        if MediaCache.shared.seasons.contains(where: { $0.year == entry.season - 1 }) {
                             Toggle(copy("Compare with Last Season", "与上季比较"), isOn: $comparePrevious).font(.subheadline)
                         }
                         pointsChart(trend)
@@ -2518,7 +2518,7 @@ struct StandingProfile: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Cumulative Points").font(.headline).accessibilityAddTraits(.isHeader)
                 pointsChart(trend)
-                if entry.season > 2023 {
+                if MediaCache.shared.seasons.contains(where: { $0.year == entry.season - 1 }) {
                     Divider()
                     Toggle("Compare with Last Season", isOn: $comparePrevious).font(.subheadline)
                     if comparePrevious && priorAnalysis == nil {

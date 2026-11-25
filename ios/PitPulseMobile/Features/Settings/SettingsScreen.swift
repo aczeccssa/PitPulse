@@ -55,7 +55,7 @@ struct SettingsScreen: View {
                         if !embedded {
                             Menu {
                                 Picker("Season", selection: $model.season) {
-                                    ForEach(2023...max(2027, model.season), id: \.self) { year in
+                                    ForEach(MediaCache.shared.seasons.map(\.year), id: \.self) { year in
                                         Text(String(year)).tag(year)
                                     }
                                 }

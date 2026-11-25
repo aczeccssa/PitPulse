@@ -7,7 +7,8 @@ extension SessionResultsView {
             driverID: result.driverId,
             name: result.driverName,
             season: model.selectedSeason,
-            size: size
+            size: size,
+            media: result.media?.driver.helmet
         )
     }
 
@@ -119,7 +120,8 @@ struct ResultsPodium: View {
             driverID: result.driverId,
             name: result.driverName,
             season: season,
-            size: size
+            size: size,
+            media: result.media?.driver.helmet
         )
     }
 

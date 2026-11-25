@@ -40,6 +40,11 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             "/api/v1/media/blob/{digest}",
             get(super::media::native_blob),
         )
+        .route("/api/v1/seasons", get(super::media::seasons))
+        .route(
+            "/api/v1/seasons/{season}/drivers/{driver}/media",
+            get(super::media::driver_media),
+        )
         .route("/api/v1/calendar", get(calendar))
         .route("/api/v1/home", get(crate::services::engineering::home))
         .route(
@@ -361,9 +366,11 @@ async fn session_results(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    if !state.database.session_exists(&session_id).await? {
-        return Err(ApiError::NotFound);
-    }
+    let season = state
+        .database
+        .session_season(&session_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
     let (results, mut meta) = state.database.session_results(&session_id).await?;
     meta.sync_status = state
         .database
@@ -373,7 +380,11 @@ async fn session_results(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": results, "meta": meta})))
+    let mut rows = json!(results);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        super::media::public_bindings().add_result_media(row, season);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn driver_standings(
@@ -394,7 +405,13 @@ async fn driver_standings(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": standings, "meta": meta})))
+    let mut rows = json!(standings);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let id = row["driverId"].as_str().unwrap_or_default();
+        row["media"] =
+            super::media::public_bindings().driver(row["season"].as_i64().unwrap_or(season_id), id);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn constructor_standings(
@@ -418,7 +435,13 @@ async fn constructor_standings(
         meta.quality = crate::domain::quality::DataQuality::Pending;
         meta.stale = false;
     }
-    Ok(Json(json!({"data": standings, "meta": meta})))
+    let mut rows = json!(standings);
+    for row in rows.as_array_mut().into_iter().flatten() {
+        let id = row["constructorId"].as_str().unwrap_or_default();
+        row["media"] =
+            super::media::public_bindings().team(row["season"].as_i64().unwrap_or(season_id), id);
+    }
+    Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
 async fn live_snapshot(

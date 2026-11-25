@@ -41,6 +41,7 @@ NATIVE_MEDIA = HERE.parent / "media"
 
 ROSTER = HERE / "roster.json"
 MANIFEST = HERE / "manifest.json"
+HELMET_SOURCES = HERE / "historical-helmets.json"
 
 CDN = "https://media.formula1.com/image/upload"
 F1_SITE = "https://www.formula1.com"
@@ -581,15 +582,17 @@ def gap_reason(kind: str, season: int) -> str:
             f"{FIRST_SEASON_WITH_ARTWORK}; every probed path returns 404"
         )
     if kind == "helmet":
-        return (
-            "no public season-scoped helmet artwork; only the 2026 native media "
-            "catalog carries helmets"
-        )
+        return "no verified helmet image for this driver and season"
     return "no official artwork answered for this entry"
 
 
-def provenance_for(asset_id: str, kind: str, season: int) -> dict:
-    page = {
+def provenance_for(asset_id: str, kind: str, season: int, historical: dict | None = None) -> dict:
+    if (kind, season, asset_id) == ("driver-photo", 2024, "doohan"):
+        historical = {
+            "sourcePage": "https://app.formula1dashboard.com/driver-stats/doohan/2024/",
+            "sourceImage": "https://cdn.formula1dashboard.com/i/v1/w320-h320-fcontain-q85/drivers/2024/portrait/2024-doohan.png",
+        }
+    page = historical["sourcePage"] if historical else {
         "driver-photo": f"{F1_SITE}/en/drivers",
         "car-side": f"{F1_SITE}/en/teams",
         "team-logo": f"{F1_SITE}/en/teams",
@@ -597,6 +600,7 @@ def provenance_for(asset_id: str, kind: str, season: int) -> dict:
     }[kind]
     return {
         "sourcePageUrl": page,
+        **({"provenance": historical} if historical else {}),
         "license": "restricted",
         "rightsStatus": "restricted",
         "downloadStatus": "downloaded",
@@ -612,6 +616,7 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
     """Describe what is on disk, and what the roster expects but is missing."""
     collected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     entries: list[dict] = []
+    helmets = {(row["season"], row["driverId"]): row for row in json.loads(HELMET_SOURCES.read_text())}
     present: set[tuple[str, str, int]] = set()
     for season in SEASONS:
         season_dir = HERE / str(season)
@@ -635,7 +640,7 @@ def scan_entries(roster: dict) -> tuple[list[dict], list[dict]]:
                     "width": image.width,
                     "height": image.height,
                     "collectedAt": collected_at,
-                    **provenance_for(base_id, kind, season),
+                    **provenance_for(base_id, kind, season, helmets.get((season, base_id)) if kind == "helmet" else None),
                 }
                 if base_id != asset_id:
                     entry["variant"] = asset_id[len(base_id) + 1 :]
