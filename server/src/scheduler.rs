@@ -83,8 +83,9 @@ pub fn spawn(state: AppState) -> SchedulerTasks {
     });
     let analysis = tokio::spawn(crate::services::analysis::preload(state.clone()));
     let wec_live = tokio::spawn(run_wec_live_supervisor(state.clone()));
+    let next_schedule = tokio::spawn(crate::services::next_schedule::run(state.clone()));
     let live = tokio::spawn(run_live_supervisor(state));
-    let tasks = vec![scheduler, live, wec_live, analysis];
+    let tasks = vec![scheduler, live, wec_live, analysis, next_schedule];
     #[cfg(all(target_os = "linux", target_env = "gnu"))]
     let tasks = {
         let mut tasks = tasks;

@@ -1323,6 +1323,8 @@ struct TabletRaceCalendar: View {
     @FocusState private var searchFocused: Bool
     @State private var filter = RaceCalendarFilter.all
 
+    @State private var showNextSeasonSchedule = false
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
@@ -1374,6 +1376,9 @@ struct TabletRaceCalendar: View {
         }
         .background(WebDashboardStyle.homeBackground)
         .foregroundStyle(WebDashboardStyle.homeText)
+        .sheet(isPresented: $showNextSeasonSchedule) {
+            NextSeasonScheduleView(serverURL: model.serverURL, token: model.currentToken)
+        }
         .navigationDestination(isPresented: Binding(
             get: { sessionResult != nil },
             set: { if !$0 { sessionResult = nil } }
@@ -1434,13 +1439,22 @@ struct TabletRaceCalendar: View {
             HStack(spacing: 12) {
                 monthTitle(date).fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 0)
+                nextSeasonButton
                 monthNavigation
             }
             VStack(alignment: .leading, spacing: 8) {
                 monthTitle(date)
                 monthNavigation
+                nextSeasonButton
             }
         }
+    }
+
+    private var nextSeasonButton: some View {
+        Button("Next Season Schedule", systemImage: "calendar.badge.clock") {
+            showNextSeasonSchedule = true
+        }
+        .buttonStyle(.bordered)
     }
 
     private func monthTitle(_ date: Date) -> some View {
@@ -1759,6 +1773,7 @@ struct TabletRaceCalendar: View {
 struct CalendarScreen: View {
     @EnvironmentObject private var model: MobileModel
     @State private var filter = RaceCalendarFilter.all
+    @State private var showNextSeasonSchedule = false
     @State private var search = ""
     @FocusState private var searchFocused: Bool
     @State private var position = ScrollPosition(idType: Meeting.ID.self)
@@ -1782,6 +1797,11 @@ struct CalendarScreen: View {
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button("Next Season Schedule", systemImage: "calendar.badge.clock") {
+                        showNextSeasonSchedule = true
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Calendar Range", selection: $filter) {
                             ForEach(RaceCalendarFilter.allCases) { range in
@@ -1792,6 +1812,9 @@ struct CalendarScreen: View {
                         Label("Filter Races", systemImage: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
+            }
+            .sheet(isPresented: $showNextSeasonSchedule) {
+                NextSeasonScheduleView(serverURL: model.serverURL, token: model.currentToken)
             }
             .dashboardDetail()
             .safeAreaInset(edge: .bottom, spacing: 0) { searchBar }

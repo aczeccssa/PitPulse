@@ -37,6 +37,10 @@ public actor APIClient {
         )
     }
 
+    public func nextSeasonSchedule(token: String?) async throws -> APIEnvelope<NextSeasonSchedule> {
+        try await envelope(NextSeasonSchedule.self, path: "/api/v1/schedule/next", queryItems: [], token: token)
+    }
+
     public func seasonResults(season: Int, token: String?) async throws -> APIEnvelope<[SeasonResultWeekend]> {
         try await envelope(
             [SeasonResultWeekend].self,

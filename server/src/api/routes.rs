@@ -74,6 +74,10 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             super::dashboard_cache::cache_response,
         ))
         .route("/api/v1/health", get(health))
+        .route(
+            "/api/v1/schedule/next",
+            get(crate::services::next_schedule::get),
+        )
         .route("/api/v1/meetings/next", get(next_meeting))
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route(
@@ -528,7 +532,7 @@ fn parse_season(params: &HashMap<String, String>) -> Result<Option<i64>, ApiErro
     Ok(season)
 }
 
-async fn current_year(state: &AppState) -> Result<i64, ApiError> {
+pub(crate) async fn current_year(state: &AppState) -> Result<i64, ApiError> {
     let now = state.database.utc_now().await?;
     now.get(..4)
         .and_then(|year| year.parse().ok())

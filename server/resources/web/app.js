@@ -3,7 +3,7 @@
 (() => {
     "use strict";
 
-    const ROUTES = ["home", "standings", "results", "drivers", "head-to-head", "consistency", "tech-updates", "pu-elements", "destructors-championship"];
+    const ROUTES = ["home", "standings", "results", "schedule", "drivers", "head-to-head", "consistency", "tech-updates", "pu-elements", "destructors-championship"];
     let offeredSeasons = [];
     function seasonYears() {
         return offeredSeasons.map(entry => entry.year);
@@ -13,6 +13,7 @@
         home: "Home",
         standings: "Standings",
         results: "Results",
+        schedule: "Next Season Schedule",
         drivers: "Drivers",
         "driver-stats": "Driver Stats",
         "head-to-head": "Head To Head",
@@ -2783,7 +2784,7 @@
             const active = link.dataset.route === (view === 'driver-stats' ? 'drivers' : view) && (!link.dataset.standingsNav || link.dataset.standingsNav === state.standingsKind);
             link.classList.toggle("is-active", active);
             const season = view === 'results' ? resultsSeason() : requestedSeason() || driverPages.season;
-            if (link.dataset.route && !link.dataset.standingsNav) {
+            if (link.dataset.route && !link.dataset.standingsNav && link.dataset.route !== "schedule") {
                 const target = link.dataset.route === 'standings' ? 'driver-standings' : link.dataset.route;
                 link.href = `/${target}${season ? `?season=${season}` : ''}`;
             }
@@ -2801,7 +2802,46 @@
             return;
         }
         if (view === "results") renderResultsPage();
+        if (view === "schedule") loadNextSeasonSchedule();
         if (RACING_VIEWS.includes(view)) renderDriverPages();
+    }
+
+    let displayedSchedule;
+    const scheduleDates = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+
+    async function loadNextSeasonSchedule() {
+        if (state.view !== "schedule" || document.hidden) return;
+        try {
+            const { body: { data, meta } } = await api("/api/v1/schedule/next");
+            const version = `${data.year}:${meta.revision}`;
+            el("schedule-status").textContent = data.events.length ? "" : "Waiting for the official schedule.";
+            if (version === displayedSchedule) return;
+            el("schedule-title").textContent = `${data.year} F1 Schedule`;
+            const source = el("schedule-source");
+            source.href = data.sourceUrl;
+            source.hidden = false;
+            el("schedule-events").replaceChildren(...data.events.map(event => {
+                const row = document.createElement("li");
+                const detail = document.createElement("div");
+                const round = document.createElement("span");
+                round.textContent = event.round == null ? "Testing" : `Round ${event.round}`;
+                const title = document.createElement("h2");
+                title.textContent = event.location;
+                const name = document.createElement("p");
+                name.textContent = event.name;
+                detail.append(round, title, name);
+                const dates = document.createElement("span");
+                dates.className = "schedule-dates";
+                dates.textContent = scheduleDates.formatRange(new Date(event.startDate), new Date(event.endDate));
+                row.append(detail, dates);
+                return row;
+            }));
+            displayedSchedule = version;
+        } catch {
+            el("schedule-status").textContent = el("schedule-events").childElementCount
+                ? "Refresh failed. Showing the last available schedule."
+                : "Schedule unavailable. Retrying automatically.";
+        }
     }
 
     /* ---------- wiring ---------- */
@@ -2871,6 +2911,8 @@
         applyRoute();
         wireChrome();
         setInterval(updateHomeCountdown, 1000);
+        setInterval(loadNextSeasonSchedule, 60_000);
+        document.addEventListener("visibilitychange", loadNextSeasonSchedule);
     }
 
     init();
