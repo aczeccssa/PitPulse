@@ -336,6 +336,10 @@ struct DriverChoiceScreen: View {
                         } actions: {
                             Button("Retry") { Task { await model.loadF1Roster(force: true) } }
                         }
+                    } else if model.seasonHasNotStarted {
+                        SeasonPendingView(season: model.season, symbol: "person.crop.circle")
+                    } else if model.rosterDidLoad {
+                        ContentUnavailableView("No Driver Data Yet", systemImage: "person.crop.circle")
                     } else {
                         PulseSkeleton(label: "Loading drivers…").padding(24)
                             .frame(maxWidth: .infinity)

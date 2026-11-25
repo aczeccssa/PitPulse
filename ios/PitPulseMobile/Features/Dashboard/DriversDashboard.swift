@@ -93,16 +93,20 @@ struct DriversDashboard: View {
     }
 
     @ViewBuilder private var rosterStatus: some View {
-        if rosterLoading {
+        if model.seasonHasNotStarted && model.rosterLoadError == nil {
+            SeasonPendingView(season: model.season, symbol: "person.2")
+        } else if rosterLoading {
             PulseSkeleton(rows: 5, label: "Loading drivers…")
-        } else {
+        } else if let error = model.rosterLoadError {
             ContentUnavailableView {
                 Label("Drivers Unavailable", systemImage: "person.2")
             } description: {
-                Text(model.rosterLoadError?.pulseEnglishError ?? "No driver standings are available for this season.")
+                Text(error.pulseEnglishError)
             } actions: {
                 Button("Retry") { Task { await load(force: true) } }.buttonStyle(.glass)
             }
+        } else {
+            ContentUnavailableView("No Driver Data Yet", systemImage: "person.2")
         }
     }
 
@@ -327,13 +331,11 @@ private func driverTeamID(_ driver: DriverStanding) -> String {
 
 extension DriverStanding {
     var seasonTeamID: String {
-        if season == 2026, id == "lawson" { return "rb" }
-        return constructorIds.first.map(MobileModel.normalizedConstructorID) ?? constructor
+        constructorIds.first.map(MobileModel.normalizedConstructorID) ?? constructor
     }
 
     var seasonTeamName: String {
-        if season == 2026, id == "lawson" { return "Racing Bulls" }
-        return constructor
+        seasonTeamID == "rb" ? "Racing Bulls" : constructor
     }
 }
 

@@ -22,7 +22,9 @@ struct SeasonResultsIndex: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let archive = model.seasonArchive {
+                if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+                    SeasonPendingView(season: model.season, symbol: "flag.checkered")
+                } else if let archive = model.seasonArchive {
                     let weekends = archive.data.sorted { $0.meeting.startDate > $1.meeting.startDate }
                     let entries = weekends.compactMap { weekend in
                         entrySession(weekend).map { (weekend: weekend, session: $0) }
@@ -85,7 +87,7 @@ struct SeasonResultsIndex: View {
                 if let error = model.seasonArchiveError {
                     Text(error.pulseEnglishError).foregroundStyle(.secondary)
                     Button("Retry") { Task { await model.loadSeasonArchive(force: true) } }
-                } else if model.seasonArchive == nil {
+                } else if model.seasonArchive == nil && !model.seasonHasNotStarted {
                     loadingResults
                 }
             }

@@ -88,7 +88,10 @@ struct ChampionshipScreen: View {
 
     var body: some View {
         Group {
-            if constructorsOnly && tabletWebLayout {
+            if model.seasonHasNotStarted && entries.isEmpty && teamError == nil {
+                SeasonPendingView(season: model.season, symbol: "trophy")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if constructorsOnly && tabletWebLayout {
                 constructorOverview
             } else {
                 StandingColumns(wide: $wideStandings, enabled: constructorsOnly, selected: standingDetail) {

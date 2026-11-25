@@ -510,6 +510,7 @@ async fn test_published_season_is_selectable_in_native_calendar() {
     let now = state.database.utc_now().await.unwrap();
     let year = now[..4].parse::<i64>().unwrap() + 1;
     let calendar_path = format!("/api/v1/calendar?season={year}");
+    let geometry_path = format!("/api/v1/meetings/{year}:formula1:bahrain/geometry");
     let router = server::router(state.clone());
 
     for (revision, start) in [(1, "03-12"), (2, "03-19")] {
@@ -542,6 +543,21 @@ async fn test_published_season_is_selectable_in_native_calendar() {
                 "/api/v1/media/manifest.json",
                 "/seasons/0/year",
                 serde_json::json!(year),
+            ),
+            (
+                "/api/v1/media/manifest.json",
+                "/seasons/0/firstRaceDate",
+                serde_json::json!(format!("{year}-{start}")),
+            ),
+            (
+                geometry_path.as_str(),
+                "/data/geometry/properties/id",
+                serde_json::json!("bh-2002"),
+            ),
+            (
+                geometry_path.as_str(),
+                "/data/calibrated",
+                serde_json::json!(false),
             ),
             ("/api/v1/seasons", "/data", serde_json::json!([])),
         ] {

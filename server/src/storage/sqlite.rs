@@ -468,13 +468,18 @@ impl Database {
         .await?
     }
 
-    pub async fn published_schedule_seasons(&self) -> Result<Vec<i64>, StorageError> {
+    pub async fn published_schedule_openings(&self) -> Result<BTreeMap<i64, String>, StorageError> {
         let connection = Arc::clone(&self.connection);
         Ok(spawn_blocking(move || {
             let connection = connection.blocking_lock();
-            let mut years = connection.prepare("SELECT season FROM next_season_schedule")?;
+            let mut years = connection.prepare(
+                "SELECT schedule.season, MIN(json_extract(event.value, '$.startDate'))
+                 FROM next_season_schedule AS schedule, json_each(schedule.events_json) AS event
+                 WHERE json_type(event.value, '$.round') = 'integer'
+                 GROUP BY schedule.season",
+            )?;
             years
-                .query_map([], |row| row.get(0))?
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
                 .collect::<rusqlite::Result<_>>()
         })
         .await??)

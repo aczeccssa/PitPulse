@@ -165,10 +165,11 @@ struct StandingsView: View {
     }
 
     var emptyStandings: some View {
-        EmptyStateCard(
+        let pending = model.seasonHasNotStarted && model.standingsError == nil
+        return EmptyStateCard(
             symbol: "trophy",
-            title: model.standingsError == nil ? "暂无积分" : "无法读取积分榜",
-            message: model.standingsError == nil ? "该赛季还没有可用的积分数据。" : "稍后重试，或检查服务器连接。"
+            title: pending ? "赛季尚未开始" : model.standingsError == nil ? "暂无积分" : "无法读取积分榜",
+            message: pending ? "开赛后将在这里显示积分。" : model.standingsError == nil ? "该赛季还没有可用的积分数据。" : "稍后重试，或检查服务器连接。"
         )
     }
 }

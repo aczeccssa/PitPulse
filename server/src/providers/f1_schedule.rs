@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 use anyhow::{Context, Result, ensure};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +12,8 @@ pub struct ScheduleEvent {
     pub round: Option<usize>,
     pub name: String,
     pub location: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track: Option<String>,
     pub start_date: String,
     pub end_date: String,
 }
@@ -67,11 +70,22 @@ fn parse(html: &str, season: i64) -> Result<Vec<ScheduleEvent>> {
             ),
         };
         let (start_date, end_date) = date_range(season, &card_text(card, &dates)?)?;
+        let track = card
+            .attr("data-f1rd-a7s-context")
+            .and_then(|context| STANDARD.decode(context).ok())
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .and_then(|data| {
+                data["trackName"]
+                    .as_str()
+                    .filter(|name| !name.is_empty())
+                    .map(str::to_owned)
+            });
         events.push(ScheduleEvent {
             id: id.to_owned(),
             round: number,
             name: card_text(card, &name)?,
             location: card_text(card, &location)?,
+            track,
             start_date,
             end_date,
         });

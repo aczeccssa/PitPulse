@@ -11,6 +11,19 @@ public struct NextSession: Equatable, Sendable {
 }
 
 public enum CalendarLogic {
+    public static func seasonHasNotStarted(
+        _ season: Int, meetings: [Meeting], firstRaceDate: String? = nil, now: Date = .now
+    ) -> Bool {
+        let opening = meetings.lazy.filter {
+            $0.season == season && $0.round != nil && $0.status != .cancelled
+        }.map(\.startDate).min()
+        let publishedOpening = firstRaceDate.flatMap { RFC3339.parse($0 + "T00:00:00Z") }
+        if let start = opening ?? publishedOpening { return now < start }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        return season > utc.component(.year, from: now)
+    }
+
     public static func featuredMeeting(in meetings: [Meeting], now: Date, calendar: Calendar = .current) -> Meeting? {
         let available = meetings.filter { $0.status != .cancelled }
         // Keep the race-day recap, then advance to the next weekend rather than the nearest date.

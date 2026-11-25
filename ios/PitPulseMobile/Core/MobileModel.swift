@@ -75,6 +75,7 @@ final class MobileModel: ObservableObject {
     var lastFinishedF1: LiveSnapshot?
     var displayedLiveSessionKey: String?
     @Published var driverRoster: [DriverStanding] = []
+    @Published var rosterDidLoad = false
     @Published var rosterLoadError: String?
     @Published var settingsPresented = false
     @Published var liveNotice: LiveNotice?
@@ -123,6 +124,12 @@ final class MobileModel: ObservableObject {
     @Published var credentialRevision = 0
 
     var dataContext: String { "\(serverURL?.absoluteString ?? serverText)|\(season)|\(credentialRevision)" }
+    var seasonHasNotStarted: Bool {
+        CalendarLogic.seasonHasNotStarted(
+            season, meetings: meetings,
+            firstRaceDate: MediaCache.shared.seasons.first { $0.year == season }?.firstRaceDate
+        )
+    }
 
     func invalidateCalendar() {
         calendarRequestID = UUID()
@@ -135,6 +142,8 @@ final class MobileModel: ObservableObject {
         healthText = nil
         liveHistory = [:]
         driverRoster = []
+        rosterDidLoad = false
+        rosterLoadError = nil
         historiesBySeries = [:]
         recentLiveLaps = [:]
         liveSnapshots = [:]

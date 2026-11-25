@@ -49,7 +49,7 @@ pub async fn calendar(
                 end_date: format!("{}T23:59:59Z", event.end_date),
                 status: MeetingStatus::Scheduled,
                 sessions: Vec::new(),
-                circuit: None,
+                circuit: super::circuits::published_venue(&event.id, event.track.as_deref()),
                 jolpica_round_id: None,
                 source: Some(SOURCE.into()),
                 fetched_at: Some(snapshot.checked_at.clone()),

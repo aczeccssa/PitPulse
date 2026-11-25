@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         [command, option, range] if command == "backfill" && option == "--season" => {
             Some(pitpulse_server::services::backfill::seasons(range)?)
         }
-        _ => anyhow::bail!("usage: pitpulse-server [backfill --season 2021..2026 [--resume]]"),
+        _ => anyhow::bail!("usage: pitpulse-server [backfill --season YEAR[..YEAR] [--resume]]"),
     };
     tracing::info!(bind = %config.server.bind, db = %config.database.path.display(), "starting PitPulse");
 

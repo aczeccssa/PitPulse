@@ -19,8 +19,8 @@ pub fn seasons(input: &str) -> Result<RangeInclusive<i64>> {
     let (start, end) = input.split_once("..").unwrap_or((input, input));
     let (start, end) = (start.parse()?, end.parse()?);
     ensure!(
-        2021 <= start && start <= end && end <= 2026,
-        "expected a season or inclusive range within 2021..2026"
+        2021 <= start && start <= end && end <= 9999,
+        "expected a four-digit season from 2021 onward or an inclusive range"
     );
     Ok(start..=end)
 }

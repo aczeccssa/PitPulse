@@ -34,6 +34,7 @@ public final class MediaCache {
 
         public let year: Int
         public let features: Features
+        public let firstRaceDate: String?
     }
 
     public var seasons: [Season] { catalog.target?.seasons ?? [] }

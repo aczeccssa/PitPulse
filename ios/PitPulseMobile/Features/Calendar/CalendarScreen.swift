@@ -541,7 +541,7 @@ struct WebHomeScreen<Header: View>: View {
                         PulseNumber(lovedDriverGap(driver)).fontWeight(.bold).monospacedDigit()
                     }.font(.caption2)
                 } else {
-                    Text(model.favoriteDriverID == nil ? "Choose a driver" : "Standings unavailable")
+                    Text(model.seasonHasNotStarted ? "Season not started" : model.favoriteDriverID == nil ? "Choose a driver" : "Standings unavailable")
                         .font(.subheadline).foregroundStyle(WebDashboardStyle.homeMuted)
                 }
             }
@@ -559,7 +559,10 @@ struct WebHomeScreen<Header: View>: View {
     }
 
     @ViewBuilder private func homeRecords(stretch: Bool = false) -> some View {
-        if model.seasonArchive == nil && model.seasonArchiveError == nil {
+        if model.seasonHasNotStarted && model.seasonArchiveError == nil {
+            SeasonPendingView(season: model.season, symbol: "flag.checkered")
+                .webHomePanel(stretch: stretch)
+        } else if model.seasonArchive == nil && model.seasonArchiveError == nil {
             PulseSkeleton(rows: 3, label: "Loading race highlights")
         } else {
             WebHomeRecords(weekends: model.seasonArchive?.data ?? [], season: model.season, stretch: stretch) {
@@ -569,9 +572,12 @@ struct WebHomeScreen<Header: View>: View {
     }
 
     private func homeStandings(_ entries: [StandingEntry], teams: Bool, stretch: Bool = false) -> some View {
-        let loading = entries.isEmpty && (teams ? loadingConstructors : model.serverURL != nil && model.rosterLoadError == nil)
+        let loading = entries.isEmpty && (teams ? loadingConstructors : model.serverURL != nil && !model.rosterDidLoad && model.rosterLoadError == nil)
         return Group {
-            if loading {
+            if entries.isEmpty && model.seasonHasNotStarted {
+                SeasonPendingView(season: model.season, symbol: "trophy")
+                    .webHomePanel(stretch: stretch)
+            } else if loading {
                 PulseSkeleton(label: teams ? "Loading constructor standings…" : "Loading driver standings…")
             } else {
                 standings(entries, teams: teams, stretch: stretch)
@@ -1648,16 +1654,17 @@ struct TabletRaceCalendar: View {
         return Button {
             selectedMeetingID = meeting.id
         } label: {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    FlagBadge(countryCode: meeting.countryCode, width: 16, height: 10)
+            HStack(spacing: 4) {
+                FlagBadge(countryCode: meeting.countryCode, width: 16, height: 10)
+                    .accessibilityHidden(true)
+                ViewThatFits(in: .horizontal) {
                     Text(meeting.name).fixedSize()
+                    Text(meeting.location.isEmpty ? meeting.country : meeting.location)
+                        .fixedSize()
+                    Text(meeting.round.map { "R\($0)" } ?? meeting.countryCode ?? "GP")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                 }
-                Text(meeting.location.isEmpty ? meeting.country : meeting.location)
-                    .fixedSize()
-                Text(meeting.round.map { "R\($0)" } ?? meeting.countryCode ?? "GP")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
             }
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 3)

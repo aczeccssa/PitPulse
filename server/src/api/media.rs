@@ -137,11 +137,14 @@ async fn season_catalog(
     include_published_schedule: bool,
 ) -> Result<Vec<serde_json::Value>, ApiError> {
     let mut years = state.database.racing_seasons_before(10_000).await?;
-    if include_published_schedule {
-        years.extend(state.database.published_schedule_seasons().await?);
-        years.sort_unstable();
-        years.dedup();
-    }
+    let openings = if include_published_schedule {
+        state.database.published_schedule_openings().await?
+    } else {
+        BTreeMap::new()
+    };
+    years.extend(openings.keys().copied());
+    years.sort_unstable();
+    years.dedup();
     Ok(years
         .into_iter()
         .rev()
@@ -152,11 +155,15 @@ async fn season_catalog(
                 .keys()
                 .filter_map(|group| group.strip_prefix(&prefix))
                 .collect();
-            serde_json::json!({
+            let mut entry = serde_json::json!({
                 "year": year,
                 "features": crate::services::engineering::features(year),
                 "mediaKinds": media_kinds
-            })
+            });
+            if let Some(date) = openings.get(&year) {
+                entry["firstRaceDate"] = serde_json::json!(date);
+            }
+            entry
         })
         .collect())
 }
