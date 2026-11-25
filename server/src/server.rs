@@ -4,7 +4,7 @@ use tokio::net::TcpListener;
 
 use crate::{
     api::{
-        media,
+        mcp, media,
         middleware::require_bearer_token,
         routes::{self, build_router},
         web_auth::issue_web_session,
@@ -49,6 +49,7 @@ pub fn router(state: AppState) -> Router {
         .route("/media-worker.js", get(media::worker));
 
     protected_router
+        .merge(mcp::router(state.clone()))
         .merge(shell)
         .merge(public_routes)
         .fallback(routes::spa_fallback)

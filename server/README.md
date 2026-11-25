@@ -36,6 +36,19 @@ F1_COMPANION_DATABASE_PATH=/tmp/pitpulse.sqlite \
 ```
 
 
+## MCP access
+
+Configure a native or server-side MCP client to use Streamable HTTP at `https://<pitpulse-host>/mcp`.
+With `F1_COMPANION_REQUIRE_TOKEN=true`, send `Authorization: Bearer <token>` on every MCP request.
+Use the same `F1_COMPANION_TOKEN` as the REST API. Keep the token in the client's secret configuration.
+Browser session cookies and query parameters do not authenticate MCP requests. The endpoint rejects browser `Origin` headers.
+With token enforcement disabled, MCP follows the same unauthenticated mode as the REST API. Enable token enforcement and HTTPS for public deployments.
+
+The endpoint accepts JSON-RPC over HTTP POST and returns JSON or an empty `202` for notifications.
+It does not create sessions or offer an SSE stream on `GET /mcp`.
+Use `tools/list` to discover the read-only calendar, next meeting, standings, session results, and F1/WEC live snapshot tools.
+Tool results retain the API's JSON data and metadata in their text content.
+
 ## Historical season import
 
 Run the server executable with the same database configuration as the service. The range is inclusive. The command also accepts a single year.

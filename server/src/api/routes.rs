@@ -328,7 +328,7 @@ pub async fn spa_fallback(
     response
 }
 
-async fn calendar(
+pub(super) async fn calendar(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
@@ -350,7 +350,7 @@ async fn calendar(
     Ok(Json(json!({"data": meetings, "meta": meta})))
 }
 
-async fn next_meeting(
+pub(super) async fn next_meeting(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
@@ -367,7 +367,7 @@ async fn next_meeting(
     Ok(Json(json!({"data": meeting, "meta": meta})))
 }
 
-async fn session_results(
+pub(super) async fn session_results(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
@@ -392,7 +392,7 @@ async fn session_results(
     Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
-async fn driver_standings(
+pub(super) async fn driver_standings(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
@@ -419,7 +419,7 @@ async fn driver_standings(
     Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
-async fn constructor_standings(
+pub(super) async fn constructor_standings(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
@@ -449,7 +449,7 @@ async fn constructor_standings(
     Ok(Json(json!({"data": rows, "meta": meta})))
 }
 
-async fn live_snapshot(
+pub(super) async fn live_snapshot(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {

@@ -1,5 +1,6 @@
 pub(crate) mod dashboard_cache;
 pub mod dto;
+pub(crate) mod mcp;
 pub(crate) mod media;
 mod media_bindings;
 pub mod middleware;
