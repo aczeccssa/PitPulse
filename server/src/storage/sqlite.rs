@@ -58,11 +58,13 @@ pub struct Database {
     season_publisher: Option<super::postgres::Postgres>,
 }
 
+#[derive(Clone)]
 pub struct ScheduleSnapshot {
     pub events: Vec<ScheduleEvent>,
     pub revision: u64,
     pub checked_at: String,
     pub updated_at: String,
+    pub stale: bool,
 }
 
 impl Database {
@@ -102,6 +104,24 @@ impl Database {
 
     pub fn uses_central_season_data(&self) -> bool {
         self.season_reader.is_some()
+    }
+
+    pub fn season_cache_stats(&self) -> Option<super::postgres::SeasonCacheStats> {
+        self.season_reader
+            .as_ref()
+            .map(super::postgres::Postgres::cache_stats)
+    }
+
+    async fn standings_season(&self, season: Option<i64>) -> Result<i64, StorageError> {
+        match season {
+            Some(value) => Ok(value),
+            None => self
+                .utc_now()
+                .await?
+                .get(..4)
+                .and_then(|v| v.parse().ok())
+                .ok_or(StorageError::SeasonDataInvalid),
+        }
     }
 
     fn require_legacy_writer(&self) -> Result<(), StorageError> {
@@ -505,6 +525,7 @@ impl Database {
                     revision,
                     checked_at,
                     updated_at,
+                    stale: false,
                 })
             })
             .transpose()
@@ -764,7 +785,9 @@ impl Database {
         season: Option<i64>,
     ) -> Result<(Vec<DriverStanding>, Meta), StorageError> {
         if let Some(reader) = &self.season_reader {
-            return reader.driver_standings(season).await;
+            return reader
+                .driver_standings(self.standings_season(season).await?)
+                .await;
         }
         let connection = Arc::clone(&self.connection);
         let rows = spawn_blocking(move || {
@@ -800,7 +823,9 @@ impl Database {
         season: Option<i64>,
     ) -> Result<(Vec<ConstructorStanding>, Meta), StorageError> {
         if let Some(reader) = &self.season_reader {
-            return reader.constructor_standings(season).await;
+            return reader
+                .constructor_standings(self.standings_season(season).await?)
+                .await;
         }
         let connection = Arc::clone(&self.connection);
         let rows = spawn_blocking(move || {

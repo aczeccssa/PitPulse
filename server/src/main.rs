@@ -44,10 +44,12 @@ async fn main() -> anyhow::Result<()> {
     database.migrate().await?;
     let database = match std::env::var("PITPULSE_SEASON_READ_DATABASE_URL") {
         Ok(url) => {
-            use pitpulse_server::storage::postgres::{DEFAULT_SCHEMA, Postgres};
+            use pitpulse_server::storage::postgres::{DEFAULT_SCHEMA, Postgres, SeasonCacheConfig};
             let schema = std::env::var("PITPULSE_SEASON_SCHEMA")
                 .unwrap_or_else(|_| DEFAULT_SCHEMA.to_owned());
-            database.with_season_reader(Postgres::new(&url, &schema, true)?)
+            database.with_season_reader(
+                Postgres::new(&url, &schema, true)?.with_cache(SeasonCacheConfig::from_env()?),
+            )
         }
         Err(std::env::VarError::NotPresent) => database,
         Err(_) => anyhow::bail!("PITPULSE_SEASON_READ_DATABASE_URL is not valid UTF-8"),

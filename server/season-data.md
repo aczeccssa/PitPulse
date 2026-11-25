@@ -19,3 +19,18 @@ Postgres uses natural keys from the SQLite uniqueness constraints. SQLite surrog
 Run `pitpulse-server publish-sync` as a separate process with `PITPULSE_SEASON_WRITE_DATABASE_URL`, the shared `PITPULSE_SEASON_SCHEMA`, and a dedicated `PITPULSE_PUBLISH_STATE_PATH`. Provision the write credential to the publisher and migration operator only. HTTP instances use `PITPULSE_SEASON_READ_DATABASE_URL` and never consult the write variable. The publisher reuses the periodic Jolpica/OpenF1 sync and official schedule refresh, without opening an HTTP listener. SQLite holds the restartable retry state. Empty or unavailable upstream responses leave stored classifications and standings intact. Revision and reader generation changes commit with canonical payloads. The previous SQLite-backed server mode remains available by starting HTTP without `PITPULSE_SEASON_READ_DATABASE_URL` against the pre-cutover SQLite snapshot.
 
 The current publisher starts from the existing polling scheduler. The PP-51 archive-sealed replay event and exact actual-end-plus-24h reconciliation still depend on the PP-51 producer. This polling path uses the stored session end or the legacy estimate and retry schedule.
+
+## Automatic reader cache
+
+Central readers keep a shared, process-local cache of canonical query results. Requests populate it automatically. Concurrent callers for an admitted key share its origin load. Least-recently-used idle slots are evicted. If all slots are busy, new distinct keys receive a retryable `503`. No new history rows or cache rows are written to SQLite. The existing Dashboard response and derived archive caches are bypassed in central mode so a second layer cannot conceal an expired or revised canonical value.
+
+| Reader environment variable | Default | Meaning |
+| --- | ---: | --- |
+| `PITPULSE_SEASON_CACHE_CAPACITY` | 512 | Query entry limit, up to 8192. Zero disables the cache for cold-read comparisons. |
+| `PITPULSE_SEASON_CACHE_TTL_SECONDS` | 60 | Fresh age of a key since its last successful read, up to 3600. |
+| `PITPULSE_SEASON_CACHE_MAX_STALE_SECONDS` | 21600 | Maximum total age since the last successful read for outage fallback, up to 86400. Zero disables fallback. |
+| `PITPULSE_SEASON_CACHE_REVISION_SECONDS` | 5 | Minimum interval between successful shared generation checks on active readers, 1–60 seconds. |
+
+A generation change invalidates the fresh copy on the next check. An unavailable center triggers a coalesced retry after one second. A last successful eligible value is served within the stale window, with existing `meta.stale` and `meta.quality` fields updated where the response has metadata. An uncached key, exhausted stale window or cached negative lookup during an outage returns `503` with `season_data_unavailable` and `Retry-After`. Live recovery, health and SSE use local state.
+
+`GET /api/v1/diagnostics/season-cache` uses the existing API authentication and reports aggregate `hits`, `staleHits`, `originLoads`, `revisionChecks`, `evictions` and `unavailable` counters for the running process. An origin load is one canonical query operation, which can use several SQL statements. Generation probes are tracked separately. A session results request can touch both the session lookup and classification keys. SQLite-only mode returns `data: null`.

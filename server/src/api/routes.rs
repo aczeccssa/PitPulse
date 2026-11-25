@@ -74,6 +74,7 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             super::dashboard_cache::cache_response,
         ))
         .route("/api/v1/health", get(health))
+        .route("/api/v1/diagnostics/season-cache", get(season_cache_stats))
         .route("/api/v1/meetings/next", get(next_meeting))
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route(
@@ -267,6 +268,10 @@ pub async fn favicon_png() -> impl IntoResponse {
         ],
         include_bytes!("../../resources/branding/favicon.png").as_slice(),
     )
+}
+
+async fn season_cache_stats(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(json!({"data": state.database.season_cache_stats()}))
 }
 
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, ApiError> {

@@ -1,9 +1,11 @@
+mod cache;
 mod import;
 mod read;
 mod write;
+pub use cache::{SeasonCacheConfig, SeasonCacheStats};
 pub use import::ImportCount;
 
-use std::{path::Path, time::Duration};
+use std::{path::Path, sync::Arc, time::Duration};
 
 use deadpool_postgres::{Client, Hook, HookError, Manager, Pool, Runtime};
 use native_tls::{Certificate, TlsConnector};
@@ -22,6 +24,7 @@ pub const DEFAULT_SCHEMA: &str = "pitpulse_season";
 pub struct Postgres {
     pool: Pool,
     schema: String,
+    cache: Arc<cache::Cache>,
 }
 
 impl Postgres {
@@ -61,7 +64,36 @@ impl Postgres {
         Ok(Self {
             pool,
             schema: schema.to_owned(),
+            cache: Arc::new(cache::Cache::new(if read_only {
+                SeasonCacheConfig::default()
+            } else {
+                SeasonCacheConfig {
+                    capacity: 0,
+                    ..SeasonCacheConfig::default()
+                }
+            })),
         })
+    }
+
+    pub fn with_cache(mut self, config: SeasonCacheConfig) -> Self {
+        self.cache = Arc::new(cache::Cache::new(config));
+        self
+    }
+
+    pub fn cache_stats(&self) -> SeasonCacheStats {
+        self.cache.stats()
+    }
+
+    async fn dataset_generation(&self) -> Result<i64, StorageError> {
+        Ok(self
+            .client()
+            .await?
+            .query_one(
+                "SELECT generation FROM dataset_generation WHERE singleton",
+                &[],
+            )
+            .await?
+            .try_get(0)?)
     }
 
     pub(super) async fn client(&self) -> Result<Client, StorageError> {

@@ -404,3 +404,207 @@ async fn publisher_replays_revisions_without_writing_local_history() {
         "Fixture GP"
     );
 }
+
+// Cut only the reader's TCP traffic. The writer can still publish while the
+// reader is disconnected, so reconnect tests exercise real revision recovery.
+async fn postgres_proxy(
+    upstream: (&str, u16),
+) -> (
+    u16,
+    tokio::sync::watch::Sender<bool>,
+    tokio::task::JoinHandle<()>,
+) {
+    let upstream = (upstream.0.to_owned(), upstream.1);
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (online, gate) = tokio::sync::watch::channel(true);
+    let task = tokio::spawn(async move {
+        while let Ok((mut inbound, _)) = listener.accept().await {
+            let mut gate = gate.clone();
+            if !*gate.borrow_and_update() {
+                continue;
+            }
+            let upstream = upstream.clone();
+            tokio::spawn(async move {
+                let Ok(mut outbound) = tokio::net::TcpStream::connect(upstream).await else {
+                    return;
+                };
+                inbound.set_nodelay(true).unwrap();
+                outbound.set_nodelay(true).unwrap();
+                tokio::select! {
+                    _ = gate.wait_for(|online| !*online) => {},
+                    _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound) => {},
+                }
+            });
+        }
+    });
+    (port, online, task)
+}
+
+#[tokio::test]
+#[ignore = "requires an isolated loopback Postgres and PITPULSE_TEST_DATABASE_URL"]
+async fn cache_refreshes_revised_data_and_live_stream_survives_outage() {
+    use std::time::Duration;
+
+    use futures_util::StreamExt;
+    use pitpulse_server::{
+        domain::{
+            calendar::Meeting,
+            live::{LiveSourceMode, LiveStatus},
+        },
+        storage::postgres::SeasonCacheConfig,
+    };
+    use serde_json::json;
+    use tokio::time::{sleep, timeout};
+
+    let dsn = std::env::var("PITPULSE_TEST_DATABASE_URL").expect("set PITPULSE_TEST_DATABASE_URL");
+    let read_dsn = std::env::var("PITPULSE_TEST_READ_DATABASE_URL").unwrap_or_else(|_| dsn.clone());
+    let read_role = std::env::var("PITPULSE_TEST_READER_ROLE").ok();
+    let mut url = url::Url::parse(&read_dsn).unwrap_or_else(|_| panic!("invalid test URL"));
+    assert!(
+        url.host_str() == Some("127.0.0.1"),
+        "proxy test is loopback-only"
+    );
+    let schema = format!(
+        "pitpulse_test_cache_{}_{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let writer = Postgres::new(&dsn, &schema, false).unwrap();
+    writer.migrate(read_role.as_deref()).await.unwrap();
+    let (port, online, proxy) = postgres_proxy(("127.0.0.1", url.port().unwrap_or(5432))).await;
+    url.set_port(Some(port)).unwrap();
+    let reader = Postgres::new(url.as_str(), &schema, true)
+        .unwrap()
+        .with_cache(SeasonCacheConfig {
+            capacity: 8,
+            ttl: Duration::from_secs(30),
+            max_stale: Duration::from_secs(4),
+            revision_interval: Duration::from_millis(250),
+        });
+    let db = Database::open(std::path::Path::new(":memory:"))
+        .await
+        .unwrap();
+    db.migrate().await.unwrap();
+    let publisher = db.clone().with_season_publisher(writer);
+    let mut meeting: Meeting = serde_json::from_value(json!({
+        "id":"2024:1", "season":2024, "round":1, "name":"Fixture GP", "country":"Fixture Country",
+        "location":"Fixture City", "startDate":"2024-03-01", "endDate":"2024-03-03", "status":"scheduled", "sessions":[]
+    })).unwrap();
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting.clone()], "2026-02-01T00:00:00Z")
+            .await
+            .unwrap(),
+        1
+    );
+    let state = AppState::new(AppConfig::default(), db.with_season_reader(reader.clone()));
+    let router = server::router(state.clone());
+    let path = "/api/v1/calendar?season=2024";
+    let (a, b, c) = tokio::join!(
+        response(&router, path),
+        response(&router, path),
+        response(&router, path)
+    );
+    for (code, body) in [a, b, c] {
+        assert_eq!(code, StatusCode::OK);
+        assert_eq!(body["data"][0]["name"], "Fixture GP");
+    }
+    assert_eq!(reader.cache_stats().origin_loads, 1);
+    assert_eq!(reader.cache_stats().hits, 2);
+    assert!(reader.cache_stats().revision_checks >= 1);
+    meeting.name = "Fixture GP revised".into();
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting.clone()], "2026-02-01T00:01:00Z")
+            .await
+            .unwrap(),
+        2
+    );
+    sleep(Duration::from_millis(275)).await;
+    assert_eq!(
+        response(&router, path).await.1["data"][0]["name"],
+        "Fixture GP revised"
+    );
+    assert_eq!(reader.cache_stats().origin_loads, 2);
+
+    online.send(false).unwrap();
+    sleep(Duration::from_millis(275)).await;
+    let (code, stale) = response(&router, path).await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(stale["data"][0]["name"], "Fixture GP revised");
+    assert_eq!(stale["meta"]["quality"], "stale");
+    assert_eq!(stale["meta"]["stale"], true);
+    assert_eq!(reader.cache_stats().stale_hits, 1);
+    let (code, body) = response(&router, "/api/v1/calendar?season=2025").await;
+    assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(body["error"]["code"], "season_data_unavailable");
+
+    let stream = router
+        .clone()
+        .oneshot(
+            Request::get("/api/v1/live/stream")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(stream.status(), StatusCode::OK);
+    assert_eq!(stream.headers()["content-type"], "text/event-stream");
+    let mut events = stream.into_body().into_data_stream();
+    let first = timeout(Duration::from_secs(2), events.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(
+        std::str::from_utf8(&first)
+            .unwrap()
+            .contains("event: snapshot")
+    );
+    state.live.reset(
+        LiveStatus::Connected,
+        LiveSourceMode::Replay,
+        "pp57_fixture",
+    );
+    let second = timeout(Duration::from_secs(2), events.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(
+        std::str::from_utf8(&second)
+            .unwrap()
+            .contains("pp57_fixture")
+    );
+    let (code, live) = response(&router, "/api/v1/live/snapshot").await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(live["data"]["statusReason"], "pp57_fixture");
+    assert_eq!(response(&router, "/api/v1/health").await.0, StatusCode::OK);
+
+    sleep(Duration::from_secs(4)).await;
+    assert_eq!(
+        response(&router, path).await.0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    meeting.name = "Fixture GP recovered".into();
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting], "2026-02-01T00:02:00Z")
+            .await
+            .unwrap(),
+        3
+    );
+    online.send(true).unwrap();
+    sleep(Duration::from_millis(1100)).await;
+    let (code, recovered) = response(&router, path).await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(recovered["data"][0]["name"], "Fixture GP recovered");
+    assert_eq!(reader.cache_stats().origin_loads, 3);
+    proxy.abort();
+}

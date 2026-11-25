@@ -93,6 +93,9 @@ fn update_record(records: &mut HashMap<Layout, TimedLap>, weekend: &Weekend) {
 }
 
 async fn archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, ApiError> {
+    if state.database.uses_central_season_data() {
+        return load_archive(state, season).await;
+    }
     state
         .dashboard
         .archives
