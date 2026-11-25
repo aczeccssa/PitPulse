@@ -902,6 +902,42 @@ async fn apply_live_update(
     state.live.publish(snapshot, data_updated);
 }
 
+/// The isolated publisher runs the canonical provider sync without starting
+/// the HTTP listener, analysis preload, manual refresh queue, or Live clients.
+pub async fn run_publisher(state: AppState) -> anyhow::Result<()> {
+    anyhow::ensure!(
+        state.jolpica.enabled,
+        "publish-sync requires the Jolpica provider"
+    );
+    let results = ResultsSync {
+        jolpica: state.jolpica.clone(),
+        openf1: state.openf1.clone(),
+        timeout: Duration::from_secs(8),
+    };
+    let official = tokio::spawn(crate::services::next_schedule::run(state.clone()));
+    let mut identities = None;
+    let mut interval = tokio::time::interval(TICK);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let stop = tokio::signal::ctrl_c();
+    tokio::pin!(stop);
+    let result = loop {
+        tokio::select! {
+            result = &mut stop => break result,
+            _ = interval.tick() => {
+                if identities.is_none() && let Some(season) = current_season(&state).await {
+                    identities = results.cached_identity_maps(&state.database, season).await.ok().flatten();
+                }
+                if let Err(error) = sync_cycle(&state, &results, &mut identities).await {
+                    tracing::warn!(%error, "publish-sync cycle failed");
+                }
+            }
+        }
+    };
+    official.abort();
+    let _ = official.await;
+    Ok(result?)
+}
+
 async fn sync_cycle(
     state: &AppState,
     results: &ResultsSync,
@@ -1063,6 +1099,9 @@ async fn sync_cycle(
             .sync_driver_standings_once(&state.database, season, identities)
             .await
         {
+            Ok(false) if state.database.uses_central_season_data() => {
+                record_empty(&state.database, PROVIDER, &driver_key, attempt, None).await?;
+            }
             Ok(_) => {
                 record_success(&state.database, PROVIDER, &driver_key, SIX_HOURS, None).await?
             }
@@ -1078,6 +1117,9 @@ async fn sync_cycle(
             .sync_constructor_standings_once(&state.database, season, identities)
             .await
         {
+            Ok(false) if state.database.uses_central_season_data() => {
+                record_empty(&state.database, PROVIDER, &constructor_key, attempt, None).await?;
+            }
             Ok(_) => {
                 record_success(&state.database, PROVIDER, &constructor_key, SIX_HOURS, None).await?
             }

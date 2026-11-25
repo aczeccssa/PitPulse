@@ -55,6 +55,7 @@ enum SyncStateOutcome<'a> {
 pub struct Database {
     connection: Arc<Mutex<Connection>>,
     season_reader: Option<super::postgres::Postgres>,
+    season_publisher: Option<super::postgres::Postgres>,
 }
 
 pub struct ScheduleSnapshot {
@@ -81,12 +82,21 @@ impl Database {
         Ok(Self {
             connection: Arc::new(Mutex::new(connection)),
             season_reader: None,
+            season_publisher: None,
         })
     }
 
     /// Attach the canonical reader. Canonical SQLite writes then fail closed.
     pub fn with_season_reader(mut self, reader: super::postgres::Postgres) -> Self {
         self.season_reader = Some(reader);
+        self
+    }
+
+    /// Used only by the headless publish-sync command. Canonical reads and
+    /// writes use Postgres. SQLite still records retry state.
+    pub fn with_season_publisher(mut self, publisher: super::postgres::Postgres) -> Self {
+        self.season_reader = Some(publisher.clone());
+        self.season_publisher = Some(publisher);
         self
     }
 
@@ -296,6 +306,11 @@ impl Database {
         constructors: &[serde_json::Value],
         fetched_at: &str,
     ) -> Result<(), StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher
+                .save_identity_cache(season, drivers, constructors, fetched_at)
+                .await;
+        }
         self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         let drivers = serde_json::to_string(drivers).unwrap_or_else(|_| "[]".to_string());
@@ -523,6 +538,11 @@ impl Database {
         events_json: String,
         now: String,
     ) -> Result<(), StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher
+                .save_next_season_schedule(season, &events_json, &now)
+                .await;
+        }
         self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         spawn_blocking(move || {
@@ -832,6 +852,9 @@ impl Database {
         mut rows: Vec<SessionResult>,
         quality: &str,
     ) -> Result<i64, StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher.replace_session_results(rows, quality).await;
+        }
         self.require_legacy_writer()?;
         let Some(session_id) = rows.first().map(|row| row.session_id.clone()) else {
             return Ok(0);
@@ -909,6 +932,9 @@ impl Database {
         &self,
         rows: Vec<DriverStanding>,
     ) -> Result<i64, StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher.replace_driver_standings(rows).await;
+        }
         self.require_legacy_writer()?;
         let Some(season) = rows.first().map(|row| row.season) else {
             return Ok(0);
@@ -938,6 +964,9 @@ impl Database {
         &self,
         rows: Vec<ConstructorStanding>,
     ) -> Result<i64, StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher.replace_constructor_standings(rows).await;
+        }
         self.require_legacy_writer()?;
         let Some(season) = rows.first().map(|row| row.season) else {
             return Ok(0);
@@ -968,6 +997,11 @@ impl Database {
         drivers: Vec<(String, String, String)>,
         constructors: Vec<(String, String, String)>,
     ) -> Result<(), StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher
+                .store_provider_mappings(drivers, constructors)
+                .await;
+        }
         self.require_legacy_writer()?;
         let connection = Arc::clone(&self.connection);
         spawn_blocking(move || {
@@ -989,6 +1023,9 @@ impl Database {
         meetings: &[Meeting],
         fetched_at: &str,
     ) -> Result<u64, StorageError> {
+        if let Some(publisher) = &self.season_publisher {
+            return publisher.replace_calendar(meetings, fetched_at).await;
+        }
         self.require_legacy_writer()?;
         let meetings = meetings.to_vec();
         let fetched_at = fetched_at.to_string();
@@ -1041,7 +1078,7 @@ pub(super) fn meta_from_snapshot(
     }
 }
 
-fn quality_rank(value: &str) -> u8 {
+pub(super) fn quality_rank(value: &str) -> u8 {
     match value {
         "partial" => 1,
         "provisional" => 2,
@@ -1050,7 +1087,7 @@ fn quality_rank(value: &str) -> u8 {
     }
 }
 
-fn same_result_content(old: &SessionResult, new: &SessionResult) -> bool {
+pub(super) fn same_result_content(old: &SessionResult, new: &SessionResult) -> bool {
     let mut old = old.clone();
     let mut new = new.clone();
     old.fetched_at.clear();
@@ -1509,7 +1546,7 @@ fn upsert_calendar(
     Ok(max_revision)
 }
 
-fn stable_calendar_hash(meetings: &[&Meeting]) -> String {
+pub(super) fn stable_calendar_hash(meetings: &[&Meeting]) -> String {
     let mut content = meetings
         .iter()
         .map(|meeting| {

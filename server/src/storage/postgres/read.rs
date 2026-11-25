@@ -16,6 +16,8 @@ use crate::{
 
 use super::Postgres;
 
+pub(super) const RESULT_COLUMNS: &str = "session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3, race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, driver_number";
+
 const MEETING_COLUMNS: &str = "id, season, round, name, country, location, start_date, end_date,
     country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id, circuit_json";
 
@@ -125,11 +127,10 @@ impl Postgres {
         session_id: &str,
     ) -> Result<(Vec<SessionResult>, Meta), StorageError> {
         let rows = self.client().await?.query(
-            "SELECT session_id, position, classification, driver_id, driver_name, constructor_id, team, time, best_lap, q1, q2, q3,
-                    race_time, gap, laps, points, source, source_updated_at, fetched_at, revision, quality, driver_number,
+            &format!("SELECT {RESULT_COLUMNS},
                     COALESCE(now() - season_timestamp(fetched_at) > interval '6 hours', TRUE)
              FROM session_results WHERE session_id = $1 AND revision = (SELECT MAX(revision) FROM session_results WHERE session_id = $1)
-             ORDER BY position NULLS LAST, driver_id COLLATE \"C\"",
+             ORDER BY position NULLS LAST, driver_id COLLATE \"C\""),
             &[&session_id],
         ).await?;
         let results = rows
@@ -301,7 +302,7 @@ fn session(row: &Row) -> Result<Session, StorageError> {
         openf1_session_key: row.try_get(7)?,
     })
 }
-fn session_result(row: &Row) -> Result<SessionResult, StorageError> {
+pub(super) fn session_result(row: &Row) -> Result<SessionResult, StorageError> {
     Ok(SessionResult {
         session_id: row.try_get(0)?,
         position: row.try_get(1)?,

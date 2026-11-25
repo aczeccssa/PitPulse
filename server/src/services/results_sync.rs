@@ -376,10 +376,17 @@ pub enum SyncOutcome {
     NoResult,
 }
 
-fn storage_error(error: impl std::fmt::Display) -> ProviderError {
-    ProviderError::Decode {
-        url: "sqlite".to_string(),
-        error: error.to_string(),
+fn storage_error(error: crate::error::StorageError) -> ProviderError {
+    let message = error.to_string();
+    match error {
+        crate::error::StorageError::SeasonUnavailable => ProviderError::Transport {
+            url: "season-storage".into(),
+            error: message,
+        },
+        _ => ProviderError::Decode {
+            url: "season-storage".into(),
+            error: message,
+        },
     }
 }
 

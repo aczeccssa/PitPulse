@@ -124,3 +124,283 @@ async fn imported_history_matches_http_contract_with_clean_sqlite() {
         0
     );
 }
+
+#[tokio::test]
+#[ignore = "requires a disposable Postgres database and PITPULSE_TEST_DATABASE_URL"]
+async fn publisher_replays_revisions_without_writing_local_history() {
+    use pitpulse_server::{domain::calendar::Meeting, error::StorageError};
+    use serde_json::json;
+
+    let dsn = std::env::var("PITPULSE_TEST_DATABASE_URL").expect("set PITPULSE_TEST_DATABASE_URL");
+    let read_dsn = std::env::var("PITPULSE_TEST_READ_DATABASE_URL").unwrap_or_else(|_| dsn.clone());
+    let read_role = std::env::var("PITPULSE_TEST_READER_ROLE").ok();
+    let schema = format!(
+        "pitpulse_test_publish_{}_{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let postgres = Postgres::new(&dsn, &schema, false).unwrap();
+    postgres.migrate(read_role.as_deref()).await.unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let state_path = temp.path().join("publisher.sqlite");
+    let state = Database::open(&state_path).await.unwrap();
+    state.migrate().await.unwrap();
+    let publisher = state.clone().with_season_publisher(postgres.clone());
+    let reader = state
+        .clone()
+        .with_season_reader(Postgres::new(&read_dsn, &schema, true).unwrap());
+    let mut meeting: Meeting = serde_json::from_value(json!({
+        "id":"2024:1", "season":2024, "round":1, "name":"Fixture GP", "country":"Fixture Country",
+        "location":"Fixture City", "startDate":"2024-03-01", "endDate":"2024-03-03", "status":"scheduled",
+        "sessions":[{"id":"2024:1:race", "meetingId":"2024:1", "sessionType":"race",
+        "startTime":"2024-03-03T10:00:00Z", "status":"scheduled", "openf1SessionKey":8001,
+        "jolpicaSessionId":"fixture-race"}]
+    })).unwrap();
+    meeting.jolpica_round_id = Some("fixture-round".into());
+    let early = "2024-03-03T10:30:00Z";
+    let late = "2024-03-03T10:40:00Z";
+    assert!(matches!(
+        reader.replace_calendar(&[meeting.clone()], early).await,
+        Err(StorageError::SeasonReadOnly)
+    ));
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting.clone()], early)
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting.clone()], early)
+            .await
+            .unwrap(),
+        1
+    );
+    let mut updated = meeting.clone();
+    updated.name = "Fixture Revised GP".into();
+    assert_eq!(
+        publisher.replace_calendar(&[updated], late).await.unwrap(),
+        2
+    );
+    assert_eq!(
+        publisher
+            .replace_calendar(&[meeting.clone()], early)
+            .await
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        reader.calendar(Some(2024)).await.unwrap().0[0].name,
+        "Fixture Revised GP"
+    );
+    let mut first = serde_json::from_value::<pitpulse_server::domain::results::SessionResult>(json!({
+        "sessionId":"2024:1:race", "position":2, "classification":"classified", "driverId":"fixture-driver",
+        "driverName":"Fixture Driver", "constructorId":"fixture-team", "team":"Fixture Team", "points":18.0,
+        "source":"fixture", "fetchedAt":early, "revision":0, "quality":"provisional"
+    })).unwrap();
+    assert!(matches!(
+        reader
+            .replace_session_results(vec![first.clone()], "provisional")
+            .await,
+        Err(StorageError::SeasonReadOnly)
+    ));
+    let (a, b) = tokio::join!(
+        publisher.replace_session_results(vec![first.clone()], "provisional"),
+        publisher.replace_session_results(vec![first.clone()], "provisional")
+    );
+    assert_eq!(a.unwrap(), 1);
+    assert_eq!(b.unwrap(), 1);
+    let mut revised = first.clone();
+    revised.position = Some(1);
+    revised.points = Some(25.0);
+    revised.fetched_at = late.into();
+    // Current provider revisions can remain provisional. A replay of the prior
+    // provisional snapshot still must not restore its older classification.
+    assert_eq!(
+        publisher
+            .replace_session_results(vec![revised.clone()], "provisional")
+            .await
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        publisher
+            .replace_session_results(vec![first.clone()], "provisional")
+            .await
+            .unwrap(),
+        2
+    );
+    first.fetched_at = "2024-03-04T00:00:00Z".into();
+    assert_eq!(
+        publisher
+            .replace_session_results(vec![first.clone()], "partial")
+            .await
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        publisher
+            .replace_session_results(vec![], "provisional")
+            .await
+            .unwrap(),
+        0
+    );
+    assert!(matches!(
+        publisher
+            .replace_session_results(vec![first.clone(), first], "provisional")
+            .await,
+        Err(StorageError::SeasonDataInvalid)
+    ));
+    let (rows, meta) = reader.session_results("2024:1:race").await.unwrap();
+    assert_eq!(meta.revision, 2);
+    assert_eq!(rows[0].points, Some(25.0));
+    assert_eq!(rows[0].fetched_at, late);
+
+    let mut drivers = serde_json::from_value::<Vec<pitpulse_server::domain::standings::DriverStanding>>(json!([{
+        "season":2024, "position":1, "driverId":"fixture-driver", "driverName":"Fixture Driver", "constructor":"Fixture Team",
+        "constructorIds":["fixture-team", "prior-team"], "points":25.0, "wins":1, "source":"fixture", "fetchedAt":early, "revision":0
+    }])).unwrap();
+    assert_eq!(
+        publisher
+            .replace_driver_standings(drivers.clone())
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        publisher
+            .replace_driver_standings(drivers.clone())
+            .await
+            .unwrap(),
+        1
+    );
+    let old_drivers = drivers.clone();
+    drivers[0].points = 26.0;
+    drivers[0].fetched_at = late.into();
+    assert_eq!(
+        publisher.replace_driver_standings(drivers).await.unwrap(),
+        2
+    );
+    assert_eq!(
+        publisher
+            .replace_driver_standings(old_drivers)
+            .await
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        reader.driver_standings(Some(2024)).await.unwrap().0[0].points,
+        26.0
+    );
+    let constructors = serde_json::from_value::<Vec<pitpulse_server::domain::standings::ConstructorStanding>>(json!([{
+        "season":2024, "position":1, "constructorId":"fixture-team", "constructorName":"Fixture Team", "points":25.0,
+        "wins":1, "source":"fixture", "fetchedAt":early, "revision":0
+    }])).unwrap();
+    assert_eq!(
+        publisher
+            .replace_constructor_standings(constructors.clone())
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        publisher
+            .replace_constructor_standings(constructors)
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        reader.constructor_standings(Some(2024)).await.unwrap().0[0].points,
+        25.0
+    );
+    publisher
+        .save_identity_cache(
+            2024,
+            &[json!({"driverId":"fixture-driver"})],
+            &[json!({"constructorId":"fixture-team"})],
+            early,
+        )
+        .await
+        .unwrap();
+    assert!(reader.identity_cache(2024).await.unwrap().is_some());
+    for _ in 0..2 {
+        publisher
+            .store_provider_mappings(
+                vec![("fixture".into(), "raw".into(), "fixture-driver".into())],
+                vec![("fixture".into(), "raw".into(), "fixture-team".into())],
+            )
+            .await
+            .unwrap();
+        publisher
+            .save_next_season_schedule(
+                2025,
+                json!([{"id":"fixture","round":1,"name":"Fixture GP","location":"Fixture City","startDate":"2025-03-01","endDate":"2025-03-03"}]).to_string(),
+                early.into(),
+            )
+            .await
+            .unwrap();
+    }
+    assert_eq!(
+        reader
+            .published_schedule_openings()
+            .await
+            .unwrap()
+            .get(&2025)
+            .unwrap(),
+        "2025-03-01"
+    );
+    assert_eq!(
+        reader
+            .next_season_schedule(2025)
+            .await
+            .unwrap()
+            .unwrap()
+            .revision,
+        1
+    );
+    publisher
+        .sync_begin("fixture", "fixture-retry-state", early)
+        .await
+        .unwrap();
+    assert!(
+        state
+            .sync_status("fixture", "fixture-retry-state")
+            .await
+            .unwrap()
+            .is_some()
+    );
+    let local = rusqlite::Connection::open(&state_path).unwrap();
+    for table in [
+        "meetings",
+        "sessions",
+        "session_results",
+        "driver_standings",
+        "constructor_standings",
+        "provider_mappings",
+        "driver_mappings",
+        "constructor_mappings",
+        "provider_identity_cache",
+        "calendar_snapshots",
+        "next_season_schedule",
+    ] {
+        assert_eq!(
+            local
+                .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0,
+            "{table}"
+        );
+    }
+    // An explicitly selected legacy SQLite database is still usable for rollback.
+    assert_eq!(state.replace_calendar(&[meeting], early).await.unwrap(), 1);
+    assert_eq!(
+        state.calendar(Some(2024)).await.unwrap().0[0].name,
+        "Fixture GP"
+    );
+}

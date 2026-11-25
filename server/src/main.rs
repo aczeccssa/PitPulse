@@ -16,6 +16,15 @@ async fn main() -> anyhow::Result<()> {
     }
     let config_path = std::env::var("F1_COMPANION_CONFIG").ok().map(PathBuf::from);
     let config = AppConfig::load(config_path.as_deref())?;
+    if args.as_slice() == ["publish-sync"] {
+        let path = std::env::var_os("PITPULSE_PUBLISH_STATE_PATH")
+            .context("PITPULSE_PUBLISH_STATE_PATH must name an isolated SQLite file")?;
+        let publisher = season_writer()?;
+        let database = Database::open(&PathBuf::from(path)).await?;
+        database.migrate().await?;
+        let database = database.with_season_publisher(publisher);
+        return scheduler::run_publisher(AppState::new(config, database)).await;
+    }
     let (args, resume) = match args.strip_suffix(&[String::from("--resume")]) {
         Some(prefix) if !prefix.is_empty() => (prefix, true),
         _ => (args.as_slice(), false),
@@ -25,7 +34,9 @@ async fn main() -> anyhow::Result<()> {
         [command, option, range] if command == "backfill" && option == "--season" => {
             Some(pitpulse_server::services::backfill::seasons(range)?)
         }
-        _ => anyhow::bail!("usage: pitpulse-server [backfill --season YEAR[..YEAR] [--resume]]"),
+        _ => anyhow::bail!(
+            "usage: pitpulse-server [publish-sync | backfill --season YEAR[..YEAR] [--resume]]"
+        ),
     };
     tracing::info!(bind = %config.server.bind, db = %config.database.path.display(), "starting PitPulse");
 
@@ -57,23 +68,14 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn season_data(args: &[String]) -> anyhow::Result<()> {
-    use pitpulse_server::storage::postgres::{DEFAULT_SCHEMA, Postgres};
-
-    let schema =
-        std::env::var("PITPULSE_SEASON_SCHEMA").unwrap_or_else(|_| DEFAULT_SCHEMA.to_owned());
-    let database = || -> anyhow::Result<Postgres> {
-        let url = std::env::var("PITPULSE_SEASON_WRITE_DATABASE_URL")
-            .context("PITPULSE_SEASON_WRITE_DATABASE_URL must be set")?;
-        Ok(Postgres::new(&url, &schema, false)?)
-    };
     match args {
         [command] if command == "migrate" => {
             let role = std::env::var("PITPULSE_SEASON_READER_ROLE").ok();
-            database()?.migrate(role.as_deref()).await?;
+            season_writer()?.migrate(role.as_deref()).await?;
             println!("Season data schema v1 ready");
         }
         [command, source] if matches!(command.as_str(), "import" | "verify") => {
-            let report = database()?
+            let report = season_writer()?
                 .import_sqlite(std::path::Path::new(source), command == "verify")
                 .await?;
             println!("{}", serde_json::to_string_pretty(&report)?);
@@ -83,6 +85,16 @@ async fn season_data(args: &[String]) -> anyhow::Result<()> {
         ),
     }
     Ok(())
+}
+
+fn season_writer() -> anyhow::Result<pitpulse_server::storage::postgres::Postgres> {
+    use pitpulse_server::storage::postgres::{DEFAULT_SCHEMA, Postgres};
+
+    let schema =
+        std::env::var("PITPULSE_SEASON_SCHEMA").unwrap_or_else(|_| DEFAULT_SCHEMA.to_owned());
+    let url = std::env::var("PITPULSE_SEASON_WRITE_DATABASE_URL")
+        .context("PITPULSE_SEASON_WRITE_DATABASE_URL must be set")?;
+    Ok(Postgres::new(&url, &schema, false)?)
 }
 
 fn install_tracing() -> anyhow::Result<()> {
