@@ -1,0 +1,38 @@
+[Unit]
+Description=PitPulse season data publisher
+After=network-online.target pitpulse-server.service
+Wants=network-online.target
+ConditionPathExists=/etc/pitpulse/reader.env
+
+[Service]
+Type=simple
+User=pitpulse-publisher
+Group=pitpulse-socket
+Environment=F1_COMPANION_REQUIRE_TOKEN=false
+Environment=F1_COMPANION_CONFIG=/etc/pitpulse/config.toml
+Environment=PITPULSE_PUBLISH_STATE_PATH=/var/lib/pitpulse-publisher/state.sqlite
+Environment=PITPULSE_PUBLISH_SOCKET=/run/pitpulse-publisher/sync.sock
+EnvironmentFile=-/etc/pitpulse/season.env
+EnvironmentFile=/etc/pitpulse/publisher.env
+UnsetEnvironment=PITPULSE_SEASON_READ_DATABASE_URL F1_COMPANION_TOKEN
+ExecStart=/opt/pitpulse/current/pitpulse-server publish-sync
+StateDirectory=pitpulse-publisher
+StateDirectoryMode=0700
+RuntimeDirectory=pitpulse-publisher
+RuntimeDirectoryMode=2750
+UMask=0077
+Restart=on-failure
+RestartSec=3s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

@@ -23,6 +23,8 @@ pub struct AppState {
     pub radio: crate::providers::radio::RadioProvider,
     pub analysis: crate::services::analysis::AnalysisCache,
     pub(crate) dashboard: Arc<crate::api::dashboard_cache::DashboardCache>,
+    #[cfg(unix)]
+    pub(crate) publisher: Option<crate::publisher_bridge::PublisherClient>,
     pub refresh_queue: crate::api::refresh::RefreshQueue,
     pub refresh_events: broadcast::Sender<crate::api::refresh::DataRefreshEvent>,
 }
@@ -49,9 +51,31 @@ impl AppState {
             openf1,
             analysis: crate::services::analysis::AnalysisCache::default(),
             dashboard: Arc::default(),
+            #[cfg(unix)]
+            publisher: None,
             refresh_queue: crate::api::refresh::RefreshQueue::default(),
             refresh_events,
         }
+    }
+
+    #[cfg(unix)]
+    pub fn with_publisher_socket(mut self, path: &std::path::Path) -> anyhow::Result<Self> {
+        self.publisher = Some(crate::publisher_bridge::PublisherClient::new(path)?);
+        Ok(self)
+    }
+
+    pub(crate) async fn season_sync_status(
+        &self,
+        endpoint: &str,
+    ) -> Result<Option<crate::api::dto::SyncStatus>, crate::error::StorageError> {
+        if self.database.uses_central_season_data() {
+            #[cfg(unix)]
+            if let Some(publisher) = &self.publisher {
+                return Ok(publisher.sync_status(endpoint).await);
+            }
+            return Ok(None);
+        }
+        self.database.sync_status("jolpica-alpha", endpoint).await
     }
 
     pub fn live_for(&self, series: &str) -> Option<&LiveState> {

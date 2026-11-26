@@ -74,6 +74,7 @@ pub fn build_router(state: AppState) -> Router<AppState> {
             super::dashboard_cache::cache_response,
         ))
         .route("/api/v1/health", get(health))
+        .route("/api/v1/diagnostics/season-cache", get(season_cache_stats))
         .route("/api/v1/meetings/next", get(next_meeting))
         .route("/api/v1/sessions/{sessionId}/results", get(session_results))
         .route(
@@ -269,6 +270,10 @@ pub async fn favicon_png() -> impl IntoResponse {
     )
 }
 
+async fn season_cache_stats(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(json!({"data": state.database.season_cache_stats()}))
+}
+
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, ApiError> {
     Ok(Json(health_body(&state).await))
 }
@@ -336,16 +341,19 @@ async fn calendar(
     let (meetings, mut meta) = state.database.calendar(season).await?;
     let current_year = current_year(&state).await?;
     let season_id = season.unwrap_or(current_year);
-    if season.is_some()
-        && (meetings.is_empty() || season_id > current_year)
-        && let Some((official, meta)) =
-            crate::services::next_schedule::calendar(&state.database, season_id).await?
-    {
-        return Ok(Json(json!({"data": official, "meta": meta})));
+    if season.is_some() && (meetings.is_empty() || season_id > current_year) {
+        match crate::services::next_schedule::calendar(&state.database, season_id).await {
+            Ok(Some((official, meta))) => return Ok(Json(json!({"data": official, "meta": meta}))),
+            Ok(None) => {}
+            // The optional schedule can be cold while the canonical calendar
+            // still has an eligible stale value. Keep the latter in that case.
+            Err(crate::error::StorageError::SeasonUnavailable)
+                if state.database.uses_central_season_data() && meta.stale => {}
+            Err(error) => return Err(error.into()),
+        }
     }
     meta.sync_status = state
-        .database
-        .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))
+        .season_sync_status(&format!("calendar-{season_id}"))
         .await?;
     Ok(Json(json!({"data": meetings, "meta": meta})))
 }
@@ -361,8 +369,7 @@ async fn next_meeting(
         None => current_year(&state).await?,
     };
     meta.sync_status = state
-        .database
-        .sync_status("jolpica-alpha", &format!("calendar-{season_id}"))
+        .season_sync_status(&format!("calendar-{season_id}"))
         .await?;
     Ok(Json(json!({"data": meeting, "meta": meta})))
 }
@@ -378,8 +385,7 @@ async fn session_results(
         .ok_or(ApiError::NotFound)?;
     let (results, mut meta) = state.database.session_results(&session_id).await?;
     meta.sync_status = state
-        .database
-        .sync_status("jolpica-alpha", &format!("results-{session_id}"))
+        .season_sync_status(&format!("results-{session_id}"))
         .await?;
     if results.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
@@ -403,8 +409,7 @@ async fn driver_standings(
         None => current_year(&state).await?,
     };
     meta.sync_status = state
-        .database
-        .sync_status("jolpica-alpha", &format!("standings-drivers-{season_id}"))
+        .season_sync_status(&format!("standings-drivers-{season_id}"))
         .await?;
     if standings.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;
@@ -430,11 +435,7 @@ async fn constructor_standings(
         None => current_year(&state).await?,
     };
     meta.sync_status = state
-        .database
-        .sync_status(
-            "jolpica-alpha",
-            &format!("standings-constructors-{season_id}"),
-        )
+        .season_sync_status(&format!("standings-constructors-{season_id}"))
         .await?;
     if standings.is_empty() {
         meta.quality = crate::domain::quality::DataQuality::Pending;

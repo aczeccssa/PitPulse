@@ -8,3 +8,6 @@ pub mod scheduler;
 pub mod server;
 pub mod services;
 pub mod storage;
+
+#[cfg(unix)]
+pub mod publisher_bridge;

@@ -43,12 +43,49 @@ pub enum StorageError {
     #[error("blocking database task failed: {0}")]
     Task(#[from] tokio::task::JoinError),
 
+    #[error("season data center unavailable")]
+    SeasonUnavailable,
+
+    #[error("season data configuration: {0}")]
+    SeasonConfig(&'static str),
+
+    #[error("season data operation failed (Postgres SQLSTATE {0})")]
+    SeasonPostgres(String),
+
+    #[error("season data import: {0}")]
+    SeasonImport(String),
+
+    #[error("season data is invalid")]
+    SeasonDataInvalid,
+
+    #[error("season data writer is disabled")]
+    SeasonReadOnly,
+
     #[error("analysis cache entry is corrupted: {0}")]
     CorruptCache(String),
 }
 
+impl From<tokio_postgres::Error> for StorageError {
+    fn from(error: tokio_postgres::Error) -> Self {
+        // Do not propagate database diagnostics: payloads and authentication
+        // details may appear in driver errors.
+        match error.code().map(|code| code.code()) {
+            None | Some("57014" | "57P01" | "57P02" | "57P03" | "55P03") => Self::SeasonUnavailable,
+            Some(code) if code.starts_with("08") => Self::SeasonUnavailable,
+            Some(code) => Self::SeasonPostgres(code.to_owned()),
+        }
+    }
+}
+
 impl IntoResponse for StorageError {
     fn into_response(self) -> Response {
+        if matches!(self, Self::SeasonUnavailable) {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                [(axum::http::header::RETRY_AFTER, "5")],
+                Json(json!({"error": {"code": "season_data_unavailable", "message": "season data center unavailable"}})),
+            ).into_response();
+        }
         tracing::error!(error = %self, "storage operation failed");
         (
             StatusCode::INTERNAL_SERVER_ERROR,

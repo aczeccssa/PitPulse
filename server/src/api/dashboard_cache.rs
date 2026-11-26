@@ -114,6 +114,9 @@ pub(crate) async fn cache_response(
     request: Request,
     next: Next,
 ) -> Response {
+    if state.database.uses_central_season_data() {
+        return next.run(request).await;
+    }
     let Some(key) = cache_key(request.uri()).filter(|_| {
         request.method() == Method::GET
             && request

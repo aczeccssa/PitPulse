@@ -5,7 +5,7 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduleEvent {
     pub id: String,

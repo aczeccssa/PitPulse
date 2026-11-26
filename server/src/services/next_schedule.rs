@@ -62,7 +62,7 @@ pub async fn calendar(
         Some(SOURCE.into()),
         Some(snapshot.checked_at),
         snapshot.revision,
-        false,
+        snapshot.stale,
     );
     Ok(Some((meetings, meta)))
 }

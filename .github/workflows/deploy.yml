@@ -16,6 +16,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: pitpulse-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Manual production deployment
