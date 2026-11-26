@@ -276,6 +276,72 @@ start_service() {
     service_is_active
 }
 
+# The operator activates central mode by installing this private systemd
+# EnvironmentFile under the same lock used by deploy and rollback.
+lock_release_operation() {
+    require_commands flock
+    exec 9>"$PITPULSE_OPT_DIR/release.lock"
+    flock -n 9 || fail "another release operation is in progress"
+}
+
+select_release_mode() {
+    local reader_env="$PITPULSE_ETC_DIR/reader.env"
+    RELEASE_MODE=sqlite
+    PREVIOUS_FILE="$PITPULSE_OPT_DIR/previous"
+    if [[ -e "$reader_env" || -L "$reader_env" ]]; then
+        local env_file
+        for env_file in "$reader_env" "$PITPULSE_ETC_DIR/publisher.env" "$PITPULSE_ETC_DIR/season.env"; do
+            [[ -f "$env_file" && ! -L "$env_file" && "$(file_mode "$env_file")" == 600 &&
+               "$(stat -c '%u' "$env_file")" == 0 ]] ||
+                fail "central environment files must be root-owned regular files with mode 0600"
+        done
+        [[ -f "$PITPULSE_SYSTEMD_DIR/pitpulse-server.service.d/season-data.conf" &&
+           -f "$PITPULSE_SYSTEMD_DIR/pitpulse-publisher.service" ]] ||
+            fail "install the central systemd units before deploying"
+        require_commands runuser
+        RELEASE_MODE=central
+        PREVIOUS_FILE="$PITPULSE_OPT_DIR/previous-central"
+    fi
+}
+
+stop_release() {
+    if [[ "$RELEASE_MODE" == central ]]; then
+        systemctl_cmd stop pitpulse-publisher >/dev/null || return 1
+        systemctl_cmd stop "$PITPULSE_SERVICE_NAME" >/dev/null
+    else
+        stop_service
+    fi
+}
+
+start_http_and_check() {
+    local auth="$1" work="$2" base="http://$PITPULSE_BIND"
+    start_service && wait_for_health "$base" "$auth" "$work" || return 1
+    [[ "$RELEASE_MODE" == central ]] || return 0
+
+    # The local health route only checks SQLite. A fresh HTTP process has
+    # no stale cache to hide a failed canonical read.
+    curl_cmd -fsS --max-time 30 --config "$auth" -o "$work/season-cache.json" \
+        "$base/api/v1/diagnostics/season-cache" &&
+        jq -e '.data | type == "object"' "$work/season-cache.json" >/dev/null &&
+        curl_cmd -fsS --max-time 30 --config "$auth" -o "$work/season-calendar.json" \
+            "$base/api/v1/calendar" &&
+        jq -e '.data | type == "array"' "$work/season-calendar.json" >/dev/null
+}
+
+start_publisher_and_check() {
+    [[ "$RELEASE_MODE" == central ]] || return 0
+    systemctl_cmd start pitpulse-publisher >/dev/null || return 1
+    local deadline=$((SECONDS + 30))
+    while (( SECONDS < deadline )); do
+        systemctl_cmd is-active --quiet pitpulse-publisher &&
+            runuser -u pitpulse -g pitpulse -G pitpulse-socket -- curl -fsS --noproxy '*' --max-time "$((deadline - SECONDS + 1))" \
+                --unix-socket /run/pitpulse-publisher/sync.sock http://publisher/ready \
+                >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    return 1
+}
+
 sqlite_snapshot() {
     local db_path="$1" backup_dir="$2" stamp backup_path integrity
     mkdir -p "$backup_dir"

@@ -176,6 +176,7 @@ pub(crate) fn serve(path: &Path, state: AppState) -> anyhow::Result<PublisherLis
         return Err(error).context("could not restrict publisher socket permissions");
     }
     let router = Router::new()
+        .route("/ready", get(ready))
         .route("/refresh", post(refresh))
         .route("/status/{endpoint}", get(status))
         .route("/events", get(events))
@@ -189,6 +190,13 @@ pub(crate) fn serve(path: &Path, state: AppState) -> anyhow::Result<PublisherLis
         task,
         path: path.to_owned(),
     })
+}
+
+async fn ready(State(state): State<AppState>) -> StatusCode {
+    match state.database.publisher_ready().await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+    }
 }
 
 async fn refresh(

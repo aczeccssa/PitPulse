@@ -97,6 +97,24 @@ impl Postgres {
             .try_get(0)?)
     }
 
+    pub(crate) async fn publisher_ready(&self) -> Result<(), StorageError> {
+        let can_publish: bool = self
+            .client()
+            .await?
+            .query_one(
+                "SELECT NOT current_setting('transaction_read_only')::boolean
+                     AND has_table_privilege('dataset_generation', 'UPDATE')
+                 FROM dataset_generation WHERE singleton",
+                &[],
+            )
+            .await?
+            .try_get(0)?;
+        if !can_publish {
+            return Err(StorageError::SeasonReadOnly);
+        }
+        Ok(())
+    }
+
     pub(super) async fn client(&self) -> Result<Client, StorageError> {
         self.pool
             .get()

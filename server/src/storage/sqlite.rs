@@ -102,6 +102,14 @@ impl Database {
         self
     }
 
+    pub(crate) async fn publisher_ready(&self) -> Result<(), StorageError> {
+        self.season_publisher
+            .as_ref()
+            .ok_or(StorageError::SeasonReadOnly)?
+            .publisher_ready()
+            .await
+    }
+
     pub fn uses_central_season_data(&self) -> bool {
         self.season_reader.is_some()
     }

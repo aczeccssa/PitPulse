@@ -16,6 +16,8 @@ Postgres uses natural keys from the SQLite uniqueness constraints. SQLite surrog
 
 ## Migrate, switch, and roll back
 
+For the CI release bundle, systemd service setup, and VPS acceptance gates, use the [VPS deployment runbook](deploy/season-data-vps.md).
+
 Rehearse on an isolated copy first. Keep the previous binary, configuration and database backup together. Use private service environment files with shell tracing disabled. Keep the writer URL out of HTTP process environments and use TLS hostname verification for non-loopback connections.
 
 1. Stop legacy season writers and keep `publish-sync` stopped. Make a consistent backup of the current SQLite database with SQLite's backup API or CLI `.backup`. A raw copy of an active WAL database is insufficient. Save the source file, manifest of supported seasons and representative API responses. The import expects SQLite schema v11. Upgrade a copy with the legacy schema v11 binary before import if necessary.
