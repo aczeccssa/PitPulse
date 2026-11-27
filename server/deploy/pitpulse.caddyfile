@@ -8,6 +8,7 @@ https://pitpulse.lestere.bond {
 	}
 
 	import access_log pitpulse
+	encode zstd gzip
 
 	reverse_proxy 127.0.0.1:38701 {
 		flush_interval -1
