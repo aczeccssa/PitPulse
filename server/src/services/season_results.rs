@@ -1,16 +1,25 @@
 //! Read-only season projection over stored results and historical analysis bundles.
-use crate::{api::dto::Meta, app_state::AppState, error::ApiError};
+use crate::{
+    api::dto::Meta,
+    app_state::AppState,
+    domain::{
+        calendar::{Meeting, MeetingStatus, Session},
+        results::SessionResult,
+    },
+    error::{ApiError, StorageError},
+    storage::postgres::CacheKey,
+};
 use axum::{
     Json,
     extract::{Query, State},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{collections::HashMap, sync::Arc};
 
 type Layout = (String, Option<String>);
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TimedLap {
     millis: u64,
@@ -21,12 +30,14 @@ struct TimedLap {
     year: i64,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 struct Weekend {
     entry: Value,
     layout: Option<Layout>,
     best: Option<TimedLap>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct SeasonArchive {
     weekends: Vec<Weekend>,
     meta: Meta,
@@ -48,21 +59,80 @@ pub async fn overview(
         });
     }
 
-    let current = archive(&state, season).await?;
-    let mut earlier = HashMap::new();
-    if current
+    let current = Box::pin(archive(&state, season)).await?;
+    let earlier = if current
         .weekends
         .iter()
         .any(|weekend| weekend.best.is_some())
     {
-        for year in state.database.racing_seasons_before(season).await? {
-            for weekend in &archive(&state, year).await?.weekends {
-                update_record(&mut earlier, weekend);
-            }
-        }
-    }
+        Box::pin(prior_records(&state, season))
+            .await?
+            .into_iter()
+            .collect()
+    } else {
+        HashMap::new()
+    };
     let entries = project_weekends(&current.weekends, earlier);
     Ok(Json(json!({"data":entries,"meta":current.meta})))
+}
+
+type LapRecords = Vec<(Layout, TimedLap)>;
+
+async fn prior_records(state: &AppState, season: i64) -> Result<LapRecords, StorageError> {
+    let load = async {
+        let mut earlier = HashMap::new();
+        for year in state.database.racing_seasons_before(season).await? {
+            if let Some(reader) = state.database.season_reader() {
+                let ((meetings, _), results, history) = tokio::try_join!(
+                    state.database.calendar(Some(year)),
+                    reader.season_results(year),
+                    season_history(state, year),
+                )?;
+                let mut meetings = meetings;
+                meetings.sort_by(|a, b| a.start_date.cmp(&b.start_date));
+                for meeting in meetings {
+                    let mut best = None;
+                    for session in &meeting.sessions {
+                        if let Some((rows, _)) = results.sessions.get(&session.id) {
+                            for row in rows {
+                                let historical =
+                                    historical_entry(&history, &meeting, session, &row.driver_id);
+                                record_lap(
+                                    &mut best,
+                                    official_lap(row, historical),
+                                    row,
+                                    &meeting,
+                                    session,
+                                );
+                            }
+                        }
+                    }
+                    update_record(&mut earlier, layout(&meeting).as_ref(), best.as_ref());
+                }
+            } else {
+                for weekend in &Box::pin(archive(state, year)).await?.weekends {
+                    update_record(&mut earlier, weekend.layout.as_ref(), weekend.best.as_ref());
+                }
+            }
+        }
+        Ok(earlier.into_iter().collect())
+    };
+    if let Some(reader) = state
+        .database
+        .season_reader()
+        .filter(|reader| reader.has_disk_cache())
+    {
+        state.database.analysis_generation(reader).await?;
+        return reader
+            .cached(
+                CacheKey::LapRecords(season),
+                Box::pin(load),
+                |_| true,
+                |_| {},
+            )
+            .await;
+    }
+    load.await
 }
 
 fn project_weekends(weekends: &[Weekend], mut earlier: HashMap<Layout, TimedLap>) -> Vec<Value> {
@@ -75,15 +145,19 @@ fn project_weekends(weekends: &[Weekend], mut earlier: HashMap<Layout, TimedLap>
                 .as_ref()
                 .and_then(|layout| earlier.get(layout));
             entry["fastestLaps"] = json!({"weekend":best,"previous":previous});
-            update_record(&mut earlier, weekend);
+            update_record(&mut earlier, weekend.layout.as_ref(), weekend.best.as_ref());
         }
         entries.push(entry);
     }
     entries
 }
 
-fn update_record(records: &mut HashMap<Layout, TimedLap>, weekend: &Weekend) {
-    if let (Some(layout), Some(best)) = (&weekend.layout, &weekend.best)
+fn update_record(
+    records: &mut HashMap<Layout, TimedLap>,
+    layout: Option<&Layout>,
+    best: Option<&TimedLap>,
+) {
+    if let (Some(layout), Some(best)) = (layout, best)
         && records
             .get(layout)
             .is_none_or(|previous| best.millis < previous.millis)
@@ -92,31 +166,70 @@ fn update_record(records: &mut HashMap<Layout, TimedLap>, weekend: &Weekend) {
     }
 }
 
-async fn archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, ApiError> {
-    if state.database.uses_central_season_data() {
-        return load_archive(state, season).await;
+async fn archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, StorageError> {
+    if let Some(reader) = state.database.season_reader() {
+        if reader.has_disk_cache() {
+            state.database.analysis_generation(reader).await?;
+            return reader
+                .cached(
+                    CacheKey::Archive(season),
+                    Box::pin(load_archive(state, season)),
+                    |archive| !archive.weekends.is_empty(),
+                    |archive| {
+                        let archive = Arc::make_mut(archive);
+                        mark_stale(&mut archive.meta);
+                        for weekend in &mut archive.weekends {
+                            crate::api::dashboard_cache::mark_response_stale(&mut weekend.entry);
+                        }
+                    },
+                )
+                .await;
+        }
+        return Box::pin(load_archive(state, season)).await;
     }
     state
         .dashboard
         .archives
-        .get_or_load(season, 4, load_archive(state, season))
+        .get_or_load(season, 4, Box::pin(load_archive(state, season)))
         .await
 }
 
-async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, ApiError> {
-    let (mut meetings, meta) = state.database.calendar(Some(season)).await?;
+fn mark_stale(meta: &mut Meta) {
+    meta.stale = true;
+    meta.quality = crate::domain::quality::DataQuality::Stale;
+}
+
+async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, StorageError> {
+    let ((mut meetings, mut meta), batch) = if let Some(reader) = state.database.season_reader() {
+        let (calendar, results) = tokio::try_join!(
+            state.database.calendar(Some(season)),
+            reader.season_results(season)
+        )?;
+        (calendar, Some(results))
+    } else {
+        (state.database.calendar(Some(season)).await?, None)
+    };
+    if batch.as_ref().is_some_and(|batch| batch.stale) {
+        mark_stale(&mut meta);
+    }
     meetings.sort_by(|a, b| a.start_date.cmp(&b.start_date));
-    let history = state
-        .database
-        .analysis_cache(&format!("season:{season}:bundle"))
-        .await?
-        .unwrap_or(Value::Null);
+    let history = season_history(state, season).await?;
     let mut weekends = Vec::new();
     for meeting in meetings {
         let mut sessions = serde_json::Map::new();
         let mut best: Option<TimedLap> = None;
         for session in &meeting.sessions {
-            let (rows, result_meta) = state.database.session_results(&session.id).await?;
+            let (rows, mut result_meta) = match &batch {
+                Some(batch) => batch
+                    .sessions
+                    .get(&session.id)
+                    .cloned()
+                    .unwrap_or_else(|| (Vec::new(), Meta::empty())),
+                None => state.database.session_results(&session.id).await?,
+            };
+            if batch.as_ref().is_some_and(|batch| batch.stale) && !rows.is_empty() {
+                mark_stale(&mut result_meta);
+            }
             let bundle = if rows.is_empty() {
                 Value::Null
             } else {
@@ -136,11 +249,13 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
                     *best = best.min(seconds);
                 }
             }
-            let mut rows = json!(rows);
-            for row in rows.as_array_mut().into_iter().flatten() {
-                crate::api::media::public_bindings().add_result_media(row, meeting.season);
-                let number = row["driverNumber"]
-                    .as_str()
+            let mut projected = Vec::with_capacity(rows.len());
+            for raw in &rows {
+                let mut row = json!(raw);
+                crate::api::media::public_bindings().add_result_media(&mut row, meeting.season);
+                let number = raw
+                    .driver_number
+                    .as_deref()
                     .and_then(|n| n.parse::<i64>().ok());
                 let grid = bundle["data"]["grid"]
                     .as_array()
@@ -148,41 +263,12 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
                     .flatten()
                     .find(|g| number.is_some() && g["driverNumber"].as_i64() == number)
                     .map(|g| g["position"].clone());
-                let historical = history["data"]["rounds"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .filter(|r| {
-                        matches!(session.session_type.as_str(), "race" | "sprint")
-                            && r["round"].as_i64() == meeting.round
-                            && (r["sessionType"] == "Sprint")
-                                == (session.session_type.as_str() == "sprint")
-                    })
-                    .flat_map(|r| r["entries"].as_array().into_iter().flatten())
-                    .find(|r| r["driverId"] == row["driverId"]);
+                let historical = historical_entry(&history, &meeting, session, &raw.driver_id);
                 row["gridPosition"] = grid
                     .or_else(|| historical.map(|h| h["grid"].clone()))
                     .unwrap_or(Value::Null);
-                let official = ["bestLap", "q1", "q2", "q3"]
-                    .iter()
-                    .filter_map(|&key| row[key].as_str())
-                    .chain(historical.and_then(|h| h["fastestLap"].as_str()))
-                    .filter_map(|time| Some((lap_millis(time)?, time)))
-                    .min_by_key(|(millis, _)| *millis);
-                if let Some((millis, time)) = official
-                    && meeting.round.is_some()
-                    && meeting.status != crate::domain::calendar::MeetingStatus::Cancelled
-                    && best.as_ref().is_none_or(|current| millis < current.millis)
-                {
-                    best = Some(TimedLap {
-                        millis,
-                        time: time.to_owned(),
-                        driver_name: row["driverName"].as_str().unwrap_or_default().to_owned(),
-                        team: row["team"].as_str().unwrap_or_default().to_owned(),
-                        session_type: session.session_type.as_str().to_owned(),
-                        year: season,
-                    });
-                }
+                let official = official_lap(raw, historical);
+                record_lap(&mut best, official, raw, &meeting, session);
                 if row["bestLap"].is_null() {
                     row["bestLap"] = official
                         .map(|(_, time)| json!(time))
@@ -199,10 +285,11 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
                         })
                         .unwrap_or(Value::Null);
                 }
+                projected.push(row);
             }
             sessions.insert(
                 session.session_type.as_str().into(),
-                json!({"rows":rows,"meta":result_meta}),
+                json!({"rows":projected,"meta":result_meta}),
             );
         }
         let mut meeting_json = json!(&meeting);
@@ -212,15 +299,7 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
                 meeting_json["circuit"]["lengthKm"] = json!(meters / 1000.);
             }
         }
-        let layout = meeting.circuit.as_ref().and_then(|circuit| {
-            Some((
-                circuit["id"].as_str()?.to_owned(),
-                circuit["layoutId"]
-                    .as_str()
-                    .or_else(|| circuit["layout"].as_str())
-                    .map(str::to_owned),
-            ))
-        });
+        let layout = layout(&meeting);
         weekends.push(Weekend {
             entry: json!({"meeting":meeting_json,"sessions":sessions}),
             layout,
@@ -228,6 +307,81 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
         });
     }
     Ok(Arc::new(SeasonArchive { weekends, meta }))
+}
+
+async fn season_history(state: &AppState, season: i64) -> Result<Value, StorageError> {
+    Ok(state
+        .database
+        .analysis_cache(&format!("season:{season}:bundle"))
+        .await?
+        .unwrap_or(Value::Null))
+}
+
+fn layout(meeting: &Meeting) -> Option<Layout> {
+    let circuit = meeting.circuit.as_ref()?;
+    Some((
+        circuit["id"].as_str()?.to_owned(),
+        circuit["layoutId"]
+            .as_str()
+            .or_else(|| circuit["layout"].as_str())
+            .map(str::to_owned),
+    ))
+}
+
+fn historical_entry<'a>(
+    history: &'a Value,
+    meeting: &Meeting,
+    session: &Session,
+    driver: &str,
+) -> Option<&'a Value> {
+    let kind = session.session_type.as_str();
+    if !matches!(kind, "race" | "sprint") {
+        return None;
+    }
+    history["data"]["rounds"]
+        .as_array()?
+        .iter()
+        .filter(|r| {
+            r["round"].as_i64() == meeting.round
+                && (r["sessionType"] == "Sprint") == (kind == "sprint")
+        })
+        .flat_map(|r| r["entries"].as_array().into_iter().flatten())
+        .find(|r| r["driverId"].as_str() == Some(driver))
+}
+
+fn official_lap<'a>(
+    row: &'a SessionResult,
+    historical: Option<&'a Value>,
+) -> Option<(u64, &'a str)> {
+    [&row.best_lap, &row.q1, &row.q2, &row.q3]
+        .into_iter()
+        .filter_map(|time| time.as_deref())
+        .chain(historical.and_then(|row| row["fastestLap"].as_str()))
+        .filter_map(|time| Some((lap_millis(time)?, time)))
+        .min_by_key(|(millis, _)| *millis)
+}
+
+fn record_lap(
+    best: &mut Option<TimedLap>,
+    official: Option<(u64, &str)>,
+    row: &SessionResult,
+    meeting: &Meeting,
+    session: &Session,
+) {
+    if let Some((millis, time)) = official
+        && meeting.round.is_some()
+        && meeting.status != MeetingStatus::Cancelled
+        && best.as_ref().is_none_or(|current| millis < current.millis)
+    {
+        *best = Some(TimedLap {
+            millis,
+            time: time.to_owned(),
+            driver_name: row.driver_name.clone(),
+            team: row.team.clone(),
+            session_type: session.session_type.as_str().to_owned(),
+            year: meeting.season,
+        });
+    }
 }
 
 fn lap_millis(time: &str) -> Option<u64> {
@@ -275,8 +429,12 @@ mod tests {
     #[test]
     fn weekend_comparison_uses_fastest_prior_time_for_the_same_layout() {
         let mut earlier = HashMap::new();
-        update_record(&mut earlier, &timed_weekend("a", "gp", "1:17.5", 2024));
-        update_record(&mut earlier, &timed_weekend("a", "gp", "1:19.2", 2025));
+        for weekend in [
+            timed_weekend("a", "gp", "1:17.5", 2024),
+            timed_weekend("a", "gp", "1:19.2", 2025),
+        ] {
+            update_record(&mut earlier, weekend.layout.as_ref(), weekend.best.as_ref());
+        }
         let rows = project_weekends(
             &[
                 timed_weekend("a", "short", "0:58.123", 2026),

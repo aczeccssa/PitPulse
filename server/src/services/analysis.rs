@@ -296,7 +296,11 @@ impl Job {
 }
 
 impl AnalysisCache {
-    async fn read(&self, state: &AppState, key: &str) -> Result<Option<Value>, ApiError> {
+    async fn read(
+        &self,
+        state: &AppState,
+        key: &str,
+    ) -> Result<Option<Value>, crate::error::StorageError> {
         let mut entries = self.entries.lock().await;
         if let Some(entry) = entries.values.get(key) {
             return Ok(Some(entry.value.clone()));
@@ -620,7 +624,7 @@ pub async fn season_analysis(
 pub(crate) async fn cached_session_bundle(
     state: &AppState,
     session_id: &str,
-) -> Result<Option<Value>, ApiError> {
+) -> Result<Option<Value>, crate::error::StorageError> {
     let key = format!("session:{session_id}:bundle");
     let Some(value) = state.analysis.read(state, &key).await? else {
         return Ok(None);

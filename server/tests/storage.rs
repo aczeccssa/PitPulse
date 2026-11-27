@@ -186,7 +186,7 @@ async fn test_version_three_upgrade_preserves_cached_results_and_adds_nullable_f
     }
     let database = Database::open(&path).await.unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 11);
+    assert_eq!(database.user_version().await.unwrap(), 12);
     let (meetings, _) = database.calendar(Some(2026)).await.unwrap();
     assert_eq!(meetings.len(), 1);
     assert!(meetings[0].circuit.is_none());
@@ -468,7 +468,7 @@ async fn test_result_driver_number_roundtrip_and_number_only_revision() {
         Some("44")
     );
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 11);
+    assert_eq!(database.user_version().await.unwrap(), 12);
 }
 
 #[tokio::test]
@@ -508,7 +508,7 @@ async fn test_analysis_cache_compresses_values_and_reads_legacy_plaintext() {
         database.analysis_cache("legacy").await.unwrap(),
         Some(value)
     );
-    assert_eq!(database.user_version().await.unwrap(), 11);
+    assert_eq!(database.user_version().await.unwrap(), 12);
 
     connection
         .execute(
@@ -531,7 +531,7 @@ async fn test_analysis_cache_upgrades_v9_and_round_trips_large_values() {
         .execute_batch("DROP TABLE live_snapshot_cache; PRAGMA user_version = 9;")
         .unwrap();
     database.migrate().await.unwrap();
-    assert_eq!(database.user_version().await.unwrap(), 11);
+    assert_eq!(database.user_version().await.unwrap(), 12);
     assert!(database.live_snapshot_cache("f1").await.unwrap().is_none());
 
     let value = serde_json::json!({"data": "x".repeat(16 * 1024 * 1024)});

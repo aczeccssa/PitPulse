@@ -31,7 +31,7 @@ The live `/etc/pitpulse/reader.env` file selects central mode. Keep the pending 
 ## First cutover
 
 1. Verify and stage the selected CI archive on the isolated host with `deploy-release.sh /trusted/path/artifact.tar.gz --stage-only`. Record its SHA, the current release and operator configuration, and a baseline for calendar, standings, results, Live snapshot and the first SSE event. Keep the prior release and its configuration.
-2. Reserve the maintenance window and keep manual CI dispatches idle. Stop the legacy HTTP service and confirm the publisher is stopped. Create and integrity-check a SQLite `.backup` in a private backup directory. Retain it as an immutable rollback source. The import expects SQLite schema v11. Use a SQLite-mode v11 binary against a separate copy to upgrade an older snapshot.
+2. Reserve the maintenance window and keep manual CI dispatches idle. Stop the legacy HTTP service and confirm the publisher is stopped. Create and integrity-check a SQLite `.backup` in a private backup directory. Retain it as an immutable rollback source. The import accepts SQLite schema v11 or v12. Use a recent SQLite-mode binary against a separate copy to upgrade an older snapshot.
 3. As migration operator, use the staged binary with the private writer, schema and reader-role settings. Run `season-data migrate`, `season-data import <snapshot>`, then `season-data verify <snapshot>`. Keep private reports. Confirm all supported counts match, excluded counts are expected, and a retry with the same snapshot inserts zero rows. If any values conflict, resolve the conflict before proceeding. Keep the publisher stopped throughout this phase.
 4. Start a read-only canary with the staged binary, a different loopback port and a fresh SQLite file. Use a separate environment with only the reader credentials. Compare the reference season endpoints and Live/SSE, and check cache diagnostics. Stop the canary. If carrying local state, copy `sync_state` and `live_snapshot_cache` from the frozen snapshot to the initialized reader SQLite in a transaction. Seed publisher retry state separately if needed. Give each SQLite file and its parent the matching service ownership. Keep the legacy snapshot and working SQLite separate from both central files.
 5. Atomically rename the pending reader file to `/etc/pitpulse/reader.env`. Run the verified deploy helper with the same archive, or dispatch the approved CI artifact once it is eligible for the existing manual workflow. The helper starts the reader, checks canonical reads, local/public auth, SSE and web assets, then starts and checks the publisher. Confirm both services are healthy before enabling the publisher at boot with `systemctl enable pitpulse-publisher`. A failed first activation restores the old release pointer. Follow the data rollback steps to restore service in SQLite mode.
@@ -63,3 +63,30 @@ Both units should report `active`. The socket probe returns HTTP 204 with an emp
 3. Start the legacy service. Recheck local/public auth, representative season reads, Live snapshot and SSE. Keep the untouched migration snapshot, Postgres data, and both reports. Reconcile post-cutover Postgres revisions with the SQLite rollback state before any later cutover.
 
 In rehearsal, also check denial for a user outside the socket group, restart the publisher after a forced process exit, and exercise a failed candidate before running manual rollback. Use identical artifact structure and the same helper commands. Keep sanitized evidence under `temp/docs/`.
+
+### Instance season cache
+
+In central mode the API uses a disposable `reader.season-cache.sqlite` alongside
+`reader.sqlite`. `warm()` primes the current calendar, standings, Home and Results
+on startup. When the Postgres generation matches, a populated cache can serve
+these reads after restart without reloading the season from Postgres. The first
+fill of a new generation queries Postgres, including one batch for season results.
+Keep the sidecar with its instance and originating database. After restoring or
+replacing the origin under the same database name, stop the API and remove the
+sidecar before restarting. The sidecar can be removed with the API stopped and
+is safe to exclude from backups.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `PITPULSE_SEASON_CACHE_DISK_BYTES` | `67108864` | SQLite file budget (64 MiB). `0` disables persistence. |
+| `PITPULSE_SEASON_CACHE_MEMORY_BYTES` | `33554432` | Estimated heap budget for retained season entries (32 MiB). |
+| `PITPULSE_SEASON_CACHE_MAX_STALE_SECONDS` | `21600` | Outage window from the last successful load or confirmation of its generation. |
+| `PITPULSE_SEASON_CACHE_REVISION_SECONDS` | `5` | Interval between shared generation probes on reads. |
+| `PITPULSE_SEASON_CACHE_TTL_SECONDS` | `60` | Refresh interval for derived dashboard views. Canonical disk snapshots follow the dataset generation. |
+
+Cache diagnostics expose `diskBytes`, `memoryBytes`, `diskHits`, `originLoads`,
+`hits`, `staleHits` and `revisionChecks`. Measure process RSS independently. The
+legacy analysis archive in `reader.sqlite` has its own retention policy and is
+separate from the season-cache budget. During origin outages a valid snapshot
+can be served with stale metadata. A missing or expired snapshot returns the
+existing retryable `season_data_unavailable` response.

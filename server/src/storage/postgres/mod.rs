@@ -1,4 +1,6 @@
 mod cache;
+mod disk_cache;
+pub(crate) use cache::Key as CacheKey;
 mod import;
 mod read;
 mod write;
@@ -25,6 +27,7 @@ pub const DEFAULT_SCHEMA: &str = "pitpulse_season";
 pub struct Postgres {
     pool: Pool,
     schema: String,
+    cache_namespace: String,
     cache: Arc<cache::Cache>,
 }
 
@@ -36,6 +39,13 @@ impl Postgres {
             ));
         }
         let (mut config, tls) = connection_options(dsn)?;
+        let cache_namespace = format!(
+            "pp58-v1:{}:{schema}:{:?}:{:?}:{:?}",
+            env!("CARGO_PKG_VERSION"),
+            config.get_hosts(),
+            config.get_ports(),
+            config.get_dbname(),
+        );
         let mut settings = format!(
             "SET search_path TO {schema}, pg_catalog; SET timezone TO 'UTC'; \
              SET statement_timeout TO 3000; SET lock_timeout TO 2000; \
@@ -65,6 +75,7 @@ impl Postgres {
         Ok(Self {
             pool,
             schema: schema.to_owned(),
+            cache_namespace,
             cache: Arc::new(cache::Cache::new(if read_only {
                 SeasonCacheConfig::default()
             } else {
@@ -79,6 +90,34 @@ impl Postgres {
     pub fn with_cache(mut self, config: SeasonCacheConfig) -> Self {
         self.cache = Arc::new(cache::Cache::new(config));
         self
+    }
+
+    pub async fn with_disk_cache(mut self, config: SeasonCacheConfig, path: &Path) -> Self {
+        let mut cache = cache::Cache::new(config);
+        if config.capacity != 0 && config.disk_bytes >= 128 * 1024 {
+            match disk_cache::DiskCache::open(path, self.cache_namespace.clone(), config.disk_bytes)
+                .await
+            {
+                Ok(disk) => cache.disk = Some(disk),
+                Err(error) => tracing::warn!(%error, "local season cache disabled"),
+            }
+        }
+        self.cache = Arc::new(cache);
+        self
+    }
+
+    pub(crate) async fn current_generation(&self) -> Result<i64, StorageError> {
+        self.cache
+            .current_generation(self.dataset_generation())
+            .await
+    }
+
+    pub(crate) fn has_disk_cache(&self) -> bool {
+        self.cache.disk.is_some()
+    }
+
+    pub async fn disk_cache_bytes(&self) -> Option<u64> {
+        self.cache.disk.as_ref()?.bytes().await
     }
 
     pub fn cache_stats(&self) -> SeasonCacheStats {

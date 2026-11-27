@@ -70,7 +70,7 @@ fn fastest_stop(bundle: &Value, round: i64, country: &str) -> Option<Value> {
 }
 
 async fn pit_stops(state: &AppState, year: i64) -> Result<Value, ApiError> {
-    let (meetings, _) = state.database.calendar(Some(year)).await?;
+    let (meetings, calendar_meta) = state.database.calendar(Some(year)).await?;
     let mut stops = Vec::new();
     let mut covered = Vec::new();
     for meeting in meetings {
@@ -98,7 +98,7 @@ async fn pit_stops(state: &AppState, year: i64) -> Result<Value, ApiError> {
     stops.truncate(3);
     let unavailable = stops.is_empty();
     Ok(
-        json!({"data":stops,"meta":{"source":"PitPulse timing archive","fetchedAt":state.database.utc_now().await?,"stale":false,"unavailable":unavailable,"coverage":{"rounds":covered,"complete":false}}}),
+        json!({"data":stops,"meta":{"source":"PitPulse timing archive","fetchedAt":state.database.utc_now().await?,"stale":calendar_meta.stale && state.database.uses_central_season_data(),"unavailable":unavailable,"coverage":{"rounds":covered,"complete":false}}}),
     )
 }
 

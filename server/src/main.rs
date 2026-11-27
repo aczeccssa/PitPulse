@@ -55,7 +55,12 @@ async fn main() -> anyhow::Result<()> {
             let schema = std::env::var("PITPULSE_SEASON_SCHEMA")
                 .unwrap_or_else(|_| DEFAULT_SCHEMA.to_owned());
             database.with_season_reader(
-                Postgres::new(&url, &schema, true)?.with_cache(SeasonCacheConfig::from_env()?),
+                Postgres::new(&url, &schema, true)?
+                    .with_disk_cache(
+                        SeasonCacheConfig::from_env()?,
+                        &config.database.path.with_extension("season-cache.sqlite"),
+                    )
+                    .await,
             )
         }
         Err(std::env::VarError::NotPresent) => database,
