@@ -49,7 +49,7 @@ The current publisher starts from the existing polling scheduler. The PP-51 arch
 
 ## Automatic reader cache
 
-Central readers keep a shared, process-local cache of canonical query results. Requests populate it automatically. Concurrent callers for an admitted key share its origin load. Least-recently-used idle slots are evicted. If all slots are busy, new distinct keys receive a retryable `503`. No new history rows or cache rows are written to SQLite. The existing Dashboard response and derived archive caches are bypassed in central mode so a second layer cannot conceal an expired or revised canonical value.
+Central readers keep a shared, process-local cache of canonical query results. Requests populate it automatically. Setting `PITPULSE_SEASON_CACHE_DISK_BYTES=0` disables persistence while leaving the process-local generation cache enabled. Concurrent callers for an admitted key share its origin load. Least-recently-used idle slots are evicted. If all slots are busy, new distinct keys receive a retryable `503`. No new history rows or cache rows are written to SQLite. The existing Dashboard response and derived archive caches are bypassed in central mode so a second layer cannot conceal an expired or revised canonical value.
 
 | Reader environment variable | Default | Meaning |
 | --- | ---: | --- |

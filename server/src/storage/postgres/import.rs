@@ -163,9 +163,9 @@ fn load(path: &Path) -> Result<Vec<Snapshot>, StorageError> {
     let mut connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let tx = connection.transaction()?;
     let version: i64 = tx.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-    if version != 11 {
+    if !matches!(version, 11 | 12) {
         return Err(StorageError::SeasonImport(format!(
-            "expected a migrated SQLite v11 snapshot, got v{version}"
+            "expected a migrated SQLite v11 or v12 snapshot, got v{version}"
         )));
     }
     for table in ["sessions", "session_results"] {

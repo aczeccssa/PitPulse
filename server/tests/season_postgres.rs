@@ -8,7 +8,10 @@ use pitpulse_server::{
     app_state::AppState,
     config::AppConfig,
     server,
-    storage::{postgres::Postgres, sqlite::Database},
+    storage::{
+        postgres::{Postgres, SeasonCacheConfig},
+        sqlite::Database,
+    },
 };
 use serde_json::Value;
 use tower::ServiceExt;
@@ -461,6 +464,104 @@ async fn publisher_replays_revisions_without_writing_local_history() {
         state.calendar(Some(2024)).await.unwrap().0[0].name,
         "Fixture GP"
     );
+}
+
+#[tokio::test]
+#[ignore = "requires an isolated loopback Postgres and PITPULSE_TEST_DATABASE_URL"]
+async fn disk_cache_restarts_offline_and_refreshes_after_generation_change() {
+    use pitpulse_server::domain::calendar::Meeting;
+    use serde_json::json;
+    use std::{path::Path, time::Duration};
+    use tokio::time::sleep;
+
+    let dsn = std::env::var("PITPULSE_TEST_DATABASE_URL").unwrap();
+    let read_dsn = std::env::var("PITPULSE_TEST_READ_DATABASE_URL").unwrap_or_else(|_| dsn.clone());
+    let schema = format!(
+        "pitpulse_disk_{}_{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let writer = Postgres::new(&dsn, &schema, false).unwrap();
+    writer.migrate(None).await.unwrap();
+    let (port, online, proxy) = postgres_proxy(("127.0.0.1", 55458)).await;
+    let mut proxy_url = url::Url::parse(&read_dsn).unwrap();
+    proxy_url.set_port(Some(port)).unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let disk_path = temp.path().join("season-cache.sqlite");
+    let config = SeasonCacheConfig {
+        revision_interval: Duration::from_millis(50),
+        max_stale: Duration::from_secs(600),
+        query_deadline: Duration::from_secs(1),
+        ..Default::default()
+    };
+    let db = Database::open(Path::new(":memory:")).await.unwrap();
+    db.migrate().await.unwrap();
+    let publisher = db.clone().with_season_publisher(writer.clone());
+    let mut meeting: Meeting = serde_json::from_value(json!({
+        "id":"2024:1", "season":2024, "round":1, "name":"Disk Cache GP", "country":"Fixture Country",
+        "location":"Fixture City", "startDate":"2024-03-01", "endDate":"2024-03-03", "status":"scheduled", "sessions":[]
+    })).unwrap();
+    publisher
+        .replace_calendar(&[meeting.clone()], "2026-02-01T00:00:00Z")
+        .await
+        .unwrap();
+    let make_reader = || async {
+        Postgres::new(proxy_url.as_str(), &schema, true)
+            .unwrap()
+            .with_disk_cache(config, &disk_path)
+            .await
+    };
+    let reader = make_reader().await;
+    let router = server::router(AppState::new(
+        AppConfig::default(),
+        db.clone().with_season_reader(reader.clone()),
+    ));
+    let first = response(&router, "/api/v1/calendar?season=2024").await;
+    assert_eq!(first.0, StatusCode::OK);
+    assert_eq!(first.1["data"][0]["name"], "Disk Cache GP");
+    assert!(reader.disk_cache_bytes().await.unwrap() > 0);
+    drop(router);
+    drop(reader);
+
+    online.send(false).unwrap();
+    let offline_reader = make_reader().await;
+    let offline_router = server::router(AppState::new(
+        AppConfig::default(),
+        db.clone().with_season_reader(offline_reader.clone()),
+    ));
+    let stale = response(&offline_router, "/api/v1/calendar?season=2024").await;
+    assert_eq!(stale.0, StatusCode::OK);
+    assert_eq!(stale.1["data"][0]["name"], "Disk Cache GP");
+    assert_eq!(stale.1["meta"]["stale"], true);
+    assert_eq!(
+        response(&offline_router, "/api/v1/calendar?season=2025")
+            .await
+            .0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    drop(offline_router);
+    drop(offline_reader);
+
+    online.send(true).unwrap();
+    sleep(Duration::from_millis(100)).await;
+    meeting.name = "Published After Reconnect".into();
+    publisher
+        .replace_calendar(&[meeting], "2026-02-01T00:01:00Z")
+        .await
+        .unwrap();
+    let refreshed_reader = make_reader().await;
+    let refreshed_router = server::router(AppState::new(
+        AppConfig::default(),
+        db.with_season_reader(refreshed_reader.clone()),
+    ));
+    sleep(Duration::from_millis(100)).await;
+    let refreshed = response(&refreshed_router, "/api/v1/calendar?season=2024").await;
+    assert_eq!(refreshed.0, StatusCode::OK);
+    assert_eq!(refreshed.1["data"][0]["name"], "Published After Reconnect");
+    proxy.abort();
 }
 
 // Cut only the reader's TCP traffic. The writer can still publish while the

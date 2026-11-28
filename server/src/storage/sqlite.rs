@@ -25,6 +25,7 @@ use crate::{
 const ANALYSIS_CACHE_GZIP_PREFIX: &[u8] = b"\x00PULSEGZ\x01";
 const MAX_DECOMPRESSED_ANALYSIS_BYTES: usize = 16 * 1024 * 1024;
 
+const MIGRATION_0012: &str = include_str!("migrations/0012_season_analysis_generation.sql");
 const MIGRATION_0011: &str = include_str!("migrations/0011_next_season_schedule.sql");
 const MIGRATION_0009: &str = include_str!("migrations/0009_live_snapshot_cache.sql");
 const MIGRATION_0008: &str = include_str!("migrations/0008_driver_numbers.sql");
@@ -58,7 +59,7 @@ pub struct Database {
     season_publisher: Option<super::postgres::Postgres>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct ScheduleSnapshot {
     pub events: Vec<ScheduleEvent>,
     pub revision: u64,
@@ -114,10 +115,40 @@ impl Database {
         self.season_reader.is_some()
     }
 
-    pub fn season_cache_stats(&self) -> Option<super::postgres::SeasonCacheStats> {
-        self.season_reader
-            .as_ref()
-            .map(super::postgres::Postgres::cache_stats)
+    pub(crate) fn season_reader(&self) -> Option<&super::postgres::Postgres> {
+        self.season_reader.as_ref()
+    }
+
+    pub async fn season_cache_stats(&self) -> Option<super::postgres::SeasonCacheStats> {
+        let reader = self.season_reader()?;
+        let mut stats = reader.cache_stats();
+        stats.disk_bytes = reader.disk_cache_bytes().await;
+        Some(stats)
+    }
+
+    /// Revisions of both the origin and the local analysis archive affect
+    /// mixed projections. The trigger catches any local producer of those rows.
+    pub(crate) async fn analysis_generation(
+        &self,
+        reader: &super::postgres::Postgres,
+    ) -> Result<(i64, i64), StorageError> {
+        let connection = self.connection.clone();
+        let (local, origin) = tokio::try_join!(
+            async {
+                Ok::<_, StorageError>(
+                    spawn_blocking(move || {
+                        connection.blocking_lock().query_row(
+                            "SELECT generation FROM season_analysis_generation WHERE id=1",
+                            [],
+                            |row| row.get::<_, i64>(0),
+                        )
+                    })
+                    .await??,
+                )
+            },
+            reader.current_generation(),
+        )?;
+        Ok((local, origin))
     }
 
     async fn standings_season(&self, season: Option<i64>) -> Result<i64, StorageError> {
@@ -1371,6 +1402,9 @@ fn apply_migrations(connection: &Connection) -> Result<(), StorageError> {
     }
     if version < 11 {
         connection.execute_batch(MIGRATION_0011)?;
+    }
+    if version < 12 {
+        connection.execute_batch(MIGRATION_0012)?;
     }
 
     Ok(())

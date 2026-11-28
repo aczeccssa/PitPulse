@@ -26,8 +26,10 @@ pub(super) const RESULT_COLUMNS: &str = "session_id, position, classification, d
 const MEETING_COLUMNS: &str = "id, season, round, name, country, location, start_date, end_date,
     country_code, status, source, fetched_at, source_updated_at, revision, jolpica_round_id, circuit_json";
 
+#[derive(serde::Serialize, serde::Deserialize)]
 struct CalendarSnapshot {
     meetings: Vec<Meeting>,
+    round_ids: Vec<Option<String>>,
     // Each candidate is (UTC microseconds, meeting index). The SQL query
     // supplies the legacy tie-break ordering before we index the list.
     next: Vec<(i64, usize)>,
@@ -47,7 +49,11 @@ impl Postgres {
         season: Option<i64>,
     ) -> Result<(Vec<Meeting>, Meta), StorageError> {
         let (snapshot, meta) = self.calendar_snapshot(season).await?;
-        Ok((snapshot.meetings.clone(), meta))
+        let mut meetings = snapshot.meetings.clone();
+        for (meeting, round_id) in meetings.iter_mut().zip(&snapshot.round_ids) {
+            meeting.jolpica_round_id.clone_from(round_id);
+        }
+        Ok((meetings, meta))
     }
 
     pub(crate) async fn next_meeting_at(
@@ -69,10 +75,13 @@ impl Postgres {
         let index = snapshot
             .next
             .partition_point(|&(time, _)| time < now_micros);
-        let next = snapshot
-            .next
-            .get(index)
-            .map(|&(_, index)| snapshot.meetings[index].clone());
+        let next = snapshot.next.get(index).map(|&(_, index)| {
+            let mut meeting = snapshot.meetings[index].clone();
+            meeting
+                .jolpica_round_id
+                .clone_from(&snapshot.round_ids[index]);
+            meeting
+        });
         Ok((next, meta))
     }
 
@@ -93,12 +102,14 @@ impl Postgres {
         .await
     }
 
-    async fn cached<T: Clone + Send + Sync + 'static>(
+    pub(crate) async fn cached<
+        T: Clone + serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static,
+    >(
         &self,
         key: Key,
         load: impl Future<Output = Result<T, StorageError>>,
         can_fallback: impl FnOnce(&T) -> bool,
-        mark_stale: impl FnOnce(&mut T),
+        mark_stale: impl Fn(&mut T),
     ) -> Result<T, StorageError> {
         self.cache
             .get(
@@ -294,6 +305,10 @@ impl Postgres {
         };
         tx.commit().await?;
         Ok(CalendarSnapshot {
+            round_ids: meetings
+                .iter()
+                .map(|meeting| meeting.jolpica_round_id.clone())
+                .collect(),
             meetings,
             next,
             meta,
@@ -318,22 +333,51 @@ impl Postgres {
              ORDER BY position NULLS LAST, driver_id COLLATE \"C\""),
             &[&session_id],
         ).await?;
-        let results = rows
-            .iter()
-            .map(session_result)
-            .collect::<Result<Vec<_>, _>>()?;
-        let meta = match results.first() {
-            Some(first) => meta_from_snapshot(
-                first.source.clone(),
-                first.source_updated_at.clone(),
-                first.fetched_at.clone(),
-                first.revision,
-                &first.quality,
-                rows[0].try_get(22)?,
-            ),
-            None => Meta::empty(),
-        };
-        Ok((results, meta))
+        result_snapshot(&rows)
+    }
+
+    pub(crate) async fn season_results(
+        &self,
+        season: i64,
+    ) -> Result<Arc<SeasonResults>, StorageError> {
+        self.cached(
+            Key::SeasonResults(season),
+            async { self.query_season_results(season).await.map(Arc::new) },
+            |_| true,
+            |snapshot| Arc::make_mut(snapshot).stale = true,
+        )
+        .await
+    }
+
+    async fn query_season_results(&self, season: i64) -> Result<SeasonResults, StorageError> {
+        // One snapshot and query for all current revisions, including a
+        // deterministic order within each session. The calendar supplies
+        // sessions that have no result yet.
+        let rows = self
+            .client()
+            .await?
+            .query(
+                &format!(
+                    "SELECT {RESULT_COLUMNS},
+                    COALESCE(now() - season_timestamp(fetched_at) > interval '6 hours', TRUE)
+             FROM session_results
+             WHERE (session_id, revision) IN (
+                 SELECT r.session_id, MAX(r.revision)
+                 FROM session_results r JOIN sessions s ON s.id = r.session_id
+                 JOIN meetings m ON m.id = s.meeting_id WHERE m.season = $1 GROUP BY r.session_id
+             ) ORDER BY session_id COLLATE \"C\", position NULLS LAST, driver_id COLLATE \"C\""
+                ),
+                &[&season],
+            )
+            .await?;
+        let mut sessions = HashMap::new();
+        for rows in rows.chunk_by(|left, right| left.get::<_, &str>(0) == right.get::<_, &str>(0)) {
+            sessions.insert(rows[0].try_get(0)?, result_snapshot(rows)?);
+        }
+        Ok(SeasonResults {
+            sessions,
+            stale: rows.iter().any(|row| row.get::<_, bool>(22)),
+        })
     }
 
     async fn query_driver_standings(
@@ -434,6 +478,31 @@ impl Postgres {
             &[],
         ).await?.into_iter().map(|row| Ok((row.try_get(0)?, row.try_get(1)?))).collect()
     }
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub(crate) struct SeasonResults {
+    pub sessions: HashMap<String, (Vec<SessionResult>, Meta)>,
+    pub stale: bool,
+}
+
+fn result_snapshot(rows: &[Row]) -> Result<(Vec<SessionResult>, Meta), StorageError> {
+    let results = rows
+        .iter()
+        .map(session_result)
+        .collect::<Result<Vec<_>, _>>()?;
+    let meta = match results.first() {
+        Some(first) => meta_from_snapshot(
+            first.source.clone(),
+            first.source_updated_at.clone(),
+            first.fetched_at.clone(),
+            first.revision,
+            &first.quality,
+            rows[0].try_get(22)?,
+        ),
+        None => Meta::empty(),
+    };
+    Ok((results, meta))
 }
 
 fn stale_meta<T>((_, meta): &mut (T, Meta)) {

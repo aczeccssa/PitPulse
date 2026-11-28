@@ -16,7 +16,11 @@ use axum::{
 use tokio::sync::Mutex as AsyncMutex;
 use tower::ServiceExt;
 
-use crate::{app_state::AppState, services::season_results::SeasonArchive};
+use crate::{
+    app_state::AppState, error::StorageError, services::season_results::SeasonArchive,
+    storage::postgres::CacheKey,
+};
+use serde_json::Value;
 
 const DASHBOARD_HEADER: &str = "x-pitpulse-dashboard";
 const TTL: Duration = Duration::from_secs(60);
@@ -115,8 +119,99 @@ pub(crate) async fn cache_response(
     next: Next,
 ) -> Response {
     if state.database.uses_central_season_data() {
-        return next.run(request).await;
+        return central_response(state, request, next).await;
     }
+    legacy_response(state, request, next).await
+}
+
+// Keep the router future small: it is nested in the internal warming router
+// and in the HTTP service stack.
+fn central_response(
+    state: AppState,
+    request: Request,
+    next: Next,
+) -> std::pin::Pin<Box<dyn Future<Output = Response> + Send>> {
+    Box::pin(async move {
+        let Some(reader) = state.database.season_reader() else {
+            return next.run(request).await;
+        };
+        if !reader.cache_enabled() || request.method() != Method::GET {
+            return next.run(request).await;
+        }
+        let Some((path, season)) = cache_key(request.uri()) else {
+            return next.run(request).await;
+        };
+        // Sync status on calendar and standings is time-dependent. Cache the
+        // underlying canonical data, not those final HTTP bodies.
+        if matches!(
+            path,
+            "/api/v1/calendar"
+                | "/api/v1/standings/drivers"
+                | "/api/v1/standings/constructors"
+                | "/api/v1/features"
+                | "/api/v1/tech-updates"
+                | "/api/v1/pu-elements"
+                | "/api/v1/destructors-championship"
+        ) {
+            return next.run(request).await;
+        }
+        let (local_generation, origin_generation) =
+            match state.database.analysis_generation(reader).await {
+                Ok(generation) => generation,
+                Err(error) => return error.into_response(),
+            };
+        let mut passthrough = None;
+        let result = reader
+            .cached(
+                CacheKey::Response(path, season, local_generation, origin_generation),
+                async {
+                    let response = next.run(request).await;
+                    if !response.status().is_success() {
+                        let status = response.status();
+                        passthrough = Some(response);
+                        return Err(if status == StatusCode::SERVICE_UNAVAILABLE {
+                            StorageError::SeasonUnavailable
+                        } else {
+                            StorageError::SeasonDataInvalid
+                        });
+                    }
+                    let bytes = to_bytes(response.into_body(), usize::MAX)
+                        .await
+                        .map_err(|_| StorageError::SeasonDataInvalid)?;
+                    serde_json::from_slice::<Value>(&bytes)
+                        .map(Arc::new)
+                        .map_err(|_| StorageError::SeasonDataInvalid)
+                },
+                |value| {
+                    // An unknown season or an unavailable Home must not become a warm
+                    // offline hit just because the handler returned a 200 response.
+                    match path {
+                        "/api/v1/results/season" => value["data"]
+                            .as_array()
+                            .is_some_and(|rows| !rows.is_empty()),
+                        "/api/v1/home" => {
+                            value["meta"]["sections"]
+                                .as_object()
+                                .is_some_and(|sections| {
+                                    sections
+                                        .values()
+                                        .any(|section| section["unavailable"] != true)
+                                })
+                        }
+                        _ => false,
+                    }
+                },
+                |value| mark_response_stale(Arc::make_mut(value)),
+            )
+            .await;
+        match result {
+            Ok(value) => axum::Json(value).into_response(),
+            Err(error) => passthrough.unwrap_or_else(|| error.into_response()),
+        }
+    })
+}
+
+async fn legacy_response(state: AppState, request: Request, next: Next) -> Response {
     let Some(key) = cache_key(request.uri()).filter(|_| {
         request.method() == Method::GET
             && request
@@ -145,6 +240,41 @@ pub(crate) async fn cache_response(
     match result {
         Ok(data) => ([(header::CONTENT_TYPE, "application/json")], data).into_response(),
         Err(response) => response,
+    }
+}
+
+/// Preserve pending/unavailable values while marking stored data in the
+/// existing API metadata, including nested sections and session results.
+pub(crate) fn mark_response_stale(value: &mut Value) {
+    match value {
+        Value::Object(fields) => {
+            if let Some(Value::Object(meta)) = fields.get_mut("meta") {
+                mark_meta_stale(meta);
+            }
+            for child in fields.values_mut() {
+                mark_response_stale(child);
+            }
+        }
+        Value::Array(rows) => rows.iter_mut().for_each(mark_response_stale),
+        _ => {}
+    }
+}
+
+fn mark_meta_stale(meta: &mut serde_json::Map<String, Value>) {
+    if meta.get("stale").is_some() && meta.get("unavailable").and_then(Value::as_bool) != Some(true)
+    {
+        meta.insert("stale".into(), true.into());
+        if meta
+            .get("quality")
+            .is_some_and(|quality| quality != "pending")
+        {
+            meta.insert("quality".into(), "stale".into());
+        }
+    }
+    if let Some(Value::Object(sections)) = meta.get_mut("sections") {
+        for section in sections.values_mut().filter_map(Value::as_object_mut) {
+            mark_meta_stale(section);
+        }
     }
 }
 

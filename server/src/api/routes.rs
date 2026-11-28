@@ -271,7 +271,7 @@ pub async fn favicon_png() -> impl IntoResponse {
 }
 
 async fn season_cache_stats(State(state): State<AppState>) -> Json<serde_json::Value> {
-    Json(json!({"data": state.database.season_cache_stats()}))
+    Json(json!({"data": state.database.season_cache_stats().await}))
 }
 
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, ApiError> {
