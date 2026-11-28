@@ -120,12 +120,13 @@ async fn prior_records(state: &AppState, season: i64) -> Result<LapRecords, Stor
     if let Some(reader) = state
         .database
         .season_reader()
-        .filter(|reader| reader.has_disk_cache())
+        .filter(|reader| reader.cache_enabled())
     {
-        state.database.analysis_generation(reader).await?;
+        let (local_generation, origin_generation) =
+            state.database.analysis_generation(reader).await?;
         return reader
             .cached(
-                CacheKey::LapRecords(season),
+                CacheKey::LapRecords(season, local_generation, origin_generation),
                 Box::pin(load),
                 |_| true,
                 |_| {},
@@ -168,11 +169,12 @@ fn update_record(
 
 async fn archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, StorageError> {
     if let Some(reader) = state.database.season_reader() {
-        if reader.has_disk_cache() {
-            state.database.analysis_generation(reader).await?;
+        if reader.cache_enabled() {
+            let (local_generation, origin_generation) =
+                state.database.analysis_generation(reader).await?;
             return reader
                 .cached(
-                    CacheKey::Archive(season),
+                    CacheKey::Archive(season, local_generation, origin_generation),
                     Box::pin(load_archive(state, season)),
                     |archive| !archive.weekends.is_empty(),
                     |archive| {
@@ -200,7 +202,7 @@ fn mark_stale(meta: &mut Meta) {
 }
 
 async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive>, StorageError> {
-    let ((mut meetings, mut meta), batch) = if let Some(reader) = state.database.season_reader() {
+    let ((mut meetings, meta), batch) = if let Some(reader) = state.database.season_reader() {
         let (calendar, results) = tokio::try_join!(
             state.database.calendar(Some(season)),
             reader.season_results(season)
@@ -209,9 +211,6 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
     } else {
         (state.database.calendar(Some(season)).await?, None)
     };
-    if batch.as_ref().is_some_and(|batch| batch.stale) {
-        mark_stale(&mut meta);
-    }
     meetings.sort_by(|a, b| a.start_date.cmp(&b.start_date));
     let history = season_history(state, season).await?;
     let mut weekends = Vec::new();
@@ -219,7 +218,7 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
         let mut sessions = serde_json::Map::new();
         let mut best: Option<TimedLap> = None;
         for session in &meeting.sessions {
-            let (rows, mut result_meta) = match &batch {
+            let (rows, result_meta) = match &batch {
                 Some(batch) => batch
                     .sessions
                     .get(&session.id)
@@ -227,9 +226,6 @@ async fn load_archive(state: &AppState, season: i64) -> Result<Arc<SeasonArchive
                     .unwrap_or_else(|| (Vec::new(), Meta::empty())),
                 None => state.database.session_results(&session.id).await?,
             };
-            if batch.as_ref().is_some_and(|batch| batch.stale) && !rows.is_empty() {
-                mark_stale(&mut result_meta);
-            }
             let bundle = if rows.is_empty() {
                 Value::Null
             } else {

@@ -135,7 +135,7 @@ fn central_response(
         let Some(reader) = state.database.season_reader() else {
             return next.run(request).await;
         };
-        if !reader.has_disk_cache() || request.method() != Method::GET {
+        if !reader.cache_enabled() || request.method() != Method::GET {
             return next.run(request).await;
         }
         let Some((path, season)) = cache_key(request.uri()) else {
@@ -155,13 +155,15 @@ fn central_response(
         ) {
             return next.run(request).await;
         }
-        if let Err(error) = state.database.analysis_generation(reader).await {
-            return error.into_response();
-        }
+        let (local_generation, origin_generation) =
+            match state.database.analysis_generation(reader).await {
+                Ok(generation) => generation,
+                Err(error) => return error.into_response(),
+            };
         let mut passthrough = None;
         let result = reader
             .cached(
-                CacheKey::Response(path, season),
+                CacheKey::Response(path, season, local_generation, origin_generation),
                 async {
                     let response = next.run(request).await;
                     if !response.status().is_success() {

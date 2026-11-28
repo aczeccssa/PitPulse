@@ -131,7 +131,7 @@ impl Database {
     pub(crate) async fn analysis_generation(
         &self,
         reader: &super::postgres::Postgres,
-    ) -> Result<i64, StorageError> {
+    ) -> Result<(i64, i64), StorageError> {
         let connection = self.connection.clone();
         let (local, origin) = tokio::try_join!(
             async {
@@ -148,7 +148,7 @@ impl Database {
             },
             reader.current_generation(),
         )?;
-        Ok(local.rotate_left(32) ^ origin)
+        Ok((local, origin))
     }
 
     async fn standings_season(&self, season: Option<i64>) -> Result<i64, StorageError> {

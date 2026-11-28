@@ -134,9 +134,9 @@ pub(crate) enum Key {
     Schedule(i64),
     ScheduleOpenings,
     SeasonResults(i64),
-    Archive(i64),
-    LapRecords(i64),
-    Response(&'static str, i64),
+    Archive(i64, i64, i64),
+    LapRecords(i64, i64, i64),
+    Response(&'static str, i64, i64, i64),
 }
 
 impl Key {
@@ -205,6 +205,10 @@ impl Cache {
             evictions: 0.into(),
             unavailable: 0.into(),
         }
+    }
+
+    pub(super) fn enabled(&self) -> bool {
+        self.config.capacity != 0
     }
 
     pub(super) fn stats(&self) -> SeasonCacheStats {
@@ -435,13 +439,11 @@ impl Cache {
     // slots are never evicted and the byte budget is enforced under the map lock.
     fn retain(&self, slot: &mut Slot, entry: Entry) -> Option<Entry> {
         let mut slots = self.slots.lock().expect("season cache");
-        if let Some(old) = slot.entry.take() {
-            self.memory_bytes.fetch_sub(old.bytes, Relaxed);
-        }
         if entry.bytes > self.config.memory_bytes {
             return Some(entry);
         }
-        while self.memory_bytes.load(Relaxed) + entry.bytes > self.config.memory_bytes {
+        let old_bytes = slot.entry.as_ref().map_or(0, |old| old.bytes);
+        while self.memory_bytes.load(Relaxed) - old_bytes + entry.bytes > self.config.memory_bytes {
             let Some(key) = slots
                 .iter()
                 .filter(|(_, slot)| Arc::strong_count(slot) == 1)
@@ -458,6 +460,9 @@ impl Cache {
             slots.remove(&key.0);
             self.memory_bytes.fetch_sub(key.2, Relaxed);
             self.evictions.fetch_add(1, Relaxed);
+        }
+        if let Some(old) = slot.entry.take() {
+            self.memory_bytes.fetch_sub(old.bytes, Relaxed);
         }
         self.memory_bytes.fetch_add(entry.bytes, Relaxed);
         slot.entry = Some(entry);
@@ -635,12 +640,67 @@ mod tests {
         assert_eq!(get(&cache, 1, Ok(2), async { Ok(21) }).await.unwrap(), 21);
     }
 
+    #[test]
+    fn derived_keys_include_both_generations() {
+        assert!(Key::Archive(2026, 1, 7) != Key::Archive(2026, 2, 7));
+        assert!(Key::Archive(2026, 1, 7) != Key::Archive(2026, 1, 8));
+        assert!(Key::LapRecords(2026, 1, 7) != Key::LapRecords(2026, 2, 7));
+        assert!(Key::LapRecords(2026, 1, 7) != Key::LapRecords(2026, 1, 8));
+        assert!(
+            Key::Response("/api/v1/home", 2026, 1, 7) != Key::Response("/api/v1/home", 2026, 2, 7)
+        );
+        assert!(
+            Key::Response("/api/v1/home", 2026, 1, 7) != Key::Response("/api/v1/home", 2026, 1, 8)
+        );
+    }
+
+    #[test]
+    fn zero_disk_budget_keeps_memory_cache_enabled() {
+        let config = SeasonCacheConfig {
+            disk_bytes: 0,
+            ..Default::default()
+        };
+        assert!(Cache::new(config).enabled());
+    }
+
+    #[tokio::test]
+    async fn oversized_replacement_preserves_existing_entry() {
+        let config = SeasonCacheConfig {
+            memory_bytes: 1024,
+            ..Default::default()
+        };
+        let cache = Cache::new(config);
+        assert_eq!(get(&cache, 1, Ok(1), async { Ok(10) }).await.unwrap(), 10);
+        let slot = cache.slot(Key::RacingSeasons(1)).unwrap();
+        {
+            let mut slot = slot.lock().await;
+            let retained = cache.retain(
+                &mut slot,
+                Entry {
+                    value: Box::new(20),
+                    generation: 1,
+                    loaded: Instant::now(),
+                    loaded_at: epoch_seconds(),
+                    bytes: 2048,
+                    can_fallback: true,
+                },
+            );
+            assert!(retained.is_some());
+            assert_eq!(
+                slot.entry
+                    .as_ref()
+                    .and_then(|entry| entry.value.downcast_ref::<i32>()),
+                Some(&10)
+            );
+        }
+    }
+
     #[tokio::test]
     async fn cached_misses_and_derived_values_are_not_offline_snapshots() {
         let cache = Cache::new(SeasonCacheConfig::default());
         let missing = cache
             .get(
-                Key::Response("/api/v1/home", 2099),
+                Key::Response("/api/v1/home", 2099, 0, 1),
                 async { Ok(1) },
                 async {
                     Ok::<_, StorageError>(
@@ -655,7 +715,7 @@ mod tests {
         assert_eq!(missing["meta"]["unavailable"], true);
         assert!(
             !cache
-                .slot(Key::Response("/api/v1/home", 2099))
+                .slot(Key::Response("/api/v1/home", 2099, 0, 1))
                 .unwrap()
                 .try_lock()
                 .unwrap()
@@ -667,7 +727,7 @@ mod tests {
         assert!(matches!(
             cache
                 .get::<Vec<(String, i64)>>(
-                    Key::LapRecords(2026),
+                    Key::LapRecords(2026, 0, 1),
                     async { Err(StorageError::SeasonUnavailable) },
                     async { Err::<Vec<(String, i64)>, _>(StorageError::SeasonUnavailable) },
                     |_| true,

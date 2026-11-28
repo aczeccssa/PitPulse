@@ -112,8 +112,8 @@ impl Postgres {
             .await
     }
 
-    pub(crate) fn has_disk_cache(&self) -> bool {
-        self.cache.disk.is_some()
+    pub(crate) fn cache_enabled(&self) -> bool {
+        self.cache.enabled()
     }
 
     pub async fn disk_cache_bytes(&self) -> Option<u64> {
